@@ -1,4 +1,11 @@
-import { createHolographicTarget, createSpatialScene, routeSpatialScene } from '../../src/spatial/holographic_contracts.mjs';
+/* global describe, expect, test */
+
+import {
+  createHolographicTarget,
+  createSpatialScene,
+  executeSpatialScene,
+  routeSpatialScene,
+} from '../../src/spatial/holographic_contracts.mjs';
 
 describe('THERGRID holographic contracts', () => {
   test('creates supported display targets', () => {
@@ -6,13 +13,43 @@ describe('THERGRID holographic contracts', () => {
   });
 
   test('creates spatial scenes without changing grid truth', () => {
-    const scene = createSpatialScene({ id: 'grid-demo', nodes: [{ id: 'solar', position: { x: 1 } }], targets: [{ id: 'proj-1', type: 'projector' }] });
+    const scene = createSpatialScene({
+      id: 'grid-demo',
+      nodes: [{ id: 'solar', position: { x: 1 } }],
+      targets: [{ id: 'proj-1', type: 'projector' }],
+    });
     expect(scene.schema).toBe('thergrid.spatial-scene.v1');
     expect(scene.nodes[0].position).toEqual({ x: 1, y: 0, z: 0 });
   });
 
   test('routes scenes to explicit targets', () => {
-    const scene = createSpatialScene({ id: 'grid-demo', targets: [{ id: 'platform-1', type: 'three-d-platform' }] });
-    expect(routeSpatialScene(scene, 'platform-1')).toEqual({ sceneId: 'grid-demo', targetId: 'platform-1', type: 'three-d-platform', status: 'ready' });
+    const scene = createSpatialScene({
+      id: 'grid-demo',
+      targets: [{ id: 'platform-1', type: 'three-d-platform' }],
+    });
+    expect(routeSpatialScene(scene, 'platform-1')).toEqual({
+      sceneId: 'grid-demo',
+      targetId: 'platform-1',
+      type: 'three-d-platform',
+      status: 'ready',
+    });
+  });
+
+  test('returns an auditable holographic execution receipt', () => {
+    const scene = createSpatialScene({
+      id: 'grid-demo',
+      nodes: [{ id: 'solar' }],
+      targets: [{ id: 'proj-1', type: 'projector' }],
+    });
+    expect(executeSpatialScene(scene, 'proj-1', { executionId: 'exec-1' })).toEqual({
+      executionId: 'exec-1',
+      sceneId: 'grid-demo',
+      targetId: 'proj-1',
+      targetType: 'projector',
+      status: 'simulated',
+      simulated: true,
+      nodeCount: 1,
+      sourceOfTruth: 'grid-state',
+    });
   });
 });
