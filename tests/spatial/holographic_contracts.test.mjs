@@ -5,6 +5,7 @@ import {
   createHolographicTarget,
   createSpatialScene,
   executeSpatialScene,
+  executeSpatialSceneBatch,
   routeSpatialScene,
 } from '../../src/spatial/holographic_contracts.mjs';
 
@@ -70,6 +71,31 @@ describe('THERGRID holographic contracts', () => {
       nodeCount: 1,
       sourceOfTruth: 'grid-state',
     });
+  });
+
+  test('executes multiple targets with deterministic batch evidence', () => {
+    const scene = createSpatialScene({
+      id: 'grid-demo',
+      nodes: [{ id: 'solar' }],
+      targets: [
+        { id: 'proj-1', type: 'projector' },
+        { id: 'mat-1', type: 'holomat' },
+      ],
+    });
+    const first = executeSpatialSceneBatch(scene, ['proj-1', 'mat-1', 'proj-1'], { executionId: 'batch-1' });
+    const second = executeSpatialSceneBatch(scene, ['proj-1', 'mat-1'], { executionId: 'batch-1' });
+    assert.equal(first.executionId, 'batch-1');
+    assert.equal(first.status, 'simulated');
+    assert.equal(first.targetCount, 2);
+    assert.equal(first.receipts.length, 2);
+    assert.equal(first.batchKey, second.batchKey);
+    assert.match(first.batchKey, /^[a-f0-9]{64}$/);
+    assert.equal(first.sourceOfTruth, 'grid-state');
+  });
+
+  test('rejects empty batch execution requests', () => {
+    const scene = createSpatialScene({ id: 'grid-demo', targets: [{ id: 'proj-1', type: 'projector' }] });
+    assert.throws(() => executeSpatialSceneBatch(scene), /at least one target id is required/);
   });
 
   test('fails closed when a target is marked for live execution', () => {
