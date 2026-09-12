@@ -6,7 +6,12 @@ export function createHolographicTarget({ id, type, capabilities = [], simulated
   if (typeof id !== 'string' || !id.trim()) throw new TypeError('Target id is required.');
   if (!TARGET_TYPES.has(type)) throw new TypeError(`Unsupported target type: ${type}`);
   if (!Array.isArray(capabilities)) throw new TypeError('Target capabilities must be an array.');
-  return Object.freeze({ id: id.trim(), type, capabilities: Object.freeze([...new Set(capabilities.map(String))]), simulated: Boolean(simulated) });
+  return Object.freeze({
+    id: id.trim(),
+    type,
+    capabilities: Object.freeze([...new Set(capabilities.map(String))]),
+    simulated: Boolean(simulated),
+  });
 }
 
 export function createSpatialScene({ id, source = 'thergrid', nodes = [], targets = [] } = {}) {
@@ -35,15 +40,13 @@ export function routeSpatialScene(scene, targetId) {
 export function executeSpatialScene(scene, targetId, { executionId } = {}) {
   const route = routeSpatialScene(scene, targetId);
   const target = scene.targets.find((candidate) => candidate.id === targetId);
-  if (target.simulated !== true) {
-    throw new Error('Live spatial execution is not enabled.');
-  }
+  if (target.simulated !== true) throw new Error('Live spatial execution is not enabled.');
   return Object.freeze({
     executionId: executionId ?? `${scene.id}:${targetId}`,
     sceneId: route.sceneId,
     targetId: route.targetId,
     targetType: route.type,
-    status: 'simulated' ,
+    status: 'simulated',
     simulated: true,
     nodeCount: scene.nodes.length,
     sourceOfTruth: 'grid-state',
