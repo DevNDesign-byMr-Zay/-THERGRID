@@ -60,3 +60,23 @@ export function executeSpatialScene(scene, targetId, { executionId } = {}) {
     sourceOfTruth: 'grid-state',
   });
 }
+
+export function executeSpatialSceneBatch(scene, targetIds = [], { executionId } = {}) {
+  if (!Array.isArray(targetIds) || targetIds.length === 0) {
+    throw new TypeError('at least one target id is required.');
+  }
+  const uniqueTargetIds = [...new Set(targetIds.map((id) => String(id)))];
+  const receipts = uniqueTargetIds.map((targetId) => executeSpatialScene(scene, targetId));
+  const batchPayload = JSON.stringify({ executionId, sceneId: scene.id, receipts });
+  const batchKey = createHash('sha256').update(batchPayload).digest('hex');
+  return Object.freeze({
+    executionId: executionId ?? `${scene.id}:batch`,
+    batchKey,
+    sceneId: scene.id,
+    status: 'simulated',
+    simulated: true,
+    targetCount: receipts.length,
+    receipts: Object.freeze(receipts),
+    sourceOfTruth: 'grid-state',
+  });
+}
