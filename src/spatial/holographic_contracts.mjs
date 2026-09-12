@@ -35,13 +35,16 @@ export function routeSpatialScene(scene, targetId) {
 export function executeSpatialScene(scene, targetId, { executionId } = {}) {
   const route = routeSpatialScene(scene, targetId);
   const target = scene.targets.find((candidate) => candidate.id === targetId);
+  if (target.simulated !== true) {
+    throw new Error('Live spatial execution is not enabled.');
+  }
   return Object.freeze({
     executionId: executionId ?? `${scene.id}:${targetId}`,
     sceneId: route.sceneId,
     targetId: route.targetId,
     targetType: route.type,
     status: 'simulated' ,
-    simulated: target.simulated,
+    simulated: true,
     nodeCount: scene.nodes.length,
     sourceOfTruth: 'grid-state',
   });
