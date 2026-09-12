@@ -36,7 +36,7 @@ describe('THERGRID holographic contracts', () => {
     });
   });
 
-  test('returns an auditable holographic execution receipt', () => {
+  test('returns an auditable holographic execution receipt for simulated targets', () => {
     const scene = createSpatialScene({
       id: 'grid-demo',
       nodes: [{ id: 'solar' }],
@@ -52,5 +52,17 @@ describe('THERGRID holographic contracts', () => {
       nodeCount: 1,
       sourceOfTruth: 'grid-state',
     });
+  });
+
+  test('fails closed when a target is marked for live execution', () => {
+    const scene = createSpatialScene({
+      id: 'grid-demo',
+      targets: [{ id: 'live-proj', type: 'projector', simulated: false }],
+    });
+
+    assert.throws(
+      () => executeSpatialScene(scene, 'live-proj'),
+      /Live spatial execution is not enabled/,
+    );
   });
 });
