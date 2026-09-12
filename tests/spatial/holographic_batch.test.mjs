@@ -1,3 +1,5 @@
+import { describe, test } from 'node:test';
+import assert from 'node:assert/strict';
 import {
   createSpatialScene,
   createHolographicTarget,
@@ -15,8 +17,8 @@ describe('THERGRID holographic batch policy', () => {
         createHolographicTarget({ id: 'mat-1', type: 'holomat', capabilities: [] }),
       ],
     });
-    expect(negotiateSpatialScene(scene, 'projector-1')).toMatchObject({ compatible: true, missing: [] });
-    expect(negotiateSpatialScene(scene, 'mat-1')).toMatchObject({ compatible: false, missing: ['depth'] });
+    assert.deepEqual(negotiateSpatialScene(scene, 'projector-1'), { targetId: 'projector-1', targetType: 'projector', compatible: true, missing: [] });
+    assert.deepEqual(negotiateSpatialScene(scene, 'mat-1'), { targetId: 'mat-1', targetType: 'holomat', compatible: false, missing: ['depth'] });
   });
 
   test('returns partial status instead of failing the entire batch', () => {
@@ -29,7 +31,7 @@ describe('THERGRID holographic batch policy', () => {
       ],
     });
     const batch = executeSpatialSceneBatch(scene, ['projector-1', 'mat-1']);
-    expect(batch).toMatchObject({ status: 'partial', targetCount: 2, successCount: 1, failureCount: 1 });
-    expect(batch.receipts.map((receipt) => receipt.status)).toEqual(['simulated', 'failed']);
+    assert.deepEqual({ status: batch.status, targetCount: batch.targetCount, successCount: batch.successCount, failureCount: batch.failureCount }, { status: 'partial', targetCount: 2, successCount: 1, failureCount: 1 });
+    assert.deepEqual(batch.receipts.map((receipt) => receipt.status), ['simulated', 'failed']);
   });
 });
