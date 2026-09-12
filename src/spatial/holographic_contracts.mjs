@@ -1,6 +1,13 @@
+import { createHash } from 'node:crypto';
+
 export const SPATIAL_SCENE_SCHEMA = 'thergrid.spatial-scene.v1';
 
 const TARGET_TYPES = new Set(['projector', 'holomat', 'three-d-platform']);
+
+function replayKey(scene, target) {
+  const payload = JSON.stringify({ schema: scene.schema, id: scene.id, source: scene.source, nodes: scene.nodes, target });
+  return createHash('sha256').update(payload).digest('hex');
+}
 
 export function createHolographicTarget({ id, type, capabilities = [], simulated = true } = {}) {
   if (typeof id !== 'string' || !id.trim()) throw new TypeError('Target id is required.');
@@ -43,6 +50,7 @@ export function executeSpatialScene(scene, targetId, { executionId } = {}) {
   if (target.simulated !== true) throw new Error('Live spatial execution is not enabled.');
   return Object.freeze({
     executionId: executionId ?? `${scene.id}:${targetId}`,
+    replayKey: replayKey(scene, target),
     sceneId: route.sceneId,
     targetId: route.targetId,
     targetType: route.type,
