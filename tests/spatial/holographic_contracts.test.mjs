@@ -40,13 +40,16 @@ describe('THERGRID holographic contracts', () => {
     const scene = createSpatialScene({
       id: 'grid-demo',
       nodes: [{ id: 'solar' }],
-      targets: [{ id: 'proj-1', type: 'projector' }],
+      targets: [
+        { id: 'proj-1', type: 'projector' },
+        { id: 'proj-2', type: 'projector' },
+      ],
     });
     const first = executeSpatialScene(scene, 'proj-1', { executionId: 'exec-1' });
-    const second = executeSpatialScene(scene, 'proj-2', { executionId: 'exec-2' }).replayKey;
+    const second = executeSpatialScene(scene, 'proj-2', { executionId: 'exec-2' });
     assert.equal(first.replayKey, executeSpatialScene(scene, 'proj-1').replayKey);
     assert.match(first.replayKey, /^[a-f0-9]{64}$/);
-    assert.notEqual(first.replayKey, second);
+    assert.notEqual(first.replayKey, second.replayKey);
   });
 
   test('returns an auditable holographic execution receipt for simulated targets', () => {
