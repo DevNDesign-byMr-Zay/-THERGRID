@@ -7,6 +7,7 @@ import { compileHolographicRenderPacket } from './holographic-renderer-contract.
 import { simulateProposal } from './simulation.mjs';
 import { buildProvenanceGraph, fingerprintExperiment, validateProvenanceGraph } from './provenance.mjs';
 import { buildSolverEvidence, evaluatePromotionGate } from './solver-evaluation.mjs';
+import { createSolvaerOptimizationRequest } from './solvaer-optimization-contract.mjs';
 
 const DEFAULT_PRESENTATION_DEVICES = Object.freeze([
   { id: 'holo-mat-reference', type: 'holo-mat', capabilities: ['topology', 'power-flows', 'forecast-delta'], online: true },
@@ -31,6 +32,13 @@ export function runSyntheticMicrogrid(snapshot, { presentationDevices = DEFAULT_
   const provenanceValid = validateProvenanceGraph(provenance, { requiredTypes: ['telemetry', 'twin-state', 'forecast', 'operating-proposal', 'simulation', 'decision-receipt', 'spatial-scene', 'render-packet'] });
   const solverEvidence = buildSolverEvidence({ experimentId, inputSnapshotId: snapshot.snapshotId, candidate: { model: 'thergrid-classical-reference', solver: 'thergrid-reference', version: 'v1' }, constraints: proposal.constraints ?? null, seed: simulation.seed ?? null, objective: Math.abs(simulation.outputs.residualBalanceKw), feasible: simulation.status === 'passed' && Math.abs(simulation.outputs.residualBalanceKw) <= 0.000001, runtimeMs: simulation.runtimeMs, timeout: false, provenance: [receiptId, scene.sceneId] });
   const promotion = evaluatePromotionGate({ evidence: solverEvidence, validation: { simulationPassed: simulation.status === 'passed', receiptValid: receiptId === fingerprintDecisionReceipt(receipt), provenanceValid } });
+  const solvaerRequest = createSolvaerOptimizationRequest({
+    experimentId,
+    snapshotId: snapshot.snapshotId,
+    twinStateRef: `twin-state:${snapshot.snapshotId}`,
+    objective: 'explore lower residual balance while preserving simulation constraints',
+    constraints: proposal.constraints ?? null,
+  });
 
-  return { twinState, forecast, proposal, simulation, receipt: receiptWithId, scene, presentation, renderPacket, experimentId, solverEvidence, promotion, provenance };
+  return { twinState, forecast, proposal, simulation, receipt: receiptWithId, scene, presentation, renderPacket, experimentId, solverEvidence, promotion, provenance, solvaerRequest };
 }
