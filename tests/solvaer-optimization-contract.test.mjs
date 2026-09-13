@@ -62,6 +62,7 @@ test('accepts a candidate only as an immutable simulation-required handoff', () 
   assert.equal(accepted.safety.authoritative, false);
   assert.equal(accepted.safety.actuatesHardware, false);
   assert.equal(Object.isFrozen(accepted), true);
+  assert.equal(Object.isFrozen(accepted.constraints), true);
   assert.equal(Object.isFrozen(accepted.candidate), true);
   assert.equal(Object.isFrozen(accepted.provenanceRef), true);
   assert.equal(Object.isFrozen(accepted.safety), true);
