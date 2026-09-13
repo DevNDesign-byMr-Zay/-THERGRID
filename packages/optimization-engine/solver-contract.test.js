@@ -14,3 +14,23 @@ test('provider adapter preserves the QUBO contract and audit fields', () => {
   assert.deepEqual(result.bits, [1, 1]);
   assert.equal(result.objective, -3);
 });
+
+test('rejects non-finite problem coefficients', () => {
+  assert.throws(() => createQuboProblem({ linear: [1, NaN] }), /finite numbers/);
+});
+
+test('rejects provider results whose shape does not match the problem', () => {
+  const problem = createQuboProblem({ linear: [-1, 1] });
+  assert.throws(
+    () => runOptimization({ solve: () => ({ bits: [1], objective: -1 }) }, problem),
+    /mismatched binary result/,
+  );
+});
+
+test('rejects a numerically better but malformed result', () => {
+  const problem = createQuboProblem({ linear: [-1, 1] });
+  assert.throws(
+    () => runOptimization({ solve: () => ({ bits: [1, 0], objective: Number.NEGATIVE_INFINITY }) }, problem),
+    /non-finite objective/,
+  );
+});
