@@ -12,16 +12,15 @@ const input = {
   provenance: ['receipt-runner-001'],
 };
 
-test('runner compares candidates and selects the first feasible evidence', async () => {
+test('runner ranks feasible candidates by objective before runtime', async () => {
   const result = await runSolverCandidates({
     adapters: [createClassicalReferenceAdapter(), createQuantumInspiredAdapter()],
-    input: { ...input, objective: 0, feasible: true, runtimeMs: 1 },
-    simulationPassed: true,
-    receiptValid: true,
-    provenanceValid: true,
+    input: { ...input, objective: 2, feasible: true, runtimeMs: 10 },
+    validation: { simulationPassed: true, receiptValid: true, provenanceValid: true },
   });
   assert.equal(result.candidates.length, 2);
-  assert.equal(typeof result.selectedFingerprint, 'string');
+  assert.equal(result.ranking.length, 2);
+  assert.equal(result.ranking[0].objective, 0);
   assert.equal(result.promotion.status, 'eligible');
   assert.equal(result.authoritative, false);
 });
@@ -31,7 +30,7 @@ test('runner records timeout/failure without granting promotion', async () => {
     identity: { model: 'slow', solver: 'slow-test', version: 'v1' },
     async solve() {
       await new Promise((resolve) => setTimeout(resolve, 25));
-      return { feasible: true, timeout: false };
+      return { feasible: true, timeout: false, objective: 0, runtimeMs: 25 };
     },
   });
   const result = await runSolverCandidates({ adapters: [slowAdapter], input, timeoutMs: 1 });
@@ -43,4 +42,6 @@ test('runner does not self-authorize when validation gates are absent', async ()
   const result = await runSolverCandidates({ adapters: [createClassicalReferenceAdapter()], input });
   assert.equal(result.promotion.status, 'rejected');
   assert.equal(result.promotion.checks.simulationPassed, false);
+  assert.equal(result.promotion.checks.receiptValid, false);
+  assert.equal(result.promotion.checks.provenanceValid, false);
 });
