@@ -26,14 +26,20 @@ const fixture = {
   },
 };
 
-test('runs the complete deterministic vertical slice', () => {
+test('runs the complete deterministic vertical slice with evidence gates', () => {
   const first = runSyntheticMicrogrid(fixture);
   const second = runSyntheticMicrogrid(fixture);
   assert.deepEqual(first, second);
   assert.equal(first.simulation.backend, 'thergrid-classical-reference-v1');
+  assert.equal(first.simulation.status, 'passed');
   assert.equal(first.simulation.safety.physicalActuation, false);
   assert.match(first.receipt.receiptId, /^[a-f0-9]{64}$/);
-  assert.equal(first.scene.sceneVersion, 1);
+  assert.equal(first.scene.sceneVersion, 2);
+  assert.equal(first.scene.rendererContract.mode, 'renderer-neutral');
+  assert.equal(first.provenance.contractVersion, 2);
+  assert.equal(first.provenance.nodes.length, 7);
+  assert.equal(first.promotion.status, 'eligible');
+  assert.equal(first.promotion.authoritative, false);
 });
 
 test('records VÆLON capability and explicit fallback identity', () => {
