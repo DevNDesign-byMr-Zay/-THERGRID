@@ -3,6 +3,7 @@ import { buildPersistenceForecast, buildBaselineOperatingProposal } from './plan
 import { buildDecisionReceipt, fingerprintDecisionReceipt } from './decision-receipt.mjs';
 import { buildSpatialScene } from './spatial-scene.mjs';
 import { simulateProposal } from './simulation.mjs';
+import { buildProvenanceGraph, fingerprintExperiment } from './provenance.mjs';
 
 export function runSyntheticMicrogrid(snapshot) {
   const twinState = deriveTwinState(snapshot);
@@ -12,6 +13,31 @@ export function runSyntheticMicrogrid(snapshot) {
   const receipt = buildDecisionReceipt({ twinState, forecast, proposal });
   const receiptId = fingerprintDecisionReceipt(receipt);
   const scene = buildSpatialScene({ twinState, proposal });
+  const experimentId = fingerprintExperiment({
+    inputs: { snapshotId: snapshot.snapshotId, observedAt: snapshot.observedAt },
+    constraints: proposal.constraints ?? null,
+    model: { identity: 'thergrid-classical-reference-v1' },
+    solver: { identity: 'thergrid-reference-v1' },
+    seed: simulation.seed ?? null,
+  });
+  const provenance = buildProvenanceGraph({
+    snapshot,
+    twinState,
+    forecast,
+    proposal,
+    simulation,
+    receipt: { ...receipt, receiptId },
+    scene,
+  });
 
-  return { twinState, forecast, proposal, simulation, receipt: { ...receipt, receiptId }, scene };
+  return {
+    twinState,
+    forecast,
+    proposal,
+    simulation,
+    receipt: { ...receipt, receiptId },
+    scene,
+    experimentId,
+    provenance,
+  };
 }
