@@ -1,4 +1,5 @@
-import { benchmarkReference } from './benchmark-harness.js';
+import { solveQuboExactly, compareOptimization } from './benchmark.js';
+import { createReferenceProvider } from './quantum-inspired-provider.js';
 
 /**
  * Turn a benchmark run into a compact, serializable measurement receipt.
@@ -6,7 +7,14 @@ import { benchmarkReference } from './benchmark-harness.js';
  */
 export function createBenchmarkReceipt({ linear, quadratic = [], seed = 1, iterations = 2000 } = {}) {
   const startedAt = Date.now();
-  const benchmark = benchmarkReference({ linear, quadratic, seed, iterations });
+  const exact = solveQuboExactly({ linear, quadratic });
+  const candidate = createReferenceProvider({ seed, iterations }).solve({
+    kind: 'qubo',
+    version: 1,
+    linear,
+    quadratic,
+  });
+  const comparison = compareOptimization(candidate, exact);
   const durationMs = Date.now() - startedAt;
 
   return Object.freeze({
@@ -18,16 +26,16 @@ export function createBenchmarkReceipt({ linear, quadratic = [], seed = 1, itera
     },
     configuration: { seed, iterations },
     reference: {
-      backend: benchmark.exact.backend,
-      algorithm: benchmark.exact.algorithm,
-      objective: benchmark.exact.objective,
+      backend: exact.backend,
+      algorithm: exact.algorithm,
+      objective: exact.objective,
     },
     candidate: {
-      backend: benchmark.heuristic.backend,
-      algorithm: benchmark.heuristic.algorithm,
-      objective: benchmark.heuristic.objective,
+      backend: candidate.backend,
+      algorithm: candidate.algorithm,
+      objective: candidate.objective,
     },
-    comparison: { ...benchmark.comparison },
+    comparison: { ...comparison },
     durationMs,
   });
 }
