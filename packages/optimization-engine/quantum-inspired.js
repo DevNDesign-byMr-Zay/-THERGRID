@@ -75,3 +75,13 @@ export function solveQubo({ linear, quadratic = [], seed = 1, iterations = 2000 
     objective: bestScore,
   };
 }
+
+/** Adapter implementing the provider-neutral solver contract. */
+export function createReferenceProvider(options = {}) {
+  return Object.freeze({
+    name: 'thergrid-qis-reference-v1',
+    solve(problem) {
+      return solveQubo({ ...problem, ...options });
+    },
+  });
+}
