@@ -1,39 +1,10 @@
-import { evaluateQubo } from './quantum-inspired.js';
+import { solveQuboExactly } from './exact-reference.js';
 
 /**
- * Exact baseline for small QUBOs. This is intentionally bounded: it is a
- * measurement tool for validating heuristic/provider quality, not production
- * optimization for large state spaces.
+ * Measurement helpers for comparing heuristic/provider output against the
+ * single maintained exact classical reference.
  */
-export function solveQuboExactly({ linear, quadratic = [] } = {}) {
-  if (!Array.isArray(linear) || linear.length === 0) {
-    throw new TypeError('linear coefficients are required.');
-  }
-  if (linear.length > 20) {
-    throw new RangeError('exact QUBO baseline is limited to 20 binary variables.');
-  }
-
-  const states = 2 ** linear.length;
-  let best;
-  let objective = Number.POSITIVE_INFINITY;
-
-  for (let encoded = 0; encoded < states; encoded += 1) {
-    const bits = linear.map((_, index) => (encoded >> index) & 1);
-    const score = evaluateQubo(linear, quadratic, bits);
-    if (score < objective) {
-      objective = score;
-      best = bits;
-    }
-  }
-
-  return Object.freeze({
-    backend: 'thergrid-exact-reference-v1',
-    algorithm: 'exhaustive-binary-enumeration',
-    states,
-    bits: best,
-    objective,
-  });
-}
+export { solveQuboExactly } from './exact-reference.js';
 
 export function compareOptimization(result, exact) {
   if (!result || !exact || typeof result.objective !== 'number' || typeof exact.objective !== 'number') {
@@ -46,4 +17,10 @@ export function compareOptimization(result, exact) {
     exactBackend: exact.backend,
     candidateBackend: result.backend,
   });
+}
+
+/** Resolve the maintained reference through this measurement boundary. */
+export function benchmarkAgainstExact(problem, candidate) {
+  const exact = solveQuboExactly(problem);
+  return Object.freeze({ exact, comparison: compareOptimization(candidate, exact) });
 }
