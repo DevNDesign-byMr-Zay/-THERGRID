@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-const EVALUATION_VERSION = 2;
+const EVALUATION_VERSION = 3;
 
 function object(value, name) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError(`${name} must be an object`);
@@ -26,11 +26,7 @@ export function buildSolverEvidence({ experimentId, candidate, inputSnapshotId, 
     evaluationVersion: EVALUATION_VERSION,
     experimentId: text(experimentId, 'experimentId'),
     inputSnapshotId: text(inputSnapshotId, 'inputSnapshotId'),
-    candidate: {
-      model: text(c.model ?? 'unknown', 'candidate.model'),
-      solver: text(c.solver ?? 'unknown', 'candidate.solver'),
-      version: text(c.version ?? 'unversioned', 'candidate.version'),
-    },
+    candidate: { model: text(c.model ?? 'unknown', 'candidate.model'), solver: text(c.solver ?? 'unknown', 'candidate.solver'), version: text(c.version ?? 'unversioned', 'candidate.version') },
     constraints,
     seed,
     objective: finite(objective, 'objective'),
@@ -50,15 +46,17 @@ export function compareSolverEvidence(evidences = []) {
   if (!Array.isArray(evidences)) throw new TypeError('evidences must be an array');
   return evidences.map((evidence) => {
     const value = object(evidence, 'evidence');
-    return Object.freeze({ fingerprint: fingerprintSolverEvidence(value), candidate: value.candidate, feasible: value.feasible, objective: value.objective, runtimeMs: value.runtimeMs, timeout: value.timeout, fallback: value.fallback });
+    return Object.freeze({ fingerprint: fingerprintSolverEvidence(value), candidate: value.candidate, feasible: value.feasible, objective: value.objective, runtimeMs: value.runtimeMs, timeout: value.timeout, fallback: value.fallback, provenanceCount: Array.isArray(value.provenance) ? value.provenance.length : 0 });
   });
 }
 
 export function evaluatePromotionGate({ evidence, validation } = {}) {
   const value = object(evidence, 'evidence');
+  const provenance = Array.isArray(value.provenance) ? value.provenance : [];
   const checks = {
     evidenceComplete: Boolean(value.experimentId && value.inputSnapshotId && value.candidate?.model && value.candidate?.solver && value.candidate?.version),
     feasible: value.feasible === true && value.timeout === false,
+    provenanceBound: provenance.length >= 2,
     simulationPassed: validation?.simulationPassed === true,
     receiptValid: validation?.receiptValid === true,
     provenanceValid: validation?.provenanceValid === true,
