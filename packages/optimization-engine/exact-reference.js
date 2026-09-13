@@ -1,3 +1,9 @@
+/**
+ * Single maintained classical reference for small QUBOs.
+ *
+ * This is deliberately exhaustive and bounded so candidate providers can be
+ * compared against one stable objective implementation.
+ */
 export function solveQuboExactly({ linear, quadratic = [] } = {}) {
   if (!Array.isArray(linear) || linear.length === 0) {
     throw new TypeError('linear coefficients are required.');
@@ -7,30 +13,30 @@ export function solveQuboExactly({ linear, quadratic = [] } = {}) {
     throw new RangeError('exact QUBO reference is limited to 20 variables.');
   }
 
+  const states = 2 ** variableCount;
   let bestBits = null;
-  let bestObjective = Number.POSITIVE_INFINITY;
-  const combinations = 2 ** variableCount;
+  let objective = Number.POSITIVE_INFINITY;
 
-  for (let mask = 0; mask < combinations; mask += 1) {
-    const bits = Array.from({ length: variableCount }, (_, index) => (mask >> index) & 1);
-    let objective = 0;
+  for (let encoded = 0; encoded < states; encoded += 1) {
+    const bits = linear.map((_, index) => (encoded >> index) & 1);
+    let score = 0;
     for (let i = 0; i < variableCount; i += 1) {
-      objective += linear[i] * bits[i];
+      score += linear[i] * bits[i];
       for (let j = i + 1; j < variableCount; j += 1) {
-        objective += (quadratic[i]?.[j] ?? 0) * bits[i] * bits[j];
+        score += (quadratic[i]?.[j] ?? 0) * bits[i] * bits[j];
       }
     }
-    if (objective < bestObjective) {
-      bestObjective = objective;
+    if (score < objective) {
+      objective = score;
       bestBits = bits;
     }
   }
 
-  return {
-    backend: 'thergrid-classical-exact-reference-v1',
-    algorithm: 'exhaustive-binary-search',
-    variables: variableCount,
+  return Object.freeze({
+    backend: 'thergrid-exact-reference-v1',
+    algorithm: 'exhaustive-binary-enumeration',
+    states,
     bits: bestBits,
-    objective: bestObjective,
-  };
+    objective,
+  });
 }
