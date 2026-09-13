@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runSyntheticMicrogrid } from '../src/pipeline.mjs';
 import { createModelRoute, buildModelEvidence } from '../src/model-routing.mjs';
+import { getSpatialSceneId } from '../src/spatial-scene.mjs';
 
 const fixture = {
   schemaVersion: 1,
@@ -33,7 +34,9 @@ test('runs the complete deterministic vertical slice', () => {
   assert.equal(first.simulation.backend, 'thergrid-classical-reference-v1');
   assert.equal(first.simulation.safety.physicalActuation, false);
   assert.match(first.receipt.receiptId, /^[a-f0-9]{64}$/);
-  assert.equal(first.scene.sceneVersion, 1);
+  assert.equal(first.scene.sceneVersion, 2);
+  assert.equal(first.scene.sceneId, getSpatialSceneId(fixture.snapshotId));
+  assert.equal(first.scene.provenanceRef, first.experimentId);
 });
 
 test('records VÆLON capability and explicit fallback identity', () => {
