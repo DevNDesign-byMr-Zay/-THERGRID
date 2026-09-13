@@ -6,19 +6,20 @@ function requireObject(value, name) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError(`${name} must be an object`);
   return value;
 }
-
 function finite(value, name) {
   if (!Number.isFinite(value)) throw new TypeError(`${name} must be finite`);
   return value;
 }
-
 function id(value, name) {
   if (typeof value !== 'string' || !value.trim()) throw new TypeError(`${name} must be a non-empty string`);
   return value.trim();
 }
-
 function sceneId(snapshotId) {
   return `scene-${createHash('sha256').update(`thergrid-scene-v${SCENE_VERSION}:${snapshotId}`, 'utf8').digest('hex').slice(0, 16)}`;
+}
+
+export function getSpatialSceneId(snapshotId) {
+  return sceneId(id(snapshotId, 'snapshotId'));
 }
 
 export function buildSpatialScene({ twinState, proposal = null, alerts = [], provenance = null, attention = [] } = {}) {
