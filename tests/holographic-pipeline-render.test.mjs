@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runSyntheticMicrogrid } from '../src/pipeline.mjs';
-import { validateHolographicRenderPacket } from '../src/holographic-renderer-contract.mjs';
+import {
+  RENDERER_CONTRACT_VERSION,
+  validateHolographicRenderPacket,
+} from '../src/holographic-renderer-contract.mjs';
 
 const fixture = {
   schemaVersion: 1,
@@ -10,9 +13,22 @@ const fixture = {
   assets: [
     { id: 'solar-1', kind: 'solar', powerKw: 40, capacityKw: 50 },
     { id: 'wind-1', kind: 'wind', powerKw: 20, capacityKw: 30 },
-    { id: 'battery-1', kind: 'battery', powerKw: 0, capacityKw: 25, capacityKwh: 100, stateOfChargeKwh: 60 },
+    {
+      id: 'battery-1',
+      kind: 'battery',
+      powerKw: 0,
+      capacityKw: 25,
+      capacityKwh: 100,
+      stateOfChargeKwh: 60,
+    },
     { id: 'load-1', kind: 'load', powerKw: 45, flexible: true },
-    { id: 'grid-1', kind: 'grid_interconnect', powerKw: -15, importLimitKw: 80, exportLimitKw: 40 },
+    {
+      id: 'grid-1',
+      kind: 'grid_interconnect',
+      powerKw: -15,
+      importLimitKw: 80,
+      exportLimitKw: 40,
+    },
   ],
   topology: {
     nodes: ['node-a'],
@@ -30,7 +46,7 @@ test('pipeline emits a validated renderer packet without changing simulation aut
   const result = runSyntheticMicrogrid(fixture);
   assert.equal(result.simulation.status, 'passed');
   assert.equal(result.presentation.status, 'ready-for-renderer');
-  assert.equal(result.renderPacket.contractVersion, 1);
+  assert.equal(result.renderPacket.contractVersion, RENDERER_CONTRACT_VERSION);
   assert.equal(result.renderPacket.sceneId, result.scene.sceneId);
   assert.equal(result.renderPacket.target, 'holo-mat');
   assert.equal(result.renderPacket.deviceId, 'holo-mat-reference');
@@ -51,7 +67,9 @@ test('pipeline preserves a valid render packet when presentation has no compatib
 });
 
 test('pipeline render packet changes only with the requested presentation target', () => {
-  const result = runSyntheticMicrogrid(fixture, { preferredPresentationTarget: 'volumetric-3d' });
+  const result = runSyntheticMicrogrid(fixture, {
+    preferredPresentationTarget: 'volumetric-3d',
+  });
   assert.equal(result.renderPacket.target, 'volumetric-3d');
   assert.equal(result.renderPacket.deviceId, 'volumetric-reference');
   assert.equal(result.simulation.backend, 'thergrid-classical-reference-v1');

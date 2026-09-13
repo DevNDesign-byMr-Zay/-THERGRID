@@ -1,5 +1,9 @@
-import { describe, expect, it } from 'vitest';
-import { buildProvenanceGraph, validateProvenanceGraph } from '../src/provenance.mjs';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  buildProvenanceGraph,
+  validateProvenanceGraph,
+} from '../src/provenance.mjs';
 
 describe('renderer provenance graph', () => {
   it('tracks render packets as the final presentation artifact', () => {
@@ -15,8 +19,13 @@ describe('renderer provenance graph', () => {
       experimentId: 'experiment-1',
     });
 
-    expect(validateProvenanceGraph(graph, { requiredTypes: ['spatial-scene', 'render-packet'] })).toBe(true);
-    expect(graph.nodes.at(-1).type).toBe('render-packet');
-    expect(graph.edges.at(-1).to).toBe(graph.nodes.at(-1).id);
+    assert.equal(
+      validateProvenanceGraph(graph, {
+        requiredTypes: ['spatial-scene', 'render-packet'],
+      }),
+      true,
+    );
+    assert.equal(graph.nodes.at(-1).type, 'render-packet');
+    assert.equal(graph.edges.at(-1).to, graph.nodes.at(-1).id);
   });
 });

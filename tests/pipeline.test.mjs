@@ -10,9 +10,22 @@ const fixture = {
   assets: [
     { id: 'solar-1', kind: 'solar', powerKw: 40, capacityKw: 50 },
     { id: 'wind-1', kind: 'wind', powerKw: 20, capacityKw: 30 },
-    { id: 'battery-1', kind: 'battery', powerKw: 0, capacityKw: 25, capacityKwh: 100, stateOfChargeKwh: 60 },
+    {
+      id: 'battery-1',
+      kind: 'battery',
+      powerKw: 0,
+      capacityKw: 25,
+      capacityKwh: 100,
+      stateOfChargeKwh: 60,
+    },
     { id: 'load-1', kind: 'load', powerKw: 45, flexible: true },
-    { id: 'grid-1', kind: 'grid_interconnect', powerKw: -15, importLimitKw: 80, exportLimitKw: 40 },
+    {
+      id: 'grid-1',
+      kind: 'grid_interconnect',
+      powerKw: -15,
+      importLimitKw: 80,
+      exportLimitKw: 40,
+    },
   ],
   topology: {
     nodes: ['node-a'],
@@ -42,13 +55,27 @@ test('runs the complete deterministic vertical slice with evidence gates', () =>
   assert.equal(first.presentation.authoritative, false);
   assert.equal(first.presentation.actuatesHardware, false);
   assert.equal(first.provenance.contractVersion, 2);
-  assert.equal(first.provenance.nodes.length, 7);
+  assert.deepEqual(
+    first.provenance.nodes.map((node) => node.type),
+    [
+      'telemetry',
+      'twin-state',
+      'forecast',
+      'operating-proposal',
+      'simulation',
+      'decision-receipt',
+      'spatial-scene',
+      'render-packet',
+    ],
+  );
   assert.equal(first.promotion.status, 'eligible');
   assert.equal(first.promotion.authoritative, false);
 });
 
 test('selects an explicit presentation target without changing the authoritative pipeline', () => {
-  const result = runSyntheticMicrogrid(fixture, { preferredPresentationTarget: 'volumetric-3d' });
+  const result = runSyntheticMicrogrid(fixture, {
+    preferredPresentationTarget: 'volumetric-3d',
+  });
   assert.equal(result.presentation.target, 'volumetric-3d');
   assert.equal(result.presentation.deviceId, 'volumetric-reference');
   assert.equal(result.presentation.status, 'ready-for-renderer');
@@ -67,14 +94,21 @@ test('degrades cleanly when no presentation device is available', () => {
 
 test('rejects a presentation target outside the scene renderer contract', () => {
   assert.throws(
-    () => runSyntheticMicrogrid(fixture, { preferredPresentationTarget: 'physical-grid-control' }),
+    () =>
+      runSyntheticMicrogrid(fixture, {
+        preferredPresentationTarget: 'physical-grid-control',
+      }),
     /target is not supported by the scene/,
   );
 });
 
 test('records VÆLON capability and explicit fallback identity', () => {
   const route = createModelRoute({ model: 'VÆLON', version: 'phase-2-contract' });
-  const evidence = buildModelEvidence({ route, capability: 'optimization.explore', fallbackUsed: true });
+  const evidence = buildModelEvidence({
+    route,
+    capability: 'optimization.explore',
+    fallbackUsed: true,
+  });
   assert.equal(evidence.model, 'VÆLON');
   assert.equal(evidence.fallbackUsed, true);
   assert.equal(evidence.fallbackIdentity, 'classical-reference-v1');
