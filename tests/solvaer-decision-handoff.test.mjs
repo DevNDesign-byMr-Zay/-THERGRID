@@ -11,6 +11,7 @@ test('SOLVÆR decision handoff produces simulation evidence without promotion au
     candidate,
     provenanceRef: result.provenance,
     twinState: result.twinState,
+    forecast: result.forecast,
     proposal: result.proposal,
   });
 
