@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
 
+import { SCENE_VERSION } from './spatial-scene.mjs';
+
 const OPERATOR_PROJECTION_VERSION = 1;
 const SUPPORTED_TARGETS = Object.freeze([
   'holo-mat',
@@ -100,6 +102,9 @@ export function buildOperatorAttentionProjection({ scene, handoff, target } = {}
   const snapshotId = text(spatialScene.snapshotId, 'scene.snapshotId');
   const handoffSnapshotId = text(evidenceHandoff.snapshotId, 'handoff.snapshotId');
 
+  if (spatialScene.sceneVersion !== SCENE_VERSION) {
+    throw new TypeError(`scene.sceneVersion must equal ${SCENE_VERSION}`);
+  }
   if (snapshotId !== handoffSnapshotId) {
     throw new TypeError('scene.snapshotId must match handoff.snapshotId');
   }
@@ -127,6 +132,7 @@ export function buildOperatorAttentionProjection({ scene, handoff, target } = {}
 
   const payload = Object.freeze({
     projectionVersion: OPERATOR_PROJECTION_VERSION,
+    sceneVersion: SCENE_VERSION,
     snapshotId,
     sceneId: text(spatialScene.sceneId, 'scene.sceneId'),
     provenanceRef: text(spatialScene.provenanceRef, 'scene.provenanceRef'),
@@ -172,6 +178,9 @@ export function validateOperatorAttentionProjection(projection) {
   const value = object(projection, 'projection');
   if (value.projectionVersion !== OPERATOR_PROJECTION_VERSION) {
     throw new TypeError(`projection.projectionVersion must equal ${OPERATOR_PROJECTION_VERSION}`);
+  }
+  if (value.sceneVersion !== SCENE_VERSION) {
+    throw new TypeError(`projection.sceneVersion must equal ${SCENE_VERSION}`);
   }
 
   text(value.snapshotId, 'projection.snapshotId');
