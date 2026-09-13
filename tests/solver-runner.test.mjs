@@ -4,7 +4,7 @@ import { createClassicalReferenceAdapter, createQuantumInspiredAdapter } from '.
 import { runSolverCandidates } from '../src/solver-runner.mjs';
 
 const input = {
-  experimentId: 'exp-runner-001', snapshotId: 'snapshot-runner-001', proposal: { projectedBalanceKw: 0 }, constraints: { advisoryOnly: true }, seed: 11, provenance: ['receipt-runner-001'],
+  experimentId: 'exp-runner-001', snapshotId: 'snapshot-runner-001', proposal: { projectedBalanceKw: 0 }, constraints: { advisoryOnly: true }, seed: 11, provenance: ['receipt-runner-001', 'scene-runner-001'],
 };
 
 test('runner ranks feasible candidates by objective before runtime', async () => {
