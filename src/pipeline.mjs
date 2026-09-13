@@ -27,18 +27,12 @@ export function runSyntheticMicrogrid(snapshot, { presentationDevices = DEFAULT_
   const provenanceSeed = { experimentId, snapshotId: snapshot.snapshotId, receiptId };
   const scene = buildSpatialScene({ twinState, proposal, provenance: provenanceSeed });
   const presentation = planHolographicPresentation({ scene, devices: presentationDevices, preferredTarget: preferredPresentationTarget });
-  const renderPacket = compileHolographicRenderPacket({ scene, presentation });
+  const renderPacket = compileHolographicRenderPacket({ scene, presentation, experimentId, receiptId });
   const provenance = buildProvenanceGraph({ snapshot, twinState, forecast, proposal, simulation, receipt: receiptWithId, scene, renderPacket, experimentId });
   const provenanceValid = validateProvenanceGraph(provenance, { requiredTypes: ['telemetry', 'twin-state', 'forecast', 'operating-proposal', 'simulation', 'decision-receipt', 'spatial-scene', 'render-packet'] });
   const solverEvidence = buildSolverEvidence({ experimentId, inputSnapshotId: snapshot.snapshotId, candidate: { model: 'thergrid-classical-reference', solver: 'thergrid-reference', version: 'v1' }, constraints: proposal.constraints ?? null, seed: simulation.seed ?? null, objective: Math.abs(simulation.outputs.residualBalanceKw), feasible: simulation.status === 'passed' && Math.abs(simulation.outputs.residualBalanceKw) <= 0.000001, runtimeMs: simulation.runtimeMs, timeout: false, provenance: [receiptId, scene.sceneId] });
   const promotion = evaluatePromotionGate({ evidence: solverEvidence, validation: { simulationPassed: simulation.status === 'passed', receiptValid: receiptId === fingerprintDecisionReceipt(receipt), provenanceValid } });
-  const solvaerRequest = createSolvaerOptimizationRequest({
-    experimentId,
-    snapshotId: snapshot.snapshotId,
-    twinStateRef: `twin-state:${snapshot.snapshotId}`,
-    objective: 'explore lower residual balance while preserving simulation constraints',
-    constraints: proposal.constraints ?? null,
-  });
+  const solvaerRequest = createSolvaerOptimizationRequest({ experimentId, snapshotId: snapshot.snapshotId, twinStateRef: `twin-state:${snapshot.snapshotId}`, objective: 'explore lower residual balance while preserving simulation constraints', constraints: proposal.constraints ?? null });
 
   return { twinState, forecast, proposal, simulation, receipt: receiptWithId, scene, presentation, renderPacket, experimentId, solverEvidence, promotion, provenance, solvaerRequest };
 }
