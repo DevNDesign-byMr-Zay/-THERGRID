@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-const EVALUATION_VERSION = 1;
+const EVALUATION_VERSION = 2;
 
 function object(value, name) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError(`${name} must be an object`);
@@ -22,7 +22,7 @@ function canonical(value) {
 
 export function buildSolverEvidence({ experimentId, candidate, inputSnapshotId, constraints = null, seed = null, objective, feasible, runtimeMs, timeout = false, fallback = null, provenance = [] } = {}) {
   const c = object(candidate, 'candidate');
-  const evidence = {
+  return Object.freeze({
     evaluationVersion: EVALUATION_VERSION,
     experimentId: text(experimentId, 'experimentId'),
     inputSnapshotId: text(inputSnapshotId, 'inputSnapshotId'),
@@ -39,8 +39,7 @@ export function buildSolverEvidence({ experimentId, candidate, inputSnapshotId, 
     timeout: Boolean(timeout),
     fallback: fallback == null ? null : text(fallback, 'fallback'),
     provenance: Array.isArray(provenance) ? provenance.map((ref) => text(ref, 'provenance reference')) : [],
-  };
-  return Object.freeze(evidence);
+  });
 }
 
 export function fingerprintSolverEvidence(evidence) {
@@ -51,34 +50,21 @@ export function compareSolverEvidence(evidences = []) {
   if (!Array.isArray(evidences)) throw new TypeError('evidences must be an array');
   return evidences.map((evidence) => {
     const value = object(evidence, 'evidence');
-    return Object.freeze({
-      fingerprint: fingerprintSolverEvidence(value),
-      candidate: value.candidate,
-      feasible: value.feasible,
-      objective: value.objective,
-      runtimeMs: value.runtimeMs,
-      timeout: value.timeout,
-      fallback: value.fallback,
-    });
+    return Object.freeze({ fingerprint: fingerprintSolverEvidence(value), candidate: value.candidate, feasible: value.feasible, objective: value.objective, runtimeMs: value.runtimeMs, timeout: value.timeout, fallback: value.fallback });
   });
 }
 
-export function evaluatePromotionGate({ evidence, simulationPassed, receiptValid, provenanceValid } = {}) {
+export function evaluatePromotionGate({ evidence, validation } = {}) {
   const value = object(evidence, 'evidence');
   const checks = {
     evidenceComplete: Boolean(value.experimentId && value.inputSnapshotId && value.candidate?.model && value.candidate?.solver && value.candidate?.version),
     feasible: value.feasible === true && value.timeout === false,
-    simulationPassed: simulationPassed === true,
-    receiptValid: receiptValid === true,
-    provenanceValid: provenanceValid === true,
+    simulationPassed: validation?.simulationPassed === true,
+    receiptValid: validation?.receiptValid === true,
+    provenanceValid: validation?.provenanceValid === true,
   };
   const passed = Object.values(checks).every(Boolean);
-  return Object.freeze({
-    status: passed ? 'eligible' : 'rejected',
-    checks,
-    authoritative: false,
-    reason: passed ? 'candidate passed evidence and validation gates' : 'candidate failed one or more validation gates',
-  });
+  return Object.freeze({ status: passed ? 'eligible' : 'rejected', checks, authoritative: false, reason: passed ? 'candidate passed evidence and validation gates' : 'candidate failed one or more validation gates' });
 }
 
 export { EVALUATION_VERSION };
