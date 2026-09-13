@@ -37,10 +37,20 @@ export function acceptSolvaerOptimizationResult({ request, candidate, provenance
   if (input.experimentId !== text(provenance.experimentId, 'provenanceRef.experimentId')) {
     throw new TypeError('candidate experimentId must match request');
   }
+  if (result.experimentId != null && text(result.experimentId, 'candidate.experimentId') !== input.experimentId) {
+    throw new TypeError('candidate experimentId must match request');
+  }
+  if (result.snapshotId != null && text(result.snapshotId, 'candidate.snapshotId') !== input.snapshotId) {
+    throw new TypeError('candidate snapshotId must match request');
+  }
+  if (provenance.snapshotId != null && text(provenance.snapshotId, 'provenanceRef.snapshotId') !== input.snapshotId) {
+    throw new TypeError('provenance snapshotId must match request');
+  }
   return Object.freeze({
     contractVersion: CONTRACT_VERSION,
     capability: CAPABILITY,
     experimentId: input.experimentId,
+    snapshotId: input.snapshotId,
     candidate: result,
     provenanceRef: provenance,
     fallbackUsed: fallbackUsed === true,
