@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   compileHolographicRenderPacket,
   validateHolographicRenderPacket,
+  RENDERER_CONTRACT_VERSION,
 } from '../src/holographic-renderer-contract.mjs';
 
 const scene = {
@@ -25,8 +26,10 @@ const presentation = {
   status: 'ready-for-renderer',
 };
 
-test('compiles a deterministic renderer packet with a safety boundary', () => {
+test('uses renderer contract v2 and preserves the safety boundary', () => {
   const packet = compileHolographicRenderPacket({ scene, presentation });
+  assert.equal(RENDERER_CONTRACT_VERSION, 2);
+  assert.equal(packet.contractVersion, 2);
   assert.equal(packet.target, 'holo-mat');
   assert.equal(packet.deviceId, 'mat-a');
   assert.equal(packet.nodes[0].position.z, 3);
@@ -78,5 +81,15 @@ test('requires a device for a renderer-ready plan', () => {
       presentation: { ...presentation, deviceId: null },
     }),
     /requires a deviceId/,
+  );
+});
+
+test('fails closed on unsupported render targets', () => {
+  assert.throws(
+    () => compileHolographicRenderPacket({
+      scene,
+      presentation: { ...presentation, target: 'unsupported-surface' },
+    }),
+    /unsupported render target/,
   );
 });
