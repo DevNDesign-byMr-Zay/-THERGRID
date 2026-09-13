@@ -93,6 +93,7 @@ test('builds deterministic advisory projections for every renderer-neutral targe
     });
 
     assert.equal(first.projectionFingerprint, second.projectionFingerprint);
+    assert.equal(first.sceneVersion, 2);
     assert.equal(first.snapshotId, 'snapshot-001');
     assert.equal(first.target.name, target);
     assert.equal(first.target.rendererNeutral, true);
@@ -118,7 +119,7 @@ test('preserves fallback disclosure as deterministic operator attention', () => 
   assert.match(projection.attention[0].reason, /classical-reference-v1/);
 });
 
-test('rejects snapshot mismatch and unsupported targets before projection', () => {
+test('rejects mismatched scene identity and unsupported targets before projection', () => {
   assert.throws(
     () =>
       buildOperatorAttentionProjection({
@@ -127,6 +128,16 @@ test('rejects snapshot mismatch and unsupported targets before projection', () =
         target: 'web-dashboard',
       }),
     /snapshotId must match/,
+  );
+
+  assert.throws(
+    () =>
+      buildOperatorAttentionProjection({
+        scene: { ...scene(), sceneVersion: 99 },
+        handoff: handoff(),
+        target: 'web-dashboard',
+      }),
+    /sceneVersion must equal 2/,
   );
 
   assert.throws(
@@ -154,6 +165,15 @@ test('fails validation when projection identity or authority fields are tampered
         sceneId: 'scene-tampered',
       }),
     /fingerprint integrity check failed/,
+  );
+
+  assert.throws(
+    () =>
+      validateOperatorAttentionProjection({
+        ...projection,
+        sceneVersion: 99,
+      }),
+    /sceneVersion must equal 2/,
   );
 
   assert.throws(
