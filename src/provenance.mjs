@@ -29,7 +29,7 @@ export function fingerprintExperiment(input = {}) {
   return createHash('sha256').update(JSON.stringify(normalized), 'utf8').digest('hex');
 }
 
-export function buildProvenanceGraph({ snapshot, twinState, forecast, proposal, simulation, receipt, scene, experimentId } = {}) {
+export function buildProvenanceGraph({ snapshot, twinState, forecast, proposal, simulation, receipt, scene, renderPacket = null, experimentId } = {}) {
   const artifacts = [
     ['telemetry', snapshot],
     ['twin-state', twinState],
@@ -38,6 +38,7 @@ export function buildProvenanceGraph({ snapshot, twinState, forecast, proposal, 
     ['simulation', simulation],
     ['decision-receipt', receipt],
     ['spatial-scene', scene],
+    ['render-packet', renderPacket],
   ];
 
   const nodes = artifacts
