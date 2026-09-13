@@ -36,6 +36,25 @@ test('compiles a deterministic renderer packet with a safety boundary', () => {
   assert.equal(validateHolographicRenderPacket(packet), true);
 });
 
+test('binds renderer packets to experiment and receipt identity', () => {
+  const packet = compileHolographicRenderPacket({
+    scene,
+    presentation,
+    experimentId: 'experiment-001',
+    receiptId: 'receipt-001',
+  });
+  assert.equal(packet.experimentId, 'experiment-001');
+  assert.equal(packet.receiptId, 'receipt-001');
+  assert.equal(validateHolographicRenderPacket(packet), true);
+});
+
+test('rejects malformed evidence identity at compilation', () => {
+  assert.throws(
+    () => compileHolographicRenderPacket({ scene, presentation, experimentId: '   ' }),
+    /experimentId must be a non-empty string/,
+  );
+});
+
 test('rejects a mismatched scene and presentation', () => {
   assert.throws(
     () => compileHolographicRenderPacket({
@@ -49,6 +68,7 @@ test('rejects a mismatched scene and presentation', () => {
 test('detects tampering after compilation', () => {
   const packet = compileHolographicRenderPacket({ scene, presentation });
   assert.equal(validateHolographicRenderPacket({ ...packet, target: 'projector' }), false);
+  assert.equal(validateHolographicRenderPacket({ ...packet, experimentId: 'tampered' }), false);
 });
 
 test('requires a device for a renderer-ready plan', () => {
