@@ -12,13 +12,22 @@ export function runSyntheticMicrogrid(snapshot) {
   const simulation = simulateProposal({ twinState, proposal });
   const receipt = buildDecisionReceipt({ twinState, forecast, proposal });
   const receiptId = fingerprintDecisionReceipt(receipt);
-  const scene = buildSpatialScene({ twinState, proposal });
   const experimentId = fingerprintExperiment({
     inputs: { snapshotId: snapshot.snapshotId, observedAt: snapshot.observedAt },
     constraints: proposal.constraints ?? null,
     model: { identity: 'thergrid-classical-reference-v1' },
     solver: { identity: 'thergrid-reference-v1' },
     seed: simulation.seed ?? null,
+  });
+  const provenanceSeed = {
+    experimentId,
+    snapshotId: snapshot.snapshotId,
+    receiptId,
+  };
+  const scene = buildSpatialScene({
+    twinState,
+    proposal,
+    provenance: provenanceSeed,
   });
   const provenance = buildProvenanceGraph({
     snapshot,
