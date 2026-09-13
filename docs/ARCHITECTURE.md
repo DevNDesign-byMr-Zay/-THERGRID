@@ -69,10 +69,18 @@ No future actuator should accept an `OperatingProposal` directly. It should acce
 
 Responsibilities:
 - convert `TwinState`, alerts, proposals, and simulations into a renderer-neutral scene contract
+- negotiate presentation against declared device capabilities
 - support 2D, 3D, AR/VR, and future holographic clients without changing core twin logic
 - surface provenance and confidence alongside visual state
+- stop at a renderer-ready plan; physical actuation remains outside this layer
 
-Output: `SpatialScene`.
+Output: `SpatialScene` plus an optional `HolographicPresentationPlan`.
+
+The presentation path is intentionally downstream of authoritative state:
+
+`TwinState -> proposal -> simulation -> decision receipt -> SpatialScene -> device capability routing -> renderer-ready plan`
+
+A missing presentation device must not invalidate the underlying simulation or decision evidence.
 
 ## 3. Model-family integration
 
@@ -104,6 +112,8 @@ Phase 1 should define these schemas first:
 - `SimulationResult`
 - `DecisionReceipt`
 - `SpatialScene`
+- `HolographicDeviceDescriptor`
+- `HolographicPresentationPlan`
 
 Use versioned schemas and reject unknown required fields or malformed units at system boundaries.
 
@@ -126,7 +136,8 @@ Then implement:
 5. simulation of that proposal
 6. decision receipt generation
 7. spatial scene serialization
-8. integration test covering the full path
+8. presentation capability negotiation
+9. integration tests covering the full path
 
 ## 6. Security and safety constraints
 
@@ -137,7 +148,9 @@ Then implement:
 - Reject stale telemetry when freshness is required by the scenario.
 - Keep raw telemetry immutable; derived state belongs in separate records.
 - Every autonomous boundary must be observable and testable.
+- Device descriptors are capability declarations only; they never authorize actuation.
+- Renderer selection must fail closed to `no-compatible-device` rather than inventing a target.
 
 ## 7. Definition of done for architecture foundation
 
-The architecture foundation is ready when a fresh clone can install, run tests, execute the synthetic microgrid scenario, and generate deterministic `TwinState`, `OperatingProposal`, `SimulationResult`, `DecisionReceipt`, and `SpatialScene` artifacts without external credentials.
+The architecture foundation is ready when a fresh clone can install, run tests, execute the synthetic microgrid scenario, and generate deterministic `TwinState`, `OperatingProposal`, `SimulationResult`, `DecisionReceipt`, `SpatialScene`, and renderer-ready presentation artifacts without external credentials or physical side effects.
