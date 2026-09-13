@@ -36,10 +36,40 @@ test('runs the complete deterministic vertical slice with evidence gates', () =>
   assert.match(first.receipt.receiptId, /^[a-f0-9]{64}$/);
   assert.equal(first.scene.sceneVersion, 2);
   assert.equal(first.scene.rendererContract.mode, 'renderer-neutral');
+  assert.equal(first.presentation.status, 'ready-for-renderer');
+  assert.equal(first.presentation.target, 'holo-mat');
+  assert.equal(first.presentation.deviceId, 'holo-mat-reference');
+  assert.equal(first.presentation.authoritative, false);
+  assert.equal(first.presentation.actuatesHardware, false);
   assert.equal(first.provenance.contractVersion, 2);
   assert.equal(first.provenance.nodes.length, 7);
   assert.equal(first.promotion.status, 'eligible');
   assert.equal(first.promotion.authoritative, false);
+});
+
+test('selects an explicit presentation target without changing the authoritative pipeline', () => {
+  const result = runSyntheticMicrogrid(fixture, { preferredPresentationTarget: 'volumetric-3d' });
+  assert.equal(result.presentation.target, 'volumetric-3d');
+  assert.equal(result.presentation.deviceId, 'volumetric-reference');
+  assert.equal(result.presentation.status, 'ready-for-renderer');
+  assert.equal(result.receipt.receiptId.length, 64);
+  assert.equal(result.presentation.authoritative, false);
+});
+
+test('degrades cleanly when no presentation device is available', () => {
+  const result = runSyntheticMicrogrid(fixture, { presentationDevices: [] });
+  assert.equal(result.presentation.status, 'no-compatible-device');
+  assert.equal(result.presentation.deviceId, null);
+  assert.equal(result.presentation.target, null);
+  assert.equal(result.simulation.status, 'passed');
+  assert.equal(result.promotion.status, 'eligible');
+});
+
+test('rejects a presentation target outside the scene renderer contract', () => {
+  assert.throws(
+    () => runSyntheticMicrogrid(fixture, { preferredPresentationTarget: 'physical-grid-control' }),
+    /target is not supported by the scene/,
+  );
 });
 
 test('records VÆLON capability and explicit fallback identity', () => {
