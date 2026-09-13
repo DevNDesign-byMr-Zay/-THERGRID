@@ -1,4 +1,4 @@
-const CONTRACT_VERSION = 1;
+const CONTRACT_VERSION = 2;
 const CAPABILITY = 'optimization.explore';
 
 function object(value, name) {
@@ -12,16 +12,21 @@ function text(value, name) {
 }
 
 /**
- * Defines the future SOLVÆR optimization handoff without granting authority
- * over THERGRID simulation, promotion, or physical infrastructure.
+ * Defines the SOLVÆR optimization handoff without granting authority over
+ * THERGRID simulation, promotion, or physical infrastructure.
  */
 export function createSolvaerOptimizationRequest({ experimentId, snapshotId, twinStateRef, objective, constraints = null } = {}) {
+  const normalizedSnapshotId = text(snapshotId, 'snapshotId');
+  const normalizedTwinStateRef = text(twinStateRef, 'twinStateRef');
+  if (normalizedTwinStateRef !== `twin-state:${normalizedSnapshotId}`) {
+    throw new TypeError('twinStateRef must bind to snapshotId');
+  }
   return Object.freeze({
     contractVersion: CONTRACT_VERSION,
     capability: CAPABILITY,
     experimentId: text(experimentId, 'experimentId'),
-    snapshotId: text(snapshotId, 'snapshotId'),
-    twinStateRef: text(twinStateRef, 'twinStateRef'),
+    snapshotId: normalizedSnapshotId,
+    twinStateRef: normalizedTwinStateRef,
     objective: text(objective, 'objective'),
     constraints: constraints == null ? null : object(constraints, 'constraints'),
     safety: { advisoryOnly: true, authoritative: false, actuatesHardware: false },
@@ -34,6 +39,7 @@ export function acceptSolvaerOptimizationResult({ request, candidate, provenance
   const provenance = object(provenanceRef, 'provenanceRef');
   if (input.contractVersion !== CONTRACT_VERSION) throw new TypeError('unsupported SOLVÆR contract version');
   if (input.capability !== CAPABILITY) throw new TypeError('request capability must be optimization.explore');
+  if (input.twinStateRef !== `twin-state:${input.snapshotId}`) throw new TypeError('request twinStateRef must bind to snapshotId');
   if (input.experimentId !== text(provenance.experimentId, 'provenanceRef.experimentId')) {
     throw new TypeError('candidate experimentId must match request');
   }
