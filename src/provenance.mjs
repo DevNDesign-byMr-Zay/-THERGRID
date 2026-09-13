@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-const PROVENANCE_VERSION = 1;
+const PROVENANCE_VERSION = 2;
 
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
@@ -8,6 +8,14 @@ function canonical(value) {
     return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonical(value[key])]));
   }
   return value;
+}
+
+function artifactId(type, value) {
+  const digest = createHash('sha256')
+    .update(`${PROVENANCE_VERSION}:${type}:${JSON.stringify(canonical(value))}`, 'utf8')
+    .digest('hex')
+    .slice(0, 16);
+  return `${type}-${digest}`;
 }
 
 export function fingerprintExperiment(input = {}) {
@@ -21,19 +29,38 @@ export function fingerprintExperiment(input = {}) {
   return createHash('sha256').update(JSON.stringify(normalized), 'utf8').digest('hex');
 }
 
-export function buildProvenanceGraph({ snapshot, twinState, forecast, proposal, simulation, receipt, scene } = {}) {
-  const nodes = [
-    ['telemetry', snapshot?.snapshotId],
-    ['twin-state', twinState?.snapshotId],
-    ['forecast', forecast?.forecastFor],
-    ['operating-proposal', proposal?.strategy],
-    ['simulation', simulation?.status],
-    ['decision-receipt', receipt?.receiptId],
-    ['spatial-scene', scene?.sceneId],
-  ].filter(([, id]) => id !== undefined && id !== null).map(([type, id]) => ({ type, id: String(id) }));
+export function buildProvenanceGraph({ snapshot, twinState, forecast, proposal, simulation, receipt, scene, experimentId } = {}) {
+  const artifacts = [
+    ['telemetry', snapshot],
+    ['twin-state', twinState],
+    ['forecast', forecast],
+    ['operating-proposal', proposal],
+    ['simulation', simulation],
+    ['decision-receipt', receipt],
+    ['spatial-scene', scene],
+  ];
 
+  const nodes = artifacts
+    .filter(([, value]) => value != null)
+    .map(([type, value]) => ({ type, id: artifactId(type, value) }));
   const edges = nodes.slice(1).map((node, index) => ({ from: nodes[index].id, to: node.id }));
-  return Object.freeze({ contractVersion: PROVENANCE_VERSION, nodes: Object.freeze(nodes), edges: Object.freeze(edges) });
+
+  return Object.freeze({
+    contractVersion: PROVENANCE_VERSION,
+    experimentId: experimentId ?? null,
+    nodes: Object.freeze(nodes),
+    edges: Object.freeze(edges),
+  });
+}
+
+export function validateProvenanceGraph(graph, { requiredTypes = [] } = {}) {
+  if (!graph || typeof graph !== 'object' || Array.isArray(graph)) throw new TypeError('graph must be an object');
+  if (graph.contractVersion !== PROVENANCE_VERSION) return false;
+  if (!Array.isArray(graph.nodes) || !Array.isArray(graph.edges)) return false;
+  const ids = new Set(graph.nodes.map((node) => node.id));
+  if (ids.size !== graph.nodes.length) return false;
+  if (graph.edges.some((edge) => !ids.has(edge.from) || !ids.has(edge.to))) return false;
+  return requiredTypes.every((type) => graph.nodes.some((node) => node.type === type));
 }
 
 export { PROVENANCE_VERSION };
