@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { runSyntheticMicrogrid } from '../src/pipeline.mjs';
 import { validateSolvaerCollaborationEvidence } from '../src/solvaer-collaboration-evidence.mjs';
 import { buildSolvaerDecisionRenderBridge } from '../src/solvaer-decision-render-bridge.mjs';
+import { validateSolvaerOperatorAttention } from '../src/solvaer-operator-attention.mjs';
 import { validateHolographicRenderPacket } from '../src/holographic-renderer-contract.mjs';
 
 const snapshot = {
@@ -14,7 +15,7 @@ const snapshot = {
   ],
 };
 
-test('SOLVÆR decision bridge preserves experiment evidence through rendering', () => {
+test('SOLVÆR decision bridge preserves experiment evidence through rendering and operator attention', () => {
   const baseline = runSyntheticMicrogrid(snapshot);
   const candidate = {
     experimentId: baseline.experimentId,
@@ -39,6 +40,11 @@ test('SOLVÆR decision bridge preserves experiment evidence through rendering', 
   assert.equal(bridge.decision.promotionEligible, false);
   assert.equal(bridge.collaborationEvidence.experimentId, baseline.experimentId);
   assert.equal(validateSolvaerCollaborationEvidence(bridge.collaborationEvidence), true);
+  assert.equal(bridge.operatorAttention.experimentId, baseline.experimentId);
+  assert.equal(bridge.operatorAttention.snapshotId, snapshot.snapshotId);
+  assert.equal(validateSolvaerOperatorAttention(bridge.operatorAttention), true);
+  assert.equal(bridge.operatorAttention.items.length, 2);
+  assert.equal(bridge.operatorAttention.items[0].evidenceRef, bridge.collaborationEvidence.evidenceFingerprint);
   assert.equal(bridge.renderPacket.experimentId, baseline.experimentId);
   assert.equal(bridge.renderPacket.receiptId, bridge.decision.decisionReceipt.receiptId);
   assert.equal(validateHolographicRenderPacket(bridge.renderPacket), true);
