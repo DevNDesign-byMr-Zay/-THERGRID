@@ -9,16 +9,20 @@ test('benchmark receipts reject invalid measurement inputs before execution', ()
   assert.throws(() => createBenchmarkReceipt({ linear: [] }), /linear coefficients are required/);
   assert.throws(() => createBenchmarkReceipt({ linear: [1, Number.NaN] }), /linear coefficients must be finite/);
   assert.throws(() => createBenchmarkReceipt({ linear: [1], quadratic: {} }), /quadratic coefficients must be an array/);
-  assert.throws(() => createBenchmarkReceipt({ linear: [1], quadratic: [{ i: 0, j: 1, value: Number.NaN }] }), /quadratic coefficients must contain finite/);
+  assert.throws(() => createBenchmarkReceipt({ linear: [1], quadratic: [[0, 1, Number.NaN]] }), /quadratic coefficients must be finite/);
+  assert.throws(() => createBenchmarkReceipt({ linear: [1], quadratic: [[0, 1, 2]] }), /quadratic indices must reference existing variables/);
+  assert.throws(() => createBenchmarkReceipt({ linear: [1, 2], quadratic: [[0, 0, 2]] }), /quadratic terms cannot be diagonal/);
   assert.throws(() => createBenchmarkReceipt({ linear: [1], seed: -1 }), /seed must be a non-negative integer/);
   assert.throws(() => createBenchmarkReceipt({ linear: [1], iterations: 0 }), /iterations must be a positive integer/);
 });
 
 test('benchmark receipt remains serializable and self-identifying for valid deterministic input', () => {
-  const receipt = createBenchmarkReceipt({ linear: [1, -2], seed: 7, iterations: 20 });
+  const receipt = createBenchmarkReceipt({ linear: [1, -2], quadratic: [[1, 0, 0.5]], seed: 7, iterations: 20 });
   assert.equal(receipt.schema, 'thergrid-optimization-benchmark-receipt-v1');
   assert.match(receipt.measurementFingerprint, /^[a-f0-9]{64}$/);
   assert.equal(receipt.problem.variableCount, 2);
+  assert.deepEqual(receipt.problem.linear, [1, -2]);
+  assert.deepEqual(receipt.problem.quadratic, [[0, 1, 0.5]]);
   assert.equal(receipt.configuration.seed, 7);
   assert.equal(receipt.configuration.iterations, 20);
   assert.equal(receipt.comparison.exactBackend, receipt.reference.backend);
@@ -32,7 +36,7 @@ test('benchmark receipt remains serializable and self-identifying for valid dete
 });
 
 test('benchmark receipt fingerprint is stable across object key ordering', () => {
-  const receipt = createBenchmarkReceipt({ linear: [1, -2], seed: 7, iterations: 20 });
+  const receipt = createBenchmarkReceipt({ linear: [1, -2], quadratic: [[1, 0, 0.5]], seed: 7, iterations: 20 });
   const reordered = {
     measurementFingerprint: receipt.measurementFingerprint,
     durationMs: receipt.durationMs,
@@ -57,6 +61,8 @@ test('benchmark receipt fingerprint is stable across object key ordering', () =>
       seed: receipt.configuration.seed,
     },
     problem: {
+      quadratic: receipt.problem.quadratic,
+      linear: receipt.problem.linear,
       variableCount: receipt.problem.variableCount,
       version: receipt.problem.version,
       kind: receipt.problem.kind,
@@ -64,6 +70,24 @@ test('benchmark receipt fingerprint is stable across object key ordering', () =>
     schema: receipt.schema,
   };
   assert.doesNotThrow(() => validateBenchmarkReceipt(reordered));
+});
+
+test('receipt fingerprint binds the canonical QUBO coefficients', () => {
+  const receipt = createBenchmarkReceipt({ linear: [1, -2], quadratic: [[1, 0, 0.5]], seed: 7, iterations: 20 });
+  assert.throws(() => validateBenchmarkReceipt({
+    ...receipt,
+    problem: {
+      ...receipt.problem,
+      linear: [1, -1.9],
+    },
+  }), /measurement fingerprint mismatch/);
+  assert.throws(() => validateBenchmarkReceipt({
+    ...receipt,
+    problem: {
+      ...receipt.problem,
+      quadratic: [[0, 1, 0.6]],
+    },
+  }), /measurement fingerprint mismatch/);
 });
 
 test('receipt boundary rejects structurally or cryptographically tampered evidence', () => {
