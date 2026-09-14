@@ -61,6 +61,8 @@ export function validateBenchmarkReceipt(receipt) {
     || typeof receipt.comparison.matchedObjective !== 'boolean'
     || receipt.comparison.exactBackend !== receipt.reference.backend
     || receipt.comparison.candidateBackend !== receipt.candidate.backend
+    || receipt.comparison.objectiveGap !== receipt.candidate.objective - receipt.reference.objective
+    || receipt.comparison.matchedObjective !== (receipt.candidate.objective === receipt.reference.objective)
   ) {
     throw new TypeError('invalid benchmark receipt comparison.');
   }
