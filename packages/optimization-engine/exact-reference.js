@@ -8,6 +8,19 @@ export function solveQuboExactly({ linear, quadratic = [] } = {}) {
   if (!Array.isArray(linear) || linear.length === 0) {
     throw new TypeError('linear coefficients are required.');
   }
+  if (linear.some((value) => typeof value !== 'number' || !Number.isFinite(value))) {
+    throw new TypeError('linear coefficients must be finite numbers.');
+  }
+  if (!Array.isArray(quadratic)) {
+    throw new TypeError('quadratic coefficients must be an array.');
+  }
+  for (const row of quadratic) {
+    if (!Array.isArray(row)) throw new TypeError('quadratic coefficients must contain arrays.');
+    if (row.some((value) => value !== undefined && (typeof value !== 'number' || !Number.isFinite(value)))) {
+      throw new TypeError('quadratic coefficients must be finite numbers.');
+    }
+  }
+
   const variableCount = linear.length;
   if (variableCount > 20) {
     throw new RangeError('exact QUBO reference is limited to 20 variables.');
