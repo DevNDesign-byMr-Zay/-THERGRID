@@ -147,6 +147,26 @@ test('rejects evidence whose nested candidate does not match the accepted candid
   );
 });
 
+test('rejects evidence whose nested provenance does not match accepted provenance', () => {
+  const fixture = collaborationFixture('snapshot-solvaer-provenance-bind');
+  const differentProvenance = {
+    ...fixture.provenanceRef,
+    source: 'alternate-provenance',
+  };
+
+  assert.throws(
+    () => evaluateSolvaerCandidate({
+      request: fixture.pipeline.solvaerRequest,
+      candidate: fixture.candidate,
+      provenanceRef: differentProvenance,
+      collaborationEvidence: fixture.collaborationEvidence,
+      twinState: fixture.pipeline.twinState,
+      proposal: fixture.pipeline.proposal,
+    }),
+    /collaboration evidence provenance must match accepted provenance/,
+  );
+});
+
 test('rejects a candidate from a different snapshot before simulation', () => {
   const fixture = collaborationFixture('snapshot-solvaer-mismatch');
   assert.throws(
