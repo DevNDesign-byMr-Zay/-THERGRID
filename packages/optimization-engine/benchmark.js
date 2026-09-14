@@ -7,8 +7,13 @@ import { solveQuboExactly } from './exact-reference.js';
 export { solveQuboExactly } from './exact-reference.js';
 
 export function compareOptimization(result, exact) {
-  if (!result || !exact || typeof result.objective !== 'number' || typeof exact.objective !== 'number') {
-    throw new TypeError('optimization and exact results with numeric objectives are required.');
+  if (
+    !result
+    || !exact
+    || !Number.isFinite(result.objective)
+    || !Number.isFinite(exact.objective)
+  ) {
+    throw new TypeError('optimization and exact results with finite objectives are required.');
   }
 
   return Object.freeze({
