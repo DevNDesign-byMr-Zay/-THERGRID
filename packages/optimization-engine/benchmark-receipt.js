@@ -58,8 +58,9 @@ export function validateBenchmarkReceipt(receipt) {
   if (
     !receipt.comparison
     || !Number.isFinite(receipt.comparison.objectiveGap)
-    || !Number.isFinite(receipt.comparison.relativeGap)
-    || typeof receipt.comparison.candidateMatchesReference !== 'boolean'
+    || typeof receipt.comparison.matchedObjective !== 'boolean'
+    || receipt.comparison.exactBackend !== receipt.reference.backend
+    || receipt.comparison.candidateBackend !== receipt.candidate.backend
   ) {
     throw new TypeError('invalid benchmark receipt comparison.');
   }
