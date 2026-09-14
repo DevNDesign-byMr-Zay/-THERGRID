@@ -14,3 +14,13 @@ test('exact reference finds the global minimum of a small QUBO', () => {
 test('exact reference rejects oversized problems', () => {
   assert.throws(() => solveQuboExactly({ linear: Array(21).fill(1) }), /limited to 20/);
 });
+
+test('exact reference rejects non-finite coefficients', () => {
+  assert.throws(() => solveQuboExactly({ linear: [-1, Infinity] }), /linear coefficients must be finite/);
+  assert.throws(() => solveQuboExactly({ linear: [-1], quadratic: [[0, NaN]] }), /quadratic coefficients must be finite/);
+});
+
+test('exact reference rejects malformed quadratic containers', () => {
+  assert.throws(() => solveQuboExactly({ linear: [-1], quadratic: {} }), /quadratic coefficients must be an array/);
+  assert.throws(() => solveQuboExactly({ linear: [-1], quadratic: [[0], 1] }), /contain arrays/);
+});
