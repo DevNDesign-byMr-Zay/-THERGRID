@@ -44,11 +44,28 @@ The folders above are the target architecture. Add them only as real code or doc
 
 ## Phase 1 acceptance target
 
-The first working vertical slice should take a small synthetic microgrid fixture through the entire chain:
+The first working vertical slice takes a small synthetic microgrid fixture through the entire chain:
 
 `telemetry -> validated twin state -> forecast/scenario -> optimization proposal -> audit receipt -> spatial scene payload`
 
-Phase 1 is complete when that path is deterministic, tested, reproducible from a fresh clone, and produces no unaudited side effects.
+Phase 1 is considered reproducible only when that path is deterministic, tested from a fresh clone, and produces no unaudited side effects.
+
+## Reproducible verification
+
+THERGRID targets Node.js 22 and commits its lockfile so a fresh clone can reproduce the maintained quality path.
+
+```bash
+npm ci --ignore-scripts
+npm audit --audit-level=moderate
+npm run syntax
+npm test
+npm run coverage
+npm run demo
+```
+
+`npm run demo` executes the deterministic synthetic-microgrid vertical slice and prints a compact evidence summary containing the snapshot, experiment, receipt, scene, render target, provenance result, promotion status, and the advisory SOLVÆR handoff state. The demo fails closed if simulation or provenance validation fails or if the promotion gate becomes authoritative.
+
+Pull requests and pushes to `main` run the same reproducible install, dependency audit, syntax checks, test coverage, and demo path. CodeQL runs separately as the maintained static security-analysis gate.
 
 ## Engineering rules
 
@@ -62,6 +79,6 @@ Phase 1 is complete when that path is deterministic, tested, reproducible from a
 
 ## Current status
 
-**Foundation / architecture phase.** The next priority is to establish shared contracts, a synthetic microgrid fixture, deterministic twin-state computation, and the audit-receipt path before expanding into advanced optimization, quantum adapters, or production visualization.
+**Working deterministic vertical slice under hardening.** The repository now contains the synthetic microgrid path, evidence/provenance gates, simulation-bound model handoffs, renderer-neutral spatial output, and operator-attention contracts. Current work is focused on reproducibility, security evidence, adversarial validation, and keeping every model boundary advisory until explicit downstream authorization exists.
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the working technical plan.
