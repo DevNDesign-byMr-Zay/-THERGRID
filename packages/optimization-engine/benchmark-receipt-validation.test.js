@@ -31,6 +31,41 @@ test('benchmark receipt remains serializable and self-identifying for valid dete
   assert.doesNotThrow(() => JSON.stringify(receipt));
 });
 
+test('benchmark receipt fingerprint is stable across object key ordering', () => {
+  const receipt = createBenchmarkReceipt({ linear: [1, -2], seed: 7, iterations: 20 });
+  const reordered = {
+    measurementFingerprint: receipt.measurementFingerprint,
+    durationMs: receipt.durationMs,
+    comparison: {
+      matchedObjective: receipt.comparison.matchedObjective,
+      candidateBackend: receipt.comparison.candidateBackend,
+      objectiveGap: receipt.comparison.objectiveGap,
+      exactBackend: receipt.comparison.exactBackend,
+    },
+    candidate: {
+      objective: receipt.candidate.objective,
+      algorithm: receipt.candidate.algorithm,
+      backend: receipt.candidate.backend,
+    },
+    reference: {
+      objective: receipt.reference.objective,
+      algorithm: receipt.reference.algorithm,
+      backend: receipt.reference.backend,
+    },
+    configuration: {
+      iterations: receipt.configuration.iterations,
+      seed: receipt.configuration.seed,
+    },
+    problem: {
+      variableCount: receipt.problem.variableCount,
+      version: receipt.problem.version,
+      kind: receipt.problem.kind,
+    },
+    schema: receipt.schema,
+  };
+  assert.doesNotThrow(() => validateBenchmarkReceipt(reordered));
+});
+
 test('receipt boundary rejects structurally or cryptographically tampered evidence', () => {
   const receipt = createBenchmarkReceipt({ linear: [1, -2], seed: 7, iterations: 20 });
   assert.throws(() => validateBenchmarkReceipt({ ...receipt, schema: 'tampered' }), /invalid benchmark receipt schema/);
