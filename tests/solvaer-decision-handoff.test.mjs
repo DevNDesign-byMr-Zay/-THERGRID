@@ -3,9 +3,40 @@ import assert from 'node:assert/strict';
 import { runSyntheticMicrogrid } from '../src/pipeline.mjs';
 import { evaluateSolvaerDecisionHandoff } from '../src/solvaer-decision-handoff.mjs';
 
+function snapshot(snapshotId) {
+  return {
+    schemaVersion: 1,
+    snapshotId,
+    observedAt: '2026-09-13T00:00:00.000Z',
+    assets: [
+      { id: 'solar-1', kind: 'solar', powerKw: 12, capacityKw: 15 },
+      { id: 'load-1', kind: 'load', powerKw: 10, flexible: true },
+      {
+        id: 'grid-1',
+        kind: 'grid_interconnect',
+        powerKw: -2,
+        importLimitKw: 80,
+        exportLimitKw: 40,
+      },
+    ],
+    topology: {
+      nodes: ['node-a'],
+      connections: [
+        { assetId: 'solar-1', nodeId: 'node-a' },
+        { assetId: 'load-1', nodeId: 'node-a' },
+        { assetId: 'grid-1', nodeId: 'node-a' },
+      ],
+    },
+  };
+}
+
 test('SOLVÆR decision handoff produces simulation evidence without promotion authority', () => {
-  const result = runSyntheticMicrogrid({ snapshotId: 'snapshot-solvaer-handoff', observedAt: '2026-09-13T00:00:00Z', assets: [] });
-  const candidate = { experimentId: result.experimentId, snapshotId: 'snapshot-solvaer-handoff', proposal: result.proposal };
+  const result = runSyntheticMicrogrid(snapshot('snapshot-solvaer-handoff'));
+  const candidate = {
+    experimentId: result.experimentId,
+    snapshotId: result.twinState.snapshotId,
+    proposal: result.proposal,
+  };
   const handoff = evaluateSolvaerDecisionHandoff({
     request: result.solvaerRequest,
     candidate,
