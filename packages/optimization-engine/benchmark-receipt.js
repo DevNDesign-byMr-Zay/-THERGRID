@@ -20,6 +20,56 @@ function validateReceiptInput({ linear, quadratic, seed, iterations }) {
 }
 
 /**
+ * Validate an already-produced receipt before it crosses a package boundary.
+ * This is structural evidence validation only; it does not execute a solver.
+ */
+export function validateBenchmarkReceipt(receipt) {
+  if (!receipt || receipt.schema !== 'thergrid-optimization-benchmark-receipt-v1') {
+    throw new TypeError('invalid benchmark receipt schema.');
+  }
+  if (
+    !receipt.problem
+    || receipt.problem.kind !== 'qubo'
+    || receipt.problem.version !== 1
+    || !Number.isInteger(receipt.problem.variableCount)
+    || receipt.problem.variableCount <= 0
+  ) {
+    throw new TypeError('invalid benchmark receipt problem.');
+  }
+  if (
+    !receipt.configuration
+    || !Number.isInteger(receipt.configuration.seed)
+    || receipt.configuration.seed < 0
+    || !Number.isInteger(receipt.configuration.iterations)
+    || receipt.configuration.iterations <= 0
+  ) {
+    throw new TypeError('invalid benchmark receipt configuration.');
+  }
+  for (const side of ['reference', 'candidate']) {
+    if (
+      !receipt[side]
+      || typeof receipt[side].backend !== 'string'
+      || typeof receipt[side].algorithm !== 'string'
+      || !Number.isFinite(receipt[side].objective)
+    ) {
+      throw new TypeError(`invalid benchmark receipt ${side}.`);
+    }
+  }
+  if (
+    !receipt.comparison
+    || !Number.isFinite(receipt.comparison.objectiveGap)
+    || !Number.isFinite(receipt.comparison.relativeGap)
+    || typeof receipt.comparison.candidateMatchesReference !== 'boolean'
+  ) {
+    throw new TypeError('invalid benchmark receipt comparison.');
+  }
+  if (!Number.isInteger(receipt.durationMs) || receipt.durationMs < 0) {
+    throw new TypeError('invalid benchmark receipt duration.');
+  }
+  return receipt;
+}
+
+/**
  * Turn a benchmark run into a compact, serializable measurement receipt.
  * The receipt records comparison evidence only; it has no actuation semantics.
  */
@@ -36,7 +86,7 @@ export function createBenchmarkReceipt({ linear, quadratic = [], seed = 1, itera
   const comparison = compareOptimization(candidate, exact);
   const durationMs = Date.now() - startedAt;
 
-  return Object.freeze({
+  return validateBenchmarkReceipt(Object.freeze({
     schema: 'thergrid-optimization-benchmark-receipt-v1',
     problem: {
       kind: 'qubo',
@@ -56,5 +106,5 @@ export function createBenchmarkReceipt({ linear, quadratic = [], seed = 1, itera
     },
     comparison: { ...comparison },
     durationMs,
-  });
+  }));
 }
