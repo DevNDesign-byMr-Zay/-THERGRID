@@ -1,5 +1,6 @@
 import { evaluateSolvaerDecisionHandoff } from './solvaer-decision-handoff.mjs';
 import { createSolvaerCollaborationEvidence } from './solvaer-collaboration-evidence.mjs';
+import { buildSolvaerOperatorAttention, validateSolvaerOperatorAttention } from './solvaer-operator-attention.mjs';
 import { compileHolographicRenderPacket, validateHolographicRenderPacket } from './holographic-renderer-contract.mjs';
 
 /**
@@ -22,6 +23,11 @@ export function buildSolvaerDecisionRenderBridge({
     candidate: decision.candidate,
     provenanceRef,
   });
+  const operatorAttention = buildSolvaerOperatorAttention({
+    evidence: collaborationEvidence,
+    decision,
+  });
+  if (!validateSolvaerOperatorAttention(operatorAttention)) throw new TypeError('SOLVÆR render bridge produced invalid operator attention');
   const renderPacket = compileHolographicRenderPacket({
     scene,
     presentation,
@@ -35,6 +41,7 @@ export function buildSolvaerDecisionRenderBridge({
     experimentId: decision.experimentId,
     decision,
     collaborationEvidence,
+    operatorAttention,
     renderPacket,
     promotionEligible: false,
     handoff: 'simulation-evidence-required',
