@@ -25,9 +25,19 @@ function deepFreeze(value) {
 }
 
 /** Normalize a SOLVÆR contribution before it enters THERGRID simulation. */
-export function validateSolvaerCollaborationResult({ request, candidate, provenanceRef } = {}) {
+export function validateSolvaerCollaborationResult({
+  request,
+  candidate,
+  provenanceRef,
+  fallbackUsed = false,
+} = {}) {
   const input = object(request, 'request');
-  const result = acceptSolvaerOptimizationResult({ request: input, candidate, provenanceRef });
+  const result = acceptSolvaerOptimizationResult({
+    request: input,
+    candidate,
+    provenanceRef,
+    fallbackUsed,
+  });
   const proposal = deepFreeze(snapshot(object(result.candidate.proposal, 'candidate.proposal')));
   const requestedObjective = text(input.objective, 'request.objective');
   if (
@@ -51,7 +61,8 @@ export function validateSolvaerCollaborationResult({ request, candidate, provena
     snapshotId: result.snapshotId,
     twinStateRef: text(input.twinStateRef, 'request.twinStateRef'),
     objective: requestedObjective,
-    constraints: input.constraints == null ? null : snapshot(object(input.constraints, 'request.constraints')),
+    constraints:
+      input.constraints == null ? null : snapshot(object(input.constraints, 'request.constraints')),
     proposal,
     provenanceRef: snapshot(result.provenanceRef),
     fallbackUsed: result.fallbackUsed === true,
