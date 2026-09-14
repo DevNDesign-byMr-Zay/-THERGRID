@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { solveQuboExactly, compareOptimization } from './benchmark.js';
 import { createReferenceProvider } from './quantum-inspired-provider.js';
+import { normalizeQuboProblem } from './qubo-validation.js';
 
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
@@ -20,10 +21,20 @@ function validateReceiptInput({ linear, quadratic, seed, iterations }) {
   if (!Array.isArray(quadratic)) {
     throw new TypeError('benchmark receipt quadratic coefficients must be an array.');
   }
-  if (quadratic.some((term) => !term || typeof term !== 'object'
-    || !Number.isInteger(term.i) || !Number.isInteger(term.j)
-    || typeof term.value !== 'number' || !Number.isFinite(term.value))) {
-    throw new TypeError('benchmark receipt quadratic coefficients must contain finite indexed terms.');
+  for (const term of quadratic) {
+    if (!Array.isArray(term) || term.length !== 3) {
+      throw new TypeError('benchmark receipt quadratic terms must be [i, j, coefficient].');
+    }
+    const [i, j, coefficient] = term;
+    if (!Number.isInteger(i) || !Number.isInteger(j) || i < 0 || j < 0 || i >= linear.length || j >= linear.length) {
+      throw new RangeError('benchmark receipt quadratic indices must reference existing variables.');
+    }
+    if (i === j) {
+      throw new RangeError('benchmark receipt quadratic terms cannot be diagonal.');
+    }
+    if (typeof coefficient !== 'number' || !Number.isFinite(coefficient)) {
+      throw new TypeError('benchmark receipt quadratic coefficients must be finite numbers.');
+    }
   }
   if (!Number.isInteger(seed) || seed < 0) {
     throw new TypeError('benchmark receipt seed must be a non-negative integer.');
@@ -59,7 +70,21 @@ export function validateBenchmarkReceipt(receipt) {
     || receipt.problem.version !== 1
     || !Number.isInteger(receipt.problem.variableCount)
     || receipt.problem.variableCount <= 0
+    || !Array.isArray(receipt.problem.linear)
+    || receipt.problem.linear.length !== receipt.problem.variableCount
+    || receipt.problem.linear.some((value) => typeof value !== 'number' || !Number.isFinite(value))
+    || !Array.isArray(receipt.problem.quadratic)
   ) {
+    throw new TypeError('invalid benchmark receipt problem.');
+  }
+  try {
+    normalizeQuboProblem({
+      kind: 'qubo',
+      version: 1,
+      linear: receipt.problem.linear,
+      quadratic: receipt.problem.quadratic,
+    });
+  } catch {
     throw new TypeError('invalid benchmark receipt problem.');
   }
   if (
@@ -110,22 +135,20 @@ export function validateBenchmarkReceipt(receipt) {
  */
 export function createBenchmarkReceipt({ linear, quadratic = [], seed = 1, iterations = 2000 } = {}) {
   validateReceiptInput({ linear, quadratic, seed, iterations });
+  const problem = normalizeQuboProblem({ kind: 'qubo', version: 1, linear, quadratic });
   const startedAt = Date.now();
-  const exact = solveQuboExactly({ linear, quadratic });
-  const candidate = createReferenceProvider({ seed, iterations }).solve({
-    kind: 'qubo',
-    version: 1,
-    linear,
-    quadratic,
-  });
+  const exact = solveQuboExactly(problem);
+  const candidate = createReferenceProvider({ seed, iterations }).solve(problem);
   const comparison = compareOptimization(candidate, exact);
   const durationMs = Date.now() - startedAt;
   const receipt = {
     schema: 'thergrid-optimization-benchmark-receipt-v1',
     problem: {
-      kind: 'qubo',
-      version: 1,
-      variableCount: linear.length,
+      kind: problem.kind,
+      version: problem.version,
+      variableCount: problem.linear.length,
+      linear: [...problem.linear],
+      quadratic: problem.quadratic.map((term) => [...term]),
     },
     configuration: { seed, iterations },
     reference: {
