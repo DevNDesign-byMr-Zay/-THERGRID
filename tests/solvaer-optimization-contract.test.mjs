@@ -21,11 +21,16 @@ test('creates an advisory SOLVÆR v2 optimization request bound to its twin snap
   const request = createRequest();
   assert.equal(request.contractVersion, 2);
   assert.equal(request.capability, 'optimization.explore');
+  assert.equal(request.requestId, 'solvaer:experiment-001:snapshot-001');
   assert.equal(request.snapshotId, 'snapshot-001');
   assert.equal(request.twinStateRef, 'twin-state:snapshot-001');
   assert.equal(request.safety.advisoryOnly, true);
   assert.equal(request.safety.authoritative, false);
   assert.equal(request.safety.actuatesHardware, false);
+});
+
+test('supports an explicit non-empty request identity', () => {
+  assert.equal(createRequest({ requestId: 'solvaer-request-42' }).requestId, 'solvaer-request-42');
 });
 
 test('rejects a request whose twin reference does not bind to its snapshot', () => {
@@ -50,6 +55,7 @@ test('accepts a candidate only as a simulation-required handoff', () => {
     batteryPowerKw: 8,
     snapshotId: 'snapshot-001',
   });
+  assert.equal(accepted.requestId, request.requestId);
   assert.equal(accepted.snapshotId, 'snapshot-001');
   assert.equal(accepted.handoff, 'simulation-required');
   assert.equal(accepted.safety.authoritative, false);
