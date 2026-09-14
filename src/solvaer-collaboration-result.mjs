@@ -10,22 +10,56 @@ function text(value, name) {
   return value.trim();
 }
 
+function snapshot(value) {
+  if (Array.isArray(value)) return value.map(snapshot);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, snapshot(child)]));
+  }
+  return value;
+}
+
+function deepFreeze(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
+}
+
 /** Normalize a SOLVÆR contribution before it enters THERGRID simulation. */
 export function validateSolvaerCollaborationResult({ request, candidate, provenanceRef } = {}) {
-  const result = acceptSolvaerOptimizationResult({ request, candidate, provenanceRef });
-  const proposal = object(result.candidate.proposal, 'candidate.proposal');
-  const objective = result.candidate.objective == null ? null : text(result.candidate.objective, 'candidate.objective');
-  if (result.candidate.authoritative === true || result.candidate.actuatesHardware === true || result.candidate.physicalActuation === true) {
+  const input = object(request, 'request');
+  const result = acceptSolvaerOptimizationResult({ request: input, candidate, provenanceRef });
+  const proposal = deepFreeze(snapshot(object(result.candidate.proposal, 'candidate.proposal')));
+  const requestedObjective = text(input.objective, 'request.objective');
+  if (
+    result.candidate.objective != null &&
+    text(result.candidate.objective, 'candidate.objective') !== requestedObjective
+  ) {
+    throw new TypeError('candidate objective must match request objective');
+  }
+  if (
+    result.candidate.authoritative === true ||
+    result.candidate.actuatesHardware === true ||
+    result.candidate.physicalActuation === true
+  ) {
     throw new TypeError('SOLVÆR candidate cannot claim authority or physical actuation');
   }
-  return Object.freeze({
+
+  return deepFreeze({
     contractVersion: result.contractVersion,
+    capability: result.capability,
     experimentId: result.experimentId,
     snapshotId: result.snapshotId,
+    twinStateRef: text(input.twinStateRef, 'request.twinStateRef'),
+    objective: requestedObjective,
+    constraints: input.constraints == null ? null : snapshot(object(input.constraints, 'request.constraints')),
     proposal,
-    objective,
-    provenanceRef: result.provenanceRef,
-    safety: Object.freeze({ advisoryOnly: true, authoritative: false, actuatesHardware: false }),
+    provenanceRef: snapshot(result.provenanceRef),
+    fallbackUsed: result.fallbackUsed === true,
+    safety: {
+      advisoryOnly: true,
+      authoritative: false,
+      actuatesHardware: false,
+    },
     handoff: 'simulation-required',
   });
 }
