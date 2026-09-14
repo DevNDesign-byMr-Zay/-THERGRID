@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createBenchmarkReceipt } from './benchmark-receipt.js';
+import {
+  createBenchmarkReceipt,
+  validateBenchmarkReceipt,
+} from './benchmark-receipt.js';
 
 test('benchmark receipts reject invalid measurement inputs before execution', () => {
   assert.throws(
@@ -33,5 +36,28 @@ test('benchmark receipt remains serializable for a valid deterministic input', (
   assert.equal(receipt.configuration.iterations, 20);
   assert.ok(Number.isInteger(receipt.durationMs));
   assert.ok(receipt.durationMs >= 0);
+  assert.equal(validateBenchmarkReceipt(receipt), receipt);
   assert.doesNotThrow(() => JSON.stringify(receipt));
+});
+
+test('receipt boundary rejects structurally tampered evidence', () => {
+  const receipt = createBenchmarkReceipt({ linear: [1, -2], seed: 7, iterations: 20 });
+  assert.throws(
+    () => validateBenchmarkReceipt({ ...receipt, schema: 'tampered' }),
+    /invalid benchmark receipt schema/,
+  );
+  assert.throws(
+    () => validateBenchmarkReceipt({
+      ...receipt,
+      candidate: { ...receipt.candidate, objective: Number.NaN },
+    }),
+    /invalid benchmark receipt candidate/,
+  );
+  assert.throws(
+    () => validateBenchmarkReceipt({
+      ...receipt,
+      comparison: { ...receipt.comparison, relativeGap: Number.POSITIVE_INFINITY },
+    }),
+    /invalid benchmark receipt comparison/,
+  );
 });
