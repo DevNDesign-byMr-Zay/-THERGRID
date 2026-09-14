@@ -61,7 +61,7 @@ test('SOLVÆR decision-to-render bridge preserves experiment identity and safety
   assert.equal(validateHolographicRenderPacket(bridge.renderPacket), true);
   assert.equal(bridge.renderPacket.experimentId, baseline.experimentId);
   assert.equal(bridge.renderPacket.receiptId, bridge.decision.decisionReceipt.receiptId);
-  assert.equal(bridge.safety.physicalActuation, false);
+  assert.equal(bridge.safety.actuatesHardware, false);
 });
 
 test('SOLVÆR bridge rejects authoritative candidates before rendering', () => {
@@ -87,5 +87,5 @@ test('SOLVÆR bridge rejects authoritative candidates before rendering', () => {
     proposal: baseline.proposal,
     scene: baseline.scene,
     presentation: baseline.presentation,
-  }));
+  }), /authority|physical actuation/i);
 });
