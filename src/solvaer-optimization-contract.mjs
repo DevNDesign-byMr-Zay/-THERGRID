@@ -15,16 +15,28 @@ function text(value, name) {
  * Defines the SOLVÆR optimization handoff without granting authority over
  * THERGRID simulation, promotion, or physical infrastructure.
  */
-export function createSolvaerOptimizationRequest({ experimentId, snapshotId, twinStateRef, objective, constraints = null } = {}) {
+export function createSolvaerOptimizationRequest({
+  experimentId,
+  snapshotId,
+  twinStateRef,
+  objective,
+  constraints = null,
+  requestId = null,
+} = {}) {
+  const normalizedExperimentId = text(experimentId, 'experimentId');
   const normalizedSnapshotId = text(snapshotId, 'snapshotId');
   const normalizedTwinStateRef = text(twinStateRef, 'twinStateRef');
   if (normalizedTwinStateRef !== `twin-state:${normalizedSnapshotId}`) {
     throw new TypeError('twinStateRef must bind to snapshotId');
   }
+  const normalizedRequestId = requestId == null
+    ? `solvaer:${normalizedExperimentId}:${normalizedSnapshotId}`
+    : text(requestId, 'requestId');
   return Object.freeze({
     contractVersion: CONTRACT_VERSION,
     capability: CAPABILITY,
-    experimentId: text(experimentId, 'experimentId'),
+    requestId: normalizedRequestId,
+    experimentId: normalizedExperimentId,
     snapshotId: normalizedSnapshotId,
     twinStateRef: normalizedTwinStateRef,
     objective: text(objective, 'objective'),
@@ -39,6 +51,7 @@ export function acceptSolvaerOptimizationResult({ request, candidate, provenance
   const provenance = object(provenanceRef, 'provenanceRef');
   if (input.contractVersion !== CONTRACT_VERSION) throw new TypeError('unsupported SOLVÆR contract version');
   if (input.capability !== CAPABILITY) throw new TypeError('request capability must be optimization.explore');
+  const requestId = text(input.requestId, 'request.requestId');
   if (input.twinStateRef !== `twin-state:${input.snapshotId}`) throw new TypeError('request twinStateRef must bind to snapshotId');
   if (input.experimentId !== text(provenance.experimentId, 'provenanceRef.experimentId')) {
     throw new TypeError('candidate experimentId must match request');
@@ -55,6 +68,7 @@ export function acceptSolvaerOptimizationResult({ request, candidate, provenance
   return Object.freeze({
     contractVersion: CONTRACT_VERSION,
     capability: CAPABILITY,
+    requestId,
     experimentId: input.experimentId,
     snapshotId: input.snapshotId,
     candidate: result,
