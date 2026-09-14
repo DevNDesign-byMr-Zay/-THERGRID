@@ -75,5 +75,5 @@ test('SOLVÆR candidate cannot cross the render bridge with authoritative execut
     proposal: baseline.proposal,
     scene: baseline.scene,
     presentation: baseline.presentation,
-  }), /authoritative|validation/i);
+  }), /authority|physical actuation|validation/i);
 });
