@@ -87,6 +87,7 @@ test('projects only operator-relevant validated simulation evidence', () => {
   });
   assert.equal('candidate' in projection, false);
   assert.equal('action' in projection, false);
+  assert.equal('inputs' in projection, false);
   assert.equal(validateSolvaerSimulationOperatorProjection(projection, {
     evidence,
     source: evidenceSource,
@@ -105,6 +106,32 @@ test('projection identity is deterministic and recursively immutable', () => {
   assert.equal(Object.isFrozen(first.simulation), true);
   assert.equal(Object.isFrozen(first.metrics), true);
   assert.equal(Object.isFrozen(first.safety), true);
+});
+
+test('operator projection identity changes when evidence lineage changes', () => {
+  const firstSource = source();
+  const secondSource = {
+    ...firstSource,
+    collaborationEvidenceRef: {
+      ...firstSource.collaborationEvidenceRef,
+      evidenceFingerprint: 'b'.repeat(64),
+    },
+  };
+  const firstEvidence = createSolvaerSimulationEvidence(firstSource);
+  const secondEvidence = createSolvaerSimulationEvidence(secondSource);
+  const first = createSolvaerSimulationOperatorProjection({
+    evidence: firstEvidence,
+    source: firstSource,
+  });
+  const second = createSolvaerSimulationOperatorProjection({
+    evidence: secondEvidence,
+    source: secondSource,
+  });
+
+  assert.deepEqual(first.metrics, second.metrics);
+  assert.notEqual(first.evidenceRefs.collaborationEvidenceFingerprint, second.evidenceRefs.collaborationEvidenceFingerprint);
+  assert.notEqual(first.evidenceRefs.simulationEvidenceFingerprint, second.evidenceRefs.simulationEvidenceFingerprint);
+  assert.notEqual(first.projectionFingerprint, second.projectionFingerprint);
 });
 
 test('rejects source drift before operator projection', () => {
