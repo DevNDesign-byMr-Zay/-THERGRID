@@ -26,6 +26,18 @@ test('comparison reports the candidate objective gap', () => {
   assert.equal(comparison.matchedObjective, true);
 });
 
+test('comparison rejects non-finite candidate or reference objectives', () => {
+  const exact = { backend: 'exact', objective: -3 };
+  assert.throws(
+    () => compareOptimization({ backend: 'candidate', objective: Number.NaN }, exact),
+    /finite objectives/,
+  );
+  assert.throws(
+    () => compareOptimization({ backend: 'candidate', objective: -3 }, { ...exact, objective: Number.POSITIVE_INFINITY }),
+    /finite objectives/,
+  );
+});
+
 test('benchmark helper delegates to the maintained exact reference', () => {
   const problem = { linear: [-2, -1], quadratic: [[0, 0], [0, 0]] };
   const result = benchmarkOptimization(problem, {
