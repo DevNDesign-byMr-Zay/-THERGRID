@@ -21,11 +21,17 @@ test('creates an advisory SOLVÆR v2 optimization request bound to its twin snap
   const request = createRequest();
   assert.equal(request.contractVersion, 2);
   assert.equal(request.capability, 'optimization.explore');
+  assert.equal(request.requestId, 'solvaer:experiment-001:snapshot-001');
   assert.equal(request.snapshotId, 'snapshot-001');
   assert.equal(request.twinStateRef, 'twin-state:snapshot-001');
   assert.equal(request.safety.advisoryOnly, true);
   assert.equal(request.safety.authoritative, false);
   assert.equal(request.safety.actuatesHardware, false);
+});
+
+test('preserves an explicit non-empty request identity', () => {
+  const request = createRequest({ requestId: 'request-custom-001' });
+  assert.equal(request.requestId, 'request-custom-001');
 });
 
 test('rejects a request whose twin reference does not bind to its snapshot', () => {
@@ -50,10 +56,30 @@ test('accepts a candidate only as a simulation-required handoff', () => {
     batteryPowerKw: 8,
     snapshotId: 'snapshot-001',
   });
+  assert.equal(accepted.requestId, request.requestId);
   assert.equal(accepted.snapshotId, 'snapshot-001');
   assert.equal(accepted.handoff, 'simulation-required');
   assert.equal(accepted.safety.authoritative, false);
   assert.equal(accepted.safety.actuatesHardware, false);
+});
+
+test('rejects candidates that claim authority or physical actuation', () => {
+  const request = createRequest();
+  for (const candidate of [
+    { authoritative: true },
+    { actuatesHardware: true },
+    { physicalActuation: true },
+  ]) {
+    assert.throws(
+      () =>
+        acceptSolvaerOptimizationResult({
+          request,
+          candidate,
+          provenanceRef: { experimentId: 'experiment-001', snapshotId: 'snapshot-001' },
+        }),
+      /cannot claim authority or physical actuation/,
+    );
+  }
 });
 
 test('rejects candidates from a different experiment', () => {

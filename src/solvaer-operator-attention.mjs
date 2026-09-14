@@ -7,7 +7,12 @@ export function buildSolvaerOperatorAttention({ evidence, decision } = {}) {
   if (!validateSolvaerCollaborationEvidence(evidence)) throw new TypeError('invalid SOLVÆR collaboration evidence');
   if (!decision || typeof decision !== 'object') throw new TypeError('decision is required');
   if (decision.experimentId !== evidence.experimentId) throw new TypeError('decision experiment does not match evidence');
-  if (decision.requestId == null) throw new TypeError('decision requestId is required');
+  if (typeof decision.requestId !== 'string' || !decision.requestId.trim()) {
+    throw new TypeError('decision requestId is required');
+  }
+  if (decision.requestId !== evidence.requestId) {
+    throw new TypeError('decision requestId does not match collaboration evidence');
+  }
 
   const simulationPassed = decision.simulation?.status === 'passed';
   const items = [
