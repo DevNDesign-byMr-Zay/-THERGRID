@@ -6,26 +6,11 @@ import {
 } from './benchmark-receipt.js';
 
 test('benchmark receipts reject invalid measurement inputs before execution', () => {
-  assert.throws(
-    () => createBenchmarkReceipt({ linear: [] }),
-    /linear coefficients are required/,
-  );
-  assert.throws(
-    () => createBenchmarkReceipt({ linear: [1, Number.NaN] }),
-    /linear coefficients must be finite/,
-  );
-  assert.throws(
-    () => createBenchmarkReceipt({ linear: [1], quadratic: {} }),
-    /quadratic coefficients must be an array/,
-  );
-  assert.throws(
-    () => createBenchmarkReceipt({ linear: [1], seed: -1 }),
-    /seed must be a non-negative integer/,
-  );
-  assert.throws(
-    () => createBenchmarkReceipt({ linear: [1], iterations: 0 }),
-    /iterations must be a positive integer/,
-  );
+  assert.throws(() => createBenchmarkReceipt({ linear: [] }), /linear coefficients are required/);
+  assert.throws(() => createBenchmarkReceipt({ linear: [1, Number.NaN] }), /linear coefficients must be finite/);
+  assert.throws(() => createBenchmarkReceipt({ linear: [1], quadratic: {} }), /quadratic coefficients must be an array/);
+  assert.throws(() => createBenchmarkReceipt({ linear: [1], seed: -1 }), /seed must be a non-negative integer/);
+  assert.throws(() => createBenchmarkReceipt({ linear: [1], iterations: 0 }), /iterations must be a positive integer/);
 });
 
 test('benchmark receipt remains serializable for a valid deterministic input', () => {
@@ -37,7 +22,7 @@ test('benchmark receipt remains serializable for a valid deterministic input', (
   assert.equal(receipt.comparison.exactBackend, receipt.reference.backend);
   assert.equal(receipt.comparison.candidateBackend, receipt.candidate.backend);
   assert.equal(receipt.comparison.matchedObjective, receipt.candidate.objective === receipt.reference.objective);
-  assert.ok(Number.isFinite(receipt.comparison.objectiveGap));
+  assert.equal(receipt.comparison.objectiveGap, receipt.candidate.objective - receipt.reference.objective);
   assert.ok(Number.isInteger(receipt.durationMs));
   assert.ok(receipt.durationMs >= 0);
   assert.equal(validateBenchmarkReceipt(receipt), receipt);
@@ -46,29 +31,9 @@ test('benchmark receipt remains serializable for a valid deterministic input', (
 
 test('receipt boundary rejects structurally tampered evidence', () => {
   const receipt = createBenchmarkReceipt({ linear: [1, -2], seed: 7, iterations: 20 });
-  assert.throws(
-    () => validateBenchmarkReceipt({ ...receipt, schema: 'tampered' }),
-    /invalid benchmark receipt schema/,
-  );
-  assert.throws(
-    () => validateBenchmarkReceipt({
-      ...receipt,
-      candidate: { ...receipt.candidate, objective: Number.NaN },
-    }),
-    /invalid benchmark receipt candidate/,
-  );
-  assert.throws(
-    () => validateBenchmarkReceipt({
-      ...receipt,
-      comparison: { ...receipt.comparison, objectiveGap: Number.POSITIVE_INFINITY },
-    }),
-    /invalid benchmark receipt comparison/,
-  );
-  assert.throws(
-    () => validateBenchmarkReceipt({
-      ...receipt,
-      comparison: { ...receipt.comparison, exactBackend: 'forged-reference' },
-    }),
-    /invalid benchmark receipt comparison/,
-  );
+  assert.throws(() => validateBenchmarkReceipt({ ...receipt, schema: 'tampered' }), /invalid benchmark receipt schema/);
+  assert.throws(() => validateBenchmarkReceipt({ ...receipt, candidate: { ...receipt.candidate, objective: Number.NaN } }), /invalid benchmark receipt candidate/);
+  assert.throws(() => validateBenchmarkReceipt({ ...receipt, comparison: { ...receipt.comparison, objectiveGap: receipt.comparison.objectiveGap + 1 } }), /invalid benchmark receipt comparison/);
+  assert.throws(() => validateBenchmarkReceipt({ ...receipt, comparison: { ...receipt.comparison, matchedObjective: !receipt.comparison.matchedObjective } }), /invalid benchmark receipt comparison/);
+  assert.throws(() => validateBenchmarkReceipt({ ...receipt, comparison: { ...receipt.comparison, exactBackend: 'forged-reference' } }), /invalid benchmark receipt comparison/);
 });
