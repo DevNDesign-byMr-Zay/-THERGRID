@@ -45,6 +45,7 @@ export function buildProvenanceGraph({
   scene,
   renderPacket = null,
   collaborationEvidence = null,
+  operatorAttention = null,
   experimentId,
 } = {}) {
   const artifacts = [
@@ -57,6 +58,7 @@ export function buildProvenanceGraph({
     ['spatial-scene', scene],
     ['render-packet', renderPacket],
     ['solvaer-collaboration', collaborationEvidence],
+    ['operator-attention', operatorAttention],
   ];
 
   const nodes = artifacts
