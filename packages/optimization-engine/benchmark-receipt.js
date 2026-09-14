@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { solveQuboExactly, compareOptimization } from './benchmark.js';
 import { createReferenceProvider } from './quantum-inspired-provider.js';
 
@@ -11,12 +12,29 @@ function validateReceiptInput({ linear, quadratic, seed, iterations }) {
   if (!Array.isArray(quadratic)) {
     throw new TypeError('benchmark receipt quadratic coefficients must be an array.');
   }
+  if (quadratic.some((term) => !term || typeof term !== 'object'
+    || !Number.isInteger(term.i) || !Number.isInteger(term.j)
+    || typeof term.value !== 'number' || !Number.isFinite(term.value))) {
+    throw new TypeError('benchmark receipt quadratic coefficients must contain finite indexed terms.');
+  }
   if (!Number.isInteger(seed) || seed < 0) {
     throw new TypeError('benchmark receipt seed must be a non-negative integer.');
   }
   if (!Number.isInteger(iterations) || iterations <= 0) {
     throw new TypeError('benchmark receipt iterations must be a positive integer.');
   }
+}
+
+function computeReceiptFingerprint(receipt) {
+  const identity = {
+    schema: receipt.schema,
+    problem: receipt.problem,
+    configuration: receipt.configuration,
+    reference: receipt.reference,
+    candidate: receipt.candidate,
+    comparison: receipt.comparison,
+  };
+  return createHash('sha256').update(JSON.stringify(identity)).digest('hex');
 }
 
 /**
@@ -66,6 +84,12 @@ export function validateBenchmarkReceipt(receipt) {
   ) {
     throw new TypeError('invalid benchmark receipt comparison.');
   }
+  if (typeof receipt.measurementFingerprint !== 'string' || !/^[a-f0-9]{64}$/.test(receipt.measurementFingerprint)) {
+    throw new TypeError('invalid benchmark receipt measurement fingerprint.');
+  }
+  if (receipt.measurementFingerprint !== computeReceiptFingerprint(receipt)) {
+    throw new TypeError('benchmark receipt measurement fingerprint mismatch.');
+  }
   if (!Number.isInteger(receipt.durationMs) || receipt.durationMs < 0) {
     throw new TypeError('invalid benchmark receipt duration.');
   }
@@ -88,8 +112,7 @@ export function createBenchmarkReceipt({ linear, quadratic = [], seed = 1, itera
   });
   const comparison = compareOptimization(candidate, exact);
   const durationMs = Date.now() - startedAt;
-
-  return validateBenchmarkReceipt(Object.freeze({
+  const receipt = {
     schema: 'thergrid-optimization-benchmark-receipt-v1',
     problem: {
       kind: 'qubo',
@@ -109,5 +132,7 @@ export function createBenchmarkReceipt({ linear, quadratic = [], seed = 1, itera
     },
     comparison: { ...comparison },
     durationMs,
-  }));
+  };
+  receipt.measurementFingerprint = computeReceiptFingerprint(receipt);
+  return validateBenchmarkReceipt(Object.freeze(receipt));
 }
