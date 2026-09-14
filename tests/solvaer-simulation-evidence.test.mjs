@@ -105,6 +105,31 @@ test('simulation evidence snapshots caller-owned simulation state before fingerp
   assert.equal(Object.isFrozen(evidence.simulation.outputs), true);
 });
 
+test('collaboration receipt identity participates in the simulation evidence fingerprint', () => {
+  const { evaluation } = evaluateFixture('snapshot-solvaer-collaboration-identity');
+  const source = {
+    accepted: evaluation.accepted,
+    collaborationEvidenceRef: evaluation.collaborationEvidenceRef,
+    simulation: evaluation.simulation,
+  };
+  const changedReceiptSource = {
+    ...source,
+    collaborationEvidenceRef: {
+      ...source.collaborationEvidenceRef,
+      evidenceFingerprint: 'a'.repeat(64),
+    },
+  };
+
+  const original = createSolvaerSimulationEvidence(source);
+  const changed = createSolvaerSimulationEvidence(changedReceiptSource);
+
+  assert.notEqual(original.simulationEvidenceFingerprint, changed.simulationEvidenceFingerprint);
+  assert.equal(original.collaborationEvidenceFingerprint, source.collaborationEvidenceRef.evidenceFingerprint);
+  assert.equal(changed.collaborationEvidenceFingerprint, 'a'.repeat(64));
+  assert.equal(validateSolvaerSimulationEvidence(original, source), true);
+  assert.equal(validateSolvaerSimulationEvidence(original, changedReceiptSource), false);
+});
+
 test('rejects cross-request collaboration references before issuing simulation evidence', () => {
   const { evaluation } = evaluateFixture('snapshot-solvaer-cross-request-evidence');
 
