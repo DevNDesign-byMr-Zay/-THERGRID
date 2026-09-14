@@ -62,6 +62,19 @@ test('accepts a candidate only as a simulation-required handoff', () => {
   assert.equal(accepted.safety.actuatesHardware, false);
 });
 
+test('accepted-result boundary rejects authority before any downstream handoff', () => {
+  const request = createRequest();
+  assert.throws(
+    () =>
+      acceptSolvaerOptimizationResult({
+        request,
+        candidate: { experimentId: 'experiment-001', snapshotId: 'snapshot-001', authoritative: true },
+        provenanceRef: { experimentId: 'experiment-001', snapshotId: 'snapshot-001' },
+      }),
+    /authority|physical actuation/i,
+  );
+});
+
 test('rejects candidates from a different experiment', () => {
   const request = createRequest();
   assert.throws(
