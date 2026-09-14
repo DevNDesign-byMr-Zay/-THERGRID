@@ -35,6 +35,23 @@ test('benchmark helper always resolves the maintained exact reference', () => {
   assert.equal(receipt.comparison.matchedObjective, true);
 });
 
+test('comparison rejects non-finite objectives', () => {
+  const exact = solveQuboExactly({ linear: [-1] });
+
+  assert.throws(
+    () => compareOptimization({ backend: 'candidate', objective: Number.POSITIVE_INFINITY }, exact),
+    /finite numeric objectives/,
+  );
+  assert.throws(
+    () => compareOptimization({ backend: 'candidate', objective: Number.NaN }, exact),
+    /finite numeric objectives/,
+  );
+  assert.throws(
+    () => compareOptimization({ backend: 'candidate', objective: -1 }, { ...exact, objective: Number.NEGATIVE_INFINITY }),
+    /finite numeric objectives/,
+  );
+});
+
 test('exact baseline refuses unbounded growth', () => {
   assert.throws(
     () => solveQuboExactly({ linear: Array.from({ length: 21 }, () => 0) }),
