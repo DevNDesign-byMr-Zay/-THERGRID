@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "node --test",
-    "coverage": "node --test --experimental-test-coverage",
+    "coverage": "node --test --experimental-test-coverage --test-coverage-lines=90 --test-coverage-branches=70 --test-coverage-functions=90",
     "syntax": "find src tests scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check",
     "demo": "node scripts/demo.mjs",
     "check": "npm run syntax && npm run coverage && npm run demo"
