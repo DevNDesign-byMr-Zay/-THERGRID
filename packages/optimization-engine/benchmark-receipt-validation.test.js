@@ -34,6 +34,10 @@ test('benchmark receipt remains serializable for a valid deterministic input', (
   assert.equal(receipt.problem.variableCount, 2);
   assert.equal(receipt.configuration.seed, 7);
   assert.equal(receipt.configuration.iterations, 20);
+  assert.equal(receipt.comparison.exactBackend, receipt.reference.backend);
+  assert.equal(receipt.comparison.candidateBackend, receipt.candidate.backend);
+  assert.equal(receipt.comparison.matchedObjective, receipt.candidate.objective === receipt.reference.objective);
+  assert.ok(Number.isFinite(receipt.comparison.objectiveGap));
   assert.ok(Number.isInteger(receipt.durationMs));
   assert.ok(receipt.durationMs >= 0);
   assert.equal(validateBenchmarkReceipt(receipt), receipt);
@@ -56,7 +60,14 @@ test('receipt boundary rejects structurally tampered evidence', () => {
   assert.throws(
     () => validateBenchmarkReceipt({
       ...receipt,
-      comparison: { ...receipt.comparison, relativeGap: Number.POSITIVE_INFINITY },
+      comparison: { ...receipt.comparison, objectiveGap: Number.POSITIVE_INFINITY },
+    }),
+    /invalid benchmark receipt comparison/,
+  );
+  assert.throws(
+    () => validateBenchmarkReceipt({
+      ...receipt,
+      comparison: { ...receipt.comparison, exactBackend: 'forged-reference' },
     }),
     /invalid benchmark receipt comparison/,
   );
