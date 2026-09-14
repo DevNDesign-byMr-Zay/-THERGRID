@@ -2,6 +2,14 @@ import { createHash } from 'node:crypto';
 import { solveQuboExactly, compareOptimization } from './benchmark.js';
 import { createReferenceProvider } from './quantum-inspired-provider.js';
 
+function canonical(value) {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonical(value[key])]));
+  }
+  return value;
+}
+
 function validateReceiptInput({ linear, quadratic, seed, iterations }) {
   if (!Array.isArray(linear) || linear.length === 0) {
     throw new TypeError('benchmark receipt linear coefficients are required.');
@@ -34,7 +42,7 @@ function computeReceiptFingerprint(receipt) {
     candidate: receipt.candidate,
     comparison: receipt.comparison,
   };
-  return createHash('sha256').update(JSON.stringify(identity)).digest('hex');
+  return createHash('sha256').update(JSON.stringify(canonical(identity)), 'utf8').digest('hex');
 }
 
 /**
