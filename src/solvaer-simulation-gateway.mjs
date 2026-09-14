@@ -1,5 +1,6 @@
 import { validateSolvaerCollaborationEvidence } from './solvaer-collaboration-evidence.mjs';
 import { acceptSolvaerOptimizationResult } from './solvaer-optimization-contract.mjs';
+import { createSolvaerSimulationEvidence } from './solvaer-simulation-evidence.mjs';
 import { simulateProposal } from './simulation.mjs';
 
 function object(value, name) {
@@ -68,12 +69,18 @@ export function evaluateSolvaerCandidate({
     experimentId: evidence.experimentId,
     snapshotId: evidence.snapshotId,
   });
+  const simulationEvidence = createSolvaerSimulationEvidence({
+    accepted,
+    collaborationEvidenceRef,
+    simulation,
+  });
 
   return Object.freeze({
     request: input,
     accepted,
     collaborationEvidenceRef,
     simulation,
+    simulationEvidence,
     promotionEligible: false,
     handoff: 'simulation-required',
     safety: Object.freeze({ advisoryOnly: true, authoritative: false, actuatesHardware: false }),
