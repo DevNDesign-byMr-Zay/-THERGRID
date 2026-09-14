@@ -24,6 +24,7 @@ test('SOLVÆR collaboration evidence is deterministic and simulation-bound', () 
   const evidence = createSolvaerCollaborationEvidence({ request: run.solvaerRequest, candidate, provenanceRef });
 
   assert.equal(validateSolvaerCollaborationEvidence(evidence), true);
+  assert.equal(evidence.requestId, run.solvaerRequest.requestId);
   assert.equal(evidence.experimentId, run.experimentId);
   assert.equal(evidence.snapshotId, snapshot.snapshotId);
   assert.equal(evidence.safety.authoritative, false);
@@ -38,6 +39,7 @@ test('tampering collaboration evidence fails closed', () => {
     candidate: { experimentId: run.experimentId, snapshotId: snapshot.snapshotId, proposal: run.proposal },
     provenanceRef: { experimentId: run.experimentId, snapshotId: snapshot.snapshotId },
   });
+  assert.equal(validateSolvaerCollaborationEvidence({ ...evidence, requestId: 'other-request' }), false);
   assert.equal(validateSolvaerCollaborationEvidence({ ...evidence, snapshotId: 'other-snapshot' }), false);
   assert.equal(validateSolvaerCollaborationEvidence({ ...evidence, safety: { ...evidence.safety, authoritative: true } }), false);
 });
