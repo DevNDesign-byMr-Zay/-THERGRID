@@ -53,6 +53,13 @@ export function acceptSolvaerOptimizationResult({ request, candidate, provenance
   if (input.capability !== CAPABILITY) throw new TypeError('request capability must be optimization.explore');
   const requestId = text(input.requestId, 'request.requestId');
   if (input.twinStateRef !== `twin-state:${input.snapshotId}`) throw new TypeError('request twinStateRef must bind to snapshotId');
+  if (
+    result.authoritative === true ||
+    result.actuatesHardware === true ||
+    result.physicalActuation === true
+  ) {
+    throw new TypeError('SOLVÆR candidate cannot claim authority or physical actuation');
+  }
   if (input.experimentId !== text(provenance.experimentId, 'provenanceRef.experimentId')) {
     throw new TypeError('candidate experimentId must match request');
   }
