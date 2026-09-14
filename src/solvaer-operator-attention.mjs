@@ -42,8 +42,11 @@ export function buildSolvaerOperatorAttention({ evidence, decision } = {}) {
 export function validateSolvaerOperatorAttention(attention) {
   try {
     if (!attention || attention.version !== 1 || !Array.isArray(attention.items)) return false;
+    if (typeof attention.experimentId !== 'string' || !attention.experimentId.trim()
+      || typeof attention.snapshotId !== 'string' || !attention.snapshotId.trim()
+      || typeof attention.requestId !== 'string' || !attention.requestId.trim()) return false;
     if (!attention.safety || attention.safety.authoritative !== false || attention.safety.actuatesHardware !== false || attention.safety.advisoryOnly !== true) return false;
-    return attention.items.every((item) => Number.isInteger(item.priority) && item.priority >= 0 && SEVERITIES.includes(item.severity) && item.advisoryOnly === true && typeof item.evidenceRef === 'string');
+    return attention.items.every((item) => Number.isInteger(item.priority) && item.priority >= 0 && SEVERITIES.includes(item.severity) && item.advisoryOnly === true && typeof item.evidenceRef === 'string' && item.evidenceRef.trim().length > 0);
   } catch {
     return false;
   }
