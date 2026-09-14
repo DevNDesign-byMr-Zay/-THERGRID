@@ -26,11 +26,16 @@ describe('SOLVÆR collaboration validator', () => {
     })).toBe(false);
   });
 
-  it('rejects malformed or authoritative candidates', () => {
+  it('rejects authoritative or actuating candidates', () => {
     expect(validateSolvaerCollaborationResult({
       request,
-      candidate: { experimentId: 'exp-1', authoritative: true },
+      candidate: { experimentId: 'exp-1', snapshotId: 'snap-1', authoritative: true },
       provenanceRef: { experimentId: 'exp-1', snapshotId: 'snap-1' },
-    })).toBe(true);
+    })).toBe(false);
+    expect(validateSolvaerCollaborationResult({
+      request,
+      candidate: { experimentId: 'exp-1', snapshotId: 'snap-1', actuatesHardware: true },
+      provenanceRef: { experimentId: 'exp-1', snapshotId: 'snap-1' },
+    })).toBe(false);
   });
 });
