@@ -7,12 +7,22 @@ import { validateSolvaerOperatorAttention } from '../src/solvaer-operator-attent
 import { validateHolographicRenderPacket } from '../src/holographic-renderer-contract.mjs';
 
 const snapshot = {
+  schemaVersion: 1,
   snapshotId: 'snapshot-bridge-001',
-  observedAt: '2026-09-13T12:00:00Z',
-  nodes: [
-    { id: 'n1', demandKw: 42, generationKw: 48 },
-    { id: 'n2', demandKw: 36, generationKw: 30 },
+  observedAt: '2026-09-13T12:00:00.000Z',
+  assets: [
+    { id: 'solar-1', kind: 'solar', powerKw: 12, capacityKw: 15 },
+    { id: 'load-1', kind: 'load', powerKw: 10, flexible: true },
+    { id: 'grid-1', kind: 'grid_interconnect', powerKw: -2, importLimitKw: 80, exportLimitKw: 40 },
   ],
+  topology: {
+    nodes: ['node-a'],
+    connections: [
+      { assetId: 'solar-1', nodeId: 'node-a' },
+      { assetId: 'load-1', nodeId: 'node-a' },
+      { assetId: 'grid-1', nodeId: 'node-a' },
+    ],
+  },
 };
 
 test('SOLVÆR decision bridge preserves experiment evidence through rendering and operator attention', () => {
@@ -35,11 +45,14 @@ test('SOLVÆR decision bridge preserves experiment evidence through rendering an
     presentation: baseline.presentation,
   });
 
+  assert.equal(bridge.requestId, baseline.solvaerRequest.requestId);
   assert.equal(bridge.experimentId, baseline.experimentId);
   assert.equal(bridge.decision.simulation.status, 'passed');
   assert.equal(bridge.decision.promotionEligible, false);
+  assert.equal(bridge.collaborationEvidence.requestId, baseline.solvaerRequest.requestId);
   assert.equal(bridge.collaborationEvidence.experimentId, baseline.experimentId);
   assert.equal(validateSolvaerCollaborationEvidence(bridge.collaborationEvidence), true);
+  assert.equal(bridge.operatorAttention.requestId, baseline.solvaerRequest.requestId);
   assert.equal(bridge.operatorAttention.experimentId, baseline.experimentId);
   assert.equal(bridge.operatorAttention.snapshotId, snapshot.snapshotId);
   assert.equal(validateSolvaerOperatorAttention(bridge.operatorAttention), true);
