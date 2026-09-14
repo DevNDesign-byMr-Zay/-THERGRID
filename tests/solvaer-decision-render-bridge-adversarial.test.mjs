@@ -5,21 +5,35 @@ import { buildSolvaerDecisionRenderBridge } from '../src/solvaer-decision-render
 import { validateSolvaerCollaborationEvidence } from '../src/solvaer-collaboration-evidence.mjs';
 import { validateHolographicRenderPacket } from '../src/holographic-renderer-contract.mjs';
 
-test('SOLVÆR decision-to-render bridge preserves experiment identity and safety', () => {
-  const snapshot = {
-    snapshotId: 'snapshot-bridge-001',
+function snapshot(snapshotId) {
+  return {
+    schemaVersion: 1,
+    snapshotId,
     observedAt: '2026-01-01T00:00:00.000Z',
-    nodes: [
-      { id: 'n1', loadKw: 10, generationKw: 12 },
-      { id: 'n2', loadKw: 8, generationKw: 7 },
+    assets: [
+      { id: 'solar-1', kind: 'solar', powerKw: 12, capacityKw: 15 },
+      { id: 'load-1', kind: 'load', powerKw: 10, flexible: true },
+      { id: 'grid-1', kind: 'grid_interconnect', powerKw: -2, importLimitKw: 80, exportLimitKw: 40 },
     ],
+    topology: {
+      nodes: ['node-a'],
+      connections: [
+        { assetId: 'solar-1', nodeId: 'node-a' },
+        { assetId: 'load-1', nodeId: 'node-a' },
+        { assetId: 'grid-1', nodeId: 'node-a' },
+      ],
+    },
   };
-  const baseline = runSyntheticMicrogrid(snapshot);
+}
+
+test('SOLVÆR decision-to-render bridge preserves experiment identity and safety', () => {
+  const source = snapshot('snapshot-bridge-001');
+  const baseline = runSyntheticMicrogrid(source);
   const candidate = {
     model: 'SOLVÆR-reference',
     solver: 'exploration-v1',
     experimentId: baseline.experimentId,
-    snapshotId: snapshot.snapshotId,
+    snapshotId: source.snapshotId,
     proposal: baseline.proposal,
     forecast: baseline.forecast,
     authoritative: false,
@@ -30,7 +44,7 @@ test('SOLVÆR decision-to-render bridge preserves experiment identity and safety
   const bridge = buildSolvaerDecisionRenderBridge({
     request: baseline.solvaerRequest,
     candidate,
-    provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId },
+    provenanceRef: { experimentId: baseline.experimentId, snapshotId: source.snapshotId },
     twinState: baseline.twinState,
     forecast: baseline.forecast,
     proposal: baseline.proposal,
@@ -38,6 +52,7 @@ test('SOLVÆR decision-to-render bridge preserves experiment identity and safety
     presentation: baseline.presentation,
   });
 
+  assert.equal(bridge.requestId, baseline.solvaerRequest.requestId);
   assert.equal(bridge.experimentId, baseline.experimentId);
   assert.equal(bridge.decision.simulation.status, 'passed');
   assert.equal(bridge.promotionEligible, false);
@@ -46,21 +61,17 @@ test('SOLVÆR decision-to-render bridge preserves experiment identity and safety
   assert.equal(validateHolographicRenderPacket(bridge.renderPacket), true);
   assert.equal(bridge.renderPacket.experimentId, baseline.experimentId);
   assert.equal(bridge.renderPacket.receiptId, bridge.decision.decisionReceipt.receiptId);
-  assert.equal(bridge.safety.physicalActuation, false);
+  assert.equal(bridge.safety.actuatesHardware, false);
 });
 
 test('SOLVÆR bridge rejects authoritative candidates before rendering', () => {
-  const snapshot = {
-    snapshotId: 'snapshot-bridge-002',
-    observedAt: '2026-01-01T00:00:00.000Z',
-    nodes: [{ id: 'n1', loadKw: 10, generationKw: 10 }],
-  };
-  const baseline = runSyntheticMicrogrid(snapshot);
+  const source = snapshot('snapshot-bridge-002');
+  const baseline = runSyntheticMicrogrid(source);
   const unsafeCandidate = {
     model: 'SOLVÆR-reference',
     solver: 'exploration-v1',
     experimentId: baseline.experimentId,
-    snapshotId: snapshot.snapshotId,
+    snapshotId: source.snapshotId,
     proposal: baseline.proposal,
     authoritative: true,
     actuatesHardware: false,
@@ -70,11 +81,11 @@ test('SOLVÆR bridge rejects authoritative candidates before rendering', () => {
   assert.throws(() => buildSolvaerDecisionRenderBridge({
     request: baseline.solvaerRequest,
     candidate: unsafeCandidate,
-    provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId },
+    provenanceRef: { experimentId: baseline.experimentId, snapshotId: source.snapshotId },
     twinState: baseline.twinState,
     forecast: baseline.forecast,
     proposal: baseline.proposal,
     scene: baseline.scene,
     presentation: baseline.presentation,
-  }));
+  }), /authority|physical actuation/i);
 });
