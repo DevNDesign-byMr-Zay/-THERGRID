@@ -9,11 +9,25 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm test
+          cache: npm
+      - name: Reproducible install
+        run: npm ci --ignore-scripts
+      - name: Dependency security audit
+        run: npm audit --audit-level=moderate
+      - name: Syntax check
+        run: npm run syntax
+      - name: Tests with coverage
+        run: npm run coverage
+      - name: Reproducible evidence and dashboard demos
+        run: |
+          npm run demo
+          npm run dashboard-demo

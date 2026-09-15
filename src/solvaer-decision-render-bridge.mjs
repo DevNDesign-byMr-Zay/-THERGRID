@@ -1,13 +1,48 @@
 import { evaluateSolvaerDecisionHandoff } from './solvaer-decision-handoff.mjs';
 import { createSolvaerCollaborationEvidence } from './solvaer-collaboration-evidence.mjs';
-import { buildSolvaerOperatorAttention, validateSolvaerOperatorAttention } from './solvaer-operator-attention.mjs';
-import { compileHolographicRenderPacket, validateHolographicRenderPacket } from './holographic-renderer-contract.mjs';
+import {
+  buildSolvaerOperatorAttention,
+  validateSolvaerOperatorAttention,
+} from './solvaer-operator-attention.mjs';
+import {
+  compileHolographicRenderPacket,
+  validateHolographicRenderPacket,
+} from './holographic-renderer-contract.mjs';
+
+function readOwnData(value, key, path) {
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  if (!descriptor) return undefined;
+  if ('get' in descriptor || 'set' in descriptor) {
+    throw new TypeError(`${path}.${key} must not use accessors`);
+  }
+  return descriptor.value;
+}
+
+function hasUnsafeAuthority(value, path) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  if (Object.getPrototypeOf(value) !== Object.prototype) {
+    throw new TypeError(`${path} must be a plain object`);
+  }
+  return (
+    readOwnData(value, 'authoritative', path) === true ||
+    readOwnData(value, 'physicalActuation', path) === true ||
+    readOwnData(value, 'actuatesHardware', path) === true ||
+    readOwnData(value, 'advisoryOnly', path) === false
+  );
+}
 
 function rejectAuthority(candidate) {
-  const safety = candidate?.safety;
-  if (!safety || typeof safety !== 'object') return;
-  if (safety.authoritative === true || safety.physicalActuation === true || safety.actuatesHardware === true || safety.advisoryOnly === false) {
-    throw new TypeError('SOLVÆR candidate cannot cross render bridge with physical or authoritative execution authority');
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return;
+  if (hasUnsafeAuthority(candidate, 'candidate')) {
+    throw new TypeError(
+      'SOLVÆR candidate cannot cross render bridge with physical or authoritative execution authority',
+    );
+  }
+  const safety = readOwnData(candidate, 'safety', 'candidate');
+  if (safety != null && hasUnsafeAuthority(safety, 'candidate.safety')) {
+    throw new TypeError(
+      'SOLVÆR candidate cannot cross render bridge with physical or authoritative execution authority',
+    );
   }
 }
 
@@ -26,7 +61,14 @@ export function buildSolvaerDecisionRenderBridge({
   presentation,
 } = {}) {
   rejectAuthority(candidate);
-  const decision = evaluateSolvaerDecisionHandoff({ request, candidate, provenanceRef, twinState, forecast, proposal });
+  const decision = evaluateSolvaerDecisionHandoff({
+    request,
+    candidate,
+    provenanceRef,
+    twinState,
+    forecast,
+    proposal,
+  });
   const collaborationEvidence = createSolvaerCollaborationEvidence({
     request,
     candidate: decision.candidate,
@@ -36,7 +78,9 @@ export function buildSolvaerDecisionRenderBridge({
     evidence: collaborationEvidence,
     decision,
   });
-  if (!validateSolvaerOperatorAttention(operatorAttention)) throw new TypeError('SOLVÆR render bridge produced invalid operator attention');
+  if (!validateSolvaerOperatorAttention(operatorAttention)) {
+    throw new TypeError('SOLVÆR render bridge produced invalid operator attention');
+  }
   const renderPacket = compileHolographicRenderPacket({
     scene,
     presentation,
@@ -44,7 +88,9 @@ export function buildSolvaerDecisionRenderBridge({
     receiptId: decision.decisionReceipt.receiptId,
     operatorAttentionFingerprint: operatorAttention.attentionFingerprint,
   });
-  if (!validateHolographicRenderPacket(renderPacket)) throw new TypeError('SOLVÆR render bridge produced invalid packet');
+  if (!validateHolographicRenderPacket(renderPacket)) {
+    throw new TypeError('SOLVÆR render bridge produced invalid packet');
+  }
 
   return Object.freeze({
     requestId: decision.requestId,
@@ -55,6 +101,11 @@ export function buildSolvaerDecisionRenderBridge({
     renderPacket,
     promotionEligible: false,
     handoff: 'simulation-evidence-required',
-    safety: Object.freeze({ authoritative: false, physicalActuation: false, actuatesHardware: false, advisoryOnly: true }),
+    safety: Object.freeze({
+      authoritative: false,
+      physicalActuation: false,
+      actuatesHardware: false,
+      advisoryOnly: true,
+    }),
   });
 }

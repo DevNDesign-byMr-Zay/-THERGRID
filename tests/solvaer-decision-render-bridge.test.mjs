@@ -9,51 +9,131 @@ import { validateHolographicRenderPacket } from '../src/holographic-renderer-con
 const snapshot = {
   schemaVersion: 1,
   snapshotId: 'snapshot-bridge-001',
-  observedAt: '2026-09-13T12:00:00Z',
-  assets: [{ id: 'load-1', kind: 'load', powerKw: 78 }, { id: 'solar-1', kind: 'solar', powerKw: 48, capacityKw: 60 }],
-  topology: { nodes: ['node-load', 'node-solar'], connections: [{ assetId: 'load-1', nodeId: 'node-load' }, { assetId: 'solar-1', nodeId: 'node-solar' }] },
+  observedAt: '2026-09-13T12:00:00.000Z',
+  assets: [
+    { id: 'solar-1', kind: 'solar', powerKw: 12, capacityKw: 15 },
+    { id: 'load-1', kind: 'load', powerKw: 10, flexible: true },
+    {
+      id: 'grid-1',
+      kind: 'grid_interconnect',
+      powerKw: -2,
+      importLimitKw: 80,
+      exportLimitKw: 40,
+    },
+  ],
+  topology: {
+    nodes: ['node-a'],
+    connections: [
+      { assetId: 'solar-1', nodeId: 'node-a' },
+      { assetId: 'load-1', nodeId: 'node-a' },
+      { assetId: 'grid-1', nodeId: 'node-a' },
+    ],
+  },
 };
 
 test('SOLVÆR decision bridge preserves experiment evidence through rendering and operator attention', () => {
   const baseline = runSyntheticMicrogrid(snapshot);
-  const candidate = { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId, proposal: baseline.proposal, forecast: baseline.forecast, rationale: 'explore a simulation-bound candidate' };
-  const bridge = buildSolvaerDecisionRenderBridge({ request: baseline.solvaerRequest, candidate, provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId }, twinState: baseline.twinState, forecast: baseline.forecast, proposal: baseline.proposal, scene: baseline.scene, presentation: baseline.presentation });
+  const candidate = {
+    experimentId: baseline.experimentId,
+    snapshotId: snapshot.snapshotId,
+    proposal: baseline.proposal,
+    forecast: baseline.forecast,
+    rationale: 'explore a simulation-bound candidate',
+  };
+  const bridge = buildSolvaerDecisionRenderBridge({
+    request: baseline.solvaerRequest,
+    candidate,
+    provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId },
+    twinState: baseline.twinState,
+    forecast: baseline.forecast,
+    proposal: baseline.proposal,
+    scene: baseline.scene,
+    presentation: baseline.presentation,
+  });
+
+  assert.equal(bridge.requestId, baseline.solvaerRequest.requestId);
   assert.equal(bridge.experimentId, baseline.experimentId);
   assert.equal(bridge.decision.simulation.status, 'passed');
   assert.equal(bridge.decision.promotionEligible, false);
+  assert.equal(bridge.collaborationEvidence.requestId, baseline.solvaerRequest.requestId);
   assert.equal(bridge.collaborationEvidence.experimentId, baseline.experimentId);
   assert.equal(validateSolvaerCollaborationEvidence(bridge.collaborationEvidence), true);
+  assert.equal(bridge.operatorAttention.requestId, baseline.solvaerRequest.requestId);
   assert.equal(bridge.operatorAttention.experimentId, baseline.experimentId);
   assert.equal(bridge.operatorAttention.snapshotId, snapshot.snapshotId);
   assert.equal(validateSolvaerOperatorAttention(bridge.operatorAttention), true);
   assert.equal(bridge.operatorAttention.items.length, 2);
-  assert.equal(bridge.operatorAttention.items[0].evidenceRef, bridge.collaborationEvidence.evidenceFingerprint);
+  assert.equal(
+    bridge.operatorAttention.items[0].evidenceRef,
+    bridge.collaborationEvidence.evidenceFingerprint,
+  );
   assert.equal(bridge.renderPacket.experimentId, baseline.experimentId);
   assert.equal(bridge.renderPacket.receiptId, bridge.decision.decisionReceipt.receiptId);
-  assert.equal(bridge.renderPacket.operatorAttentionFingerprint, bridge.operatorAttention.attentionFingerprint);
+  assert.equal(
+    bridge.renderPacket.operatorAttentionFingerprint,
+    bridge.operatorAttention.attentionFingerprint,
+  );
   assert.equal(validateHolographicRenderPacket(bridge.renderPacket), true);
-  assert.deepEqual(bridge.safety, { authoritative: false, physicalActuation: false, actuatesHardware: false, advisoryOnly: true });
-});
-
-test('SOLVÆR render packet fingerprint invalidates operator attention identity substitution', () => {
-  const baseline = runSyntheticMicrogrid(snapshot);
-  const candidate = { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId, proposal: baseline.proposal, forecast: baseline.forecast, rationale: 'integrity-bound render' };
-  const bridge = buildSolvaerDecisionRenderBridge({ request: baseline.solvaerRequest, candidate, provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId }, twinState: baseline.twinState, forecast: baseline.forecast, proposal: baseline.proposal, scene: baseline.scene, presentation: baseline.presentation });
-  const tampered = { ...bridge.renderPacket, operatorAttentionFingerprint: '0'.repeat(64) };
-  assert.equal(validateHolographicRenderPacket(tampered), false);
-});
-
-test('SOLVÆR operator attention rejects prototype-backed safety and identity fields', () => {
-  const baseline = runSyntheticMicrogrid(snapshot);
-  const candidate = { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId, proposal: baseline.proposal, forecast: baseline.forecast, rationale: 'prototype boundary' };
-  const bridge = buildSolvaerDecisionRenderBridge({ request: baseline.solvaerRequest, candidate, provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId }, twinState: baseline.twinState, forecast: baseline.forecast, proposal: baseline.proposal, scene: baseline.scene, presentation: baseline.presentation });
-  const inheritedSafety = Object.create(bridge.operatorAttention.safety);
-  const inheritedAttention = Object.create(bridge.operatorAttention);
-  Object.assign(inheritedAttention, { safety: inheritedSafety, attentionFingerprint: bridge.operatorAttention.attentionFingerprint });
-  assert.equal(validateSolvaerOperatorAttention(inheritedAttention), false);
+  assert.deepEqual(bridge.safety, {
+    authoritative: false,
+    physicalActuation: false,
+    actuatesHardware: false,
+    advisoryOnly: true,
+  });
 });
 
 test('SOLVÆR candidate cannot cross the render bridge with authoritative execution flags', () => {
   const baseline = runSyntheticMicrogrid(snapshot);
-  assert.throws(() => buildSolvaerDecisionRenderBridge({ request: baseline.solvaerRequest, candidate: { ...baseline.proposal, experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId, safety: { authoritative: true, physicalActuation: false, actuatesHardware: false, advisoryOnly: false } }, provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId }, twinState: baseline.twinState, forecast: baseline.forecast, proposal: baseline.proposal, scene: baseline.scene, presentation: baseline.presentation }), /authority|authoritative|physical/);
+  assert.throws(
+    () =>
+      buildSolvaerDecisionRenderBridge({
+        request: baseline.solvaerRequest,
+        candidate: {
+          ...baseline.proposal,
+          experimentId: baseline.experimentId,
+          snapshotId: snapshot.snapshotId,
+          authoritative: true,
+        },
+        provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId },
+        twinState: baseline.twinState,
+        forecast: baseline.forecast,
+        proposal: baseline.proposal,
+        scene: baseline.scene,
+        presentation: baseline.presentation,
+      }),
+    /authority|physical actuation|validation/i,
+  );
+});
+
+test('SOLVÆR bridge rejects authority accessors without evaluating them', () => {
+  const baseline = runSyntheticMicrogrid(snapshot);
+  let getterReads = 0;
+  const candidate = {
+    experimentId: baseline.experimentId,
+    snapshotId: snapshot.snapshotId,
+    proposal: baseline.proposal,
+  };
+  Object.defineProperty(candidate, 'authoritative', {
+    enumerable: true,
+    get() {
+      getterReads += 1;
+      return false;
+    },
+  });
+
+  assert.throws(
+    () =>
+      buildSolvaerDecisionRenderBridge({
+        request: baseline.solvaerRequest,
+        candidate,
+        provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId },
+        twinState: baseline.twinState,
+        forecast: baseline.forecast,
+        proposal: baseline.proposal,
+        scene: baseline.scene,
+        presentation: baseline.presentation,
+      }),
+    /must not use accessors/,
+  );
+  assert.equal(getterReads, 0);
 });

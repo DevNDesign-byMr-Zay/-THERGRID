@@ -1,5 +1,10 @@
+import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSolvaerOptimizationRequest, acceptSolvaerOptimizationResult, SOLVAER_PRODUCER_IDENTITY } from '../src/solvaer-optimization-contract.mjs';
+import {
+  createSolvaerOptimizationRequest,
+  acceptSolvaerOptimizationResult,
+  SOLVAER_PRODUCER_IDENTITY,
+} from '../src/solvaer-optimization-contract.mjs';
 
 const request = createSolvaerOptimizationRequest({
   experimentId: 'exp-prototype',
@@ -16,44 +21,56 @@ function inheritedIdentity() {
 
 test('rejects a request whose SOLVÆR identity is inherited from a prototype', () => {
   assert.throws(
-    () => acceptSolvaerOptimizationResult({
-      request: { ...request, producerIdentity: inheritedIdentity() },
-      candidate: { experimentId: 'exp-prototype', snapshotId: 'snap-prototype', proposal: {} },
-      provenanceRef: provenance,
-    }),
+    () =>
+      acceptSolvaerOptimizationResult({
+        request: { ...request, producerIdentity: inheritedIdentity() },
+        candidate: { experimentId: 'exp-prototype', snapshotId: 'snap-prototype', proposal: {} },
+        provenanceRef: provenance,
+      }),
     /request producer identity is invalid/,
   );
 });
 
 test('rejects a candidate whose SOLVÆR identity is inherited from a prototype', () => {
   assert.throws(
-    () => acceptSolvaerOptimizationResult({
-      request,
-      candidate: { experimentId: 'exp-prototype', snapshotId: 'snap-prototype', proposal: {}, producerIdentity: inheritedIdentity() },
-      provenanceRef: provenance,
-    }),
+    () =>
+      acceptSolvaerOptimizationResult({
+        request,
+        candidate: {
+          experimentId: 'exp-prototype',
+          snapshotId: 'snap-prototype',
+          proposal: {},
+          producerIdentity: inheritedIdentity(),
+        },
+        provenanceRef: provenance,
+      }),
     /candidate producer identity does not match SOLVÆR request/,
   );
 });
 
 test('rejects provenance whose SOLVÆR identity is inherited from a prototype', () => {
   assert.throws(
-    () => acceptSolvaerOptimizationResult({
-      request,
-      candidate: { experimentId: 'exp-prototype', snapshotId: 'snap-prototype', proposal: {} },
-      provenanceRef: { ...provenance, producerIdentity: inheritedIdentity() },
-    }),
+    () =>
+      acceptSolvaerOptimizationResult({
+        request,
+        candidate: { experimentId: 'exp-prototype', snapshotId: 'snap-prototype', proposal: {} },
+        provenanceRef: { ...provenance, producerIdentity: inheritedIdentity() },
+      }),
     /provenanceRef producer identity does not match SOLVÆR request/,
   );
 });
 
 test('rejects a request carrying physical or authoritative execution authority', () => {
   assert.throws(
-    () => acceptSolvaerOptimizationResult({
-      request: { ...request, safety: { advisoryOnly: true, authoritative: true, actuatesHardware: false } },
-      candidate: { experimentId: 'exp-prototype', snapshotId: 'snap-prototype', proposal: {} },
-      provenanceRef: provenance,
-    }),
+    () =>
+      acceptSolvaerOptimizationResult({
+        request: {
+          ...request,
+          safety: { advisoryOnly: true, authoritative: true, actuatesHardware: false },
+        },
+        candidate: { experimentId: 'exp-prototype', snapshotId: 'snap-prototype', proposal: {} },
+        provenanceRef: provenance,
+      }),
     /request cannot carry physical or authoritative execution authority/,
   );
 });
@@ -76,11 +93,12 @@ test('rejects prototype-backed provenance objects before inherited identifiers c
     snapshotId: 'snap-prototype',
   });
   assert.throws(
-    () => acceptSolvaerOptimizationResult({
-      request,
-      candidate: { experimentId: 'exp-prototype', snapshotId: 'snap-prototype', proposal: {} },
-      provenanceRef,
-    }),
+    () =>
+      acceptSolvaerOptimizationResult({
+        request,
+        candidate: { experimentId: 'exp-prototype', snapshotId: 'snap-prototype', proposal: {} },
+        provenanceRef,
+      }),
     /provenanceRef must be a plain object/,
   );
 });

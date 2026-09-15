@@ -25,5 +25,5 @@ test('rejects a candidate that attempts physical authority', () => {
     request,
     candidate: { experimentId: 'exp-2', snapshotId: 'snap-2', proposal: {}, actuatesHardware: true },
     provenanceRef: { experimentId: 'exp-2', snapshotId: 'snap-2' },
-  }), /physical or authoritative execution authority/);
+  }), /physical actuation/);
 });

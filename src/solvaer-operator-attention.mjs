@@ -1,88 +1,227 @@
 import { createHash } from 'node:crypto';
 import { validateSolvaerCollaborationEvidence } from './solvaer-collaboration-evidence.mjs';
+import { validateSolvaerOperatorEvidenceSummary } from './solvaer-operator-evidence-summary.mjs';
 
-const SEVERITIES = Object.freeze(['info', 'warning', 'critical']);
 const ATTENTION_VERSION = 2;
-
-function plainObject(value, name) {
-  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) {
-    throw new TypeError(`${name} must be a plain object`);
-  }
-  return value;
-}
+const SEVERITIES = Object.freeze(['info', 'warning', 'critical']);
+const ATTENTION_KEYS = Object.freeze([
+  'version',
+  'experimentId',
+  'snapshotId',
+  'requestId',
+  'items',
+  'safety',
+  'attentionFingerprint',
+]);
+const ITEM_KEYS = Object.freeze(['id', 'priority', 'severity', 'reason', 'evidenceRef', 'advisoryOnly']);
+const SAFETY_KEYS = Object.freeze(['authoritative', 'actuatesHardware', 'advisoryOnly']);
 
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
   if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonical(value[key])]));
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonical(value[key])]),
+    );
   }
   return value;
 }
 
 function fingerprint(value) {
-  return createHash('sha256').update(JSON.stringify(canonical(value)), 'utf8').digest('hex');
+  return createHash('sha256')
+    .update(JSON.stringify(canonical(value)), 'utf8')
+    .digest('hex');
 }
 
-/** Project validated SOLVÆR evidence into an operator-only attention layer. */
-export function buildSolvaerOperatorAttention({ evidence, decision } = {}) {
-  if (!validateSolvaerCollaborationEvidence(evidence)) throw new TypeError('invalid SOLVÆR collaboration evidence');
-  if (!decision || typeof decision !== 'object') throw new TypeError('decision is required');
-  if (decision.experimentId !== evidence.experimentId) throw new TypeError('decision experiment does not match evidence');
-  if (decision.requestId == null) throw new TypeError('decision requestId is required');
+function snapshotAttentionEvidence(value, path = 'attention', seen = new WeakSet()) {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new TypeError(`${path} numbers must be finite`);
+    return value;
+  }
+  if (!value || typeof value !== 'object') {
+    throw new TypeError(`${path} must contain JSON-compatible evidence`);
+  }
+  if (Object.getOwnPropertySymbols(value).length > 0) {
+    throw new TypeError(`${path} must not contain symbol properties`);
+  }
+  if (seen.has(value)) throw new TypeError(`${path} must not contain circular references`);
+  seen.add(value);
 
-  const simulationPassed = decision.simulation?.status === 'passed';
+  let copy;
+  if (Array.isArray(value)) {
+    const allowedKeys = new Set(['length']);
+    copy = [];
+    for (let index = 0; index < value.length; index += 1) {
+      const key = String(index);
+      allowedKeys.add(key);
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor) throw new TypeError(`${path} must not contain sparse arrays`);
+      if ('get' in descriptor || 'set' in descriptor) {
+        throw new TypeError(`${path}[${index}] must not use accessors`);
+      }
+      copy.push(snapshotAttentionEvidence(descriptor.value, `${path}[${index}]`, seen));
+    }
+    if (Reflect.ownKeys(value).some((key) => typeof key !== 'string' || !allowedKeys.has(key))) {
+      throw new TypeError(`${path} arrays must not contain extra properties`);
+    }
+  } else {
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) {
+      throw new TypeError(`${path} must use plain objects`);
+    }
+    copy = {};
+    for (const [key, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(value))) {
+      if (!descriptor.enumerable) throw new TypeError(`${path}.${key} must be enumerable evidence`);
+      if ('get' in descriptor || 'set' in descriptor) {
+        throw new TypeError(`${path}.${key} must not use accessors`);
+      }
+      copy[key] = snapshotAttentionEvidence(descriptor.value, `${path}.${key}`, seen);
+    }
+  }
+
+  seen.delete(value);
+  return copy;
+}
+
+function hasExactKeys(value, expectedKeys) {
+  const keys = Object.keys(value);
+  return keys.length === expectedKeys.length && keys.every((key) => expectedKeys.includes(key));
+}
+
+function createOperatorAttention({ experimentId, snapshotId, requestId, evidenceRef, simulationPassed }) {
   const items = [
     {
-      id: `${evidence.experimentId}:simulation`,
+      id: `${experimentId}:simulation`,
       priority: simulationPassed ? 40 : 90,
       severity: simulationPassed ? 'info' : 'critical',
-      reason: simulationPassed ? 'SOLVÆR candidate completed the THERGRID simulation gate.' : 'SOLVÆR candidate did not pass the THERGRID simulation gate.',
-      evidenceRef: evidence.evidenceFingerprint,
+      reason: simulationPassed
+        ? 'SOLVÆR candidate completed the THERGRID simulation gate.'
+        : 'SOLVÆR candidate did not pass the THERGRID simulation gate.',
+      evidenceRef,
       advisoryOnly: true,
     },
     {
-      id: `${evidence.experimentId}:promotion`,
+      id: `${experimentId}:promotion`,
       priority: 70,
       severity: 'warning',
       reason: 'Candidate remains simulation-evidence-required and is not promotion-authoritative.',
-      evidenceRef: evidence.evidenceFingerprint,
+      evidenceRef,
       advisoryOnly: true,
     },
   ];
-
-  const attention = {
+  const body = {
     version: ATTENTION_VERSION,
+    experimentId,
+    snapshotId,
+    requestId,
+    items: Object.freeze(items.map((item) => Object.freeze(item))),
+    safety: Object.freeze({ authoritative: false, actuatesHardware: false, advisoryOnly: true }),
+  };
+
+  return Object.freeze({
+    ...body,
+    attentionFingerprint: fingerprint(body),
+  });
+}
+
+/** Project validated SOLVÆR collaboration evidence into an operator-only attention layer. */
+export function buildSolvaerOperatorAttention({ evidence, decision } = {}) {
+  if (!validateSolvaerCollaborationEvidence(evidence)) {
+    throw new TypeError('invalid SOLVÆR collaboration evidence');
+  }
+  if (!decision || typeof decision !== 'object') throw new TypeError('decision is required');
+  if (decision.experimentId !== evidence.experimentId) {
+    throw new TypeError('decision experiment does not match evidence');
+  }
+  if (typeof decision.requestId !== 'string' || !decision.requestId.trim()) {
+    throw new TypeError('decision requestId is required');
+  }
+  if (decision.requestId !== evidence.requestId) {
+    throw new TypeError('decision requestId does not match collaboration evidence');
+  }
+
+  return createOperatorAttention({
     experimentId: evidence.experimentId,
     snapshotId: evidence.snapshotId,
     requestId: decision.requestId,
-    items,
-    safety: { authoritative: false, actuatesHardware: false, advisoryOnly: true },
-  };
-  return Object.freeze({ ...attention, items: Object.freeze(items.map((item) => Object.freeze(item))), attentionFingerprint: fingerprint(attention) });
+    evidenceRef: evidence.evidenceFingerprint,
+    simulationPassed: decision.simulation?.status === 'passed',
+  });
+}
+
+/** Build attention from the already allowlisted, integrity-checked operator evidence summary. */
+export function buildSolvaerOperatorAttentionFromSummary(summary) {
+  if (!validateSolvaerOperatorEvidenceSummary(summary)) {
+    throw new TypeError('validated SOLVÆR operator evidence summary is required');
+  }
+
+  return createOperatorAttention({
+    experimentId: summary.experimentId,
+    snapshotId: summary.snapshotId,
+    requestId: summary.solvaerRequestId,
+    evidenceRef: summary.summaryFingerprint,
+    simulationPassed: summary.simulationStatus === 'passed',
+  });
 }
 
 export function validateSolvaerOperatorAttention(attention) {
   try {
-    const value = plainObject(attention, 'attention');
-    if (!Object.hasOwn(value, 'version') || value.version !== ATTENTION_VERSION || !Array.isArray(value.items)) return false;
-    if (!Object.hasOwn(value, 'experimentId') || !Object.hasOwn(value, 'snapshotId') || !Object.hasOwn(value, 'requestId')) return false;
-    if (typeof value.experimentId !== 'string' || !value.experimentId.trim()
-      || typeof value.snapshotId !== 'string' || !value.snapshotId.trim()
-      || typeof value.requestId !== 'string' || !value.requestId.trim()) return false;
-    const safety = value.safety;
-    if (!safety || typeof safety !== 'object' || Array.isArray(safety) || Object.getPrototypeOf(safety) !== Object.prototype
-      || !Object.hasOwn(safety, 'authoritative') || !Object.hasOwn(safety, 'actuatesHardware') || !Object.hasOwn(safety, 'advisoryOnly')
-      || safety.authoritative !== false || safety.actuatesHardware !== false || safety.advisoryOnly !== true) return false;
-    if (!Object.hasOwn(value, 'attentionFingerprint') || !/^[a-f0-9]{64}$/.test(value.attentionFingerprint)) return false;
-    if (!value.items.every((item) => item && typeof item === 'object' && !Array.isArray(item) && Object.getPrototypeOf(item) === Object.prototype
-      && Object.hasOwn(item, 'id') && Object.hasOwn(item, 'priority') && Object.hasOwn(item, 'severity')
-      && Object.hasOwn(item, 'advisoryOnly') && Object.hasOwn(item, 'evidenceRef')
-      && typeof item.id === 'string' && item.id.trim() && Number.isInteger(item.priority) && item.priority >= 0
-      && SEVERITIES.includes(item.severity) && item.advisoryOnly === true && typeof item.evidenceRef === 'string' && item.evidenceRef.trim().length > 0)) return false;
-    return value.attentionFingerprint === fingerprint({ ...value, attentionFingerprint: undefined });
+    const normalized = snapshotAttentionEvidence(attention);
+    if (!hasExactKeys(normalized, ATTENTION_KEYS)) return false;
+    if (normalized.version !== ATTENTION_VERSION || !Array.isArray(normalized.items)) return false;
+    if (
+      typeof normalized.experimentId !== 'string' ||
+      !normalized.experimentId.trim() ||
+      typeof normalized.snapshotId !== 'string' ||
+      !normalized.snapshotId.trim() ||
+      typeof normalized.requestId !== 'string' ||
+      !normalized.requestId.trim()
+    ) {
+      return false;
+    }
+    if (!hasExactKeys(normalized.safety, SAFETY_KEYS)) return false;
+    if (
+      normalized.safety.authoritative !== false ||
+      normalized.safety.actuatesHardware !== false ||
+      normalized.safety.advisoryOnly !== true
+    ) {
+      return false;
+    }
+    if (normalized.items.length !== 2) return false;
+    if (
+      !normalized.items.every(
+        (item) =>
+          item &&
+          typeof item === 'object' &&
+          hasExactKeys(item, ITEM_KEYS) &&
+          Number.isInteger(item.priority) &&
+          item.priority >= 0 &&
+          SEVERITIES.includes(item.severity) &&
+          item.advisoryOnly === true &&
+          typeof item.reason === 'string' &&
+          item.reason.trim().length > 0 &&
+          typeof item.evidenceRef === 'string' &&
+          item.evidenceRef.trim().length > 0,
+      )
+    ) {
+      return false;
+    }
+    if (normalized.items[0].id !== `${normalized.experimentId}:simulation`) return false;
+    if (normalized.items[1].id !== `${normalized.experimentId}:promotion`) return false;
+    if (normalized.items[0].evidenceRef !== normalized.items[1].evidenceRef) return false;
+    if (typeof normalized.attentionFingerprint !== 'string') return false;
+    if (!/^[a-f0-9]{64}$/.test(normalized.attentionFingerprint)) return false;
+
+    const { attentionFingerprint, ...body } = normalized;
+    return attentionFingerprint === fingerprint(body);
   } catch {
     return false;
   }
 }
 
-export { ATTENTION_VERSION as SOLVAER_OPERATOR_ATTENTION_VERSION, SEVERITIES as SOLVAER_OPERATOR_ATTENTION_SEVERITIES };
+export {
+  ATTENTION_VERSION as SOLVAER_OPERATOR_ATTENTION_VERSION,
+  SEVERITIES as SOLVAER_OPERATOR_ATTENTION_SEVERITIES,
+};
