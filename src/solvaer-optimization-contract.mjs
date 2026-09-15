@@ -63,6 +63,7 @@ export function acceptSolvaerOptimizationResult({ request, candidate, provenance
   if (input.twinStateRef !== `twin-state:${input.snapshotId}`) throw new TypeError('request twinStateRef must bind to snapshotId');
   if (input.requestId !== `solvaer-request:${input.experimentId}:${input.snapshotId}`) throw new TypeError('requestId must bind to experiment and snapshot');
   if (!sameIdentity(input.producerIdentity, PRODUCER_IDENTITY)) throw new TypeError('request producer identity is invalid');
+  rejectAuthority(input, 'request');
   rejectAuthority(result, 'candidate');
   rejectAuthority(provenance, 'provenanceRef');
   if (input.experimentId !== text(provenance.experimentId, 'provenanceRef.experimentId')) throw new TypeError('candidate experimentId must match request');
