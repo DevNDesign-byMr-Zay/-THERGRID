@@ -10,9 +10,9 @@ test('SOLVÆR decision-to-render bridge preserves experiment identity and safety
     schemaVersion: 1,
     snapshotId: 'snapshot-bridge-001',
     observedAt: '2026-01-01T00:00:00.000Z',
-    nodes: [
-      { id: 'n1', loadKw: 10, generationKw: 12 },
-      { id: 'n2', loadKw: 8, generationKw: 7 },
+    assets: [
+      { id: 'load-1', kind: 'load', powerKw: 18 },
+      { id: 'solar-1', kind: 'solar', powerKw: 22, capacityKw: 30 },
     ],
   };
   const baseline = runSyntheticMicrogrid(snapshot);
@@ -55,7 +55,7 @@ test('SOLVÆR bridge rejects authoritative candidates before rendering', () => {
     schemaVersion: 1,
     snapshotId: 'snapshot-bridge-002',
     observedAt: '2026-01-01T00:00:00.000Z',
-    nodes: [{ id: 'n1', loadKw: 10, generationKw: 10 }],
+    assets: [{ id: 'load-1', kind: 'load', powerKw: 20 }],
   };
   const baseline = runSyntheticMicrogrid(snapshot);
   const unsafeCandidate = {
