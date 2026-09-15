@@ -7,9 +7,9 @@ const base = {
   experimentId: 'experiment-1',
   snapshotId: 'snapshot-1',
   requestId: 'request-1',
-  items: [{ priority: 40, severity: 'info', evidenceRef: 'evidence-1', advisoryOnly: true }],
+  items: [{ id: 'experiment-1:simulation', priority: 40, severity: 'info', evidenceRef: 'evidence-1', advisoryOnly: true }],
   safety: { authoritative: false, actuatesHardware: false, advisoryOnly: true },
-  attentionFingerprint: '51bac50a9acf73777cd8e94e0091e20f8c422e96dc8022e9ef28fb4bb307ff92',
+  attentionFingerprint: '42c39f3530d9414ac6f790a90ab1cd91a5e18eb32213a06b51654e4bd54b589b',
 };
 
 test('accepts a complete operator attention identity', () => {
