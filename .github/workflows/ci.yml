@@ -27,5 +27,7 @@ jobs:
         run: npm run syntax
       - name: Tests with coverage
         run: npm run coverage
-      - name: Reproducible vertical-slice demo
-        run: npm run demo
+      - name: Reproducible evidence and dashboard demos
+        run: |
+          npm run demo
+          npm run dashboard-demo
