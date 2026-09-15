@@ -131,7 +131,19 @@ export function buildSolvaerOperatorAttention({ evidence, decision } = {}) {
   if (!validateSolvaerCollaborationEvidence(evidence)) {
     throw new TypeError('invalid SOLVÆR collaboration evidence');
   }
-  if (!decision || typeof decision !== 'object') throw new TypeError('decision is required');
+  if (!decision || typeof decision !== 'object' || Array.isArray(decision)) {
+    throw new TypeError('decision is required');
+  }
+  const decisionPrototype = Object.getPrototypeOf(decision);
+  if (decisionPrototype !== Object.prototype) {
+    throw new TypeError('decision must use a plain object');
+  }
+  for (const key of ['experimentId', 'requestId']) {
+    const descriptor = Object.getOwnPropertyDescriptor(decision, key);
+    if (!descriptor || 'get' in descriptor || 'set' in descriptor) {
+      throw new TypeError(`decision.${key} must be an own data property`);
+    }
+  }
   if (decision.experimentId !== evidence.experimentId) {
     throw new TypeError('decision experiment does not match evidence');
   }
@@ -142,12 +154,34 @@ export function buildSolvaerOperatorAttention({ evidence, decision } = {}) {
     throw new TypeError('decision requestId does not match collaboration evidence');
   }
 
+  let simulationStatus;
+  const simulationDescriptor = Object.getOwnPropertyDescriptor(decision, 'simulation');
+  if (simulationDescriptor) {
+    if ('get' in simulationDescriptor || 'set' in simulationDescriptor) {
+      throw new TypeError('decision.simulation must not use accessors');
+    }
+    const simulation = simulationDescriptor.value;
+    if (simulation != null) {
+      if (!simulation || typeof simulation !== 'object' || Array.isArray(simulation)) {
+        throw new TypeError('decision.simulation must be a plain object');
+      }
+      if (Object.getPrototypeOf(simulation) !== Object.prototype) {
+        throw new TypeError('decision.simulation must use a plain object');
+      }
+      const statusDescriptor = Object.getOwnPropertyDescriptor(simulation, 'status');
+      if (statusDescriptor && ('get' in statusDescriptor || 'set' in statusDescriptor)) {
+        throw new TypeError('decision.simulation.status must not use accessors');
+      }
+      simulationStatus = statusDescriptor?.value;
+    }
+  }
+
   return createOperatorAttention({
     experimentId: evidence.experimentId,
     snapshotId: evidence.snapshotId,
     requestId: decision.requestId,
     evidenceRef: evidence.evidenceFingerprint,
-    simulationPassed: decision.simulation?.status === 'passed',
+    simulationPassed: simulationStatus === 'passed',
   });
 }
 
