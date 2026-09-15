@@ -44,3 +44,41 @@ test('rejects missing and surplus links', () => {
     false,
   );
 });
+
+test('rejects unknown or duplicate artifact types even with a valid adjacent chain', () => {
+  assert.equal(
+    validateProvenanceGraph({
+      ...baseGraph,
+      nodes: [
+        { type: 'telemetry', id: 'telemetry-a' },
+        { type: 'unknown-artifact', id: 'unknown-a' },
+        { type: 'render-packet', id: 'render-a' },
+      ],
+      edges: [
+        { from: 'telemetry-a', to: 'unknown-a' },
+        { from: 'unknown-a', to: 'render-a' },
+      ],
+    }),
+    false,
+  );
+
+  assert.equal(
+    validateProvenanceGraph({
+      ...baseGraph,
+      nodes: [
+        { type: 'telemetry', id: 'telemetry-a' },
+        { type: 'simulation', id: 'simulation-a' },
+        { type: 'simulation', id: 'simulation-b' },
+      ],
+      edges: [
+        { from: 'telemetry-a', to: 'simulation-a' },
+        { from: 'simulation-a', to: 'simulation-b' },
+      ],
+    }),
+    false,
+  );
+});
+
+test('rejects non-canonical required artifact types', () => {
+  assert.equal(validateProvenanceGraph(baseGraph, { requiredTypes: ['unknown-artifact'] }), false);
+});
