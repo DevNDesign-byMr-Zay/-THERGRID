@@ -7,6 +7,7 @@ import { buildSolvaerOperatorAttention, validateSolvaerOperatorAttention } from 
 
 function buildAttention() {
   const baseline = runSyntheticMicrogrid({
+    schemaVersion: 1,
     snapshotId: 'attention-fingerprint-snapshot',
     observedAt: '2026-01-01T00:00:00Z',
     nodes: [{ id: 'n1', loadKw: 10, generationKw: 12 }],
