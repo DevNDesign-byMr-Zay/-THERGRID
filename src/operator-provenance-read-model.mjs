@@ -72,13 +72,20 @@ function readExactDataObject(value, expectedKeys) {
 function readItems(value) {
   if (!Array.isArray(value)) return null;
   if (Object.getOwnPropertySymbols(value).length > 0) return null;
+
+  const allowedKeys = new Set(['length']);
   const items = [];
   for (let index = 0; index < value.length; index += 1) {
-    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    const key = String(index);
+    allowedKeys.add(key);
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
     if (!descriptor || 'get' in descriptor || 'set' in descriptor) return null;
     const item = readExactDataObject(descriptor.value, ITEM_KEYS);
     if (!item) return null;
     items.push(item);
+  }
+  if (Reflect.ownKeys(value).some((key) => typeof key !== 'string' || !allowedKeys.has(key))) {
+    return null;
   }
   return items;
 }
