@@ -9,6 +9,7 @@ const VIEW_KEYS = Object.freeze([
   'requestId',
   'packageFingerprint',
   'attentionFingerprint',
+  'sourceProvenanceFingerprint',
   'sourceViewFingerprint',
   'items',
   'interpretation',
@@ -126,6 +127,7 @@ function dashboardBody(evidencePackage) {
     requestId: evidencePackage.requestId,
     packageFingerprint: evidencePackage.packageFingerprint,
     attentionFingerprint: evidencePackage.manifest.attentionFingerprint,
+    sourceProvenanceFingerprint: evidencePackage.manifest.provenanceFingerprint,
     sourceViewFingerprint: evidencePackage.manifest.viewFingerprint,
     items,
     interpretation: 'operator-dashboard-read-only',
@@ -148,11 +150,14 @@ export function validateOperatorDashboardView(view, evidencePackage) {
     if (!values) return false;
     if (values.version !== OPERATOR_DASHBOARD_VIEW_VERSION) return false;
     if (values.interpretation !== 'operator-dashboard-read-only') return false;
-    if (
-      typeof values.dashboardFingerprint !== 'string' ||
-      !/^[a-f0-9]{64}$/.test(values.dashboardFingerprint)
-    ) {
-      return false;
+    for (const value of [
+      values.packageFingerprint,
+      values.attentionFingerprint,
+      values.sourceProvenanceFingerprint,
+      values.sourceViewFingerprint,
+      values.dashboardFingerprint,
+    ]) {
+      if (typeof value !== 'string' || !/^[a-f0-9]{64}$/.test(value)) return false;
     }
 
     const safety = readExactDataObject(values.safety, SAFETY_KEYS);
