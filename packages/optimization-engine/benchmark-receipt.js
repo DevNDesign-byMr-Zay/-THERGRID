@@ -10,11 +10,18 @@ function canonical(value) {
   return value;
 }
 
+function deepFreeze(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  Object.freeze(value);
+  for (const child of Object.values(value)) deepFreeze(child);
+  return value;
+}
+
 function normalizeReceiptQuadratic(quadratic, variableCount) {
   if (!Array.isArray(quadratic)) {
     throw new TypeError('benchmark receipt quadratic coefficients must be an array.');
   }
-  return quadratic.map((row, rowIndex) => {
+  return quadratic.map((row) => {
     if (!Array.isArray(row) || row.length > variableCount) {
       throw new TypeError('benchmark receipt quadratic rows must be arrays within the variable count.');
     }
@@ -165,5 +172,5 @@ export function createBenchmarkReceipt({ linear, quadratic = [], seed = 1, itera
     durationMs,
   };
   receipt.measurementFingerprint = computeReceiptFingerprint(receipt);
-  return validateBenchmarkReceipt(Object.freeze(receipt));
+  return validateBenchmarkReceipt(deepFreeze(receipt));
 }

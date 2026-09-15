@@ -17,12 +17,14 @@ test('benchmark receipts reject invalid measurement inputs before execution', ()
 });
 
 test('benchmark receipt remains serializable and self-identifying for valid deterministic input', () => {
-  const receipt = createBenchmarkReceipt({ linear: [1, -2], quadratic: [[0, 0.5], [0, 0]], seed: 7, iterations: 20 });
+  const linear = [1, -2];
+  const quadratic = [[0, 0.5], [0, 0]];
+  const receipt = createBenchmarkReceipt({ linear, quadratic, seed: 7, iterations: 20 });
   assert.equal(receipt.schema, 'thergrid-optimization-benchmark-receipt-v1');
   assert.match(receipt.measurementFingerprint, /^[a-f0-9]{64}$/);
   assert.equal(receipt.problem.variableCount, 2);
-  assert.deepEqual(receipt.problem.linear, [1, -2]);
-  assert.deepEqual(receipt.problem.quadratic, [[0, 0.5], [0, 0]]);
+  assert.deepEqual(receipt.problem.linear, linear);
+  assert.deepEqual(receipt.problem.quadratic, quadratic);
   assert.equal(receipt.configuration.seed, 7);
   assert.equal(receipt.configuration.iterations, 20);
   assert.equal(receipt.comparison.exactBackend, receipt.reference.backend);
@@ -33,6 +35,36 @@ test('benchmark receipt remains serializable and self-identifying for valid dete
   assert.ok(receipt.durationMs >= 0);
   assert.equal(validateBenchmarkReceipt(receipt), receipt);
   assert.doesNotThrow(() => JSON.stringify(receipt));
+});
+
+test('benchmark receipt owns caller-provided QUBO inputs after issuance', () => {
+  const linear = [1, -2];
+  const quadratic = [[0, 0.5], [0, 0]];
+  const receipt = createBenchmarkReceipt({ linear, quadratic, seed: 7, iterations: 20 });
+  linear[0] = 99;
+  quadratic[0][1] = 99;
+  quadratic.push([3, 4]);
+  assert.deepEqual(receipt.problem.linear, [1, -2]);
+  assert.deepEqual(receipt.problem.quadratic, [[0, 0.5], [0, 0]]);
+  assert.doesNotThrow(() => validateBenchmarkReceipt(receipt));
+});
+
+test('benchmark receipt freezes nested evidence so its identity cannot drift in memory', () => {
+  const receipt = createBenchmarkReceipt({ linear: [1, -2], quadratic: [[0, 0.5], [0, 0]], seed: 7, iterations: 20 });
+  assert.ok(Object.isFrozen(receipt));
+  assert.ok(Object.isFrozen(receipt.problem));
+  assert.ok(Object.isFrozen(receipt.problem.linear));
+  assert.ok(Object.isFrozen(receipt.problem.quadratic));
+  assert.ok(Object.isFrozen(receipt.problem.quadratic[0]));
+  assert.ok(Object.isFrozen(receipt.configuration));
+  assert.ok(Object.isFrozen(receipt.reference));
+  assert.ok(Object.isFrozen(receipt.candidate));
+  assert.ok(Object.isFrozen(receipt.comparison));
+  assert.throws(() => {
+    receipt.problem.linear[0] = 99;
+  }, TypeError);
+  assert.equal(receipt.problem.linear[0], 1);
+  assert.doesNotThrow(() => validateBenchmarkReceipt(receipt));
 });
 
 test('benchmark receipt fingerprint is stable across object key ordering', () => {
