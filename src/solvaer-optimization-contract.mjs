@@ -16,13 +16,19 @@ function sameIdentity(actual, expected) {
   return actual?.family === expected.family && actual?.role === expected.role && actual?.contract === expected.contract;
 }
 
+function rejectAuthority(value, name) {
+  if (value == null) return;
+  const safety = object(value, `${name}.safety`);
+  if (safety.authoritative === true || safety.actuatesHardware === true || safety.physicalActuation === true || safety.advisoryOnly === false) {
+    throw new TypeError(`${name} cannot carry physical or authoritative execution authority`);
+  }
+}
+
 export function createSolvaerOptimizationRequest({ experimentId, snapshotId, twinStateRef, objective, constraints = null } = {}) {
   const normalizedExperimentId = text(experimentId, 'experimentId');
   const normalizedSnapshotId = text(snapshotId, 'snapshotId');
   const normalizedTwinStateRef = text(twinStateRef, 'twinStateRef');
-  if (normalizedTwinStateRef !== `twin-state:${normalizedSnapshotId}`) {
-    throw new TypeError('twinStateRef must bind to snapshotId');
-  }
+  if (normalizedTwinStateRef !== `twin-state:${normalizedSnapshotId}`) throw new TypeError('twinStateRef must bind to snapshotId');
   return Object.freeze({
     contractVersion: CONTRACT_VERSION,
     capability: CAPABILITY,
@@ -46,22 +52,14 @@ export function acceptSolvaerOptimizationResult({ request, candidate, provenance
   if (input.twinStateRef !== `twin-state:${input.snapshotId}`) throw new TypeError('request twinStateRef must bind to snapshotId');
   if (input.requestId !== `solvaer-request:${input.experimentId}:${input.snapshotId}`) throw new TypeError('requestId must bind to experiment and snapshot');
   if (!sameIdentity(input.producerIdentity, PRODUCER_IDENTITY)) throw new TypeError('request producer identity is invalid');
-  if (input.experimentId !== text(provenance.experimentId, 'provenanceRef.experimentId')) {
-    throw new TypeError('candidate experimentId must match request');
-  }
-  if (result.experimentId != null && text(result.experimentId, 'candidate.experimentId') !== input.experimentId) {
-    throw new TypeError('candidate experimentId must match request');
-  }
-  if (result.snapshotId != null && text(result.snapshotId, 'candidate.snapshotId') !== input.snapshotId) {
-    throw new TypeError('candidate snapshotId must match request');
-  }
-  if (provenance.snapshotId != null && text(provenance.snapshotId, 'provenanceRef.snapshotId') !== input.snapshotId) {
-    throw new TypeError('provenance snapshotId must match request');
-  }
+  rejectAuthority(result, 'candidate');
+  rejectAuthority(provenance, 'provenanceRef');
+  if (input.experimentId !== text(provenance.experimentId, 'provenanceRef.experimentId')) throw new TypeError('candidate experimentId must match request');
+  if (result.experimentId != null && text(result.experimentId, 'candidate.experimentId') !== input.experimentId) throw new TypeError('candidate experimentId must match request');
+  if (result.snapshotId != null && text(result.snapshotId, 'candidate.snapshotId') !== input.snapshotId) throw new TypeError('candidate snapshotId must match request');
+  if (provenance.snapshotId != null && text(provenance.snapshotId, 'provenanceRef.snapshotId') !== input.snapshotId) throw new TypeError('provenance snapshotId must match request');
   for (const [name, identity] of [['candidate', result.producerIdentity], ['provenanceRef', provenance.producerIdentity]]) {
-    if (identity != null && !sameIdentity(identity, PRODUCER_IDENTITY)) {
-      throw new TypeError(`${name} producer identity does not match SOLVÆR request`);
-    }
+    if (identity != null && !sameIdentity(identity, PRODUCER_IDENTITY)) throw new TypeError(`${name} producer identity does not match SOLVÆR request`);
   }
   return Object.freeze({
     contractVersion: CONTRACT_VERSION,
