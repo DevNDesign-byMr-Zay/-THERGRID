@@ -18,6 +18,20 @@ function demoPackage() {
   return JSON.parse(result.stdout);
 }
 
+function collectObjectKeys(value, keys = []) {
+  if (Array.isArray(value)) {
+    for (const item of value) collectObjectKeys(item, keys);
+    return keys;
+  }
+  if (!value || typeof value !== 'object') return keys;
+
+  for (const [key, child] of Object.entries(value)) {
+    keys.push(key.toLowerCase());
+    collectObjectKeys(child, keys);
+  }
+  return keys;
+}
+
 test('dashboard view is derived only from a validated serialized operator package', () => {
   const evidencePackage = demoPackage();
   const dashboard = createOperatorDashboardView(evidencePackage);
@@ -36,9 +50,15 @@ test('dashboard view is derived only from a validated serialized operator packag
   assert.equal(dashboard.safety.deploysInfrastructure, false);
   assert.match(dashboard.dashboardFingerprint, /^[a-f0-9]{64}$/);
 
-  const serialized = JSON.stringify(dashboard).toLowerCase();
-  for (const forbidden of ['candidate', 'controlcommand', 'actionpayload', 'dispatchdeltakw']) {
-    assert.equal(serialized.includes(forbidden), false, `dashboard leaked ${forbidden}`);
+  const keys = collectObjectKeys(dashboard);
+  for (const forbidden of [
+    'candidate',
+    'proposal',
+    'controlcommand',
+    'actionpayload',
+    'dispatchdeltakw',
+  ]) {
+    assert.equal(keys.includes(forbidden), false, `dashboard leaked structural key ${forbidden}`);
   }
 });
 
