@@ -101,6 +101,7 @@ if (evaluation.promotionEligible !== false || evaluation.simulationEvidence.prom
 if (
   operatorProjection.promotionEligible !== false ||
   operatorProjection.safety.authoritative !== false ||
+  operatorProjection.safety.advisoryOnly !== true ||
   operatorProjection.safety.actuatesHardware !== false
 ) {
   throw new Error('demo operator projection must remain review-only and non-authoritative');
@@ -125,7 +126,9 @@ const summary = {
   operatorResidualBalanceKw: operatorProjection.metrics.residualBalanceKw,
   operatorGridAdjustmentKw: operatorProjection.metrics.gridAdjustmentKw,
   operatorPromotionEligible: operatorProjection.promotionEligible,
+  operatorAdvisoryOnly: operatorProjection.safety.advisoryOnly,
   operatorAuthoritative: operatorProjection.safety.authoritative,
+  operatorActuatesHardware: operatorProjection.safety.actuatesHardware,
 };
 
 process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
