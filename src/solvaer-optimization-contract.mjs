@@ -3,7 +3,9 @@ const CAPABILITY = 'optimization.explore';
 const PRODUCER_IDENTITY = Object.freeze({ family: 'SOLVÆR', role: 'optimization', contract: `solvaer:${CONTRACT_VERSION}` });
 
 function object(value, name) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError(`${name} must be an object`);
+  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) {
+    throw new TypeError(`${name} must be a plain object`);
+  }
   return value;
 }
 
@@ -29,8 +31,10 @@ function sameIdentity(actual, expected) {
 
 function rejectAuthority(value, name) {
   if (value == null) return;
-  const safety = object(value, `${name}.safety`);
-  if (safety.authoritative === true || safety.actuatesHardware === true || safety.physicalActuation === true || safety.advisoryOnly === false) {
+  const safety = value.safety;
+  if (safety == null) return;
+  const normalizedSafety = object(safety, `${name}.safety`);
+  if (normalizedSafety.authoritative === true || normalizedSafety.actuatesHardware === true || normalizedSafety.physicalActuation === true || normalizedSafety.advisoryOnly === false) {
     throw new TypeError(`${name} cannot carry physical or authoritative execution authority`);
   }
 }
