@@ -19,6 +19,7 @@ const expectedPackageKeys = [
 ].sort();
 const expectedManifestKeys = [
   'attentionFingerprint',
+  'provenanceFingerprint',
   'provenanceNodeId',
   'viewFingerprint',
 ].sort();
@@ -55,6 +56,7 @@ test('demo emits an allowlisted sealed operator evidence package with no control
   assert.equal(evidencePackage.safety.dispatchesInfrastructure, false);
   assert.equal(evidencePackage.safety.deploysInfrastructure, false);
   assert.match(evidencePackage.manifest.attentionFingerprint, /^[a-f0-9]{64}$/);
+  assert.match(evidencePackage.manifest.provenanceFingerprint, /^[a-f0-9]{64}$/);
   assert.match(evidencePackage.manifest.viewFingerprint, /^[a-f0-9]{64}$/);
   assert.match(evidencePackage.packageFingerprint, /^[a-f0-9]{64}$/);
   assert.equal(
