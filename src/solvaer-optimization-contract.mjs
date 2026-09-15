@@ -1,5 +1,6 @@
 const CONTRACT_VERSION = 2;
 const CAPABILITY = 'optimization.explore';
+const PRODUCER_IDENTITY = Object.freeze({ family: 'SOLVÆR', role: 'optimization', contract: `solvaer:${CONTRACT_VERSION}` });
 
 function object(value, name) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError(`${name} must be an object`);
@@ -9,6 +10,10 @@ function object(value, name) {
 function text(value, name) {
   if (typeof value !== 'string' || !value.trim()) throw new TypeError(`${name} must be a non-empty string`);
   return value.trim();
+}
+
+function sameIdentity(actual, expected) {
+  return actual?.family === expected.family && actual?.role === expected.role && actual?.contract === expected.contract;
 }
 
 /**
@@ -29,6 +34,7 @@ export function createSolvaerOptimizationRequest({ experimentId, snapshotId, twi
     twinStateRef: normalizedTwinStateRef,
     objective: text(objective, 'objective'),
     constraints: constraints == null ? null : object(constraints, 'constraints'),
+    producerIdentity: PRODUCER_IDENTITY,
     safety: { advisoryOnly: true, authoritative: false, actuatesHardware: false },
   });
 }
@@ -40,6 +46,7 @@ export function acceptSolvaerOptimizationResult({ request, candidate, provenance
   if (input.contractVersion !== CONTRACT_VERSION) throw new TypeError('unsupported SOLVÆR contract version');
   if (input.capability !== CAPABILITY) throw new TypeError('request capability must be optimization.explore');
   if (input.twinStateRef !== `twin-state:${input.snapshotId}`) throw new TypeError('request twinStateRef must bind to snapshotId');
+  if (!sameIdentity(input.producerIdentity, PRODUCER_IDENTITY)) throw new TypeError('request producer identity is invalid');
   if (input.experimentId !== text(provenance.experimentId, 'provenanceRef.experimentId')) {
     throw new TypeError('candidate experimentId must match request');
   }
@@ -52,6 +59,13 @@ export function acceptSolvaerOptimizationResult({ request, candidate, provenance
   if (provenance.snapshotId != null && text(provenance.snapshotId, 'provenanceRef.snapshotId') !== input.snapshotId) {
     throw new TypeError('provenance snapshotId must match request');
   }
+
+  for (const [name, identity] of [['candidate', result.producerIdentity], ['provenanceRef', provenance.producerIdentity]]) {
+    if (identity != null && !sameIdentity(identity, PRODUCER_IDENTITY)) {
+      throw new TypeError(`${name} producer identity does not match SOLVÆR request`);
+    }
+  }
+
   return Object.freeze({
     contractVersion: CONTRACT_VERSION,
     capability: CAPABILITY,
@@ -59,10 +73,11 @@ export function acceptSolvaerOptimizationResult({ request, candidate, provenance
     snapshotId: input.snapshotId,
     candidate: result,
     provenanceRef: provenance,
+    producerIdentity: PRODUCER_IDENTITY,
     fallbackUsed: fallbackUsed === true,
     safety: { advisoryOnly: true, authoritative: false, actuatesHardware: false },
     handoff: 'simulation-required',
   });
 }
 
-export { CONTRACT_VERSION as SOLVAER_OPTIMIZATION_CONTRACT_VERSION, CAPABILITY as SOLVAER_OPTIMIZATION_CAPABILITY };
+export { CONTRACT_VERSION as SOLVAER_OPTIMIZATION_CONTRACT_VERSION, CAPABILITY as SOLVAER_OPTIMIZATION_CAPABILITY, PRODUCER_IDENTITY as SOLVAER_PRODUCER_IDENTITY };
