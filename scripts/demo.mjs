@@ -18,6 +18,10 @@ import {
   createOperatorProvenanceReadModel,
   validateOperatorProvenanceReadModel,
 } from '../src/operator-provenance-read-model.mjs';
+import {
+  createOperatorEvidencePackage,
+  validateOperatorEvidencePackage,
+} from '../src/operator-evidence-package.mjs';
 
 const snapshot = {
   schemaVersion: 1,
@@ -186,4 +190,19 @@ if (
   throw new Error('demo operator provenance read model failed validation');
 }
 
-process.stdout.write(`${JSON.stringify(operatorReadModel, null, 2)}\n`);
+const operatorEvidencePackage = createOperatorEvidencePackage({
+  attention: operatorAttention,
+  provenance: operatorProvenance,
+  readModel: operatorReadModel,
+});
+if (
+  !validateOperatorEvidencePackage(operatorEvidencePackage, {
+    attention: operatorAttention,
+    provenance: operatorProvenance,
+    readModel: operatorReadModel,
+  })
+) {
+  throw new Error('demo operator evidence package failed validation');
+}
+
+process.stdout.write(`${JSON.stringify(operatorEvidencePackage, null, 2)}\n`);
