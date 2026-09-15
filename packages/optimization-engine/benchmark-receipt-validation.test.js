@@ -35,6 +35,24 @@ test('benchmark receipt remains serializable and self-identifying for valid dete
   assert.doesNotThrow(() => JSON.stringify(receipt));
 });
 
+test('benchmark receipt freezes nested evidence so its identity cannot drift in memory', () => {
+  const receipt = createBenchmarkReceipt({ linear: [1, -2], quadratic: [[0, 0.5], [0, 0]], seed: 7, iterations: 20 });
+  assert.ok(Object.isFrozen(receipt));
+  assert.ok(Object.isFrozen(receipt.problem));
+  assert.ok(Object.isFrozen(receipt.problem.linear));
+  assert.ok(Object.isFrozen(receipt.problem.quadratic));
+  assert.ok(Object.isFrozen(receipt.problem.quadratic[0]));
+  assert.ok(Object.isFrozen(receipt.configuration));
+  assert.ok(Object.isFrozen(receipt.reference));
+  assert.ok(Object.isFrozen(receipt.candidate));
+  assert.ok(Object.isFrozen(receipt.comparison));
+  assert.throws(() => {
+    receipt.problem.linear[0] = 99;
+  }, TypeError);
+  assert.equal(receipt.problem.linear[0], 1);
+  assert.doesNotThrow(() => validateBenchmarkReceipt(receipt));
+});
+
 test('benchmark receipt fingerprint is stable across object key ordering', () => {
   const receipt = createBenchmarkReceipt({ linear: [1, -2], quadratic: [[0, 0.5], [0, 0]], seed: 7, iterations: 20 });
   const reordered = {
