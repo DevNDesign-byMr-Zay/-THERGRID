@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { validateSolvaerOperatorAttention } from './solvaer-operator-attention.mjs';
 
 const PROVENANCE_VERSION = 2;
 
@@ -22,6 +23,20 @@ function artifactId(type, value) {
     .digest('hex')
     .slice(0, 16);
   return `${type}-${digest}`;
+}
+
+function artifactNode(type, value) {
+  if (type === 'operator-attention') {
+    if (!validateSolvaerOperatorAttention(value)) {
+      throw new TypeError('operator attention must be sealed before provenance projection');
+    }
+    return Object.freeze({
+      type,
+      id: `${type}-${value.attentionFingerprint.slice(0, 16)}`,
+      sourceFingerprint: value.attentionFingerprint,
+    });
+  }
+  return Object.freeze({ type, id: artifactId(type, value) });
 }
 
 export function fingerprintExperiment(input = {}) {
@@ -63,7 +78,7 @@ export function buildProvenanceGraph({
 
   const nodes = artifacts
     .filter(([, value]) => value != null)
-    .map(([type, value]) => ({ type, id: artifactId(type, value) }));
+    .map(([type, value]) => artifactNode(type, value));
   const edges = nodes.slice(1).map((node, index) => ({ from: nodes[index].id, to: node.id }));
 
   return Object.freeze({
@@ -80,6 +95,11 @@ export function validateProvenanceGraph(graph, { requiredTypes = [] } = {}) {
   if (!nonEmptyText(graph.experimentId)) return false;
   if (!Array.isArray(graph.nodes) || !Array.isArray(graph.edges)) return false;
   if (!graph.nodes.every((node) => node && typeof node === 'object' && !Array.isArray(node) && nonEmptyText(node.type) && nonEmptyText(node.id))) return false;
+  for (const node of graph.nodes) {
+    if (node.type !== 'operator-attention') continue;
+    if (typeof node.sourceFingerprint !== 'string' || !/^[a-f0-9]{64}$/.test(node.sourceFingerprint)) return false;
+    if (node.id !== `operator-attention-${node.sourceFingerprint.slice(0, 16)}`) return false;
+  }
   const ids = new Set(graph.nodes.map((node) => node.id));
   if (ids.size !== graph.nodes.length) return false;
   if (!graph.edges.every((edge) => edge && typeof edge === 'object' && !Array.isArray(edge) && nonEmptyText(edge.from) && nonEmptyText(edge.to) && edge.from !== edge.to && ids.has(edge.from) && ids.has(edge.to))) return false;
