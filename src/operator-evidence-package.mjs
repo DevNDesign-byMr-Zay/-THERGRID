@@ -20,6 +20,7 @@ const PACKAGE_KEYS = Object.freeze([
 const MANIFEST_KEYS = Object.freeze([
   'attentionFingerprint',
   'provenanceNodeId',
+  'provenanceFingerprint',
   'viewFingerprint',
 ]);
 const SAFETY_KEYS = Object.freeze([
@@ -144,6 +145,7 @@ function derivePackageFields({ attention, provenance, readModel }) {
     manifest: {
       attentionFingerprint: attention.attentionFingerprint,
       provenanceNodeId: node.id,
+      provenanceFingerprint: fingerprint(provenance),
       viewFingerprint: readModel.viewFingerprint,
     },
     interpretation: 'operator-evidence-package-read-only',
@@ -221,6 +223,7 @@ export function validateOperatorEvidencePackage(
     if (
       manifest.attentionFingerprint !== expected.manifest.attentionFingerprint ||
       manifest.provenanceNodeId !== expected.manifest.provenanceNodeId ||
+      manifest.provenanceFingerprint !== expected.manifest.provenanceFingerprint ||
       manifest.viewFingerprint !== expected.manifest.viewFingerprint
     ) {
       return false;
