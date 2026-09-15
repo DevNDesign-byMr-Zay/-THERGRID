@@ -54,6 +54,6 @@ test('benchmark helper delegates to the maintained exact reference', () => {
 test('exact baseline refuses unbounded growth', () => {
   assert.throws(
     () => solveQuboExactly({ linear: Array.from({ length: 21 }, () => 0) }),
-    /limited to 20 binary variables/,
+    /exact QUBO reference is limited to 20 variables\./,
   );
 });
