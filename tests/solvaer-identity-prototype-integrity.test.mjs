@@ -57,3 +57,43 @@ test('rejects a request carrying physical or authoritative execution authority',
     /request cannot carry physical or authoritative execution authority/,
   );
 });
+
+test('rejects prototype-backed candidate objects before inherited fields can satisfy contract checks', () => {
+  const candidate = Object.create({
+    experimentId: 'exp-prototype',
+    snapshotId: 'snap-prototype',
+    proposal: {},
+  });
+  assert.throws(
+    () => acceptSolvaerOptimizationResult({ request, candidate, provenanceRef: provenance }),
+    /candidate must be a plain object/,
+  );
+});
+
+test('rejects prototype-backed provenance objects before inherited identifiers can satisfy the binding', () => {
+  const provenanceRef = Object.create({
+    experimentId: 'exp-prototype',
+    snapshotId: 'snap-prototype',
+  });
+  assert.throws(
+    () => acceptSolvaerOptimizationResult({
+      request,
+      candidate: { experimentId: 'exp-prototype', snapshotId: 'snap-prototype', proposal: {} },
+      provenanceRef,
+    }),
+    /provenanceRef must be a plain object/,
+  );
+});
+
+test('rejects prototype-backed safety objects before inherited authority flags are trusted', () => {
+  const candidate = {
+    experimentId: 'exp-prototype',
+    snapshotId: 'snap-prototype',
+    proposal: {},
+    safety: Object.create({ authoritative: false, physicalActuation: false, advisoryOnly: true }),
+  };
+  assert.throws(
+    () => acceptSolvaerOptimizationResult({ request, candidate, provenanceRef: provenance }),
+    /candidate\.safety must be a plain object/,
+  );
+});
