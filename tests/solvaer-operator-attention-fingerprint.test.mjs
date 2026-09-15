@@ -10,7 +10,7 @@ function buildAttention() {
     schemaVersion: 1,
     snapshotId: 'attention-fingerprint-snapshot',
     observedAt: '2026-01-01T00:00:00Z',
-    nodes: [{ id: 'n1', loadKw: 10, generationKw: 12 }],
+    assets: [{ id: 'load-1', kind: 'load', powerKw: 10 }, { id: 'solar-1', kind: 'solar', powerKw: 12, capacityKw: 15 }],
   });
   const candidate = {
     experimentId: baseline.experimentId,
