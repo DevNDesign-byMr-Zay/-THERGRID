@@ -10,9 +10,9 @@ const snapshot = {
   schemaVersion: 1,
   snapshotId: 'snapshot-bridge-001',
   observedAt: '2026-09-13T12:00:00Z',
-  nodes: [
-    { id: 'n1', demandKw: 42, generationKw: 48 },
-    { id: 'n2', demandKw: 36, generationKw: 30 },
+  assets: [
+    { id: 'load-1', kind: 'load', powerKw: 78 },
+    { id: 'solar-1', kind: 'solar', powerKw: 48, capacityKw: 60 },
   ],
 };
 
