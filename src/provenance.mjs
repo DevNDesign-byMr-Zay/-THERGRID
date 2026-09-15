@@ -200,6 +200,14 @@ export function validateProvenanceGraph(graph, { requiredTypes = [] } = {}) {
   ) {
     return false;
   }
+
+  if (edges.length !== Math.max(nodes.length - 1, 0)) return false;
+  for (let index = 0; index < edges.length; index += 1) {
+    if (edges[index].from !== nodes[index].id || edges[index].to !== nodes[index + 1].id) {
+      return false;
+    }
+  }
+
   if (!Array.isArray(requiredTypes) || !requiredTypes.every(nonEmptyText)) return false;
   return requiredTypes.every((type) => nodes.some((node) => node.type === type));
 }
