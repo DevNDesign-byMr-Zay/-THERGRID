@@ -1,54 +1,35 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-import { validateSolvaerOperatorEvidenceSummary } from '../src/solvaer-operator-evidence-summary.mjs';
-
 const demoPath = fileURLToPath(new URL('../scripts/demo.mjs', import.meta.url));
-const expectedKeys = [
-  'authoritative',
-  'collaborationEvidenceFingerprint',
+const expectedPackageKeys = [
+  'attention',
   'experimentId',
-  'operatorActuatesHardware',
-  'operatorAdvisoryOnly',
-  'operatorAuthoritative',
-  'operatorGridAdjustmentKw',
-  'operatorInterpretation',
-  'operatorProjectionFingerprint',
-  'operatorProjectionValid',
-  'operatorPromotionEligible',
-  'operatorResidualBalanceKw',
-  'promotionStatus',
-  'provenanceValid',
-  'receiptId',
-  'renderTarget',
-  'sceneId',
-  'simulationEvidenceFingerprint',
-  'simulationStatus',
+  'interpretation',
+  'manifest',
+  'packageFingerprint',
+  'provenance',
+  'readModel',
+  'requestId',
+  'safety',
   'snapshotId',
-  'solvaerRequestId',
-  'summaryFingerprint',
+  'version',
 ].sort();
-
-function canonical(value) {
-  if (Array.isArray(value)) return value.map(canonical);
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.keys(value)
-        .sort()
-        .map((key) => [key, canonical(value[key])]),
-    );
-  }
-  return value;
-}
-
-function fingerprint(value) {
-  return createHash('sha256')
-    .update(JSON.stringify(canonical(value)), 'utf8')
-    .digest('hex');
-}
+const expectedManifestKeys = [
+  'attentionFingerprint',
+  'provenanceNodeId',
+  'viewFingerprint',
+].sort();
+const expectedSafetyKeys = [
+  'actuatesHardware',
+  'advisoryOnly',
+  'authoritative',
+  'deploysInfrastructure',
+  'dispatchesInfrastructure',
+  'promotionEligible',
+].sort();
 
 function runDemo() {
   const result = spawnSync(process.execPath, [demoPath], {
@@ -59,84 +40,56 @@ function runDemo() {
   return JSON.parse(result.stdout);
 }
 
-test('demo emits an allowlisted operator evidence summary with no control payloads', () => {
-  const summary = runDemo();
+test('demo emits an allowlisted sealed operator evidence package with no control payloads', () => {
+  const evidencePackage = runDemo();
 
-  assert.deepEqual(Object.keys(summary).sort(), expectedKeys);
-  assert.equal(summary.provenanceValid, true);
-  assert.equal(summary.operatorProjectionValid, true);
-  assert.equal(summary.operatorPromotionEligible, false);
-  assert.equal(summary.operatorAdvisoryOnly, true);
-  assert.equal(summary.operatorAuthoritative, false);
-  assert.equal(summary.operatorActuatesHardware, false);
-  assert.match(summary.collaborationEvidenceFingerprint, /^[a-f0-9]{64}$/);
-  assert.match(summary.simulationEvidenceFingerprint, /^[a-f0-9]{64}$/);
-  assert.match(summary.operatorProjectionFingerprint, /^[a-f0-9]{64}$/);
-  assert.match(summary.summaryFingerprint, /^[a-f0-9]{64}$/);
-  assert.equal(validateSolvaerOperatorEvidenceSummary(summary), true);
+  assert.deepEqual(Object.keys(evidencePackage).sort(), expectedPackageKeys);
+  assert.deepEqual(Object.keys(evidencePackage.manifest).sort(), expectedManifestKeys);
+  assert.deepEqual(Object.keys(evidencePackage.safety).sort(), expectedSafetyKeys);
+  assert.equal(evidencePackage.version, 1);
+  assert.equal(evidencePackage.interpretation, 'operator-evidence-package-read-only');
+  assert.equal(evidencePackage.safety.advisoryOnly, true);
+  assert.equal(evidencePackage.safety.authoritative, false);
+  assert.equal(evidencePackage.safety.actuatesHardware, false);
+  assert.equal(evidencePackage.safety.promotionEligible, false);
+  assert.equal(evidencePackage.safety.dispatchesInfrastructure, false);
+  assert.equal(evidencePackage.safety.deploysInfrastructure, false);
+  assert.match(evidencePackage.manifest.attentionFingerprint, /^[a-f0-9]{64}$/);
+  assert.match(evidencePackage.manifest.viewFingerprint, /^[a-f0-9]{64}$/);
+  assert.match(evidencePackage.packageFingerprint, /^[a-f0-9]{64}$/);
+  assert.equal(
+    evidencePackage.manifest.attentionFingerprint,
+    evidencePackage.attention.attentionFingerprint,
+  );
+  assert.equal(evidencePackage.manifest.provenanceNodeId, evidencePackage.readModel.provenanceNodeId);
+  assert.equal(evidencePackage.manifest.viewFingerprint, evidencePackage.readModel.viewFingerprint);
 
-  const { summaryFingerprint, ...body } = summary;
-  assert.equal(summaryFingerprint, fingerprint(body));
-
-  const serialized = JSON.stringify(summary).toLowerCase();
-  for (const forbidden of ['candidate', 'dispatchdeltakw', 'controlcommand', 'actionpayload']) {
-    assert.equal(serialized.includes(forbidden), false, `demo summary leaked ${forbidden}`);
+  const serialized = JSON.stringify(evidencePackage).toLowerCase();
+  for (const forbidden of ['controlcommand', 'actionpayload']) {
+    assert.equal(serialized.includes(forbidden), false, `demo package leaked ${forbidden}`);
   }
 });
 
-test('demo summary fingerprint is deterministic across repeated runs', () => {
-  const firstSummary = runDemo();
-  const secondSummary = runDemo();
+test('demo package fingerprint and complete output are deterministic across repeated runs', () => {
+  const firstPackage = runDemo();
+  const secondPackage = runDemo();
 
-  assert.equal(firstSummary.summaryFingerprint, secondSummary.summaryFingerprint);
-  assert.deepEqual(firstSummary, secondSummary);
+  assert.equal(firstPackage.packageFingerprint, secondPackage.packageFingerprint);
+  assert.deepEqual(firstPackage, secondPackage);
 });
 
-test('operator summary contract rejects tampering, authority widening, and field insertion', () => {
-  const summary = runDemo();
+test('demo package keeps operator authority closed at every exposed read layer', () => {
+  const evidencePackage = runDemo();
 
+  assert.equal(evidencePackage.attention.safety.authoritative, false);
+  assert.equal(evidencePackage.attention.safety.actuatesHardware, false);
+  assert.equal(evidencePackage.attention.safety.advisoryOnly, true);
+  assert.equal(evidencePackage.readModel.safety.authoritative, false);
+  assert.equal(evidencePackage.readModel.safety.actuatesHardware, false);
+  assert.equal(evidencePackage.readModel.safety.advisoryOnly, true);
+  assert.equal(evidencePackage.readModel.safety.promotionEligible, false);
   assert.equal(
-    validateSolvaerOperatorEvidenceSummary({
-      ...summary,
-      operatorResidualBalanceKw: summary.operatorResidualBalanceKw + 1,
-    }),
-    false,
+    evidencePackage.provenance.nodes.filter((node) => node.type === 'operator-attention').length,
+    1,
   );
-  assert.equal(
-    validateSolvaerOperatorEvidenceSummary({
-      ...summary,
-      operatorPromotionEligible: true,
-    }),
-    false,
-  );
-  assert.equal(
-    validateSolvaerOperatorEvidenceSummary({
-      ...summary,
-      operatorAuthoritative: true,
-    }),
-    false,
-  );
-  assert.equal(
-    validateSolvaerOperatorEvidenceSummary({
-      ...summary,
-      candidate: { dispatchDeltaKw: 1 },
-    }),
-    false,
-  );
-});
-
-test('operator summary validator rejects accessor-backed fingerprints without evaluating getters', () => {
-  const summary = runDemo();
-  let getterReads = 0;
-  const deceptive = { ...summary };
-  Object.defineProperty(deceptive, 'summaryFingerprint', {
-    enumerable: true,
-    get() {
-      getterReads += 1;
-      return summary.summaryFingerprint;
-    },
-  });
-
-  assert.equal(validateSolvaerOperatorEvidenceSummary(deceptive), false);
-  assert.equal(getterReads, 0);
 });
