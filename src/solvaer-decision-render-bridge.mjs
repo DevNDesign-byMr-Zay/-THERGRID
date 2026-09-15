@@ -42,6 +42,7 @@ export function buildSolvaerDecisionRenderBridge({
     presentation,
     experimentId: decision.experimentId,
     receiptId: decision.decisionReceipt.receiptId,
+    operatorAttentionFingerprint: operatorAttention.attentionFingerprint,
   });
   if (!validateHolographicRenderPacket(renderPacket)) throw new TypeError('SOLVÆR render bridge produced invalid packet');
 
