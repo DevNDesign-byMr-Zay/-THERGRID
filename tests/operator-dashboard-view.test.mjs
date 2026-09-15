@@ -39,6 +39,10 @@ test('dashboard view is derived only from a validated serialized operator packag
   assert.equal(validateOperatorDashboardView(dashboard, evidencePackage), true);
   assert.equal(dashboard.packageFingerprint, evidencePackage.packageFingerprint);
   assert.equal(dashboard.attentionFingerprint, evidencePackage.manifest.attentionFingerprint);
+  assert.equal(
+    dashboard.sourceProvenanceFingerprint,
+    evidencePackage.manifest.provenanceFingerprint,
+  );
   assert.equal(dashboard.sourceViewFingerprint, evidencePackage.manifest.viewFingerprint);
   assert.deepEqual(dashboard.items, evidencePackage.readModel.items);
   assert.equal(dashboard.interpretation, 'operator-dashboard-read-only');
@@ -71,7 +75,7 @@ test('dashboard validation survives a complete JSON transport boundary', () => {
   assert.equal(validateOperatorDashboardView(transportedDashboard, transportedPackage), true);
 });
 
-test('dashboard rejects package substitution and authority widening', () => {
+test('dashboard rejects package, provenance identity, and authority substitution', () => {
   const evidencePackage = demoPackage();
   const dashboard = createOperatorDashboardView(evidencePackage);
   const substitutedPackage = {
@@ -80,6 +84,13 @@ test('dashboard rejects package substitution and authority widening', () => {
   };
 
   assert.equal(validateOperatorDashboardView(dashboard, substitutedPackage), false);
+  assert.equal(
+    validateOperatorDashboardView(
+      { ...dashboard, sourceProvenanceFingerprint: '0'.repeat(64) },
+      evidencePackage,
+    ),
+    false,
+  );
   assert.equal(
     validateOperatorDashboardView(
       {
