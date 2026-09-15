@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { validateSolvaerCollaborationEvidence } from './solvaer-collaboration-evidence.mjs';
 import { validateSolvaerOperatorEvidenceSummary } from './solvaer-operator-evidence-summary.mjs';
 
-const ATTENTION_VERSION = 1;
+const ATTENTION_VERSION = 2;
 const SEVERITIES = Object.freeze(['info', 'warning', 'critical']);
 const ATTENTION_KEYS = Object.freeze([
   'version',
