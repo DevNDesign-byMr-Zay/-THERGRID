@@ -6,8 +6,12 @@ import { createSolvaerCollaborationEvidence } from '../src/solvaer-collaboration
 import { evaluateSolvaerDecisionHandoff } from '../src/solvaer-decision-handoff.mjs';
 import { buildSolvaerOperatorAttention, validateSolvaerOperatorAttention } from '../src/solvaer-operator-attention.mjs';
 
+function makeSnapshot(snapshotId) {
+  return { schemaVersion: 1, snapshotId, observedAt: '2026-01-01T00:00:00Z', assets: [{ id: 'load-1', kind: 'load', powerKw: 10 }, { id: 'solar-1', kind: 'solar', powerKw: 12, capacityKw: 15 }], topology: { nodes: ['node-load', 'node-solar'], connections: [{ assetId: 'load-1', nodeId: 'node-load' }, { assetId: 'solar-1', nodeId: 'node-solar' }] } };
+}
+
 test('operator attention is derived from validated SOLVÆR evidence', () => {
-  const baseline = runSyntheticMicrogrid({ schemaVersion: 1, snapshotId: 'attention-snapshot', observedAt: '2026-01-01T00:00:00Z', assets: [{ id: 'load-1', kind: 'load', powerKw: 10 }, { id: 'solar-1', kind: 'solar', powerKw: 12, capacityKw: 15 }] });
+  const baseline = runSyntheticMicrogrid(makeSnapshot('attention-snapshot'));
   const candidate = { experimentId: baseline.experimentId, snapshotId: baseline.solvaerRequest.snapshotId, proposal: baseline.proposal };
   const provenanceRef = { experimentId: baseline.experimentId, snapshotId: baseline.solvaerRequest.snapshotId };
   assert.equal(validateSolvaerCollaborationResult({ request: baseline.solvaerRequest, candidate, provenanceRef }), true);
@@ -21,7 +25,7 @@ test('operator attention is derived from validated SOLVÆR evidence', () => {
 });
 
 test('operator attention rejects cross-experiment decision evidence', () => {
-  const baseline = runSyntheticMicrogrid({ schemaVersion: 1, snapshotId: 'attention-cross-snapshot', observedAt: '2026-01-01T00:00:00Z', assets: [{ id: 'load-1', kind: 'load', powerKw: 10 }, { id: 'solar-1', kind: 'solar', powerKw: 12, capacityKw: 15 }] });
+  const baseline = runSyntheticMicrogrid(makeSnapshot('attention-cross-snapshot'));
   const candidate = { experimentId: baseline.experimentId, snapshotId: baseline.solvaerRequest.snapshotId, proposal: baseline.proposal };
   const provenanceRef = { experimentId: baseline.experimentId, snapshotId: baseline.solvaerRequest.snapshotId };
   const evidence = createSolvaerCollaborationEvidence({ request: baseline.solvaerRequest, candidate, provenanceRef });
