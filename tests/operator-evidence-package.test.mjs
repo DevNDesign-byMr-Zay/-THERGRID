@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runSyntheticMicrogrid } from '../src/pipeline.mjs';
-import { buildProvenanceGraph } from '../src/provenance.mjs';
+import { buildProvenanceGraph, validateProvenanceGraph } from '../src/provenance.mjs';
 import { createSolvaerCollaborationEvidence } from '../src/solvaer-collaboration-evidence.mjs';
 import { buildSolvaerOperatorAttention } from '../src/solvaer-operator-attention.mjs';
 import { createOperatorProvenanceReadModel } from '../src/operator-provenance-read-model.mjs';
@@ -84,6 +84,7 @@ test('seals attention, provenance, and operator read model into one verified pac
   assert.match(evidencePackage.packageFingerprint, /^[a-f0-9]{64}$/);
   assert.equal(evidencePackage.manifest.attentionFingerprint, artifacts.attention.attentionFingerprint);
   assert.equal(evidencePackage.manifest.provenanceNodeId, artifacts.readModel.provenanceNodeId);
+  assert.match(evidencePackage.manifest.provenanceFingerprint, /^[a-f0-9]{64}$/);
   assert.equal(evidencePackage.manifest.viewFingerprint, artifacts.readModel.viewFingerprint);
   assert.deepEqual(evidencePackage.safety, {
     advisoryOnly: true,
@@ -95,6 +96,36 @@ test('seals attention, provenance, and operator read model into one verified pac
   });
   assert.equal(Object.isFrozen(evidencePackage), true);
   assert.equal(Object.isFrozen(evidencePackage.manifest), true);
+});
+
+test('binds package identity to the complete validated provenance graph', () => {
+  const artifacts = fixture();
+  const evidencePackage = createOperatorEvidencePackage(artifacts);
+  const substitutedProvenance = JSON.parse(JSON.stringify(artifacts.provenance));
+  substitutedProvenance.nodes[0].id = 'telemetry-substituted-lineage';
+  substitutedProvenance.edges[0].from = substitutedProvenance.nodes[0].id;
+
+  assert.equal(
+    validateProvenanceGraph(substitutedProvenance, { requiredTypes: ['operator-attention'] }),
+    true,
+  );
+
+  const substitutedPackage = createOperatorEvidencePackage({
+    ...artifacts,
+    provenance: substitutedProvenance,
+  });
+  assert.notEqual(
+    substitutedPackage.manifest.provenanceFingerprint,
+    evidencePackage.manifest.provenanceFingerprint,
+  );
+  assert.notEqual(substitutedPackage.packageFingerprint, evidencePackage.packageFingerprint);
+  assert.equal(
+    validateOperatorEvidencePackage({
+      ...evidencePackage,
+      provenance: substitutedProvenance,
+    }),
+    false,
+  );
 });
 
 test('rejects a valid read model substituted from another valid experiment', () => {
