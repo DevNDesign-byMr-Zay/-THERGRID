@@ -39,3 +39,27 @@ test('tampering collaboration evidence fails closed', () => {
   assert.equal(validateSolvaerCollaborationEvidence({ ...evidence, snapshotId: 'other-snapshot' }), false);
   assert.equal(validateSolvaerCollaborationEvidence({ ...evidence, safety: { ...evidence.safety, authoritative: true } }), false);
 });
+
+test('rejects inherited safety invariants even when the original evidence fingerprint is reused', () => {
+  const run = runSyntheticMicrogrid(snapshot);
+  const evidence = createSolvaerCollaborationEvidence({
+    request: run.solvaerRequest,
+    candidate: { experimentId: run.experimentId, snapshotId: snapshot.snapshotId, proposal: run.proposal },
+    provenanceRef: { experimentId: run.experimentId, snapshotId: snapshot.snapshotId },
+  });
+  const inheritedSafety = Object.create({ authoritative: false, actuatesHardware: false, advisoryOnly: true });
+  const forged = { ...evidence, safety: inheritedSafety };
+  assert.equal(forged.evidenceFingerprint, evidence.evidenceFingerprint);
+  assert.equal(validateSolvaerCollaborationEvidence(forged), false);
+});
+
+test('rejects prototype-backed evidence envelopes before inherited metadata is trusted', () => {
+  const run = runSyntheticMicrogrid(snapshot);
+  const evidence = createSolvaerCollaborationEvidence({
+    request: run.solvaerRequest,
+    candidate: { experimentId: run.experimentId, snapshotId: snapshot.snapshotId, proposal: run.proposal },
+    provenanceRef: { experimentId: run.experimentId, snapshotId: snapshot.snapshotId },
+  });
+  const forged = Object.create(evidence);
+  assert.equal(validateSolvaerCollaborationEvidence(forged), false);
+});
