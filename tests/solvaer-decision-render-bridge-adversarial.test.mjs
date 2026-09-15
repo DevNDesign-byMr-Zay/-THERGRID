@@ -7,6 +7,7 @@ import { validateHolographicRenderPacket } from '../src/holographic-renderer-con
 
 test('SOLVÆR decision-to-render bridge preserves experiment identity and safety', () => {
   const snapshot = {
+    schemaVersion: 1,
     snapshotId: 'snapshot-bridge-001',
     observedAt: '2026-01-01T00:00:00.000Z',
     nodes: [
@@ -51,6 +52,7 @@ test('SOLVÆR decision-to-render bridge preserves experiment identity and safety
 
 test('SOLVÆR bridge rejects authoritative candidates before rendering', () => {
   const snapshot = {
+    schemaVersion: 1,
     snapshotId: 'snapshot-bridge-002',
     observedAt: '2026-01-01T00:00:00.000Z',
     nodes: [{ id: 'n1', loadKw: 10, generationKw: 10 }],
