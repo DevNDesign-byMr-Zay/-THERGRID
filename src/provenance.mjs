@@ -6,6 +6,19 @@ const GRAPH_KEYS = Object.freeze(['contractVersion', 'experimentId', 'nodes', 'e
 const NODE_KEYS = Object.freeze(['type', 'id']);
 const OPERATOR_ATTENTION_NODE_KEYS = Object.freeze(['type', 'id', 'sourceFingerprint']);
 const EDGE_KEYS = Object.freeze(['from', 'to']);
+const ARTIFACT_TYPES = Object.freeze([
+  'telemetry',
+  'twin-state',
+  'forecast',
+  'operating-proposal',
+  'simulation',
+  'decision-receipt',
+  'spatial-scene',
+  'render-packet',
+  'solvaer-collaboration',
+  'operator-attention',
+]);
+const ARTIFACT_TYPE_SET = new Set(ARTIFACT_TYPES);
 
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
@@ -175,7 +188,10 @@ export function validateProvenanceGraph(graph, { requiredTypes = [] } = {}) {
   if (!nodes || !edges) return false;
   if (!nodes.every((node) => nonEmptyText(node.type) && nonEmptyText(node.id))) return false;
 
+  const seenTypes = new Set();
   for (const node of nodes) {
+    if (!ARTIFACT_TYPE_SET.has(node.type) || seenTypes.has(node.type)) return false;
+    seenTypes.add(node.type);
     if (node.type !== 'operator-attention') continue;
     if (
       typeof node.sourceFingerprint !== 'string' ||
@@ -208,8 +224,13 @@ export function validateProvenanceGraph(graph, { requiredTypes = [] } = {}) {
     }
   }
 
-  if (!Array.isArray(requiredTypes) || !requiredTypes.every(nonEmptyText)) return false;
-  return requiredTypes.every((type) => nodes.some((node) => node.type === type));
+  if (
+    !Array.isArray(requiredTypes) ||
+    !requiredTypes.every((type) => nonEmptyText(type) && ARTIFACT_TYPE_SET.has(type))
+  ) {
+    return false;
+  }
+  return requiredTypes.every((type) => seenTypes.has(type));
 }
 
-export { PROVENANCE_VERSION };
+export { ARTIFACT_TYPES as PROVENANCE_ARTIFACT_TYPES, PROVENANCE_VERSION };
