@@ -2,24 +2,110 @@ import { createHash } from 'node:crypto';
 
 const RENDERER_CONTRACT_VERSION = 2;
 const TARGETS = new Set(['holo-mat', 'projector', 'volumetric-3d', 'ar-vr', 'web-dashboard']);
-
-function object(value, name) {
-  if (
-    !value ||
-    typeof value !== 'object' ||
-    Array.isArray(value) ||
-    Object.getPrototypeOf(value) !== Object.prototype
-  ) {
-    throw new TypeError(`${name} must be a plain object`);
-  }
-  return value;
-}
+const COMPILE_INPUT_KEYS = Object.freeze([
+  'scene',
+  'presentation',
+  'experimentId',
+  'receiptId',
+  'operatorAttentionFingerprint',
+]);
+const PACKET_KEYS = Object.freeze([
+  'contractVersion',
+  'sceneId',
+  'snapshotId',
+  'experimentId',
+  'receiptId',
+  'operatorAttentionFingerprint',
+  'target',
+  'deviceId',
+  'status',
+  'coordinateSystem',
+  'layers',
+  'nodes',
+  'metrics',
+  'provenanceRef',
+  'safety',
+  'checksum',
+]);
+const SAFETY_KEYS = Object.freeze(['authoritative', 'actuatesHardware', 'advisoryOnly']);
 
 function text(value, name) {
   if (typeof value !== 'string' || !value.trim()) {
     throw new TypeError(`${name} must be a non-empty string`);
   }
   return value.trim();
+}
+
+function snapshotEvidence(value, path = 'evidence', seen = new WeakSet()) {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new TypeError(`${path} numbers must be finite`);
+    return value;
+  }
+  if (!value || typeof value !== 'object') {
+    throw new TypeError(`${path} must contain JSON-compatible evidence`);
+  }
+  if (Object.getOwnPropertySymbols(value).length > 0) {
+    throw new TypeError(`${path} must not contain symbol properties`);
+  }
+  if (seen.has(value)) throw new TypeError(`${path} must not contain circular references`);
+  seen.add(value);
+
+  let copy;
+  if (Array.isArray(value)) {
+    const allowedKeys = new Set(['length']);
+    copy = [];
+    for (let index = 0; index < value.length; index += 1) {
+      const key = String(index);
+      allowedKeys.add(key);
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor) throw new TypeError(`${path} must not contain sparse arrays`);
+      if ('get' in descriptor || 'set' in descriptor) {
+        throw new TypeError(`${path}[${index}] must not use accessors`);
+      }
+      copy.push(snapshotEvidence(descriptor.value, `${path}[${index}]`, seen));
+    }
+    if (Reflect.ownKeys(value).some((key) => typeof key !== 'string' || !allowedKeys.has(key))) {
+      throw new TypeError(`${path} arrays must not contain extra properties`);
+    }
+  } else {
+    if (Object.getPrototypeOf(value) !== Object.prototype) {
+      throw new TypeError(`${path} must be a plain object`);
+    }
+    copy = {};
+    for (const [key, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(value))) {
+      if (!descriptor.enumerable) throw new TypeError(`${path}.${key} must be enumerable evidence`);
+      if ('get' in descriptor || 'set' in descriptor) {
+        throw new TypeError(`${path}.${key} must not use accessors`);
+      }
+      copy[key] = snapshotEvidence(descriptor.value, `${path}.${key}`, seen);
+    }
+  }
+
+  seen.delete(value);
+  return copy;
+}
+
+function readCompileInput(value) {
+  const copy = snapshotEvidence(value, 'render input');
+  const keys = Object.keys(copy);
+  const unexpected = keys.find((key) => !COMPILE_INPUT_KEYS.includes(key));
+  if (unexpected) throw new TypeError(`render input contains unsupported field: ${unexpected}`);
+  for (const key of ['scene', 'presentation']) {
+    if (!Object.hasOwn(copy, key)) throw new TypeError(`render input requires ${key}`);
+  }
+  return copy;
+}
+
+function hasExactKeys(value, expected) {
+  const keys = Object.keys(value);
+  return keys.length === expected.length && keys.every((key) => expected.includes(key));
+}
+
+function deepFreeze(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
 }
 
 function checksum(value) {
@@ -34,15 +120,16 @@ function checksum(value) {
  * downstream renderers cannot silently detach a visual artifact from its
  * decision review context.
  */
-export function compileHolographicRenderPacket({
-  scene,
-  presentation,
-  experimentId = null,
-  receiptId = null,
-  operatorAttentionFingerprint = null,
-} = {}) {
-  const spatialScene = object(scene, 'scene');
-  const plan = object(presentation, 'presentation');
+export function compileHolographicRenderPacket(input = {}) {
+  const values = readCompileInput(input);
+  const spatialScene = values.scene;
+  const plan = values.presentation;
+  const experimentId = Object.hasOwn(values, 'experimentId') ? values.experimentId : null;
+  const receiptId = Object.hasOwn(values, 'receiptId') ? values.receiptId : null;
+  const operatorAttentionFingerprint = Object.hasOwn(values, 'operatorAttentionFingerprint')
+    ? values.operatorAttentionFingerprint
+    : null;
+
   if (spatialScene.sceneVersion !== 2) throw new TypeError('scene.sceneVersion must equal 2');
   if (plan.schemaVersion !== 1) throw new TypeError('presentation.schemaVersion must equal 1');
   if (plan.sceneId !== spatialScene.sceneId) {
@@ -78,15 +165,16 @@ export function compileHolographicRenderPacket({
     nodes: Array.isArray(spatialScene.nodes) ? spatialScene.nodes : [],
     metrics: spatialScene.metrics ?? null,
     provenanceRef: spatialScene.provenanceRef ?? null,
-    safety: Object.freeze({ authoritative: false, actuatesHardware: false, advisoryOnly: true }),
+    safety: { authoritative: false, actuatesHardware: false, advisoryOnly: true },
   };
 
-  return Object.freeze({ ...payload, checksum: checksum(payload) });
+  return deepFreeze({ ...payload, checksum: checksum(payload) });
 }
 
 export function validateHolographicRenderPacket(packet) {
   try {
-    const value = object(packet, 'packet');
+    const value = snapshotEvidence(packet, 'packet');
+    if (!hasExactKeys(value, PACKET_KEYS)) return false;
     if (value.contractVersion !== RENDERER_CONTRACT_VERSION) return false;
     if (typeof value.sceneId !== 'string' || !value.sceneId.trim()) return false;
     if (typeof value.snapshotId !== 'string' || !value.snapshotId.trim()) return false;
@@ -109,21 +197,15 @@ export function validateHolographicRenderPacket(packet) {
     ) {
       return false;
     }
+    if (!Array.isArray(value.nodes)) return false;
     if (typeof value.checksum !== 'string' || !/^[a-f0-9]{64}$/.test(value.checksum)) {
       return false;
     }
-    const safety = value.safety;
+    if (!hasExactKeys(value.safety, SAFETY_KEYS)) return false;
     if (
-      !safety ||
-      typeof safety !== 'object' ||
-      Array.isArray(safety) ||
-      Object.getPrototypeOf(safety) !== Object.prototype ||
-      !Object.hasOwn(safety, 'authoritative') ||
-      !Object.hasOwn(safety, 'actuatesHardware') ||
-      !Object.hasOwn(safety, 'advisoryOnly') ||
-      safety.authoritative !== false ||
-      safety.actuatesHardware !== false ||
-      safety.advisoryOnly !== true
+      value.safety.authoritative !== false ||
+      value.safety.actuatesHardware !== false ||
+      value.safety.advisoryOnly !== true
     ) {
       return false;
     }
