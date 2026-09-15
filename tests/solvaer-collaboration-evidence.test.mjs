@@ -8,8 +8,8 @@ const snapshot = {
   snapshotId: 'snapshot-evidence-1',
   observedAt: '2026-09-13T00:00:00Z',
   assets: [
-    { id: 'load-1', type: 'load', demandKw: 42 },
-    { id: 'gen-1', type: 'generator', capacityKw: 60, outputKw: 40 },
+    { id: 'load-1', kind: 'load', powerKw: 42 },
+    { id: 'solar-1', kind: 'solar', powerKw: 40, capacityKw: 60 },
   ],
 };
 
