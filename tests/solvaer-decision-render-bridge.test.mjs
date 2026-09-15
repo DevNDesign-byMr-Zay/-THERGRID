@@ -10,14 +10,8 @@ const snapshot = {
   schemaVersion: 1,
   snapshotId: 'snapshot-bridge-001',
   observedAt: '2026-09-13T12:00:00Z',
-  assets: [
-    { id: 'load-1', kind: 'load', powerKw: 78 },
-    { id: 'solar-1', kind: 'solar', powerKw: 48, capacityKw: 60 },
-  ],
-  topology: {
-    nodes: ['node-load', 'node-solar'],
-    connections: [{ assetId: 'load-1', nodeId: 'node-load' }, { assetId: 'solar-1', nodeId: 'node-solar' }],
-  },
+  assets: [{ id: 'load-1', kind: 'load', powerKw: 78 }, { id: 'solar-1', kind: 'solar', powerKw: 48, capacityKw: 60 }],
+  topology: { nodes: ['node-load', 'node-solar'], connections: [{ assetId: 'load-1', nodeId: 'node-load' }, { assetId: 'solar-1', nodeId: 'node-solar' }] },
 };
 
 test('SOLVÆR decision bridge preserves experiment evidence through rendering and operator attention', () => {
@@ -42,5 +36,5 @@ test('SOLVÆR decision bridge preserves experiment evidence through rendering an
 
 test('SOLVÆR candidate cannot cross the render bridge with authoritative execution flags', () => {
   const baseline = runSyntheticMicrogrid(snapshot);
-  assert.throws(() => buildSolvaerDecisionRenderBridge({ request: baseline.solvaerRequest, candidate: { ...baseline.proposal, experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId, authoritative: true }, provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId }, twinState: baseline.twinState, forecast: baseline.forecast, proposal: baseline.proposal, scene: baseline.scene, presentation: baseline.presentation }), /authoritative|validation/i);
+  assert.throws(() => buildSolvaerDecisionRenderBridge({ request: baseline.solvaerRequest, candidate: { ...baseline.proposal, experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId, safety: { authoritative: true, physicalActuation: false, actuatesHardware: false, advisoryOnly: false } }, provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId }, twinState: baseline.twinState, forecast: baseline.forecast, proposal: baseline.proposal, scene: baseline.scene, presentation: baseline.presentation }), /authority|authoritative|physical/);
 });
