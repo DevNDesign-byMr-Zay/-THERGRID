@@ -4,6 +4,7 @@ import { runSyntheticMicrogrid } from '../src/pipeline.mjs';
 import { createSolvaerCollaborationEvidence, validateSolvaerCollaborationEvidence } from '../src/solvaer-collaboration-evidence.mjs';
 
 const snapshot = {
+  schemaVersion: 1,
   snapshotId: 'snapshot-evidence-1',
   observedAt: '2026-09-13T00:00:00Z',
   assets: [
