@@ -13,7 +13,18 @@ function text(value, name) {
 }
 
 function sameIdentity(actual, expected) {
-  return actual?.family === expected.family && actual?.role === expected.role && actual?.contract === expected.contract;
+  return (
+    actual != null &&
+    typeof actual === 'object' &&
+    !Array.isArray(actual) &&
+    Object.getPrototypeOf(actual) === Object.prototype &&
+    Object.hasOwn(actual, 'family') &&
+    Object.hasOwn(actual, 'role') &&
+    Object.hasOwn(actual, 'contract') &&
+    actual.family === expected.family &&
+    actual.role === expected.role &&
+    actual.contract === expected.contract
+  );
 }
 
 function rejectAuthority(value, name) {
