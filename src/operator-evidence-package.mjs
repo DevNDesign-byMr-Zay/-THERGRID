@@ -43,6 +43,10 @@ function canonical(value) {
   return value;
 }
 
+function canonicalEqual(left, right) {
+  return JSON.stringify(canonical(left)) === JSON.stringify(canonical(right));
+}
+
 function fingerprint(value) {
   return createHash('sha256')
     .update(JSON.stringify(canonical(value)), 'utf8')
@@ -127,9 +131,9 @@ function validatedArtifacts({ attention, provenance, readModel }) {
   return { node };
 }
 
-function packageBody({ attention, provenance, readModel }) {
+function derivePackageFields({ attention, provenance, readModel }) {
   const { node } = validatedArtifacts({ attention, provenance, readModel });
-  return deepFreeze({
+  return {
     version: OPERATOR_EVIDENCE_PACKAGE_VERSION,
     experimentId: attention.experimentId,
     snapshotId: attention.snapshotId,
@@ -144,7 +148,11 @@ function packageBody({ attention, provenance, readModel }) {
     },
     interpretation: 'operator-evidence-package-read-only',
     safety: packageSafety(),
-  });
+  };
+}
+
+function packageBody(artifacts) {
+  return deepFreeze(derivePackageFields(artifacts));
 }
 
 function packageIdentity(body) {
@@ -169,7 +177,7 @@ export function createOperatorEvidencePackage({ attention, provenance, readModel
 
 export function validateOperatorEvidencePackage(
   evidencePackage,
-  { attention, provenance, readModel } = {},
+  expectedArtifacts = undefined,
 ) {
   try {
     const values = readExactDataObject(evidencePackage, PACKAGE_KEYS);
@@ -197,15 +205,17 @@ export function validateOperatorEvidencePackage(
       return false;
     }
 
-    const expected = packageBody({ attention, provenance, readModel });
+    const embeddedArtifacts = {
+      attention: values.attention,
+      provenance: values.provenance,
+      readModel: values.readModel,
+    };
+    const expected = derivePackageFields(embeddedArtifacts);
     if (
       values.experimentId !== expected.experimentId ||
       values.snapshotId !== expected.snapshotId ||
       values.requestId !== expected.requestId
     ) {
-      return false;
-    }
-    if (values.attention !== attention || values.provenance !== provenance || values.readModel !== readModel) {
       return false;
     }
     if (
@@ -214,6 +224,16 @@ export function validateOperatorEvidencePackage(
       manifest.viewFingerprint !== expected.manifest.viewFingerprint
     ) {
       return false;
+    }
+    if (expectedArtifacts !== undefined) {
+      if (!expectedArtifacts || typeof expectedArtifacts !== 'object') return false;
+      if (
+        !canonicalEqual(values.attention, expectedArtifacts.attention) ||
+        !canonicalEqual(values.provenance, expectedArtifacts.provenance) ||
+        !canonicalEqual(values.readModel, expectedArtifacts.readModel)
+      ) {
+        return false;
+      }
     }
 
     return values.packageFingerprint === fingerprint(packageIdentity(expected));
