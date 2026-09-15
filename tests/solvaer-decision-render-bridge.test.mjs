@@ -30,8 +30,27 @@ test('SOLVÆR decision bridge preserves experiment evidence through rendering an
   assert.equal(bridge.operatorAttention.items[0].evidenceRef, bridge.collaborationEvidence.evidenceFingerprint);
   assert.equal(bridge.renderPacket.experimentId, baseline.experimentId);
   assert.equal(bridge.renderPacket.receiptId, bridge.decision.decisionReceipt.receiptId);
+  assert.equal(bridge.renderPacket.operatorAttentionFingerprint, bridge.operatorAttention.attentionFingerprint);
   assert.equal(validateHolographicRenderPacket(bridge.renderPacket), true);
   assert.deepEqual(bridge.safety, { authoritative: false, physicalActuation: false, actuatesHardware: false, advisoryOnly: true });
+});
+
+test('SOLVÆR render packet fingerprint invalidates operator attention identity substitution', () => {
+  const baseline = runSyntheticMicrogrid(snapshot);
+  const candidate = { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId, proposal: baseline.proposal, forecast: baseline.forecast, rationale: 'integrity-bound render' };
+  const bridge = buildSolvaerDecisionRenderBridge({ request: baseline.solvaerRequest, candidate, provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId }, twinState: baseline.twinState, forecast: baseline.forecast, proposal: baseline.proposal, scene: baseline.scene, presentation: baseline.presentation });
+  const tampered = { ...bridge.renderPacket, operatorAttentionFingerprint: '0'.repeat(64) };
+  assert.equal(validateHolographicRenderPacket(tampered), false);
+});
+
+test('SOLVÆR operator attention rejects prototype-backed safety and identity fields', () => {
+  const baseline = runSyntheticMicrogrid(snapshot);
+  const candidate = { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId, proposal: baseline.proposal, forecast: baseline.forecast, rationale: 'prototype boundary' };
+  const bridge = buildSolvaerDecisionRenderBridge({ request: baseline.solvaerRequest, candidate, provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId }, twinState: baseline.twinState, forecast: baseline.forecast, proposal: baseline.proposal, scene: baseline.scene, presentation: baseline.presentation });
+  const inheritedSafety = Object.create(bridge.operatorAttention.safety);
+  const inheritedAttention = Object.create(bridge.operatorAttention);
+  Object.assign(inheritedAttention, { safety: inheritedSafety, attentionFingerprint: bridge.operatorAttention.attentionFingerprint });
+  assert.equal(validateSolvaerOperatorAttention(inheritedAttention), false);
 });
 
 test('SOLVÆR candidate cannot cross the render bridge with authoritative execution flags', () => {
