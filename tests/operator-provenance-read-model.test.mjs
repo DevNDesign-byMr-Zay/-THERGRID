@@ -138,10 +138,10 @@ test('rejects duplicate attention nodes and authority widening in the read surfa
     ],
   };
 
-  assert.equal(validateProvenanceGraph(duplicateGraph, { requiredTypes: ['operator-attention'] }), true);
+  assert.equal(validateProvenanceGraph(duplicateGraph, { requiredTypes: ['operator-attention'] }), false);
   assert.throws(
     () => createOperatorProvenanceReadModel({ ...artifacts, graph: duplicateGraph }),
-    /exactly one/,
+    /validated operator-attention provenance/,
   );
   assert.equal(
     validateOperatorProvenanceReadModel(
