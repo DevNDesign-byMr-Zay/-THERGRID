@@ -46,3 +46,14 @@ test('rejects provenance whose SOLVÆR identity is inherited from a prototype', 
     /provenanceRef producer identity does not match SOLVÆR request/,
   );
 });
+
+test('rejects a request carrying physical or authoritative execution authority', () => {
+  assert.throws(
+    () => acceptSolvaerOptimizationResult({
+      request: { ...request, safety: { advisoryOnly: true, authoritative: true, actuatesHardware: false } },
+      candidate: { experimentId: 'exp-prototype', snapshotId: 'snap-prototype', proposal: {} },
+      provenanceRef: provenance,
+    }),
+    /request cannot carry physical or authoritative execution authority/,
+  );
+});
