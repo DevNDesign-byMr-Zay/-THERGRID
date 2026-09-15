@@ -168,3 +168,31 @@ test('rejects deceptive top-level descriptors without evaluating getters', () =>
   assert.equal(validateOperatorProvenanceReadModel(deceptive, artifacts), false);
   assert.equal(getterReads, 0);
 });
+
+test('rejects extra string properties attached to the sealed items array', () => {
+  const artifacts = fixture();
+  const view = createOperatorProvenanceReadModel(artifacts);
+  const items = view.items.map((item) => ({ ...item }));
+  items.unsealedAuthority = true;
+  const tampered = { ...view, items };
+
+  assert.equal(validateOperatorProvenanceReadModel(tampered, artifacts), false);
+});
+
+test('rejects accessor side channels on the items array without evaluating them', () => {
+  const artifacts = fixture();
+  const view = createOperatorProvenanceReadModel(artifacts);
+  const items = view.items.map((item) => ({ ...item }));
+  let getterReads = 0;
+  Object.defineProperty(items, 'shadowControl', {
+    enumerable: true,
+    get() {
+      getterReads += 1;
+      return true;
+    },
+  });
+  const tampered = { ...view, items };
+
+  assert.equal(validateOperatorProvenanceReadModel(tampered, artifacts), false);
+  assert.equal(getterReads, 0);
+});
