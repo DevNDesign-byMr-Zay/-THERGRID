@@ -11,19 +11,20 @@ const snapshot = {
     { id: 'load-1', kind: 'load', powerKw: 42 },
     { id: 'solar-1', kind: 'solar', powerKw: 40, capacityKw: 60 },
   ],
+  topology: {
+    nodes: ['node-load', 'node-solar'],
+    connections: [
+      { assetId: 'load-1', nodeId: 'node-load' },
+      { assetId: 'solar-1', nodeId: 'node-solar' },
+    ],
+  },
 };
 
 test('SOLVÆR collaboration evidence is deterministic and simulation-bound', () => {
   const run = runSyntheticMicrogrid(snapshot);
-  const candidate = {
-    experimentId: run.experimentId,
-    snapshotId: snapshot.snapshotId,
-    proposal: run.proposal,
-    model: 'solvaer-reference',
-  };
+  const candidate = { experimentId: run.experimentId, snapshotId: snapshot.snapshotId, proposal: run.proposal, model: 'solvaer-reference' };
   const provenanceRef = { experimentId: run.experimentId, snapshotId: snapshot.snapshotId };
   const evidence = createSolvaerCollaborationEvidence({ request: run.solvaerRequest, candidate, provenanceRef });
-
   assert.equal(validateSolvaerCollaborationEvidence(evidence), true);
   assert.equal(evidence.experimentId, run.experimentId);
   assert.equal(evidence.snapshotId, snapshot.snapshotId);
@@ -34,11 +35,7 @@ test('SOLVÆR collaboration evidence is deterministic and simulation-bound', () 
 
 test('tampering collaboration evidence fails closed', () => {
   const run = runSyntheticMicrogrid(snapshot);
-  const evidence = createSolvaerCollaborationEvidence({
-    request: run.solvaerRequest,
-    candidate: { experimentId: run.experimentId, snapshotId: snapshot.snapshotId, proposal: run.proposal },
-    provenanceRef: { experimentId: run.experimentId, snapshotId: snapshot.snapshotId },
-  });
+  const evidence = createSolvaerCollaborationEvidence({ request: run.solvaerRequest, candidate: { experimentId: run.experimentId, snapshotId: snapshot.snapshotId, proposal: run.proposal }, provenanceRef: { experimentId: run.experimentId, snapshotId: snapshot.snapshotId } });
   assert.equal(validateSolvaerCollaborationEvidence({ ...evidence, snapshotId: 'other-snapshot' }), false);
   assert.equal(validateSolvaerCollaborationEvidence({ ...evidence, safety: { ...evidence.safety, authoritative: true } }), false);
 });
