@@ -4,7 +4,12 @@ import { runSyntheticMicrogrid } from '../src/pipeline.mjs';
 import { validateSolvaerCollaborationResult } from '../src/solvaer-collaboration-validator.mjs';
 import { createSolvaerCollaborationEvidence } from '../src/solvaer-collaboration-evidence.mjs';
 import { evaluateSolvaerDecisionHandoff } from '../src/solvaer-decision-handoff.mjs';
-import { buildSolvaerOperatorAttention, validateSolvaerOperatorAttention } from '../src/solvaer-operator-attention.mjs';
+import { createSolvaerOperatorEvidenceSummary } from '../src/solvaer-operator-evidence-summary.mjs';
+import {
+  buildSolvaerOperatorAttention,
+  buildSolvaerOperatorAttentionFromSummary,
+  validateSolvaerOperatorAttention,
+} from '../src/solvaer-operator-attention.mjs';
 
 function snapshot(snapshotId) {
   return {
@@ -27,6 +32,32 @@ function snapshot(snapshotId) {
   };
 }
 
+function operatorSummary() {
+  return createSolvaerOperatorEvidenceSummary({
+    snapshotId: 'summary-snapshot',
+    experimentId: 'summary-experiment',
+    simulationStatus: 'passed',
+    receiptId: 'receipt-1',
+    sceneId: 'scene-1',
+    renderTarget: 'web-dashboard',
+    provenanceValid: true,
+    promotionStatus: 'simulation-only',
+    authoritative: false,
+    solvaerRequestId: 'solvaer:summary-experiment:summary-snapshot',
+    collaborationEvidenceFingerprint: 'a'.repeat(64),
+    simulationEvidenceFingerprint: 'b'.repeat(64),
+    operatorProjectionFingerprint: 'c'.repeat(64),
+    operatorProjectionValid: true,
+    operatorInterpretation: 'operator-review-only',
+    operatorResidualBalanceKw: -0.5,
+    operatorGridAdjustmentKw: -1,
+    operatorPromotionEligible: false,
+    operatorAdvisoryOnly: true,
+    operatorAuthoritative: false,
+    operatorActuatesHardware: false,
+  });
+}
+
 test('operator attention is derived from validated SOLVÆR evidence', () => {
   const baseline = runSyntheticMicrogrid(snapshot('attention-snapshot'));
   const candidate = { experimentId: baseline.experimentId, snapshotId: baseline.solvaerRequest.snapshotId, proposal: baseline.proposal };
@@ -40,6 +71,33 @@ test('operator attention is derived from validated SOLVÆR evidence', () => {
   assert.equal(attention.experimentId, baseline.experimentId);
   assert.equal(attention.safety.advisoryOnly, true);
   assert.equal(attention.safety.actuatesHardware, false);
+});
+
+test('operator attention can consume only the validated allowlisted summary', () => {
+  const summary = operatorSummary();
+  const attention = buildSolvaerOperatorAttentionFromSummary(summary);
+
+  assert.equal(validateSolvaerOperatorAttention(attention), true);
+  assert.equal(attention.experimentId, summary.experimentId);
+  assert.equal(attention.snapshotId, summary.snapshotId);
+  assert.equal(attention.requestId, summary.solvaerRequestId);
+  assert.equal(attention.items[0].evidenceRef, summary.summaryFingerprint);
+  assert.equal(attention.items[1].evidenceRef, summary.summaryFingerprint);
+  assert.equal(attention.safety.authoritative, false);
+  assert.equal(attention.safety.actuatesHardware, false);
+});
+
+test('operator attention rejects tampered operator summaries before projection', () => {
+  const summary = operatorSummary();
+
+  assert.throws(
+    () => buildSolvaerOperatorAttentionFromSummary({ ...summary, operatorAuthoritative: true }),
+    /validated SOLVÆR operator evidence summary is required/,
+  );
+  assert.throws(
+    () => buildSolvaerOperatorAttentionFromSummary({ ...summary, candidate: { dispatchDeltaKw: 1 } }),
+    /validated SOLVÆR operator evidence summary is required/,
+  );
 });
 
 test('operator attention rejects cross-experiment or cross-request decision evidence', () => {
