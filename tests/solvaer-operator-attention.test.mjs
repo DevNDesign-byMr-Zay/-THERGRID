@@ -71,11 +71,13 @@ test('operator attention is derived from validated SOLVÆR evidence', () => {
   assert.equal(attention.experimentId, baseline.experimentId);
   assert.equal(attention.safety.advisoryOnly, true);
   assert.equal(attention.safety.actuatesHardware, false);
+  assert.match(attention.attentionFingerprint, /^[a-f0-9]{64}$/);
 });
 
 test('operator attention can consume only the validated allowlisted summary', () => {
   const summary = operatorSummary();
   const attention = buildSolvaerOperatorAttentionFromSummary(summary);
+  const repeated = buildSolvaerOperatorAttentionFromSummary(summary);
 
   assert.equal(validateSolvaerOperatorAttention(attention), true);
   assert.equal(attention.experimentId, summary.experimentId);
@@ -85,6 +87,7 @@ test('operator attention can consume only the validated allowlisted summary', ()
   assert.equal(attention.items[1].evidenceRef, summary.summaryFingerprint);
   assert.equal(attention.safety.authoritative, false);
   assert.equal(attention.safety.actuatesHardware, false);
+  assert.equal(attention.attentionFingerprint, repeated.attentionFingerprint);
 });
 
 test('operator attention rejects tampered operator summaries before projection', () => {
@@ -98,6 +101,82 @@ test('operator attention rejects tampered operator summaries before projection',
     () => buildSolvaerOperatorAttentionFromSummary({ ...summary, candidate: { dispatchDeltaKw: 1 } }),
     /validated SOLVÆR operator evidence summary is required/,
   );
+});
+
+test('operator attention integrity rejects item, evidence, and authority tampering', () => {
+  const attention = buildSolvaerOperatorAttentionFromSummary(operatorSummary());
+
+  assert.equal(
+    validateSolvaerOperatorAttention({
+      ...attention,
+      items: [
+        { ...attention.items[0], priority: 1 },
+        attention.items[1],
+      ],
+    }),
+    false,
+  );
+  assert.equal(
+    validateSolvaerOperatorAttention({
+      ...attention,
+      items: [
+        { ...attention.items[0], evidenceRef: 'd'.repeat(64) },
+        attention.items[1],
+      ],
+    }),
+    false,
+  );
+  assert.equal(
+    validateSolvaerOperatorAttention({
+      ...attention,
+      safety: { ...attention.safety, authoritative: true },
+    }),
+    false,
+  );
+  assert.equal(
+    validateSolvaerOperatorAttention({
+      ...attention,
+      controlCommand: { dispatchKw: 1 },
+    }),
+    false,
+  );
+});
+
+test('operator attention rejects deceptive descriptors without executing getters', () => {
+  const attention = buildSolvaerOperatorAttentionFromSummary(operatorSummary());
+  let getterReads = 0;
+  const deceptive = { ...attention };
+  Object.defineProperty(deceptive, 'attentionFingerprint', {
+    enumerable: true,
+    get() {
+      getterReads += 1;
+      return attention.attentionFingerprint;
+    },
+  });
+
+  assert.equal(validateSolvaerOperatorAttention(deceptive), false);
+  assert.equal(getterReads, 0);
+
+  const hidden = { ...attention };
+  Object.defineProperty(hidden, 'control', { enumerable: false, value: true });
+  assert.equal(validateSolvaerOperatorAttention(hidden), false);
+
+  const symbolic = { ...attention };
+  symbolic[Symbol('control')] = true;
+  assert.equal(validateSolvaerOperatorAttention(symbolic), false);
+
+  const items = [...attention.items];
+  const first = { ...items[0] };
+  Object.defineProperty(first, 'priority', {
+    enumerable: true,
+    get() {
+      getterReads += 1;
+      return 40;
+    },
+  });
+  items[0] = first;
+  assert.equal(validateSolvaerOperatorAttention({ ...attention, items }), false);
+  assert.equal(getterReads, 0);
 });
 
 test('operator attention rejects cross-experiment or cross-request decision evidence', () => {
