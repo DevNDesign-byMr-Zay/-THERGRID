@@ -4,6 +4,13 @@ import { validateSolvaerCollaborationEvidence } from './solvaer-collaboration-ev
 const SEVERITIES = Object.freeze(['info', 'warning', 'critical']);
 const ATTENTION_VERSION = 2;
 
+function plainObject(value, name) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) {
+    throw new TypeError(`${name} must be a plain object`);
+  }
+  return value;
+}
+
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
   if (value && typeof value === 'object') {
@@ -56,14 +63,23 @@ export function buildSolvaerOperatorAttention({ evidence, decision } = {}) {
 
 export function validateSolvaerOperatorAttention(attention) {
   try {
-    if (!attention || attention.version !== ATTENTION_VERSION || !Array.isArray(attention.items)) return false;
-    if (typeof attention.experimentId !== 'string' || !attention.experimentId.trim()
-      || typeof attention.snapshotId !== 'string' || !attention.snapshotId.trim()
-      || typeof attention.requestId !== 'string' || !attention.requestId.trim()) return false;
-    if (!attention.safety || attention.safety.authoritative !== false || attention.safety.actuatesHardware !== false || attention.safety.advisoryOnly !== true) return false;
-    if (!/^[a-f0-9]{64}$/.test(attention.attentionFingerprint)) return false;
-    if (!attention.items.every((item) => typeof item.id === 'string' && item.id.trim() && Number.isInteger(item.priority) && item.priority >= 0 && SEVERITIES.includes(item.severity) && item.advisoryOnly === true && typeof item.evidenceRef === 'string' && item.evidenceRef.trim().length > 0)) return false;
-    return attention.attentionFingerprint === fingerprint({ ...attention, attentionFingerprint: undefined });
+    const value = plainObject(attention, 'attention');
+    if (!Object.hasOwn(value, 'version') || value.version !== ATTENTION_VERSION || !Array.isArray(value.items)) return false;
+    if (!Object.hasOwn(value, 'experimentId') || !Object.hasOwn(value, 'snapshotId') || !Object.hasOwn(value, 'requestId')) return false;
+    if (typeof value.experimentId !== 'string' || !value.experimentId.trim()
+      || typeof value.snapshotId !== 'string' || !value.snapshotId.trim()
+      || typeof value.requestId !== 'string' || !value.requestId.trim()) return false;
+    const safety = value.safety;
+    if (!safety || typeof safety !== 'object' || Array.isArray(safety) || Object.getPrototypeOf(safety) !== Object.prototype
+      || !Object.hasOwn(safety, 'authoritative') || !Object.hasOwn(safety, 'actuatesHardware') || !Object.hasOwn(safety, 'advisoryOnly')
+      || safety.authoritative !== false || safety.actuatesHardware !== false || safety.advisoryOnly !== true) return false;
+    if (!Object.hasOwn(value, 'attentionFingerprint') || !/^[a-f0-9]{64}$/.test(value.attentionFingerprint)) return false;
+    if (!value.items.every((item) => item && typeof item === 'object' && !Array.isArray(item) && Object.getPrototypeOf(item) === Object.prototype
+      && Object.hasOwn(item, 'id') && Object.hasOwn(item, 'priority') && Object.hasOwn(item, 'severity')
+      && Object.hasOwn(item, 'advisoryOnly') && Object.hasOwn(item, 'evidenceRef')
+      && typeof item.id === 'string' && item.id.trim() && Number.isInteger(item.priority) && item.priority >= 0
+      && SEVERITIES.includes(item.severity) && item.advisoryOnly === true && typeof item.evidenceRef === 'string' && item.evidenceRef.trim().length > 0)) return false;
+    return value.attentionFingerprint === fingerprint({ ...value, attentionFingerprint: undefined });
   } catch {
     return false;
   }
