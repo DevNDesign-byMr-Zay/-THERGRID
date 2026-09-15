@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import { runSyntheticMicrogrid } from '../src/pipeline.mjs';
 import { validateProvenanceGraph } from '../src/provenance.mjs';
 import { createSolvaerCollaborationEvidence } from '../src/solvaer-collaboration-evidence.mjs';
@@ -6,6 +8,24 @@ import {
   createSolvaerSimulationOperatorProjection,
   validateSolvaerSimulationOperatorProjection,
 } from '../src/solvaer-simulation-operator-projection.mjs';
+
+function canonical(value) {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonical(value[key])]),
+    );
+  }
+  return value;
+}
+
+function fingerprint(value) {
+  return createHash('sha256')
+    .update(JSON.stringify(canonical(value)), 'utf8')
+    .digest('hex');
+}
 
 const snapshot = {
   schemaVersion: 1,
@@ -107,7 +127,7 @@ if (
   throw new Error('demo operator projection must remain review-only and non-authoritative');
 }
 
-const summary = {
+const summaryBody = {
   snapshotId: snapshot.snapshotId,
   experimentId: run.experimentId,
   simulationStatus: run.simulation.status,
@@ -130,5 +150,9 @@ const summary = {
   operatorAuthoritative: operatorProjection.safety.authoritative,
   operatorActuatesHardware: operatorProjection.safety.actuatesHardware,
 };
+const summary = Object.freeze({
+  ...summaryBody,
+  summaryFingerprint: fingerprint(summaryBody),
+});
 
 process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
