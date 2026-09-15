@@ -7,6 +7,7 @@ import { validateSolvaerOperatorAttention } from '../src/solvaer-operator-attent
 import { validateHolographicRenderPacket } from '../src/holographic-renderer-contract.mjs';
 
 const snapshot = {
+  schemaVersion: 1,
   snapshotId: 'snapshot-bridge-001',
   observedAt: '2026-09-13T12:00:00Z',
   nodes: [
