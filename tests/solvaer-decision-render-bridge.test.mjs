@@ -31,7 +31,7 @@ test('SOLVÆR decision bridge preserves experiment evidence through rendering an
   assert.equal(bridge.renderPacket.experimentId, baseline.experimentId);
   assert.equal(bridge.renderPacket.receiptId, bridge.decision.decisionReceipt.receiptId);
   assert.equal(validateHolographicRenderPacket(bridge.renderPacket), true);
-  assert.deepEqual(bridge.safety, { authoritative: false, actuatesHardware: false, advisoryOnly: true });
+  assert.deepEqual(bridge.safety, { authoritative: false, physicalActuation: false, actuatesHardware: false, advisoryOnly: true });
 });
 
 test('SOLVÆR candidate cannot cross the render bridge with authoritative execution flags', () => {
