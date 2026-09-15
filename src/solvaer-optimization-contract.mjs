@@ -16,11 +16,8 @@ function sameIdentity(actual, expected) {
   return actual?.family === expected.family && actual?.role === expected.role && actual?.contract === expected.contract;
 }
 
-/**
- * Defines the SOLVÆR optimization handoff without granting authority over
- * THERGRID simulation, promotion, or physical infrastructure.
- */
 export function createSolvaerOptimizationRequest({ experimentId, snapshotId, twinStateRef, objective, constraints = null } = {}) {
+  const normalizedExperimentId = text(experimentId, 'experimentId');
   const normalizedSnapshotId = text(snapshotId, 'snapshotId');
   const normalizedTwinStateRef = text(twinStateRef, 'twinStateRef');
   if (normalizedTwinStateRef !== `twin-state:${normalizedSnapshotId}`) {
@@ -29,7 +26,8 @@ export function createSolvaerOptimizationRequest({ experimentId, snapshotId, twi
   return Object.freeze({
     contractVersion: CONTRACT_VERSION,
     capability: CAPABILITY,
-    experimentId: text(experimentId, 'experimentId'),
+    experimentId: normalizedExperimentId,
+    requestId: `solvaer-request:${normalizedExperimentId}:${normalizedSnapshotId}`,
     snapshotId: normalizedSnapshotId,
     twinStateRef: normalizedTwinStateRef,
     objective: text(objective, 'objective'),
@@ -46,6 +44,7 @@ export function acceptSolvaerOptimizationResult({ request, candidate, provenance
   if (input.contractVersion !== CONTRACT_VERSION) throw new TypeError('unsupported SOLVÆR contract version');
   if (input.capability !== CAPABILITY) throw new TypeError('request capability must be optimization.explore');
   if (input.twinStateRef !== `twin-state:${input.snapshotId}`) throw new TypeError('request twinStateRef must bind to snapshotId');
+  if (input.requestId !== `solvaer-request:${input.experimentId}:${input.snapshotId}`) throw new TypeError('requestId must bind to experiment and snapshot');
   if (!sameIdentity(input.producerIdentity, PRODUCER_IDENTITY)) throw new TypeError('request producer identity is invalid');
   if (input.experimentId !== text(provenance.experimentId, 'provenanceRef.experimentId')) {
     throw new TypeError('candidate experimentId must match request');
@@ -59,17 +58,16 @@ export function acceptSolvaerOptimizationResult({ request, candidate, provenance
   if (provenance.snapshotId != null && text(provenance.snapshotId, 'provenanceRef.snapshotId') !== input.snapshotId) {
     throw new TypeError('provenance snapshotId must match request');
   }
-
   for (const [name, identity] of [['candidate', result.producerIdentity], ['provenanceRef', provenance.producerIdentity]]) {
     if (identity != null && !sameIdentity(identity, PRODUCER_IDENTITY)) {
       throw new TypeError(`${name} producer identity does not match SOLVÆR request`);
     }
   }
-
   return Object.freeze({
     contractVersion: CONTRACT_VERSION,
     capability: CAPABILITY,
     experimentId: input.experimentId,
+    requestId: input.requestId,
     snapshotId: input.snapshotId,
     candidate: result,
     provenanceRef: provenance,
