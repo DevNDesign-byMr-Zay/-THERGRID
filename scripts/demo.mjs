@@ -1,5 +1,5 @@
 import { runSyntheticMicrogrid } from '../src/pipeline.mjs';
-import { validateProvenanceGraph } from '../src/provenance.mjs';
+import { buildProvenanceGraph, validateProvenanceGraph } from '../src/provenance.mjs';
 import { createSolvaerCollaborationEvidence } from '../src/solvaer-collaboration-evidence.mjs';
 import { evaluateSolvaerCandidate } from '../src/solvaer-simulation-gateway.mjs';
 import {
@@ -10,6 +10,14 @@ import {
   createSolvaerOperatorEvidenceSummary,
   validateSolvaerOperatorEvidenceSummary,
 } from '../src/solvaer-operator-evidence-summary.mjs';
+import {
+  buildSolvaerOperatorAttentionFromSummary,
+  validateSolvaerOperatorAttention,
+} from '../src/solvaer-operator-attention.mjs';
+import {
+  createOperatorProvenanceReadModel,
+  validateOperatorProvenanceReadModel,
+} from '../src/operator-provenance-read-model.mjs';
 
 const snapshot = {
   schemaVersion: 1,
@@ -139,4 +147,43 @@ if (!validateSolvaerOperatorEvidenceSummary(summary)) {
   throw new Error('demo operator evidence summary failed validation');
 }
 
-process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
+const operatorAttention = buildSolvaerOperatorAttentionFromSummary(summary);
+if (!validateSolvaerOperatorAttention(operatorAttention)) {
+  throw new Error('demo operator attention failed validation');
+}
+
+const operatorProvenance = buildProvenanceGraph({
+  snapshot,
+  twinState: run.twinState,
+  forecast: run.forecast,
+  proposal: run.proposal,
+  simulation: run.simulation,
+  receipt: run.receipt,
+  scene: run.scene,
+  renderPacket: run.renderPacket,
+  collaborationEvidence,
+  operatorAttention,
+  experimentId: run.experimentId,
+});
+if (
+  !validateProvenanceGraph(operatorProvenance, {
+    requiredTypes: ['solvaer-collaboration', 'operator-attention'],
+  })
+) {
+  throw new Error('demo operator provenance graph failed validation');
+}
+
+const operatorReadModel = createOperatorProvenanceReadModel({
+  graph: operatorProvenance,
+  attention: operatorAttention,
+});
+if (
+  !validateOperatorProvenanceReadModel(operatorReadModel, {
+    graph: operatorProvenance,
+    attention: operatorAttention,
+  })
+) {
+  throw new Error('demo operator provenance read model failed validation');
+}
+
+process.stdout.write(`${JSON.stringify(operatorReadModel, null, 2)}\n`);
