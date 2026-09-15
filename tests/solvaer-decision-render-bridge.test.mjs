@@ -14,28 +14,16 @@ const snapshot = {
     { id: 'load-1', kind: 'load', powerKw: 78 },
     { id: 'solar-1', kind: 'solar', powerKw: 48, capacityKw: 60 },
   ],
+  topology: {
+    nodes: ['node-load', 'node-solar'],
+    connections: [{ assetId: 'load-1', nodeId: 'node-load' }, { assetId: 'solar-1', nodeId: 'node-solar' }],
+  },
 };
 
 test('SOLVÆR decision bridge preserves experiment evidence through rendering and operator attention', () => {
   const baseline = runSyntheticMicrogrid(snapshot);
-  const candidate = {
-    experimentId: baseline.experimentId,
-    snapshotId: snapshot.snapshotId,
-    proposal: baseline.proposal,
-    forecast: baseline.forecast,
-    rationale: 'explore a simulation-bound candidate',
-  };
-  const bridge = buildSolvaerDecisionRenderBridge({
-    request: baseline.solvaerRequest,
-    candidate,
-    provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId },
-    twinState: baseline.twinState,
-    forecast: baseline.forecast,
-    proposal: baseline.proposal,
-    scene: baseline.scene,
-    presentation: baseline.presentation,
-  });
-
+  const candidate = { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId, proposal: baseline.proposal, forecast: baseline.forecast, rationale: 'explore a simulation-bound candidate' };
+  const bridge = buildSolvaerDecisionRenderBridge({ request: baseline.solvaerRequest, candidate, provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId }, twinState: baseline.twinState, forecast: baseline.forecast, proposal: baseline.proposal, scene: baseline.scene, presentation: baseline.presentation });
   assert.equal(bridge.experimentId, baseline.experimentId);
   assert.equal(bridge.decision.simulation.status, 'passed');
   assert.equal(bridge.decision.promotionEligible, false);
@@ -54,14 +42,5 @@ test('SOLVÆR decision bridge preserves experiment evidence through rendering an
 
 test('SOLVÆR candidate cannot cross the render bridge with authoritative execution flags', () => {
   const baseline = runSyntheticMicrogrid(snapshot);
-  assert.throws(() => buildSolvaerDecisionRenderBridge({
-    request: baseline.solvaerRequest,
-    candidate: { ...baseline.proposal, experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId, authoritative: true },
-    provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId },
-    twinState: baseline.twinState,
-    forecast: baseline.forecast,
-    proposal: baseline.proposal,
-    scene: baseline.scene,
-    presentation: baseline.presentation,
-  }), /authoritative|validation/i);
+  assert.throws(() => buildSolvaerDecisionRenderBridge({ request: baseline.solvaerRequest, candidate: { ...baseline.proposal, experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId, authoritative: true }, provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId }, twinState: baseline.twinState, forecast: baseline.forecast, proposal: baseline.proposal, scene: baseline.scene, presentation: baseline.presentation }), /authoritative|validation/i);
 });
