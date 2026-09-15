@@ -9,15 +9,37 @@ import {
   validateHolographicRenderPacket,
 } from './holographic-renderer-contract.mjs';
 
+function readOwnData(value, key, path) {
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  if (!descriptor) return undefined;
+  if ('get' in descriptor || 'set' in descriptor) {
+    throw new TypeError(`${path}.${key} must not use accessors`);
+  }
+  return descriptor.value;
+}
+
+function hasUnsafeAuthority(value, path) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  if (Object.getPrototypeOf(value) !== Object.prototype) {
+    throw new TypeError(`${path} must be a plain object`);
+  }
+  return (
+    readOwnData(value, 'authoritative', path) === true ||
+    readOwnData(value, 'physicalActuation', path) === true ||
+    readOwnData(value, 'actuatesHardware', path) === true ||
+    readOwnData(value, 'advisoryOnly', path) === false
+  );
+}
+
 function rejectAuthority(candidate) {
-  const safety = candidate?.safety;
-  if (!safety || typeof safety !== 'object') return;
-  if (
-    safety.authoritative === true ||
-    safety.physicalActuation === true ||
-    safety.actuatesHardware === true ||
-    safety.advisoryOnly === false
-  ) {
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return;
+  if (hasUnsafeAuthority(candidate, 'candidate')) {
+    throw new TypeError(
+      'SOLVÆR candidate cannot cross render bridge with physical or authoritative execution authority',
+    );
+  }
+  const safety = readOwnData(candidate, 'safety', 'candidate');
+  if (safety != null && hasUnsafeAuthority(safety, 'candidate.safety')) {
     throw new TypeError(
       'SOLVÆR candidate cannot cross render bridge with physical or authoritative execution authority',
     );
