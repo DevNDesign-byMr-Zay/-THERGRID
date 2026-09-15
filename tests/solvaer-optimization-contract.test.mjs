@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   createSolvaerOptimizationRequest,
   acceptSolvaerOptimizationResult,
+  SOLVAER_PRODUCER_IDENTITY,
 } from '../src/solvaer-optimization-contract.mjs';
 
 function createRequest(overrides = {}) {
@@ -17,13 +18,14 @@ function createRequest(overrides = {}) {
   });
 }
 
-test('creates an advisory SOLVÆR v2 optimization request bound to its twin snapshot', () => {
+test('creates an advisory SOLVÆR v2 optimization request bound to its twin snapshot and producer identity', () => {
   const request = createRequest();
   assert.equal(request.contractVersion, 2);
   assert.equal(request.capability, 'optimization.explore');
-  assert.equal(request.requestId, 'solvaer:experiment-001:snapshot-001');
+  assert.equal(request.requestId, 'solvaer-request:experiment-001:snapshot-001');
   assert.equal(request.snapshotId, 'snapshot-001');
   assert.equal(request.twinStateRef, 'twin-state:snapshot-001');
+  assert.deepEqual(request.producerIdentity, SOLVAER_PRODUCER_IDENTITY);
   assert.equal(request.safety.advisoryOnly, true);
   assert.equal(request.safety.authoritative, false);
   assert.equal(request.safety.actuatesHardware, false);
@@ -58,6 +60,7 @@ test('accepts a candidate only as a simulation-required handoff', () => {
   });
   assert.equal(accepted.requestId, request.requestId);
   assert.equal(accepted.snapshotId, 'snapshot-001');
+  assert.deepEqual(accepted.producerIdentity, SOLVAER_PRODUCER_IDENTITY);
   assert.equal(accepted.handoff, 'simulation-required');
   assert.equal(accepted.safety.authoritative, false);
   assert.equal(accepted.safety.actuatesHardware, false);
@@ -66,9 +69,16 @@ test('accepts a candidate only as a simulation-required handoff', () => {
 test('rejects candidates that claim authority or physical actuation', () => {
   const request = createRequest();
   for (const candidate of [
-    { authoritative: true },
-    { actuatesHardware: true },
-    { physicalActuation: true },
+    { safety: { advisoryOnly: true, authoritative: true, actuatesHardware: false } },
+    { safety: { advisoryOnly: true, authoritative: false, actuatesHardware: true } },
+    {
+      safety: {
+        advisoryOnly: true,
+        authoritative: false,
+        actuatesHardware: false,
+        physicalActuation: true,
+      },
+    },
   ]) {
     assert.throws(
       () =>
@@ -77,7 +87,7 @@ test('rejects candidates that claim authority or physical actuation', () => {
           candidate,
           provenanceRef: { experimentId: 'experiment-001', snapshotId: 'snapshot-001' },
         }),
-      /cannot claim authority or physical actuation/,
+      /cannot carry physical or authoritative execution authority/,
     );
   }
 });
