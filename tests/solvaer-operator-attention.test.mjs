@@ -188,3 +188,42 @@ test('operator attention rejects cross-experiment or cross-request decision evid
   assert.throws(() => buildSolvaerOperatorAttention({ evidence, decision: { ...decision, experimentId: 'wrong-experiment' } }), /experiment/);
   assert.throws(() => buildSolvaerOperatorAttention({ evidence, decision: { ...decision, requestId: 'wrong-request' } }), /requestId/);
 });
+
+test('operator attention rejects inherited or accessor-backed decision identity', () => {
+  const baseline = runSyntheticMicrogrid(snapshot('attention-identity-boundary'));
+  const candidate = { experimentId: baseline.experimentId, snapshotId: baseline.solvaerRequest.snapshotId, proposal: baseline.proposal };
+  const provenanceRef = { experimentId: baseline.experimentId, snapshotId: baseline.solvaerRequest.snapshotId };
+  const evidence = createSolvaerCollaborationEvidence({ request: baseline.solvaerRequest, candidate, provenanceRef });
+  const decision = evaluateSolvaerDecisionHandoff({ request: baseline.solvaerRequest, candidate, provenanceRef, twinState: baseline.twinState, forecast: baseline.forecast, proposal: baseline.proposal });
+
+  const inherited = Object.create({ experimentId: decision.experimentId });
+  Object.defineProperty(inherited, 'requestId', { value: decision.requestId, enumerable: true });
+  assert.throws(
+    () => buildSolvaerOperatorAttention({ evidence, decision: inherited }),
+    /plain object/,
+  );
+
+  const accessor = { experimentId: decision.experimentId, requestId: decision.requestId };
+  Object.defineProperty(accessor, 'experimentId', {
+    enumerable: true,
+    get() {
+      throw new Error('decision experiment getter executed');
+    },
+  });
+  assert.throws(
+    () => buildSolvaerOperatorAttention({ evidence, decision: accessor }),
+    /own data property/,
+  );
+
+  const simulationAccessor = { experimentId: decision.experimentId, requestId: decision.requestId };
+  Object.defineProperty(simulationAccessor, 'simulation', {
+    enumerable: true,
+    get() {
+      throw new Error('decision simulation getter executed');
+    },
+  });
+  assert.throws(
+    () => buildSolvaerOperatorAttention({ evidence, decision: simulationAccessor }),
+    /accessors/,
+  );
+});
