@@ -124,6 +124,7 @@ test('preserves prototype-named evidence inside the renderer checksum', () => {
   const packet = compileHolographicRenderPacket({ scene: guardedScene, presentation });
 
   assert.equal(Object.hasOwn(packet.metrics, '__proto__'), true);
+  assert.equal(Object.getPrototypeOf(packet.metrics), Object.prototype);
   assert.equal(packet.metrics.__proto__.unsigned, true);
   assert.equal(validateHolographicRenderPacket(packet), true);
 
