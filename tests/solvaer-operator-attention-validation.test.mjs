@@ -39,6 +39,25 @@ test('accepts a complete sealed operator attention identity', () => {
   assert.equal(validateSolvaerOperatorAttention(attention), true);
 });
 
+test('rejects prototype-named attention evidence instead of dropping it', () => {
+  const attention = validAttention();
+  const prototypeNamed = JSON.parse('{"__proto__":{"promotionEligible":true}}');
+  const tampered = { ...attention, ...prototypeNamed };
+
+  assert.equal(Object.hasOwn(tampered, '__proto__'), true);
+  assert.equal(validateSolvaerOperatorAttention(tampered), false);
+
+  const itemTampered = {
+    ...attention,
+    items: [
+      { ...attention.items[0], ...prototypeNamed },
+      attention.items[1],
+    ],
+  };
+  assert.equal(Object.hasOwn(itemTampered.items[0], '__proto__'), true);
+  assert.equal(validateSolvaerOperatorAttention(itemTampered), false);
+});
+
 test('rejects missing experiment, snapshot, request, or evidence identity', () => {
   const base = validAttention();
   for (const field of ['experimentId', 'snapshotId', 'requestId']) {

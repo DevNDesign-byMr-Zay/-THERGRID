@@ -77,7 +77,12 @@ function snapshotAttentionEvidence(value, path = 'attention', seen = new WeakSet
       if ('get' in descriptor || 'set' in descriptor) {
         throw new TypeError(`${path}.${key} must not use accessors`);
       }
-      copy[key] = snapshotAttentionEvidence(descriptor.value, `${path}.${key}`, seen);
+      Object.defineProperty(copy, key, {
+        value: snapshotAttentionEvidence(descriptor.value, `${path}.${key}`, seen),
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
     }
   }
 
