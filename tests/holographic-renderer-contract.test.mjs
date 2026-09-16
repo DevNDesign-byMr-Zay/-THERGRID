@@ -112,6 +112,27 @@ test('defensively captures nested scene evidence before checksumming', () => {
   assert.equal(validateHolographicRenderPacket(packet), true);
 });
 
+test('preserves prototype-named evidence inside the renderer checksum', () => {
+  const prototypeNamed = JSON.parse('{"__proto__":{"unsigned":true}}');
+  const guardedScene = {
+    ...scene,
+    metrics: {
+      ...scene.metrics,
+      ...prototypeNamed,
+    },
+  };
+  const packet = compileHolographicRenderPacket({ scene: guardedScene, presentation });
+
+  assert.equal(Object.hasOwn(packet.metrics, '__proto__'), true);
+  assert.equal(Object.getPrototypeOf(packet.metrics), Object.prototype);
+  assert.equal(packet.metrics.__proto__.unsigned, true);
+  assert.equal(validateHolographicRenderPacket(packet), true);
+
+  const tampered = JSON.parse(JSON.stringify(packet));
+  tampered.metrics.__proto__.unsigned = false;
+  assert.equal(validateHolographicRenderPacket(tampered), false);
+});
+
 test('compilation rejects accessors without executing getters', () => {
   let inputGetterReads = 0;
   let sceneGetterReads = 0;
