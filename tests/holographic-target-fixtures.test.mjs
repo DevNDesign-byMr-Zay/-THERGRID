@@ -18,6 +18,12 @@ const twinState = {
   },
 };
 
+const fixtureProvenance = Object.freeze({
+  experimentId: 'experiment-fixture-001',
+  snapshotId: twinState.snapshotId,
+  receiptId: 'receipt-fixture-001',
+});
+
 const devices = [
   {
     id: 'fixture-holomat',
@@ -48,10 +54,7 @@ function expectedDeviceId(target) {
 describe('holographic target fixtures', () => {
   for (const target of ['holo-mat', 'projector', 'volumetric-3d']) {
     it(`compiles a deterministic ${target} packet`, () => {
-      const scene = buildSpatialScene({
-        twinState,
-        provenance: { experimentId: 'experiment-fixture-001' },
-      });
+      const scene = buildSpatialScene({ twinState, provenance: fixtureProvenance });
       const presentation = planHolographicPresentation({
         scene,
         devices,
@@ -62,6 +65,7 @@ describe('holographic target fixtures', () => {
       assert.equal(packet.target, target);
       assert.equal(packet.deviceId, expectedDeviceId(target));
       assert.equal(packet.snapshotId, twinState.snapshotId);
+      assert.deepEqual(packet.provenanceRef, fixtureProvenance);
       assert.equal(validateHolographicRenderPacket(packet), true);
       assert.deepEqual(packet.safety, {
         authoritative: false,
@@ -72,10 +76,7 @@ describe('holographic target fixtures', () => {
   }
 
   it('preserves graceful degradation when every fixture device is offline', () => {
-    const scene = buildSpatialScene({
-      twinState,
-      provenance: { experimentId: 'experiment-fixture-001' },
-    });
+    const scene = buildSpatialScene({ twinState, provenance: fixtureProvenance });
     const offline = devices.map((device) => ({ ...device, online: false }));
     const presentation = planHolographicPresentation({
       scene,
@@ -86,6 +87,7 @@ describe('holographic target fixtures', () => {
     assert.equal(presentation.status, 'no-compatible-device');
     assert.equal(packet.target, null);
     assert.equal(packet.deviceId, null);
+    assert.deepEqual(packet.provenanceRef, fixtureProvenance);
     assert.equal(validateHolographicRenderPacket(packet), true);
   });
 });
