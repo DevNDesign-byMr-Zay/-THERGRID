@@ -72,7 +72,7 @@ test('SOLVÆR decision bridge preserves experiment evidence through rendering an
   );
   assert.equal(bridge.renderPacket.experimentId, baseline.experimentId);
   assert.equal(bridge.renderPacket.receiptId, bridge.decision.decisionReceipt.receiptId);
-  assert.equal(bridge.renderPacket.scene.provenanceRef.receiptId, bridge.renderPacket.receiptId);
+  assert.equal(bridge.renderPacket.provenanceRef.receiptId, bridge.renderPacket.receiptId);
   assert.equal(
     bridge.renderPacket.operatorAttentionFingerprint,
     bridge.operatorAttention.attentionFingerprint,
