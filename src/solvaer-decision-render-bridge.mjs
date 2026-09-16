@@ -85,12 +85,16 @@ function rejectAuthority(candidate) {
   }
 }
 
-function bindSceneProvenance(scene, provenanceRef) {
+function readSceneProvenance(scene) {
   const sceneValue = requirePlainDataObject(scene, 'scene');
-  const sceneProvenanceRef = requirePlainDataObject(
+  return requirePlainDataObject(
     readOwnData(sceneValue, 'provenanceRef', 'scene'),
     'scene.provenanceRef',
   );
+}
+
+function bindSceneProvenance(scene, provenanceRef) {
+  const sceneProvenanceRef = readSceneProvenance(scene);
   const provenanceValue = requirePlainDataObject(provenanceRef, 'provenanceRef');
   const sceneExperimentId = readOwnData(sceneProvenanceRef, 'experimentId', 'scene.provenanceRef');
   const sceneSnapshotId = readOwnData(sceneProvenanceRef, 'snapshotId', 'scene.provenanceRef');
@@ -98,6 +102,17 @@ function bindSceneProvenance(scene, provenanceRef) {
   const refSnapshotId = readOwnData(provenanceValue, 'snapshotId', 'provenanceRef');
   if (sceneExperimentId !== refExperimentId || sceneSnapshotId !== refSnapshotId) {
     throw new TypeError('render scene provenanceRef must match SOLVÆR provenanceRef');
+  }
+}
+
+function bindSceneDecisionReceipt(scene, decisionReceiptId) {
+  const sceneProvenanceRef = readSceneProvenance(scene);
+  const sceneReceiptId = readOwnData(sceneProvenanceRef, 'receiptId', 'scene.provenanceRef');
+  if (typeof sceneReceiptId !== 'string' || !sceneReceiptId.trim()) {
+    throw new TypeError('render scene provenanceRef must contain a decision receiptId');
+  }
+  if (sceneReceiptId !== decisionReceiptId) {
+    throw new TypeError('render scene receiptId must match SOLVÆR decision receiptId');
   }
 }
 
@@ -127,6 +142,7 @@ export function buildSolvaerDecisionRenderBridge(input = {}) {
     forecast,
     proposal,
   });
+  bindSceneDecisionReceipt(scene, decision.decisionReceipt.receiptId);
   const collaborationEvidence = createSolvaerCollaborationEvidence({
     request,
     candidate: decision.candidate,
