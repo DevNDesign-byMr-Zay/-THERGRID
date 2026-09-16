@@ -9,20 +9,59 @@ import {
   validateHolographicRenderPacket,
 } from './holographic-renderer-contract.mjs';
 
+const BRIDGE_INPUT_KEYS = Object.freeze([
+  'request',
+  'candidate',
+  'provenanceRef',
+  'twinState',
+  'forecast',
+  'proposal',
+  'scene',
+  'presentation',
+]);
+
+function requirePlainDataObject(value, path) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${path} must be a plain object`);
+  }
+  if (Object.getPrototypeOf(value) !== Object.prototype) {
+    throw new TypeError(`${path} must be a plain object`);
+  }
+  if (Object.getOwnPropertySymbols(value).length > 0) {
+    throw new TypeError(`${path} must not contain symbol properties`);
+  }
+  return value;
+}
+
 function readOwnData(value, key, path) {
   const descriptor = Object.getOwnPropertyDescriptor(value, key);
   if (!descriptor) return undefined;
+  if (!descriptor.enumerable) {
+    throw new TypeError(`${path}.${key} must be enumerable data`);
+  }
   if ('get' in descriptor || 'set' in descriptor) {
     throw new TypeError(`${path}.${key} must not use accessors`);
   }
   return descriptor.value;
 }
 
+function captureBridgeInput(input) {
+  const value = requirePlainDataObject(input, 'render bridge input');
+  const allowed = new Set(BRIDGE_INPUT_KEYS);
+  const copy = {};
+
+  for (const key of Object.keys(value)) {
+    if (!allowed.has(key)) {
+      throw new TypeError(`render bridge input contains unsupported field: ${key}`);
+    }
+    copy[key] = readOwnData(value, key, 'render bridge input');
+  }
+  return copy;
+}
+
 function hasUnsafeAuthority(value, path) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  if (Object.getPrototypeOf(value) !== Object.prototype) {
-    throw new TypeError(`${path} must be a plain object`);
-  }
+  requirePlainDataObject(value, path);
   return (
     readOwnData(value, 'authoritative', path) === true ||
     readOwnData(value, 'physicalActuation', path) === true ||
@@ -47,24 +86,17 @@ function rejectAuthority(candidate) {
 }
 
 function bindSceneProvenance(scene, provenanceRef) {
-  if (!scene || typeof scene !== 'object' || Array.isArray(scene)) {
-    throw new TypeError('render scene must be an object');
-  }
-  const sceneProvenanceRef = readOwnData(scene, 'provenanceRef', 'scene');
-  if (!sceneProvenanceRef || typeof sceneProvenanceRef !== 'object' || Array.isArray(sceneProvenanceRef)) {
-    throw new TypeError('render scene must contain an object provenanceRef');
-  }
-  if (!provenanceRef || typeof provenanceRef !== 'object' || Array.isArray(provenanceRef)) {
-    throw new TypeError('render bridge requires an object provenanceRef');
-  }
+  const sceneValue = requirePlainDataObject(scene, 'scene');
+  const sceneProvenanceRef = requirePlainDataObject(
+    readOwnData(sceneValue, 'provenanceRef', 'scene'),
+    'scene.provenanceRef',
+  );
+  const provenanceValue = requirePlainDataObject(provenanceRef, 'provenanceRef');
   const sceneExperimentId = readOwnData(sceneProvenanceRef, 'experimentId', 'scene.provenanceRef');
   const sceneSnapshotId = readOwnData(sceneProvenanceRef, 'snapshotId', 'scene.provenanceRef');
-  const refExperimentId = readOwnData(provenanceRef, 'experimentId', 'provenanceRef');
-  const refSnapshotId = readOwnData(provenanceRef, 'snapshotId', 'provenanceRef');
-  if (
-    sceneExperimentId !== refExperimentId ||
-    sceneSnapshotId !== refSnapshotId
-  ) {
+  const refExperimentId = readOwnData(provenanceValue, 'experimentId', 'provenanceRef');
+  const refSnapshotId = readOwnData(provenanceValue, 'snapshotId', 'provenanceRef');
+  if (sceneExperimentId !== refExperimentId || sceneSnapshotId !== refSnapshotId) {
     throw new TypeError('render scene provenanceRef must match SOLVÆR provenanceRef');
   }
 }
@@ -73,16 +105,18 @@ function bindSceneProvenance(scene, provenanceRef) {
  * Join SOLVÆR decision evidence to THERGRID's renderer boundary without
  * granting the optimizer presentation or physical execution authority.
  */
-export function buildSolvaerDecisionRenderBridge({
-  request,
-  candidate,
-  provenanceRef,
-  twinState,
-  forecast,
-  proposal,
-  scene,
-  presentation,
-} = {}) {
+export function buildSolvaerDecisionRenderBridge(input = {}) {
+  const {
+    request,
+    candidate,
+    provenanceRef,
+    twinState,
+    forecast,
+    proposal,
+    scene,
+    presentation,
+  } = captureBridgeInput(input);
+
   rejectAuthority(candidate);
   bindSceneProvenance(scene, provenanceRef);
   const decision = evaluateSolvaerDecisionHandoff({
