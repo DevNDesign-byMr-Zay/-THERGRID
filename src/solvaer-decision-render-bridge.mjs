@@ -46,6 +46,29 @@ function rejectAuthority(candidate) {
   }
 }
 
+function bindSceneProvenance(scene, provenanceRef) {
+  if (!scene || typeof scene !== 'object' || Array.isArray(scene)) {
+    throw new TypeError('render scene must be an object');
+  }
+  const sceneProvenanceRef = readOwnData(scene, 'provenanceRef', 'scene');
+  if (!sceneProvenanceRef || typeof sceneProvenanceRef !== 'object' || Array.isArray(sceneProvenanceRef)) {
+    throw new TypeError('render scene must contain an object provenanceRef');
+  }
+  if (!provenanceRef || typeof provenanceRef !== 'object' || Array.isArray(provenanceRef)) {
+    throw new TypeError('render bridge requires an object provenanceRef');
+  }
+  const sceneExperimentId = readOwnData(sceneProvenanceRef, 'experimentId', 'scene.provenanceRef');
+  const sceneSnapshotId = readOwnData(sceneProvenanceRef, 'snapshotId', 'scene.provenanceRef');
+  const refExperimentId = readOwnData(provenanceRef, 'experimentId', 'provenanceRef');
+  const refSnapshotId = readOwnData(provenanceRef, 'snapshotId', 'provenanceRef');
+  if (
+    sceneExperimentId !== refExperimentId ||
+    sceneSnapshotId !== refSnapshotId
+  ) {
+    throw new TypeError('render scene provenanceRef must match SOLVÆR provenanceRef');
+  }
+}
+
 /**
  * Join SOLVÆR decision evidence to THERGRID's renderer boundary without
  * granting the optimizer presentation or physical execution authority.
@@ -61,6 +84,7 @@ export function buildSolvaerDecisionRenderBridge({
   presentation,
 } = {}) {
   rejectAuthority(candidate);
+  bindSceneProvenance(scene, provenanceRef);
   const decision = evaluateSolvaerDecisionHandoff({
     request,
     candidate,
