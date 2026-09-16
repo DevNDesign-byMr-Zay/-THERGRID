@@ -72,6 +72,7 @@ test('SOLVÆR decision bridge preserves experiment evidence through rendering an
   );
   assert.equal(bridge.renderPacket.experimentId, baseline.experimentId);
   assert.equal(bridge.renderPacket.receiptId, bridge.decision.decisionReceipt.receiptId);
+  assert.equal(bridge.renderPacket.scene.provenanceRef.receiptId, bridge.renderPacket.receiptId);
   assert.equal(
     bridge.renderPacket.operatorAttentionFingerprint,
     bridge.operatorAttention.attentionFingerprint,
@@ -83,6 +84,23 @@ test('SOLVÆR decision bridge preserves experiment evidence through rendering an
     actuatesHardware: false,
     advisoryOnly: true,
   });
+});
+
+test('SOLVÆR bridge rejects a scene carrying a stale decision receipt identity', () => {
+  const baseline = runSyntheticMicrogrid(snapshot);
+  const input = bridgeInput(baseline);
+  input.scene = {
+    ...baseline.scene,
+    provenanceRef: {
+      ...baseline.scene.provenanceRef,
+      receiptId: 'receipt-stale-or-substituted',
+    },
+  };
+
+  assert.throws(
+    () => buildSolvaerDecisionRenderBridge(input),
+    /scene receiptId must match SOLVÆR decision receiptId/,
+  );
 });
 
 test('SOLVÆR candidate cannot cross the render bridge with authoritative execution flags', () => {
