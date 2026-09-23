@@ -46,6 +46,39 @@ test('builds every adversarial fixture deterministically', () => {
   }
 });
 
+test('freezes captured fixture state behind its fingerprint', () => {
+  const source = structuredClone(snapshot);
+  const testCase = buildAdversarialCase('fallback-activation', source);
+  const fingerprint = testCase.fingerprint;
+
+  assert.equal(Object.isFrozen(testCase), true);
+  assert.equal(Object.isFrozen(testCase.snapshot), true);
+  assert.equal(Object.isFrozen(testCase.snapshot.assets), true);
+  assert.equal(Object.isFrozen(testCase.snapshot.assets[0]), true);
+  assert.equal(Object.isFrozen(testCase.metadata), true);
+
+  source.assets[0].powerKw = 999;
+  assert.equal(testCase.snapshot.assets[0].powerKw, 40);
+  assert.equal(testCase.fingerprint, fingerprint);
+  assert.throws(() => {
+    testCase.snapshot.assets[0].powerKw = 100;
+  }, TypeError);
+});
+
+test('returns immutable evaluation evidence', () => {
+  const result = evaluateAdversarialCase(
+    buildAdversarialCase('solver-timeout', snapshot),
+  );
+
+  assert.equal(result.safe, true);
+  assert.equal(Object.isFrozen(result), true);
+  assert.equal(Object.isFrozen(result.details), true);
+  assert.equal(Object.isFrozen(result.details.promotion), true);
+  assert.throws(() => {
+    result.details.promotion.status = 'eligible';
+  }, TypeError);
+});
+
 test('rejects stale telemetry under the freshness policy', () => {
   const now = Date.parse('2026-09-13T01:00:00.000Z');
   const result = evaluateAdversarialCase(
