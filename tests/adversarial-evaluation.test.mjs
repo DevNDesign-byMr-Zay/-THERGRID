@@ -72,9 +72,7 @@ test('freezes captured fixture state behind its fingerprint', () => {
 });
 
 test('returns immutable evaluation evidence', () => {
-  const result = evaluateAdversarialCase(
-    buildAdversarialCase('solver-timeout', snapshot),
-  );
+  const result = evaluateAdversarialCase(buildAdversarialCase('solver-timeout', snapshot));
 
   assert.equal(result.safe, true);
   assert.equal(Object.isFrozen(result), true);
@@ -123,21 +121,14 @@ test('solver timeout and infeasibility fail promotion gates', () => {
 });
 
 test('fallback activation is explicit and safe when identity is recorded', () => {
-  const result = evaluateAdversarialCase(
-    buildAdversarialCase('fallback-activation', snapshot),
-  );
+  const result = evaluateAdversarialCase(buildAdversarialCase('fallback-activation', snapshot));
   assert.equal(result.accepted, true);
   assert.equal(result.safe, true);
 });
 
 test('seed drift changes evidence fingerprints', () => {
-  const result = evaluateAdversarialCase(
-    buildAdversarialCase('seed-drift', snapshot),
-  );
+  const result = evaluateAdversarialCase(buildAdversarialCase('seed-drift', snapshot));
   assert.equal(result.accepted, false);
   assert.equal(result.safe, true);
-  assert.notEqual(
-    result.details.firstFingerprint,
-    result.details.secondFingerprint,
-  );
+  assert.notEqual(result.details.firstFingerprint, result.details.secondFingerprint);
 });
