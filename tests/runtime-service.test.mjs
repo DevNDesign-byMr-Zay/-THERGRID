@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import {
-  createRuntimeLogger,
-  validateRuntimeStatus,
-} from '../src/runtime-observability.mjs';
+import { createRuntimeLogger, validateRuntimeStatus } from '../src/runtime-observability.mjs';
 import { startRuntimeService } from '../src/runtime-service.mjs';
 
 async function withRuntimeService(run) {
