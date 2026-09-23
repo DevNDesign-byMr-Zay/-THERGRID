@@ -47,12 +47,16 @@ function buildAttention() {
     forecast: baseline.forecast,
     proposal: baseline.proposal,
   });
-  return buildSolvaerOperatorAttention({ evidence, decision });
+  return buildSolvaerOperatorAttention({
+    evidence,
+    decision,
+    twinState: baseline.twinState,
+  });
 }
 
 test('fingerprints a validated operator attention artifact', () => {
   const attention = buildAttention();
-  assert.equal(attention.version, 3);
+  assert.equal(attention.version, 4);
   assert.match(attention.attentionFingerprint, /^[a-f0-9]{64}$/);
   assert.equal(validateSolvaerOperatorAttention(attention), true);
 });
