@@ -30,6 +30,43 @@ test('solver evidence fingerprint is deterministic', () => {
   assert.deepEqual(compareSolverEvidence([first]), compareSolverEvidence([second]));
 });
 
+test('solver evidence snapshots and deeply freezes caller-owned constraints', () => {
+  const constraints = {
+    bounds: { maxDeltaKw: 5 },
+    weights: [1, 2, 3],
+  };
+  const built = evidence({ constraints });
+  const fingerprint = fingerprintSolverEvidence(built);
+
+  assert.equal(Object.isFrozen(built), true);
+  assert.equal(Object.isFrozen(built.candidate), true);
+  assert.equal(Object.isFrozen(built.constraints), true);
+  assert.equal(Object.isFrozen(built.constraints.bounds), true);
+  assert.equal(Object.isFrozen(built.constraints.weights), true);
+  assert.equal(Object.isFrozen(built.provenance), true);
+
+  constraints.bounds.maxDeltaKw = 99;
+  constraints.weights[0] = 99;
+
+  assert.equal(built.constraints.bounds.maxDeltaKw, 5);
+  assert.deepEqual(built.constraints.weights, [1, 2, 3]);
+  assert.equal(fingerprintSolverEvidence(built), fingerprint);
+  assert.throws(() => {
+    built.constraints.bounds.maxDeltaKw = 10;
+  }, TypeError);
+});
+
+test('solver evidence rejects non-data constraint objects and circular evidence', () => {
+  assert.throws(() => evidence({ constraints: new Date() }), /constraints must use plain objects/);
+
+  const circular = {};
+  circular.self = circular;
+  assert.throws(
+    () => evidence({ constraints: circular }),
+    /constraints\.self must not contain circular references/,
+  );
+});
+
 test('solver evidence fingerprint binds seed and provenance', () => {
   assert.notEqual(
     fingerprintSolverEvidence(evidence({ seed: 0 })),
