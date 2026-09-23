@@ -16,5 +16,9 @@
     "lint": "npx --yes --package eslint@10.10.0 eslint --max-warnings=0 src tests scripts",
     "format:check": "npx --yes --package prettier@3.6.2 prettier --check 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs'",
     "format": "npx --yes --package prettier@3.6.2 prettier --write 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs'"
+  },
+  "dependencies": {
+    "pino": "10.3.1",
+    "zod": "4.6.5"
   }
 }
