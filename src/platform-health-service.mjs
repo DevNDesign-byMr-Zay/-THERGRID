@@ -30,19 +30,13 @@ export function createPlatformHealthServer({
   return http.createServer((req, res) => {
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
 
-    if (
-      req.method === 'GET' &&
-      (url.pathname === '/health' || url.pathname === '/status')
-    ) {
+    if (req.method === 'GET' && (url.pathname === '/health' || url.pathname === '/status')) {
       const payload = {
         service: serviceName,
         status: 'ok',
         uptimeSeconds: Math.max(0, Math.floor((Date.now() - startedAt) / 1000)),
       };
-      logger.info(
-        { event: 'health_check', path: url.pathname, statusCode: 200 },
-        'health check',
-      );
+      logger.info({ event: 'health_check', path: url.pathname, statusCode: 200 }, 'health check');
       json(res, 200, payload);
       return;
     }
