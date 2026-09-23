@@ -9,6 +9,27 @@ function object(value, name) {
   return value;
 }
 
+function text(value, name) {
+  if (typeof value !== 'string' || !value.trim())
+    throw new TypeError(`${name} must be a non-empty string`);
+  return value.trim();
+}
+
+function snapshot(value) {
+  if (Array.isArray(value)) return value.map(snapshot);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, snapshot(child)]));
+  }
+  return value;
+}
+
+function deepFreeze(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
+}
+
+
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
   if (value && typeof value === 'object') {
@@ -42,6 +63,16 @@ export function evaluateSolvaerCandidate({
   const state = object(twinState, 'twinState');
   const baseline = object(proposal, 'proposal');
   const evidence = object(collaborationEvidence, 'collaborationEvidence');
+  const snapshotId = text(state.snapshotId, 'twinState.snapshotId');
+  const requestSnapshotId = text(input.snapshotId, 'request.snapshotId');
+  const requestTwinStateRef = text(input.twinStateRef, 'request.twinStateRef');
+
+  if (requestSnapshotId !== snapshotId) {
+    throw new TypeError('request snapshotId must match twinState.snapshotId');
+  }
+  if (requestTwinStateRef !== `twin-state:${snapshotId}`) {
+    throw new TypeError('request twinStateRef must match simulation twin state');
+  }
 
   if (!validateSolvaerCollaborationEvidence(evidence)) {
     throw new TypeError('validated SOLVÆR collaboration evidence is required before simulation');
@@ -80,14 +111,14 @@ export function evaluateSolvaerCandidate({
     simulation,
   });
 
-  return Object.freeze({
-    request: input,
-    accepted,
-    collaborationEvidenceRef,
-    simulation,
-    simulationEvidence,
+  return deepFreeze({
+    request: snapshot(input),
+    accepted: snapshot(accepted),
+    collaborationEvidenceRef: snapshot(collaborationEvidenceRef),
+    simulation: snapshot(simulation),
+    simulationEvidence: snapshot(simulationEvidence),
     promotionEligible: false,
     handoff: 'simulation-required',
-    safety: Object.freeze({ advisoryOnly: true, authoritative: false, actuatesHardware: false }),
+    safety: { advisoryOnly: true, authoritative: false, actuatesHardware: false },
   });
 }
