@@ -18,9 +18,7 @@ function text(value, name) {
 function snapshot(value) {
   if (Array.isArray(value)) return value.map(snapshot);
   if (value && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, child]) => [key, snapshot(child)]),
-    );
+    return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, snapshot(child)]));
   }
   return value;
 }
