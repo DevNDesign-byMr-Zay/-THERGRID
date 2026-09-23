@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { validateSolvaerCollaborationEvidence } from './solvaer-collaboration-evidence.mjs';
 import { validateSolvaerOperatorEvidenceSummary } from './solvaer-operator-evidence-summary.mjs';
 
-const ATTENTION_VERSION = 2;
+const ATTENTION_VERSION = 3;
 const SEVERITIES = Object.freeze(['info', 'warning', 'critical']);
 const ATTENTION_KEYS = Object.freeze([
   'version',
@@ -19,6 +19,9 @@ const ITEM_KEYS = Object.freeze([
   'severity',
   'reason',
   'evidenceRef',
+  'affectedMetric',
+  'recommendedAdvisoryAction',
+  'stalenessBoundary',
   'advisoryOnly',
 ]);
 const SAFETY_KEYS = Object.freeze(['authoritative', 'actuatesHardware', 'advisoryOnly']);
@@ -118,6 +121,11 @@ function createOperatorAttention({
         ? 'SOLVÆR candidate completed the THERGRID simulation gate.'
         : 'SOLVÆR candidate did not pass the THERGRID simulation gate.',
       evidenceRef,
+      affectedMetric: 'simulation.status',
+      recommendedAdvisoryAction: simulationPassed
+        ? 'review-passed-simulation-evidence'
+        : 'review-failed-simulation-evidence',
+      stalenessBoundary: `snapshot:${snapshotId}`,
       advisoryOnly: true,
     },
     {
@@ -126,6 +134,9 @@ function createOperatorAttention({
       severity: 'warning',
       reason: 'Candidate remains simulation-evidence-required and is not promotion-authoritative.',
       evidenceRef,
+      affectedMetric: 'promotion.eligibility',
+      recommendedAdvisoryAction: 'retain-simulation-only',
+      stalenessBoundary: `snapshot:${snapshotId}`,
       advisoryOnly: true,
     },
   ];
@@ -255,7 +266,13 @@ export function validateSolvaerOperatorAttention(attention) {
           typeof item.reason === 'string' &&
           item.reason.trim().length > 0 &&
           typeof item.evidenceRef === 'string' &&
-          item.evidenceRef.trim().length > 0,
+          item.evidenceRef.trim().length > 0 &&
+          typeof item.affectedMetric === 'string' &&
+          item.affectedMetric.trim().length > 0 &&
+          typeof item.recommendedAdvisoryAction === 'string' &&
+          item.recommendedAdvisoryAction.trim().length > 0 &&
+          typeof item.stalenessBoundary === 'string' &&
+          item.stalenessBoundary.trim().length > 0,
       )
     ) {
       return false;
@@ -263,6 +280,45 @@ export function validateSolvaerOperatorAttention(attention) {
     if (normalized.items[0].id !== `${normalized.experimentId}:simulation`) return false;
     if (normalized.items[1].id !== `${normalized.experimentId}:promotion`) return false;
     if (normalized.items[0].evidenceRef !== normalized.items[1].evidenceRef) return false;
+    if (
+      normalized.items.some(
+        (item) => item.stalenessBoundary !== `snapshot:${normalized.snapshotId}`,
+      )
+    ) {
+      return false;
+    }
+    if (normalized.items[0].affectedMetric !== 'simulation.status') return false;
+    if (normalized.items[1].affectedMetric !== 'promotion.eligibility') return false;
+    const simulationSemantics = [
+      {
+        priority: 40,
+        severity: 'info',
+        recommendedAdvisoryAction: 'review-passed-simulation-evidence',
+      },
+      {
+        priority: 90,
+        severity: 'critical',
+        recommendedAdvisoryAction: 'review-failed-simulation-evidence',
+      },
+    ];
+    if (
+      !simulationSemantics.some(
+        (expected) =>
+          normalized.items[0].priority === expected.priority &&
+          normalized.items[0].severity === expected.severity &&
+          normalized.items[0].recommendedAdvisoryAction ===
+            expected.recommendedAdvisoryAction,
+      )
+    ) {
+      return false;
+    }
+    if (
+      normalized.items[1].priority !== 70 ||
+      normalized.items[1].severity !== 'warning' ||
+      normalized.items[1].recommendedAdvisoryAction !== 'retain-simulation-only'
+    ) {
+      return false;
+    }
     if (typeof normalized.attentionFingerprint !== 'string') return false;
     if (!/^[a-f0-9]{64}$/.test(normalized.attentionFingerprint)) return false;
 
