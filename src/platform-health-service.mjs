@@ -30,18 +30,27 @@ export function createPlatformHealthServer({
   return http.createServer((req, res) => {
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
 
-    if (req.method === 'GET' && (url.pathname === '/health' || url.pathname === '/status')) {
+    if (
+      req.method === 'GET' &&
+      (url.pathname === '/health' || url.pathname === '/status')
+    ) {
       const payload = {
         service: serviceName,
         status: 'ok',
         uptimeSeconds: Math.max(0, Math.floor((Date.now() - startedAt) / 1000)),
       };
-      logger.info({ event: 'health_check', path: url.pathname, statusCode: 200 }, 'health check');
+      logger.info(
+        { event: 'health_check', path: url.pathname, statusCode: 200 },
+        'health check',
+      );
       json(res, 200, payload);
       return;
     }
 
-    logger.warn({ event: 'health_not_found', path: url.pathname, statusCode: 404 }, 'route not found');
+    logger.warn(
+      { event: 'health_not_found', path: url.pathname, statusCode: 404 },
+      'route not found',
+    );
     json(res, 404, { service: serviceName, status: 'not_found' });
   });
 }
@@ -60,7 +69,11 @@ export async function startPlatformHealthService(environment = process.env) {
   });
 
   logger.info(
-    { event: 'health_service_started', port: config.PORT, service: config.SERVICE_NAME },
+    {
+      event: 'health_service_started',
+      port: config.PORT,
+      service: config.SERVICE_NAME,
+    },
     'platform health service started',
   );
 
