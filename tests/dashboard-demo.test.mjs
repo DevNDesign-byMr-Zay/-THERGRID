@@ -17,13 +17,15 @@ function runDashboardDemo() {
 test('dashboard demo crosses the serialized package boundary and emits sealed read evidence', () => {
   const dashboard = runDashboardDemo();
 
-  assert.equal(dashboard.version, 1);
+  assert.equal(dashboard.version, 2);
   assert.equal(dashboard.interpretation, 'operator-dashboard-read-only');
   assert.match(dashboard.packageFingerprint, /^[a-f0-9]{64}$/);
   assert.match(dashboard.attentionFingerprint, /^[a-f0-9]{64}$/);
   assert.match(dashboard.sourceViewFingerprint, /^[a-f0-9]{64}$/);
   assert.match(dashboard.sourceProvenanceFingerprint, /^[a-f0-9]{64}$/);
   assert.match(dashboard.dashboardFingerprint, /^[a-f0-9]{64}$/);
+  assert.equal(Array.isArray(dashboard.items[0].assetNodeRefs), true);
+  assert.equal(dashboard.items[0].assetNodeRefs.length > 0, true);
   assert.equal(dashboard.safety.advisoryOnly, true);
   assert.equal(dashboard.safety.authoritative, false);
   assert.equal(dashboard.safety.actuatesHardware, false);

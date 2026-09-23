@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { validateProvenanceGraph } from './provenance.mjs';
 import { validateSolvaerOperatorAttention } from './solvaer-operator-attention.mjs';
 
-const OPERATOR_PROVENANCE_READ_MODEL_VERSION = 1;
+const OPERATOR_PROVENANCE_READ_MODEL_VERSION = 2;
 const VIEW_KEYS = Object.freeze([
   'version',
   'experimentId',
@@ -16,7 +16,15 @@ const VIEW_KEYS = Object.freeze([
   'safety',
   'viewFingerprint',
 ]);
-const ITEM_KEYS = Object.freeze(['id', 'priority', 'severity', 'reason', 'evidenceRef']);
+const ITEM_KEYS = Object.freeze([
+  'id',
+  'priority',
+  'severity',
+  'reason',
+  'evidenceRef',
+  'assetNodeRefs',
+]);
+const ASSET_NODE_REF_KEYS = Object.freeze(['assetId', 'nodeId']);
 const SAFETY_KEYS = Object.freeze([
   'advisoryOnly',
   'authoritative',
@@ -71,6 +79,44 @@ function readExactDataObject(value, expectedKeys) {
   return copy;
 }
 
+function readAssetNodeRefs(value) {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  if (Object.getOwnPropertySymbols(value).length > 0) return null;
+
+  const allowedKeys = new Set(['length']);
+  const seen = new Set();
+  const refs = [];
+  for (let index = 0; index < value.length; index += 1) {
+    const key = String(index);
+    allowedKeys.add(key);
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor || 'get' in descriptor || 'set' in descriptor) return null;
+    const ref = readExactDataObject(descriptor.value, ASSET_NODE_REF_KEYS);
+    if (!ref) return null;
+    if (
+      typeof ref.assetId !== 'string' ||
+      !ref.assetId.trim() ||
+      typeof ref.nodeId !== 'string' ||
+      !ref.nodeId.trim()
+    ) {
+      return null;
+    }
+    const normalized = {
+      assetId: ref.assetId.trim(),
+      nodeId: ref.nodeId.trim(),
+    };
+    const identity = `${normalized.assetId}\u0000${normalized.nodeId}`;
+    if (seen.has(identity)) return null;
+    seen.add(identity);
+    refs.push(normalized);
+  }
+
+  if (Reflect.ownKeys(value).some((key) => typeof key !== 'string' || !allowedKeys.has(key))) {
+    return null;
+  }
+  return refs;
+}
+
 function readItems(value) {
   if (!Array.isArray(value)) return null;
   if (Object.getOwnPropertySymbols(value).length > 0) return null;
@@ -84,7 +130,9 @@ function readItems(value) {
     if (!descriptor || 'get' in descriptor || 'set' in descriptor) return null;
     const item = readExactDataObject(descriptor.value, ITEM_KEYS);
     if (!item) return null;
-    items.push(item);
+    const assetNodeRefs = readAssetNodeRefs(item.assetNodeRefs);
+    if (!assetNodeRefs) return null;
+    items.push({ ...item, assetNodeRefs });
   }
   if (Reflect.ownKeys(value).some((key) => typeof key !== 'string' || !allowedKeys.has(key))) {
     return null;
@@ -123,6 +171,14 @@ function viewBody({ graph, attention }) {
       severity: item.severity,
       reason: item.reason,
       evidenceRef: item.evidenceRef,
+      assetNodeRefs: Object.freeze(
+        item.assetNodeRefs.map((ref) =>
+          Object.freeze({
+            assetId: ref.assetId,
+            nodeId: ref.nodeId,
+          }),
+        ),
+      ),
     }),
   );
 

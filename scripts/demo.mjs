@@ -133,6 +133,7 @@ const summary = createSolvaerOperatorEvidenceSummary({
   receiptId: run.receipt.receiptId,
   sceneId: run.scene.sceneId,
   renderTarget: run.renderPacket.target,
+  assetNodeRefs: run.twinState.topology.assetNodeRefs,
   provenanceValid,
   promotionStatus: run.promotion.status,
   authoritative: run.promotion.authoritative,

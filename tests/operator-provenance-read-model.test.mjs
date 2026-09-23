@@ -52,6 +52,7 @@ function fixture() {
   });
   const attention = buildSolvaerOperatorAttention({
     evidence,
+    twinState: run.twinState,
     decision: {
       experimentId: run.experimentId,
       requestId: run.solvaerRequest.requestId,
@@ -88,7 +89,10 @@ test('creates a deterministic read-only operator view anchored to sealed attenti
     view.provenanceNodeId,
     `operator-attention-${artifacts.attention.attentionFingerprint.slice(0, 16)}`,
   );
+  assert.equal(view.version, 2);
   assert.equal(view.items.length, artifacts.attention.items.length);
+  assert.deepEqual(view.items[0].assetNodeRefs, artifacts.attention.items[0].assetNodeRefs);
+  assert.deepEqual(view.items[1].assetNodeRefs, artifacts.attention.items[1].assetNodeRefs);
   assert.deepEqual(view.safety, {
     advisoryOnly: true,
     authoritative: false,
@@ -179,6 +183,21 @@ test('rejects deceptive top-level descriptors without evaluating getters', () =>
 
   assert.equal(validateOperatorProvenanceReadModel(deceptive, artifacts), false);
   assert.equal(getterReads, 0);
+});
+
+test('rejects substituted source asset/node scope in the read surface', () => {
+  const artifacts = fixture();
+  const view = createOperatorProvenanceReadModel(artifacts);
+  const items = view.items.map((item) => ({
+    ...item,
+    assetNodeRefs: item.assetNodeRefs.map((ref) => ({ ...ref })),
+  }));
+  items[0].assetNodeRefs[0] = {
+    assetId: 'substituted-asset',
+    nodeId: 'node-a',
+  };
+
+  assert.equal(validateOperatorProvenanceReadModel({ ...view, items }, artifacts), false);
 });
 
 test('rejects extra string properties attached to the sealed items array', () => {

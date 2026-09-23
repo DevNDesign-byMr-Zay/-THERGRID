@@ -46,6 +46,7 @@ function operatorSummary() {
     receiptId: 'receipt-1',
     sceneId: 'scene-1',
     renderTarget: 'web-dashboard',
+    assetNodeRefs: [{ assetId: 'solar-1', nodeId: 'node-a' }],
     provenanceValid: true,
     promotionStatus: 'simulation-only',
     authoritative: false,
@@ -96,15 +97,21 @@ test('operator attention is derived from validated SOLVÆR evidence', () => {
     forecast: baseline.forecast,
     proposal: baseline.proposal,
   });
-  const attention = buildSolvaerOperatorAttention({ evidence, decision });
+  const attention = buildSolvaerOperatorAttention({
+    evidence,
+    decision,
+    twinState: baseline.twinState,
+  });
   assert.equal(validateSolvaerOperatorAttention(attention), true);
   assert.equal(attention.requestId, baseline.solvaerRequest.requestId);
   assert.equal(attention.experimentId, baseline.experimentId);
-  assert.equal(attention.version, 3);
+  assert.equal(attention.version, 4);
   assert.equal(attention.items[0].affectedMetric, 'simulation.status');
   assert.equal(attention.items[1].affectedMetric, 'promotion.eligibility');
   assert.equal(attention.items[0].stalenessBoundary, `snapshot:${attention.snapshotId}`);
   assert.equal(attention.items[1].recommendedAdvisoryAction, 'retain-simulation-only');
+  assert.deepEqual(attention.items[0].assetNodeRefs, baseline.twinState.topology.assetNodeRefs);
+  assert.deepEqual(attention.items[1].assetNodeRefs, baseline.twinState.topology.assetNodeRefs);
   assert.equal(attention.safety.advisoryOnly, true);
   assert.equal(attention.safety.actuatesHardware, false);
   assert.match(attention.attentionFingerprint, /^[a-f0-9]{64}$/);
@@ -193,6 +200,19 @@ test('operator attention integrity rejects item, evidence, and authority tamperi
   assert.equal(
     validateSolvaerOperatorAttention({
       ...attention,
+      items: [
+        {
+          ...attention.items[0],
+          assetNodeRefs: [{ assetId: 'substituted-asset', nodeId: 'node-a' }],
+        },
+        attention.items[1],
+      ],
+    }),
+    false,
+  );
+  assert.equal(
+    validateSolvaerOperatorAttention({
+      ...attention,
       controlCommand: { dispatchKw: 1 },
     }),
     false,
@@ -265,6 +285,7 @@ test('operator attention rejects cross-experiment or cross-request decision evid
       buildSolvaerOperatorAttention({
         evidence,
         decision: { ...decision, experimentId: 'wrong-experiment' },
+        twinState: baseline.twinState,
       }),
     /experiment/,
   );
@@ -273,8 +294,45 @@ test('operator attention rejects cross-experiment or cross-request decision evid
       buildSolvaerOperatorAttention({
         evidence,
         decision: { ...decision, requestId: 'wrong-request' },
+        twinState: baseline.twinState,
       }),
     /requestId/,
+  );
+});
+
+test('operator attention rejects a twin snapshot substituted across evidence identity', () => {
+  const baseline = runSyntheticMicrogrid(snapshot('attention-scope-boundary'));
+  const candidate = {
+    experimentId: baseline.experimentId,
+    snapshotId: baseline.solvaerRequest.snapshotId,
+    proposal: baseline.proposal,
+  };
+  const provenanceRef = {
+    experimentId: baseline.experimentId,
+    snapshotId: baseline.solvaerRequest.snapshotId,
+  };
+  const evidence = createSolvaerCollaborationEvidence({
+    request: baseline.solvaerRequest,
+    candidate,
+    provenanceRef,
+  });
+  const decision = evaluateSolvaerDecisionHandoff({
+    request: baseline.solvaerRequest,
+    candidate,
+    provenanceRef,
+    twinState: baseline.twinState,
+    forecast: baseline.forecast,
+    proposal: baseline.proposal,
+  });
+
+  assert.throws(
+    () =>
+      buildSolvaerOperatorAttention({
+        evidence,
+        decision,
+        twinState: { ...baseline.twinState, snapshotId: 'substituted-snapshot' },
+      }),
+    /snapshot/,
   );
 });
 
@@ -306,7 +364,12 @@ test('operator attention rejects inherited or accessor-backed decision identity'
   const inherited = Object.create({ experimentId: decision.experimentId });
   Object.defineProperty(inherited, 'requestId', { value: decision.requestId, enumerable: true });
   assert.throws(
-    () => buildSolvaerOperatorAttention({ evidence, decision: inherited }),
+    () =>
+      buildSolvaerOperatorAttention({
+        evidence,
+        decision: inherited,
+        twinState: baseline.twinState,
+      }),
     /plain object/,
   );
 
@@ -318,7 +381,12 @@ test('operator attention rejects inherited or accessor-backed decision identity'
     },
   });
   assert.throws(
-    () => buildSolvaerOperatorAttention({ evidence, decision: accessor }),
+    () =>
+      buildSolvaerOperatorAttention({
+        evidence,
+        decision: accessor,
+        twinState: baseline.twinState,
+      }),
     /own data property/,
   );
 
@@ -330,7 +398,12 @@ test('operator attention rejects inherited or accessor-backed decision identity'
     },
   });
   assert.throws(
-    () => buildSolvaerOperatorAttention({ evidence, decision: simulationAccessor }),
+    () =>
+      buildSolvaerOperatorAttention({
+        evidence,
+        decision: simulationAccessor,
+        twinState: baseline.twinState,
+      }),
     /accessors/,
   );
 });

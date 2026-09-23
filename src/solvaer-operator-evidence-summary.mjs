@@ -7,6 +7,7 @@ const SUMMARY_BODY_KEYS = Object.freeze([
   'receiptId',
   'sceneId',
   'renderTarget',
+  'assetNodeRefs',
   'provenanceValid',
   'promotionStatus',
   'authoritative',
@@ -24,6 +25,7 @@ const SUMMARY_BODY_KEYS = Object.freeze([
   'operatorActuatesHardware',
 ]);
 const SUMMARY_KEYS = Object.freeze([...SUMMARY_BODY_KEYS, 'summaryFingerprint']);
+const ASSET_NODE_REF_KEYS = Object.freeze(['assetId', 'nodeId']);
 const HEX_64 = /^[a-f0-9]{64}$/;
 
 function canonical(value) {
@@ -69,6 +71,31 @@ function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+function normalizeAssetNodeRefs(value) {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new TypeError('assetNodeRefs must contain at least one validated asset/node binding');
+  }
+
+  const seen = new Set();
+  const refs = value.map((entry, index) => {
+    const ref = readExactDataObject(entry, ASSET_NODE_REF_KEYS);
+    if (!ref) throw new TypeError(`assetNodeRefs[${index}] must use exact assetId/nodeId fields`);
+    if (!isNonEmptyString(ref.assetId) || !isNonEmptyString(ref.nodeId)) {
+      throw new TypeError(`assetNodeRefs[${index}] must contain non-empty assetId/nodeId`);
+    }
+    const normalized = Object.freeze({
+      assetId: ref.assetId.trim(),
+      nodeId: ref.nodeId.trim(),
+    });
+    const key = `${normalized.assetId}\u0000${normalized.nodeId}`;
+    if (seen.has(key)) throw new TypeError('assetNodeRefs must not contain duplicate bindings');
+    seen.add(key);
+    return normalized;
+  });
+
+  return Object.freeze(refs);
+}
+
 function normalizeBody(body) {
   const values = readExactDataObject(body, SUMMARY_BODY_KEYS);
   if (!values)
@@ -87,6 +114,8 @@ function normalizeBody(body) {
     if (!isNonEmptyString(values[key])) throw new TypeError(`${key} must be a non-empty string`);
     values[key] = values[key].trim();
   }
+
+  values.assetNodeRefs = normalizeAssetNodeRefs(values.assetNodeRefs);
 
   if (values.provenanceValid !== true) throw new TypeError('provenanceValid must remain true');
   if (values.authoritative !== false) throw new TypeError('authoritative must remain false');

@@ -53,6 +53,7 @@ function fixture() {
   });
   const attention = buildSolvaerOperatorAttention({
     evidence,
+    twinState: run.twinState,
     decision: {
       experimentId: run.experimentId,
       requestId: run.solvaerRequest.requestId,
@@ -155,6 +156,7 @@ test('rejects a valid read model substituted from another valid experiment', () 
   });
   const attention = buildSolvaerOperatorAttention({
     evidence,
+    twinState: substituteRun.twinState,
     decision: {
       experimentId: substituteRun.experimentId,
       requestId: substituteRun.solvaerRequest.requestId,

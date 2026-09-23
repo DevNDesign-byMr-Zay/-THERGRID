@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { validateSolvaerCollaborationEvidence } from './solvaer-collaboration-evidence.mjs';
 import { validateSolvaerOperatorEvidenceSummary } from './solvaer-operator-evidence-summary.mjs';
 
-const ATTENTION_VERSION = 3;
+const ATTENTION_VERSION = 4;
 const SEVERITIES = Object.freeze(['info', 'warning', 'critical']);
 const ATTENTION_KEYS = Object.freeze([
   'version',
@@ -22,6 +22,7 @@ const ITEM_KEYS = Object.freeze([
   'affectedMetric',
   'recommendedAdvisoryAction',
   'stalenessBoundary',
+  'assetNodeRefs',
   'advisoryOnly',
 ]);
 const SAFETY_KEYS = Object.freeze(['authoritative', 'actuatesHardware', 'advisoryOnly']);
@@ -105,13 +106,61 @@ function hasExactKeys(value, expectedKeys) {
   return keys.length === expectedKeys.length && keys.every((key) => expectedKeys.includes(key));
 }
 
+function normalizeAssetNodeRefs(value, path = 'assetNodeRefs') {
+  const normalized = snapshotAttentionEvidence(value, path);
+  if (!Array.isArray(normalized) || normalized.length === 0) {
+    throw new TypeError(`${path} must contain at least one validated asset/node binding`);
+  }
+
+  const seen = new Set();
+  const refs = normalized.map((entry, index) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      throw new TypeError(`${path}[${index}] must be an object`);
+    }
+    if (!hasExactKeys(entry, ['assetId', 'nodeId'])) {
+      throw new TypeError(`${path}[${index}] must use exact assetId/nodeId fields`);
+    }
+    if (
+      typeof entry.assetId !== 'string' ||
+      !entry.assetId.trim() ||
+      typeof entry.nodeId !== 'string' ||
+      !entry.nodeId.trim()
+    ) {
+      throw new TypeError(`${path}[${index}] must contain non-empty assetId/nodeId`);
+    }
+    const ref = Object.freeze({ assetId: entry.assetId.trim(), nodeId: entry.nodeId.trim() });
+    const key = `${ref.assetId}\u0000${ref.nodeId}`;
+    if (seen.has(key)) throw new TypeError(`${path} must not contain duplicate bindings`);
+    seen.add(key);
+    return ref;
+  });
+
+  return Object.freeze(refs);
+}
+
+function sourceRefsFromTwinState(twinState, expectedSnapshotId) {
+  const twin = snapshotAttentionEvidence(twinState, 'twinState');
+  if (!twin || typeof twin !== 'object' || Array.isArray(twin)) {
+    throw new TypeError('twinState is required');
+  }
+  if (twin.snapshotId !== expectedSnapshotId) {
+    throw new TypeError('twinState snapshot does not match collaboration evidence');
+  }
+  if (!twin.topology || typeof twin.topology !== 'object' || Array.isArray(twin.topology)) {
+    throw new TypeError('twinState.topology is required');
+  }
+  return normalizeAssetNodeRefs(twin.topology.assetNodeRefs, 'twinState.topology.assetNodeRefs');
+}
+
 function createOperatorAttention({
   experimentId,
   snapshotId,
   requestId,
   evidenceRef,
   simulationPassed,
+  assetNodeRefs,
 }) {
+  const sourceRefs = normalizeAssetNodeRefs(assetNodeRefs);
   const items = [
     {
       id: `${experimentId}:simulation`,
@@ -126,6 +175,7 @@ function createOperatorAttention({
         ? 'review-passed-simulation-evidence'
         : 'review-failed-simulation-evidence',
       stalenessBoundary: `snapshot:${snapshotId}`,
+      assetNodeRefs: sourceRefs,
       advisoryOnly: true,
     },
     {
@@ -137,6 +187,7 @@ function createOperatorAttention({
       affectedMetric: 'promotion.eligibility',
       recommendedAdvisoryAction: 'retain-simulation-only',
       stalenessBoundary: `snapshot:${snapshotId}`,
+      assetNodeRefs: sourceRefs,
       advisoryOnly: true,
     },
   ];
@@ -156,7 +207,7 @@ function createOperatorAttention({
 }
 
 /** Project validated SOLVÆR collaboration evidence into an operator-only attention layer. */
-export function buildSolvaerOperatorAttention({ evidence, decision } = {}) {
+export function buildSolvaerOperatorAttention({ evidence, decision, twinState } = {}) {
   if (!validateSolvaerCollaborationEvidence(evidence)) {
     throw new TypeError('invalid SOLVÆR collaboration evidence');
   }
@@ -211,6 +262,7 @@ export function buildSolvaerOperatorAttention({ evidence, decision } = {}) {
     requestId: decision.requestId,
     evidenceRef: evidence.evidenceFingerprint,
     simulationPassed: simulationStatus === 'passed',
+    assetNodeRefs: sourceRefsFromTwinState(twinState, evidence.snapshotId),
   });
 }
 
@@ -226,6 +278,7 @@ export function buildSolvaerOperatorAttentionFromSummary(summary) {
     requestId: summary.solvaerRequestId,
     evidenceRef: summary.summaryFingerprint,
     simulationPassed: summary.simulationStatus === 'passed',
+    assetNodeRefs: summary.assetNodeRefs,
   });
 }
 
@@ -272,7 +325,15 @@ export function validateSolvaerOperatorAttention(attention) {
           typeof item.recommendedAdvisoryAction === 'string' &&
           item.recommendedAdvisoryAction.trim().length > 0 &&
           typeof item.stalenessBoundary === 'string' &&
-          item.stalenessBoundary.trim().length > 0,
+          item.stalenessBoundary.trim().length > 0 &&
+          (() => {
+            try {
+              normalizeAssetNodeRefs(item.assetNodeRefs, 'attention item assetNodeRefs');
+              return true;
+            } catch {
+              return false;
+            }
+          })(),
       )
     ) {
       return false;
@@ -280,6 +341,12 @@ export function validateSolvaerOperatorAttention(attention) {
     if (normalized.items[0].id !== `${normalized.experimentId}:simulation`) return false;
     if (normalized.items[1].id !== `${normalized.experimentId}:promotion`) return false;
     if (normalized.items[0].evidenceRef !== normalized.items[1].evidenceRef) return false;
+    if (
+      JSON.stringify(canonical(normalized.items[0].assetNodeRefs)) !==
+      JSON.stringify(canonical(normalized.items[1].assetNodeRefs))
+    ) {
+      return false;
+    }
     if (
       normalized.items.some(
         (item) => item.stalenessBoundary !== `snapshot:${normalized.snapshotId}`,

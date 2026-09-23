@@ -14,6 +14,7 @@ function validAttention() {
     receiptId: 'receipt-1',
     sceneId: 'scene-1',
     renderTarget: 'web-dashboard',
+    assetNodeRefs: [{ assetId: 'solar-1', nodeId: 'node-a' }],
     provenanceValid: true,
     promotionStatus: 'simulation-only',
     authoritative: false,
