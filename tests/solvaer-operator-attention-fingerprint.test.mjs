@@ -52,7 +52,7 @@ function buildAttention() {
 
 test('fingerprints a validated operator attention artifact', () => {
   const attention = buildAttention();
-  assert.equal(attention.version, 2);
+  assert.equal(attention.version, 3);
   assert.match(attention.attentionFingerprint, /^[a-f0-9]{64}$/);
   assert.equal(validateSolvaerOperatorAttention(attention), true);
 });

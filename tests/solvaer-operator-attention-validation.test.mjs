@@ -90,4 +90,30 @@ test('rejects unsafe attention state and stale fingerprints', () => {
     validateSolvaerOperatorAttention({ ...base, attentionFingerprint: '0'.repeat(64) }),
     false,
   );
+  assert.equal(
+    validateSolvaerOperatorAttention({
+      ...base,
+      items: [
+        {
+          ...base.items[0],
+          affectedMetric: 'dispatch.kw',
+        },
+        base.items[1],
+      ],
+    }),
+    false,
+  );
+  assert.equal(
+    validateSolvaerOperatorAttention({
+      ...base,
+      items: [
+        {
+          ...base.items[0],
+          stalenessBoundary: 'snapshot:stale',
+        },
+        base.items[1],
+      ],
+    }),
+    false,
+  );
 });
