@@ -32,6 +32,11 @@ export function deriveTwinState(input) {
     topology: {
       nodeCount: snapshot.topology.nodes.length,
       connectionCount: snapshot.topology.connections.length,
+      nodes: snapshot.topology.nodes.map((nodeId) => nodeId),
+      assetNodeRefs: snapshot.topology.connections.map(({ assetId, nodeId }) => ({
+        assetId,
+        nodeId,
+      })),
     },
     totals: {
       generationKw,
