@@ -37,5 +37,27 @@ jobs:
           npm run dashboard-demo
       - name: Validate container configuration
         run: docker compose config --quiet
-      - name: Build health service image
-        run: docker compose build health
+      - name: Smoke-test container runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          trap 'docker compose down --volumes --remove-orphans' EXIT
+          docker compose up --build --detach health
+
+          ready=0
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8080/health >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$ready" -ne 1 ]; then
+            docker compose logs health
+            exit 1
+          fi
+
+          curl --fail --silent http://127.0.0.1:8080/health
+          curl --fail --silent http://127.0.0.1:8080/status
+          docker compose ps

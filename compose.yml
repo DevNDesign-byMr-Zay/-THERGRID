@@ -3,6 +3,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
     environment:
       PORT: "8080"
       SERVICE_NAME: "thergrid"
