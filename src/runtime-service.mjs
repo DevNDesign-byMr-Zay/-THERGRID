@@ -1,9 +1,6 @@
 import { createServer } from 'node:http';
 
-import {
-  buildRuntimeStatus,
-  createRuntimeLogger,
-} from './runtime-observability.mjs';
+import { buildRuntimeStatus, createRuntimeLogger } from './runtime-observability.mjs';
 
 function json(response, statusCode, payload, extraHeaders = {}) {
   const body = JSON.stringify(payload);
