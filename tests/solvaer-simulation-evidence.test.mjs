@@ -124,7 +124,10 @@ test('collaboration receipt identity participates in the simulation evidence fin
   const changed = createSolvaerSimulationEvidence(changedReceiptSource);
 
   assert.notEqual(original.simulationEvidenceFingerprint, changed.simulationEvidenceFingerprint);
-  assert.equal(original.collaborationEvidenceFingerprint, source.collaborationEvidenceRef.evidenceFingerprint);
+  assert.equal(
+    original.collaborationEvidenceFingerprint,
+    source.collaborationEvidenceRef.evidenceFingerprint,
+  );
   assert.equal(changed.collaborationEvidenceFingerprint, 'a'.repeat(64));
   assert.equal(validateSolvaerSimulationEvidence(original, source), true);
   assert.equal(validateSolvaerSimulationEvidence(original, changedReceiptSource), false);

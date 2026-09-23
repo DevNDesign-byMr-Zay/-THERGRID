@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildSolverEvidence, compareSolverEvidence, evaluatePromotionGate, fingerprintSolverEvidence } from '../../src/solver-evaluation.mjs';
+import {
+  buildSolverEvidence,
+  compareSolverEvidence,
+  evaluatePromotionGate,
+  fingerprintSolverEvidence,
+} from '../../src/solver-evaluation.mjs';
 
 function evidence(overrides = {}) {
   return buildSolverEvidence({
@@ -26,24 +31,39 @@ test('solver evidence fingerprint is deterministic', () => {
 });
 
 test('solver evidence fingerprint binds seed and provenance', () => {
-  assert.notEqual(fingerprintSolverEvidence(evidence({ seed: 0 })), fingerprintSolverEvidence(evidence({ seed: 1 })));
-  assert.notEqual(fingerprintSolverEvidence(evidence({ provenance: ['receipt-1', 'scene-2'] })), fingerprintSolverEvidence(evidence()));
+  assert.notEqual(
+    fingerprintSolverEvidence(evidence({ seed: 0 })),
+    fingerprintSolverEvidence(evidence({ seed: 1 })),
+  );
+  assert.notEqual(
+    fingerprintSolverEvidence(evidence({ provenance: ['receipt-1', 'scene-2'] })),
+    fingerprintSolverEvidence(evidence()),
+  );
 });
 
 test('promotion gate rejects failed simulation', () => {
-  const result = evaluatePromotionGate({ evidence: evidence(), validation: { ...validValidation, simulationPassed: false } });
+  const result = evaluatePromotionGate({
+    evidence: evidence(),
+    validation: { ...validValidation, simulationPassed: false },
+  });
   assert.equal(result.status, 'rejected');
   assert.equal(result.authoritative, false);
 });
 
 test('promotion gate rejects solver timeout', () => {
-  const result = evaluatePromotionGate({ evidence: evidence({ timeout: true }), validation: validValidation });
+  const result = evaluatePromotionGate({
+    evidence: evidence({ timeout: true }),
+    validation: validValidation,
+  });
   assert.equal(result.status, 'rejected');
   assert.equal(result.checks.feasible, false);
 });
 
 test('promotion gate rejects incomplete provenance', () => {
-  const result = evaluatePromotionGate({ evidence: evidence({ provenance: [] }), validation: validValidation });
+  const result = evaluatePromotionGate({
+    evidence: evidence({ provenance: [] }),
+    validation: validValidation,
+  });
   assert.equal(result.status, 'rejected');
   assert.equal(result.checks.provenanceBound, false);
 });

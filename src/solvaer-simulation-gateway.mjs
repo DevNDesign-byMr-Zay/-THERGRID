@@ -4,14 +4,19 @@ import { createSolvaerSimulationEvidence } from './solvaer-simulation-evidence.m
 import { simulateProposal } from './simulation.mjs';
 
 function object(value, name) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError(`${name} must be an object`);
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new TypeError(`${name} must be an object`);
   return value;
 }
 
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
   if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonical(value[key])]));
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonical(value[key])]),
+    );
   }
   return value;
 }

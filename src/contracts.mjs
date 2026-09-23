@@ -77,10 +77,7 @@ function validateAsset(input, index) {
     if (Math.abs(normalized.powerKw) > normalized.capacityKw) {
       throw new TypeError(`snapshot.assets[${index}].powerKw exceeds battery power capacity`);
     }
-    if (
-      normalized.stateOfChargeKwh < 0 ||
-      normalized.stateOfChargeKwh > normalized.capacityKwh
-    ) {
+    if (normalized.stateOfChargeKwh < 0 || normalized.stateOfChargeKwh > normalized.capacityKwh) {
       throw new TypeError(`snapshot.assets[${index}].stateOfChargeKwh is outside battery capacity`);
     }
   }
@@ -132,36 +129,32 @@ function validateTopology(input, assetIds) {
   }
 
   const connectedAssets = new Set();
-  const connections = requireArray(
-    topology.connections,
-    'snapshot.topology.connections',
-  ).map((inputConnection, index) => {
-    const connection = requireObject(
-      inputConnection,
-      `snapshot.topology.connections[${index}]`,
-    );
-    const assetId = requireIdentifier(
-      connection.assetId,
-      `snapshot.topology.connections[${index}].assetId`,
-    );
-    const nodeId = requireIdentifier(
-      connection.nodeId,
-      `snapshot.topology.connections[${index}].nodeId`,
-    );
+  const connections = requireArray(topology.connections, 'snapshot.topology.connections').map(
+    (inputConnection, index) => {
+      const connection = requireObject(inputConnection, `snapshot.topology.connections[${index}]`);
+      const assetId = requireIdentifier(
+        connection.assetId,
+        `snapshot.topology.connections[${index}].assetId`,
+      );
+      const nodeId = requireIdentifier(
+        connection.nodeId,
+        `snapshot.topology.connections[${index}].nodeId`,
+      );
 
-    if (!assetIds.has(assetId)) {
-      throw new TypeError(`topology connection references unknown asset: ${assetId}`);
-    }
-    if (!nodeIds.has(nodeId)) {
-      throw new TypeError(`topology connection references unknown node: ${nodeId}`);
-    }
-    if (connectedAssets.has(assetId)) {
-      throw new TypeError(`asset has multiple topology connections: ${assetId}`);
-    }
+      if (!assetIds.has(assetId)) {
+        throw new TypeError(`topology connection references unknown asset: ${assetId}`);
+      }
+      if (!nodeIds.has(nodeId)) {
+        throw new TypeError(`topology connection references unknown node: ${nodeId}`);
+      }
+      if (connectedAssets.has(assetId)) {
+        throw new TypeError(`asset has multiple topology connections: ${assetId}`);
+      }
 
-    connectedAssets.add(assetId);
-    return { assetId, nodeId };
-  });
+      connectedAssets.add(assetId);
+      return { assetId, nodeId };
+    },
+  );
 
   for (const assetId of assetIds) {
     if (!connectedAssets.has(assetId)) {

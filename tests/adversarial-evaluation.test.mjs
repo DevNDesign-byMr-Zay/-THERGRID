@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ADVERSARIAL_FIXTURES, buildAdversarialCase, evaluateAdversarialCase } from '../src/adversarial-evaluation.mjs';
+import {
+  ADVERSARIAL_FIXTURES,
+  buildAdversarialCase,
+  evaluateAdversarialCase,
+} from '../src/adversarial-evaluation.mjs';
 
 const snapshot = {
   schemaVersion: 1,
@@ -8,7 +12,14 @@ const snapshot = {
   observedAt: '2026-09-13T00:00:00.000Z',
   assets: [
     { id: 'solar-1', kind: 'solar', powerKw: 40, capacityKw: 50 },
-    { id: 'battery-1', kind: 'battery', powerKw: 0, capacityKw: 25, capacityKwh: 100, stateOfChargeKwh: 60 },
+    {
+      id: 'battery-1',
+      kind: 'battery',
+      powerKw: 0,
+      capacityKw: 25,
+      capacityKwh: 100,
+      stateOfChargeKwh: 60,
+    },
     { id: 'load-1', kind: 'load', powerKw: 45, flexible: true },
     { id: 'grid-1', kind: 'grid_interconnect', powerKw: -15, importLimitKw: 80, exportLimitKw: 40 },
   ],
@@ -25,15 +36,22 @@ const snapshot = {
 
 test('builds every adversarial fixture deterministically', () => {
   for (const name of ADVERSARIAL_FIXTURES) {
-    const first = buildAdversarialCase(name, snapshot, { now: Date.parse('2026-09-13T01:00:00.000Z') });
-    const second = buildAdversarialCase(name, snapshot, { now: Date.parse('2026-09-13T01:00:00.000Z') });
+    const first = buildAdversarialCase(name, snapshot, {
+      now: Date.parse('2026-09-13T01:00:00.000Z'),
+    });
+    const second = buildAdversarialCase(name, snapshot, {
+      now: Date.parse('2026-09-13T01:00:00.000Z'),
+    });
     assert.deepEqual(first, second);
   }
 });
 
 test('rejects stale telemetry under the freshness policy', () => {
   const now = Date.parse('2026-09-13T01:00:00.000Z');
-  const result = evaluateAdversarialCase(buildAdversarialCase('stale-telemetry', snapshot, { now }), { now });
+  const result = evaluateAdversarialCase(
+    buildAdversarialCase('stale-telemetry', snapshot, { now }),
+    { now },
+  );
   assert.equal(result.safe, true);
   assert.equal(result.accepted, false);
   assert.match(result.reason, /freshness policy/);
@@ -48,7 +66,9 @@ test('rejects malformed units and impossible battery state through the input con
 });
 
 test('rejects missing model capabilities rather than silently routing them', () => {
-  const result = evaluateAdversarialCase(buildAdversarialCase('missing-model-capability', snapshot));
+  const result = evaluateAdversarialCase(
+    buildAdversarialCase('missing-model-capability', snapshot),
+  );
   assert.equal(result.accepted, false);
   assert.equal(result.safe, true);
   assert.match(result.reason, /unsupported capability/);

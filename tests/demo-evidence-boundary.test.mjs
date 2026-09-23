@@ -63,7 +63,10 @@ test('demo emits an allowlisted sealed operator evidence package with no control
     evidencePackage.manifest.attentionFingerprint,
     evidencePackage.attention.attentionFingerprint,
   );
-  assert.equal(evidencePackage.manifest.provenanceNodeId, evidencePackage.readModel.provenanceNodeId);
+  assert.equal(
+    evidencePackage.manifest.provenanceNodeId,
+    evidencePackage.readModel.provenanceNodeId,
+  );
   assert.equal(evidencePackage.manifest.viewFingerprint, evidencePackage.readModel.viewFingerprint);
 
   const serialized = JSON.stringify(evidencePackage).toLowerCase();

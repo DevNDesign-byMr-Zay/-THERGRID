@@ -121,16 +121,8 @@ function bindSceneDecisionReceipt(scene, decisionReceiptId) {
  * granting the optimizer presentation or physical execution authority.
  */
 export function buildSolvaerDecisionRenderBridge(input = {}) {
-  const {
-    request,
-    candidate,
-    provenanceRef,
-    twinState,
-    forecast,
-    proposal,
-    scene,
-    presentation,
-  } = captureBridgeInput(input);
+  const { request, candidate, provenanceRef, twinState, forecast, proposal, scene, presentation } =
+    captureBridgeInput(input);
 
   rejectAuthority(candidate);
   bindSceneProvenance(scene, provenanceRef);

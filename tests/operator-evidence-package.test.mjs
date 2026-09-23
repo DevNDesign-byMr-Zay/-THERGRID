@@ -82,7 +82,10 @@ test('seals attention, provenance, and operator read model into one verified pac
 
   assert.equal(validateOperatorEvidencePackage(evidencePackage, artifacts), true);
   assert.match(evidencePackage.packageFingerprint, /^[a-f0-9]{64}$/);
-  assert.equal(evidencePackage.manifest.attentionFingerprint, artifacts.attention.attentionFingerprint);
+  assert.equal(
+    evidencePackage.manifest.attentionFingerprint,
+    artifacts.attention.attentionFingerprint,
+  );
   assert.equal(evidencePackage.manifest.provenanceNodeId, artifacts.readModel.provenanceNodeId);
   assert.match(evidencePackage.manifest.provenanceFingerprint, /^[a-f0-9]{64}$/);
   assert.equal(evidencePackage.manifest.viewFingerprint, artifacts.readModel.viewFingerprint);

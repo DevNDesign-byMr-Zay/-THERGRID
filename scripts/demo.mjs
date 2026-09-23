@@ -111,7 +111,10 @@ const operatorProjectionValid = validateSolvaerSimulationOperatorProjection(oper
 if (!operatorProjectionValid) {
   throw new Error('demo operator projection failed validation');
 }
-if (evaluation.promotionEligible !== false || evaluation.simulationEvidence.promotionEligible !== false) {
+if (
+  evaluation.promotionEligible !== false ||
+  evaluation.simulationEvidence.promotionEligible !== false
+) {
   throw new Error('demo SOLVÆR evidence chain must remain non-promotable');
 }
 if (

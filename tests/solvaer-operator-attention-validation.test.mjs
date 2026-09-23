@@ -49,10 +49,7 @@ test('rejects prototype-named attention evidence instead of dropping it', () => 
 
   const itemTampered = {
     ...attention,
-    items: [
-      { ...attention.items[0], ...prototypeNamed },
-      attention.items[1],
-    ],
+    items: [{ ...attention.items[0], ...prototypeNamed }, attention.items[1]],
   };
   assert.equal(Object.hasOwn(itemTampered.items[0], '__proto__'), true);
   assert.equal(validateSolvaerOperatorAttention(itemTampered), false);
@@ -67,10 +64,7 @@ test('rejects missing experiment, snapshot, request, or evidence identity', () =
   assert.equal(
     validateSolvaerOperatorAttention({
       ...base,
-      items: [
-        { ...base.items[0], evidenceRef: '' },
-        base.items[1],
-      ],
+      items: [{ ...base.items[0], evidenceRef: '' }, base.items[1]],
     }),
     false,
   );

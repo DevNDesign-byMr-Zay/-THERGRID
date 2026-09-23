@@ -65,8 +65,14 @@ test('routes a receipt-bound SOLVÆR candidate through simulation without promot
 
   assert.equal(result.accepted.experimentId, fixture.pipeline.experimentId);
   assert.equal(result.accepted.snapshotId, fixture.input.snapshotId);
-  assert.equal(result.collaborationEvidenceRef.evidenceFingerprint, fixture.collaborationEvidence.evidenceFingerprint);
-  assert.equal(result.collaborationEvidenceRef.requestId, fixture.pipeline.solvaerRequest.requestId);
+  assert.equal(
+    result.collaborationEvidenceRef.evidenceFingerprint,
+    fixture.collaborationEvidence.evidenceFingerprint,
+  );
+  assert.equal(
+    result.collaborationEvidenceRef.requestId,
+    fixture.pipeline.solvaerRequest.requestId,
+  );
   assert.equal(result.simulation.status, 'passed');
   assert.equal(result.handoff, 'simulation-required');
   assert.equal(result.promotionEligible, false);
@@ -85,18 +91,16 @@ test('rejects missing or tampered collaboration evidence before simulation', () 
     proposal: fixture.pipeline.proposal,
   };
 
+  assert.throws(() => evaluateSolvaerCandidate(args), /collaborationEvidence must be an object/);
   assert.throws(
-    () => evaluateSolvaerCandidate(args),
-    /collaborationEvidence must be an object/,
-  );
-  assert.throws(
-    () => evaluateSolvaerCandidate({
-      ...args,
-      collaborationEvidence: {
-        ...fixture.collaborationEvidence,
-        evidenceFingerprint: '0'.repeat(64),
-      },
-    }),
+    () =>
+      evaluateSolvaerCandidate({
+        ...args,
+        collaborationEvidence: {
+          ...fixture.collaborationEvidence,
+          evidenceFingerprint: '0'.repeat(64),
+        },
+      }),
     /validated SOLVÆR collaboration evidence is required before simulation/,
   );
 });
@@ -118,14 +122,15 @@ test('rejects collaboration evidence from a different request identity', () => {
   });
 
   assert.throws(
-    () => evaluateSolvaerCandidate({
-      request: fixture.pipeline.solvaerRequest,
-      candidate: fixture.candidate,
-      provenanceRef: fixture.provenanceRef,
-      collaborationEvidence: otherEvidence,
-      twinState: fixture.pipeline.twinState,
-      proposal: fixture.pipeline.proposal,
-    }),
+    () =>
+      evaluateSolvaerCandidate({
+        request: fixture.pipeline.solvaerRequest,
+        candidate: fixture.candidate,
+        provenanceRef: fixture.provenanceRef,
+        collaborationEvidence: otherEvidence,
+        twinState: fixture.pipeline.twinState,
+        proposal: fixture.pipeline.proposal,
+      }),
     /collaboration evidence requestId must match accepted request/,
   );
 });
@@ -135,14 +140,15 @@ test('rejects evidence whose nested candidate does not match the accepted candid
   const differentCandidate = { ...fixture.candidate, dispatchDeltaKw: 0.5 };
 
   assert.throws(
-    () => evaluateSolvaerCandidate({
-      request: fixture.pipeline.solvaerRequest,
-      candidate: differentCandidate,
-      provenanceRef: fixture.provenanceRef,
-      collaborationEvidence: fixture.collaborationEvidence,
-      twinState: fixture.pipeline.twinState,
-      proposal: fixture.pipeline.proposal,
-    }),
+    () =>
+      evaluateSolvaerCandidate({
+        request: fixture.pipeline.solvaerRequest,
+        candidate: differentCandidate,
+        provenanceRef: fixture.provenanceRef,
+        collaborationEvidence: fixture.collaborationEvidence,
+        twinState: fixture.pipeline.twinState,
+        proposal: fixture.pipeline.proposal,
+      }),
     /collaboration evidence candidate must match accepted candidate/,
   );
 });

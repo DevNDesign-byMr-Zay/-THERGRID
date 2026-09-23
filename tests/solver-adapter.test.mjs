@@ -1,10 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createClassicalReferenceAdapter, createQuantumInspiredAdapter, createSolverAdapterContract } from '../src/solver-adapter.mjs';
+import {
+  createClassicalReferenceAdapter,
+  createQuantumInspiredAdapter,
+  createSolverAdapterContract,
+} from '../src/solver-adapter.mjs';
 
 const input = {
-  experimentId: 'exp-001', snapshotId: 'snapshot-001', proposal: { projectedBalanceKw: 2 },
-  constraints: { advisoryOnly: true }, seed: 7, provenance: ['receipt-001'],
+  experimentId: 'exp-001',
+  snapshotId: 'snapshot-001',
+  proposal: { projectedBalanceKw: 2 },
+  constraints: { advisoryOnly: true },
+  seed: 7,
+  provenance: ['receipt-001'],
 };
 
 test('classical adapter emits the shared evidence envelope', () => {

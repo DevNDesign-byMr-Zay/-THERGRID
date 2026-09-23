@@ -3,12 +3,14 @@ import { buildSolverEvidence } from './solver-evaluation.mjs';
 const ADAPTER_VERSION = 1;
 
 function requireObject(value, name) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError(`${name} must be an object`);
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new TypeError(`${name} must be an object`);
   return value;
 }
 
 function requireText(value, name) {
-  if (typeof value !== 'string' || !value.trim()) throw new TypeError(`${name} must be a non-empty string`);
+  if (typeof value !== 'string' || !value.trim())
+    throw new TypeError(`${name} must be a non-empty string`);
   return value.trim();
 }
 
@@ -20,7 +22,11 @@ export function createSolverAdapter({ model, solver, version, solve }) {
 
   return Object.freeze({
     adapterVersion: ADAPTER_VERSION,
-    identity: Object.freeze({ model: model.trim(), solver: solver.trim(), version: version.trim() }),
+    identity: Object.freeze({
+      model: model.trim(),
+      solver: solver.trim(),
+      version: version.trim(),
+    }),
     solve(input = {}) {
       return solve(requireObject(input, 'input'));
     },
@@ -38,7 +44,11 @@ export function createClassicalReferenceAdapter() {
       return buildSolverEvidence({
         experimentId: requireText(input.experimentId, 'input.experimentId'),
         inputSnapshotId: requireText(input.snapshotId, 'input.snapshotId'),
-        candidate: { model: 'thergrid-classical-reference', solver: 'thergrid-reference', version: 'v1' },
+        candidate: {
+          model: 'thergrid-classical-reference',
+          solver: 'thergrid-reference',
+          version: 'v1',
+        },
         constraints: input.constraints ?? null,
         seed: input.seed ?? 0,
         objective,
@@ -60,7 +70,11 @@ export function createQuantumInspiredAdapter() {
       return buildSolverEvidence({
         experimentId: requireText(input.experimentId, 'input.experimentId'),
         inputSnapshotId: requireText(input.snapshotId, 'input.snapshotId'),
-        candidate: { model: 'quantum-inspired', solver: 'thergrid-quantum-inspired-contract', version: 'v1' },
+        candidate: {
+          model: 'quantum-inspired',
+          solver: 'thergrid-quantum-inspired-contract',
+          version: 'v1',
+        },
         constraints: input.constraints ?? null,
         seed: input.seed ?? 0,
         objective: Number.isFinite(input.objective) ? input.objective : 0,
@@ -77,7 +91,19 @@ export function createQuantumInspiredAdapter() {
 export function createSolverAdapterContract() {
   return Object.freeze({
     adapterVersion: ADAPTER_VERSION,
-    requiredEvidence: ['experimentId', 'inputSnapshotId', 'candidate', 'constraints', 'seed', 'objective', 'feasible', 'runtimeMs', 'timeout', 'fallback', 'provenance'],
+    requiredEvidence: [
+      'experimentId',
+      'inputSnapshotId',
+      'candidate',
+      'constraints',
+      'seed',
+      'objective',
+      'feasible',
+      'runtimeMs',
+      'timeout',
+      'fallback',
+      'provenance',
+    ],
     authoritative: false,
     promotion: 'thergrid-validation-gate-v1',
     adapters: ['classical-reference', 'quantum-inspired', 'solvear-external'],

@@ -44,10 +44,7 @@ describe('SOLVÆR pipeline handoff', () => {
 
     assert.equal(result.solvaerRequest.experimentId, result.experimentId);
     assert.equal(result.solvaerRequest.snapshotId, result.twinState.snapshotId);
-    assert.equal(
-      result.solvaerRequest.twinStateRef,
-      `twin-state:${result.twinState.snapshotId}`,
-    );
+    assert.equal(result.solvaerRequest.twinStateRef, `twin-state:${result.twinState.snapshotId}`);
     assert.equal(result.solvaerRequest.capability, 'optimization.explore');
     assert.deepEqual(result.solvaerRequest.safety, {
       advisoryOnly: true,

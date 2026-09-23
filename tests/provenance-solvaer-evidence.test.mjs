@@ -13,20 +13,38 @@ const snapshot = {
     { id: 'load-1', kind: 'load', powerKw: 35, flexible: true },
     { id: 'grid-1', kind: 'grid_interconnect', powerKw: -5, importLimitKw: 80, exportLimitKw: 40 },
   ],
-  topology: { nodes: ['node-a'], connections: [
-    { assetId: 'solar-1', nodeId: 'node-a' },
-    { assetId: 'load-1', nodeId: 'node-a' },
-    { assetId: 'grid-1', nodeId: 'node-a' },
-  ] },
+  topology: {
+    nodes: ['node-a'],
+    connections: [
+      { assetId: 'solar-1', nodeId: 'node-a' },
+      { assetId: 'load-1', nodeId: 'node-a' },
+      { assetId: 'grid-1', nodeId: 'node-a' },
+    ],
+  },
 };
 
 test('chains validated SOLVÆR collaboration evidence after render evidence', () => {
   const baseline = runSyntheticMicrogrid(snapshot);
-  const candidate = { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId, proposal: baseline.proposal };
+  const candidate = {
+    experimentId: baseline.experimentId,
+    snapshotId: snapshot.snapshotId,
+    proposal: baseline.proposal,
+  };
   const provenanceRef = { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId };
-  const evidence = createSolvaerCollaborationEvidence({ request: baseline.solvaerRequest, candidate, provenanceRef });
-  const graph = buildProvenanceGraph({ ...baseline, receipt: baseline.receipt, collaborationEvidence: evidence });
-  assert.equal(validateProvenanceGraph(graph, { requiredTypes: ['render-packet', 'solvaer-collaboration'] }), true);
+  const evidence = createSolvaerCollaborationEvidence({
+    request: baseline.solvaerRequest,
+    candidate,
+    provenanceRef,
+  });
+  const graph = buildProvenanceGraph({
+    ...baseline,
+    receipt: baseline.receipt,
+    collaborationEvidence: evidence,
+  });
+  assert.equal(
+    validateProvenanceGraph(graph, { requiredTypes: ['render-packet', 'solvaer-collaboration'] }),
+    true,
+  );
   const types = graph.nodes.map((node) => node.type);
   assert.deepEqual(types.slice(-2), ['render-packet', 'solvaer-collaboration']);
   assert.equal(graph.edges.at(-1).to, graph.nodes.at(-1).id);
@@ -36,11 +54,22 @@ test('tampered collaboration evidence still produces an identifiable but indepen
   const baseline = runSyntheticMicrogrid(snapshot);
   const evidence = createSolvaerCollaborationEvidence({
     request: baseline.solvaerRequest,
-    candidate: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId, proposal: baseline.proposal },
+    candidate: {
+      experimentId: baseline.experimentId,
+      snapshotId: snapshot.snapshotId,
+      proposal: baseline.proposal,
+    },
     provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId },
   });
   const tampered = { ...evidence, handoff: 'direct-execution' };
-  const graph = buildProvenanceGraph({ ...baseline, receipt: baseline.receipt, collaborationEvidence: tampered });
+  const graph = buildProvenanceGraph({
+    ...baseline,
+    receipt: baseline.receipt,
+    collaborationEvidence: tampered,
+  });
   assert.equal(graph.nodes.at(-1).type, 'solvaer-collaboration');
-  assert.notEqual(graph.nodes.at(-1).id, `solvaer-collaboration-${evidence.evidenceFingerprint.slice(0, 16)}`);
+  assert.notEqual(
+    graph.nodes.at(-1).id,
+    `solvaer-collaboration-${evidence.evidenceFingerprint.slice(0, 16)}`,
+  );
 });

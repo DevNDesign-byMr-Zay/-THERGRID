@@ -14,7 +14,10 @@ const valid = {
 };
 
 test('accepts a well-formed provenance graph with required renderer evidence', () => {
-  assert.equal(validateProvenanceGraph(valid, { requiredTypes: ['telemetry', 'render-packet'] }), true);
+  assert.equal(
+    validateProvenanceGraph(valid, { requiredTypes: ['telemetry', 'render-packet'] }),
+    true,
+  );
 });
 
 test('rejects malformed experiment identity', () => {
@@ -23,12 +26,21 @@ test('rejects malformed experiment identity', () => {
 });
 
 test('rejects malformed or self-referential edges', () => {
-  assert.equal(validateProvenanceGraph({ ...valid, edges: [{ from: 'missing', to: 'render-a' }] }), false);
-  assert.equal(validateProvenanceGraph({ ...valid, edges: [{ from: 'render-a', to: 'render-a' }] }), false);
+  assert.equal(
+    validateProvenanceGraph({ ...valid, edges: [{ from: 'missing', to: 'render-a' }] }),
+    false,
+  );
+  assert.equal(
+    validateProvenanceGraph({ ...valid, edges: [{ from: 'render-a', to: 'render-a' }] }),
+    false,
+  );
 });
 
 test('rejects malformed and duplicate nodes', () => {
-  assert.equal(validateProvenanceGraph({ ...valid, nodes: [{ type: 'telemetry', id: '' }] }), false);
+  assert.equal(
+    validateProvenanceGraph({ ...valid, nodes: [{ type: 'telemetry', id: '' }] }),
+    false,
+  );
   assert.equal(
     validateProvenanceGraph({
       ...valid,

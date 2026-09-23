@@ -113,7 +113,10 @@ function validatedArtifacts({ attention, provenance, readModel }) {
   if (readModel.experimentId !== attention.experimentId) {
     throw new TypeError('read model experiment does not match attention');
   }
-  if (readModel.snapshotId !== attention.snapshotId || readModel.requestId !== attention.requestId) {
+  if (
+    readModel.snapshotId !== attention.snapshotId ||
+    readModel.requestId !== attention.requestId
+  ) {
     throw new TypeError('read model identity does not match attention');
   }
 
@@ -177,10 +180,7 @@ export function createOperatorEvidencePackage({ attention, provenance, readModel
   });
 }
 
-export function validateOperatorEvidencePackage(
-  evidencePackage,
-  expectedArtifacts = undefined,
-) {
+export function validateOperatorEvidencePackage(evidencePackage, expectedArtifacts = undefined) {
   try {
     const values = readExactDataObject(evidencePackage, PACKAGE_KEYS);
     if (!values) return false;

@@ -1,17 +1,20 @@
 const DEVICE_TYPES = new Set(['holo-mat', 'projector', 'volumetric-3d', 'ar-vr', 'web-dashboard']);
 
 function object(value, name) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError(`${name} must be an object`);
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new TypeError(`${name} must be an object`);
   return value;
 }
 
 function text(value, name) {
-  if (typeof value !== 'string' || !value.trim()) throw new TypeError(`${name} must be a non-empty string`);
+  if (typeof value !== 'string' || !value.trim())
+    throw new TypeError(`${name} must be a non-empty string`);
   return value.trim();
 }
 
 function capabilities(value) {
-  if (!Array.isArray(value) || value.length === 0) throw new TypeError('capabilities must contain at least one capability');
+  if (!Array.isArray(value) || value.length === 0)
+    throw new TypeError('capabilities must contain at least one capability');
   return [...new Set(value.map((item, index) => text(item, `capabilities[${index}]`)))].sort();
 }
 
@@ -41,9 +44,11 @@ export function createHolographicDeviceDescriptor(input) {
 export function selectCompatibleDevice(devices, target) {
   if (!Array.isArray(devices)) throw new TypeError('devices must be an array');
   const requestedTarget = text(target, 'target');
-  return devices
-    .map((device) => createHolographicDeviceDescriptor(device))
-    .find((device) => device.online && device.type === requestedTarget) ?? null;
+  return (
+    devices
+      .map((device) => createHolographicDeviceDescriptor(device))
+      .find((device) => device.online && device.type === requestedTarget) ?? null
+  );
 }
 
 /**
@@ -56,9 +61,11 @@ export function planHolographicPresentation({ scene, devices, preferredTarget = 
   const renderer = object(spatialScene.rendererContract, 'scene.rendererContract');
   const supportedTargets = capabilities(renderer.supportedTargets);
   const candidates = Array.isArray(devices) ? devices : [];
-  const target = preferredTarget == null
-    ? supportedTargets.find((candidate) => selectCompatibleDevice(candidates, candidate)) ?? null
-    : text(preferredTarget, 'preferredTarget');
+  const target =
+    preferredTarget == null
+      ? (supportedTargets.find((candidate) => selectCompatibleDevice(candidates, candidate)) ??
+        null)
+      : text(preferredTarget, 'preferredTarget');
 
   if (target != null && !supportedTargets.includes(target)) {
     throw new TypeError(`target is not supported by the scene: ${target}`);

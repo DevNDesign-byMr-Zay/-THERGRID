@@ -1,9 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  buildProvenanceGraph,
-  validateProvenanceGraph,
-} from '../src/provenance.mjs';
+import { buildProvenanceGraph, validateProvenanceGraph } from '../src/provenance.mjs';
 
 describe('renderer provenance graph', () => {
   it('tracks render packets as the final presentation artifact', () => {

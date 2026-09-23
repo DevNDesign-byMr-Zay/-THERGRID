@@ -88,10 +88,13 @@ test('projects only operator-relevant validated simulation evidence', () => {
   assert.equal('candidate' in projection, false);
   assert.equal('action' in projection, false);
   assert.equal('inputs' in projection, false);
-  assert.equal(validateSolvaerSimulationOperatorProjection(projection, {
-    evidence,
-    source: evidenceSource,
-  }), true);
+  assert.equal(
+    validateSolvaerSimulationOperatorProjection(projection, {
+      evidence,
+      source: evidenceSource,
+    }),
+    true,
+  );
 });
 
 test('projection identity is deterministic and recursively immutable', () => {
@@ -129,8 +132,14 @@ test('operator projection identity changes when evidence lineage changes', () =>
   });
 
   assert.deepEqual(first.metrics, second.metrics);
-  assert.notEqual(first.evidenceRefs.collaborationEvidenceFingerprint, second.evidenceRefs.collaborationEvidenceFingerprint);
-  assert.notEqual(first.evidenceRefs.simulationEvidenceFingerprint, second.evidenceRefs.simulationEvidenceFingerprint);
+  assert.notEqual(
+    first.evidenceRefs.collaborationEvidenceFingerprint,
+    second.evidenceRefs.collaborationEvidenceFingerprint,
+  );
+  assert.notEqual(
+    first.evidenceRefs.simulationEvidenceFingerprint,
+    second.evidenceRefs.simulationEvidenceFingerprint,
+  );
   assert.notEqual(first.projectionFingerprint, second.projectionFingerprint);
 });
 
@@ -138,26 +147,30 @@ test('rejects source drift before operator projection', () => {
   const { evidenceSource, evidence } = fixture();
 
   assert.throws(
-    () => createSolvaerSimulationOperatorProjection({
-      evidence,
-      source: {
-        ...evidenceSource,
-        simulation: {
-          ...evidenceSource.simulation,
-          outputs: {
-            ...evidenceSource.simulation.outputs,
-            residualBalanceKw: 999,
+    () =>
+      createSolvaerSimulationOperatorProjection({
+        evidence,
+        source: {
+          ...evidenceSource,
+          simulation: {
+            ...evidenceSource.simulation,
+            outputs: {
+              ...evidenceSource.simulation.outputs,
+              residualBalanceKw: 999,
+            },
           },
         },
-      },
-    }),
+      }),
     /validated SOLVÆR simulation evidence is required/,
   );
 });
 
 test('tampered operator metrics or promotion authority fail validation', () => {
   const { evidenceSource, evidence } = fixture();
-  const projection = createSolvaerSimulationOperatorProjection({ evidence, source: evidenceSource });
+  const projection = createSolvaerSimulationOperatorProjection({
+    evidence,
+    source: evidenceSource,
+  });
 
   assert.equal(
     validateSolvaerSimulationOperatorProjection(

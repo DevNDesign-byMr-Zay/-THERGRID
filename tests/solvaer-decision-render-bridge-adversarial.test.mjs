@@ -13,7 +13,13 @@ function snapshot(snapshotId) {
     assets: [
       { id: 'solar-1', kind: 'solar', powerKw: 12, capacityKw: 15 },
       { id: 'load-1', kind: 'load', powerKw: 10, flexible: true },
-      { id: 'grid-1', kind: 'grid_interconnect', powerKw: -2, importLimitKw: 80, exportLimitKw: 40 },
+      {
+        id: 'grid-1',
+        kind: 'grid_interconnect',
+        powerKw: -2,
+        importLimitKw: 80,
+        exportLimitKw: 40,
+      },
     ],
     topology: {
       nodes: ['node-a'],
@@ -83,27 +89,35 @@ test('SOLVÆR bridge rejects authoritative candidates before rendering', () => {
     physicalActuation: false,
   };
 
-  assert.throws(() => buildSolvaerDecisionRenderBridge({
-    request: baseline.solvaerRequest,
-    candidate: unsafeCandidate,
-    provenanceRef: { experimentId: baseline.experimentId, snapshotId: source.snapshotId },
-    twinState: baseline.twinState,
-    forecast: baseline.forecast,
-    proposal: baseline.proposal,
-    scene: baseline.scene,
-    presentation: baseline.presentation,
-  }), /authority|physical actuation/i);
+  assert.throws(
+    () =>
+      buildSolvaerDecisionRenderBridge({
+        request: baseline.solvaerRequest,
+        candidate: unsafeCandidate,
+        provenanceRef: { experimentId: baseline.experimentId, snapshotId: source.snapshotId },
+        twinState: baseline.twinState,
+        forecast: baseline.forecast,
+        proposal: baseline.proposal,
+        scene: baseline.scene,
+        presentation: baseline.presentation,
+      }),
+    /authority|physical actuation/i,
+  );
 });
 
 test('SOLVÆR bridge rejects scene provenance drift before rendering', () => {
   const source = snapshot('snapshot-bridge-003');
-  assert.throws(() => bridgeFor(source, (scene) => ({
-    ...scene,
-    provenanceRef: {
-      experimentId: scene.provenanceRef.experimentId,
-      snapshotId: 'different-snapshot',
-    },
-  })), /provenanceRef must match SOLVÆR provenanceRef/i);
+  assert.throws(
+    () =>
+      bridgeFor(source, (scene) => ({
+        ...scene,
+        provenanceRef: {
+          experimentId: scene.provenanceRef.experimentId,
+          snapshotId: 'different-snapshot',
+        },
+      })),
+    /provenanceRef must match SOLVÆR provenanceRef/i,
+  );
 });
 
 test('SOLVÆR bridge rejects accessor-backed scene provenance without executing it', () => {
@@ -120,25 +134,29 @@ test('SOLVÆR bridge rejects accessor-backed scene provenance without executing 
     },
   });
 
-  assert.throws(() => buildSolvaerDecisionRenderBridge({
-    request: baseline.solvaerRequest,
-    candidate: {
-      model: 'SOLVÆR-reference',
-      solver: 'exploration-v1',
-      experimentId: baseline.experimentId,
-      snapshotId: source.snapshotId,
-      proposal: baseline.proposal,
-      forecast: baseline.forecast,
-      authoritative: false,
-      actuatesHardware: false,
-      physicalActuation: false,
-    },
-    provenanceRef: { experimentId: baseline.experimentId, snapshotId: source.snapshotId },
-    twinState: baseline.twinState,
-    forecast: baseline.forecast,
-    proposal: baseline.proposal,
-    scene,
-    presentation: baseline.presentation,
-  }), /scene\.provenanceRef must not use accessors/i);
+  assert.throws(
+    () =>
+      buildSolvaerDecisionRenderBridge({
+        request: baseline.solvaerRequest,
+        candidate: {
+          model: 'SOLVÆR-reference',
+          solver: 'exploration-v1',
+          experimentId: baseline.experimentId,
+          snapshotId: source.snapshotId,
+          proposal: baseline.proposal,
+          forecast: baseline.forecast,
+          authoritative: false,
+          actuatesHardware: false,
+          physicalActuation: false,
+        },
+        provenanceRef: { experimentId: baseline.experimentId, snapshotId: source.snapshotId },
+        twinState: baseline.twinState,
+        forecast: baseline.forecast,
+        proposal: baseline.proposal,
+        scene,
+        presentation: baseline.presentation,
+      }),
+    /scene\.provenanceRef must not use accessors/i,
+  );
   assert.equal(getterExecuted, false);
 });
