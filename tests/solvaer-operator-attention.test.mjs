@@ -200,6 +200,19 @@ test('operator attention integrity rejects item, evidence, and authority tamperi
   assert.equal(
     validateSolvaerOperatorAttention({
       ...attention,
+      items: [
+        {
+          ...attention.items[0],
+          assetNodeRefs: [{ assetId: 'substituted-asset', nodeId: 'node-a' }],
+        },
+        attention.items[1],
+      ],
+    }),
+    false,
+  );
+  assert.equal(
+    validateSolvaerOperatorAttention({
+      ...attention,
       controlCommand: { dispatchKw: 1 },
     }),
     false,
@@ -284,6 +297,42 @@ test('operator attention rejects cross-experiment or cross-request decision evid
         twinState: baseline.twinState,
       }),
     /requestId/,
+  );
+});
+
+test('operator attention rejects a twin snapshot substituted across evidence identity', () => {
+  const baseline = runSyntheticMicrogrid(snapshot('attention-scope-boundary'));
+  const candidate = {
+    experimentId: baseline.experimentId,
+    snapshotId: baseline.solvaerRequest.snapshotId,
+    proposal: baseline.proposal,
+  };
+  const provenanceRef = {
+    experimentId: baseline.experimentId,
+    snapshotId: baseline.solvaerRequest.snapshotId,
+  };
+  const evidence = createSolvaerCollaborationEvidence({
+    request: baseline.solvaerRequest,
+    candidate,
+    provenanceRef,
+  });
+  const decision = evaluateSolvaerDecisionHandoff({
+    request: baseline.solvaerRequest,
+    candidate,
+    provenanceRef,
+    twinState: baseline.twinState,
+    forecast: baseline.forecast,
+    proposal: baseline.proposal,
+  });
+
+  assert.throws(
+    () =>
+      buildSolvaerOperatorAttention({
+        evidence,
+        decision,
+        twinState: { ...baseline.twinState, snapshotId: 'substituted-snapshot' },
+      }),
+    /snapshot/,
   );
 });
 
