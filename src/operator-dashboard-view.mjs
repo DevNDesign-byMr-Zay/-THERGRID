@@ -16,7 +16,14 @@ const VIEW_KEYS = Object.freeze([
   'safety',
   'dashboardFingerprint',
 ]);
-const ITEM_KEYS = Object.freeze(['id', 'priority', 'severity', 'reason', 'evidenceRef', 'assetNodeRefs']);
+const ITEM_KEYS = Object.freeze([
+  'id',
+  'priority',
+  'severity',
+  'reason',
+  'evidenceRef',
+  'assetNodeRefs',
+]);
 const ASSET_NODE_REF_KEYS = Object.freeze(['assetId', 'nodeId']);
 const SAFETY_KEYS = Object.freeze([
   'advisoryOnly',
