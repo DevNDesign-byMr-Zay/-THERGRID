@@ -37,10 +37,11 @@ test('decision receipt rejects forecast evidence from another snapshot', async (
   const input = await decisionInputs();
 
   assert.throws(
-    () => buildDecisionReceipt({
-      ...input,
-      forecast: { ...input.forecast, snapshotId: 'other-snapshot' },
-    }),
+    () =>
+      buildDecisionReceipt({
+        ...input,
+        forecast: { ...input.forecast, snapshotId: 'other-snapshot' },
+      }),
     /snapshotId must match/,
   );
 });
@@ -49,10 +50,11 @@ test('decision receipt rejects proposals that are not advisory-only', async () =
   const input = await decisionInputs();
 
   assert.throws(
-    () => buildDecisionReceipt({
-      ...input,
-      proposal: { ...input.proposal, advisoryOnly: false },
-    }),
+    () =>
+      buildDecisionReceipt({
+        ...input,
+        proposal: { ...input.proposal, advisoryOnly: false },
+      }),
     /advisory-only/,
   );
 });
@@ -61,10 +63,11 @@ test('decision receipt rejects proposal timestamps that drift from the forecast'
   const input = await decisionInputs();
 
   assert.throws(
-    () => buildDecisionReceipt({
-      ...input,
-      proposal: { ...input.proposal, forecastFor: '2026-09-12T16:30:00.000Z' },
-    }),
+    () =>
+      buildDecisionReceipt({
+        ...input,
+        proposal: { ...input.proposal, forecastFor: '2026-09-12T16:30:00.000Z' },
+      }),
     /proposal\.forecastFor must match forecast\.forecastFor/,
   );
 });

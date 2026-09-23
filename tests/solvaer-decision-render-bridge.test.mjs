@@ -143,14 +143,20 @@ test('SOLVÆR bridge rejects top-level accessors before evaluating them', () => 
     },
   });
 
-  assert.throws(() => buildSolvaerDecisionRenderBridge(input), /render bridge input.request must not use accessors/);
+  assert.throws(
+    () => buildSolvaerDecisionRenderBridge(input),
+    /render bridge input.request must not use accessors/,
+  );
   assert.equal(getterReads, 0);
 });
 
 test('SOLVÆR bridge rejects inherited, symbol-bearing, and unsupported top-level inputs', () => {
   const baseline = runSyntheticMicrogrid(snapshot);
   const inherited = Object.assign(Object.create({ inherited: true }), bridgeInput(baseline));
-  assert.throws(() => buildSolvaerDecisionRenderBridge(inherited), /render bridge input must be a plain object/);
+  assert.throws(
+    () => buildSolvaerDecisionRenderBridge(inherited),
+    /render bridge input must be a plain object/,
+  );
 
   const symbolBearing = bridgeInput(baseline);
   symbolBearing[Symbol('hidden')] = 'not-evidence';
@@ -173,7 +179,10 @@ test('SOLVÆR bridge rejects deceptive provenance descriptors without evaluating
     },
   });
 
-  assert.throws(() => buildSolvaerDecisionRenderBridge(input), /provenanceRef.experimentId must not use accessors/);
+  assert.throws(
+    () => buildSolvaerDecisionRenderBridge(input),
+    /provenanceRef.experimentId must not use accessors/,
+  );
   assert.equal(getterReads, 0);
 });
 
@@ -182,5 +191,8 @@ test('SOLVÆR bridge rejects symbol-bearing provenance before render handoff', (
   const input = bridgeInput(baseline);
   input.provenanceRef[Symbol('hidden')] = baseline.experimentId;
 
-  assert.throws(() => buildSolvaerDecisionRenderBridge(input), /provenanceRef must not contain symbol properties/);
+  assert.throws(
+    () => buildSolvaerDecisionRenderBridge(input),
+    /provenanceRef must not contain symbol properties/,
+  );
 });

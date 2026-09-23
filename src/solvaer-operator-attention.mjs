@@ -13,7 +13,14 @@ const ATTENTION_KEYS = Object.freeze([
   'safety',
   'attentionFingerprint',
 ]);
-const ITEM_KEYS = Object.freeze(['id', 'priority', 'severity', 'reason', 'evidenceRef', 'advisoryOnly']);
+const ITEM_KEYS = Object.freeze([
+  'id',
+  'priority',
+  'severity',
+  'reason',
+  'evidenceRef',
+  'advisoryOnly',
+]);
 const SAFETY_KEYS = Object.freeze(['authoritative', 'actuatesHardware', 'advisoryOnly']);
 
 function canonical(value) {
@@ -95,7 +102,13 @@ function hasExactKeys(value, expectedKeys) {
   return keys.length === expectedKeys.length && keys.every((key) => expectedKeys.includes(key));
 }
 
-function createOperatorAttention({ experimentId, snapshotId, requestId, evidenceRef, simulationPassed }) {
+function createOperatorAttention({
+  experimentId,
+  snapshotId,
+  requestId,
+  evidenceRef,
+  simulationPassed,
+}) {
   const items = [
     {
       id: `${experimentId}:simulation`,

@@ -39,7 +39,10 @@ function buildSceneProvenanceRef(provenance, expectedSnapshotId) {
     throw new TypeError('provenance must not contain symbol properties');
   }
 
-  const experimentId = id(readOwnData(value, 'experimentId', 'provenance'), 'provenance.experimentId');
+  const experimentId = id(
+    readOwnData(value, 'experimentId', 'provenance'),
+    'provenance.experimentId',
+  );
   const snapshotId = id(readOwnData(value, 'snapshotId', 'provenance'), 'provenance.snapshotId');
   if (snapshotId !== expectedSnapshotId) {
     throw new TypeError('provenance.snapshotId must match twinState.snapshotId');
@@ -100,9 +103,7 @@ export function buildSpatialScene({
         severity: id(item.severity ?? 'info', `attention[${index}].severity`),
         reason: id(item.reason ?? 'Unspecified', `attention[${index}].reason`),
         evidenceRef:
-          item.evidenceRef == null
-            ? null
-            : id(item.evidenceRef, `attention[${index}].evidenceRef`),
+          item.evidenceRef == null ? null : id(item.evidenceRef, `attention[${index}].evidenceRef`),
         advisoryOnly: true,
       })),
       provenance: Boolean(provenanceRef),

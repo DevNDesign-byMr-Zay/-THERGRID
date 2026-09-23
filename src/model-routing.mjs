@@ -20,8 +20,14 @@ export function createModelRoute({ model = 'VÆLON', version = 'unbound' } = {})
   };
 }
 
-export function buildModelEvidence({ route, capability, status = 'proposed', fallbackUsed = false } = {}) {
-  if (!route || typeof route.resolve !== 'function') throw new TypeError('route must be a model route');
+export function buildModelEvidence({
+  route,
+  capability,
+  status = 'proposed',
+  fallbackUsed = false,
+} = {}) {
+  if (!route || typeof route.resolve !== 'function')
+    throw new TypeError('route must be a model route');
   const resolved = route.resolve(capability);
   return {
     contractVersion: ROUTER_VERSION,

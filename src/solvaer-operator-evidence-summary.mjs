@@ -71,7 +71,8 @@ function isNonEmptyString(value) {
 
 function normalizeBody(body) {
   const values = readExactDataObject(body, SUMMARY_BODY_KEYS);
-  if (!values) throw new TypeError('operator evidence summary body must use the exact allowlisted fields');
+  if (!values)
+    throw new TypeError('operator evidence summary body must use the exact allowlisted fields');
 
   for (const key of [
     'snapshotId',
@@ -89,15 +90,18 @@ function normalizeBody(body) {
 
   if (values.provenanceValid !== true) throw new TypeError('provenanceValid must remain true');
   if (values.authoritative !== false) throw new TypeError('authoritative must remain false');
-  if (values.operatorProjectionValid !== true) throw new TypeError('operatorProjectionValid must remain true');
+  if (values.operatorProjectionValid !== true)
+    throw new TypeError('operatorProjectionValid must remain true');
   if (values.operatorInterpretation !== 'operator-review-only') {
     throw new TypeError('operatorInterpretation must remain operator-review-only');
   }
   if (values.operatorPromotionEligible !== false) {
     throw new TypeError('operatorPromotionEligible must remain false');
   }
-  if (values.operatorAdvisoryOnly !== true) throw new TypeError('operatorAdvisoryOnly must remain true');
-  if (values.operatorAuthoritative !== false) throw new TypeError('operatorAuthoritative must remain false');
+  if (values.operatorAdvisoryOnly !== true)
+    throw new TypeError('operatorAdvisoryOnly must remain true');
+  if (values.operatorAuthoritative !== false)
+    throw new TypeError('operatorAuthoritative must remain false');
   if (values.operatorActuatesHardware !== false) {
     throw new TypeError('operatorActuatesHardware must remain false');
   }

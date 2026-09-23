@@ -37,7 +37,9 @@ export function buildAdversarialFixture(baseSnapshot, fixtureCase) {
 
   switch (name) {
     case 'stale-telemetry':
-      snapshot.observedAt = new Date(Date.parse(snapshot.observedAt) - 24 * 60 * 60 * 1000).toISOString();
+      snapshot.observedAt = new Date(
+        Date.parse(snapshot.observedAt) - 24 * 60 * 60 * 1000,
+      ).toISOString();
       mutation.expectedOutcome = 'reject';
       mutation.reason = 'telemetry is outside the freshness boundary';
       break;

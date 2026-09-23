@@ -19,7 +19,13 @@ function snapshot(snapshotId) {
     assets: [
       { id: 'solar-1', kind: 'solar', powerKw: 12, capacityKw: 15 },
       { id: 'load-1', kind: 'load', powerKw: 10, flexible: true },
-      { id: 'grid-1', kind: 'grid_interconnect', powerKw: -2, importLimitKw: 80, exportLimitKw: 40 },
+      {
+        id: 'grid-1',
+        kind: 'grid_interconnect',
+        powerKw: -2,
+        importLimitKw: 80,
+        exportLimitKw: 40,
+      },
     ],
     topology: {
       nodes: ['node-a'],
@@ -60,11 +66,36 @@ function operatorSummary() {
 
 test('operator attention is derived from validated SOLVÆR evidence', () => {
   const baseline = runSyntheticMicrogrid(snapshot('attention-snapshot'));
-  const candidate = { experimentId: baseline.experimentId, snapshotId: baseline.solvaerRequest.snapshotId, proposal: baseline.proposal };
-  const provenanceRef = { experimentId: baseline.experimentId, snapshotId: baseline.solvaerRequest.snapshotId };
-  assert.equal(validateSolvaerCollaborationResult({ request: baseline.solvaerRequest, candidate, provenanceRef }), true);
-  const evidence = createSolvaerCollaborationEvidence({ request: baseline.solvaerRequest, candidate, provenanceRef });
-  const decision = evaluateSolvaerDecisionHandoff({ request: baseline.solvaerRequest, candidate, provenanceRef, twinState: baseline.twinState, forecast: baseline.forecast, proposal: baseline.proposal });
+  const candidate = {
+    experimentId: baseline.experimentId,
+    snapshotId: baseline.solvaerRequest.snapshotId,
+    proposal: baseline.proposal,
+  };
+  const provenanceRef = {
+    experimentId: baseline.experimentId,
+    snapshotId: baseline.solvaerRequest.snapshotId,
+  };
+  assert.equal(
+    validateSolvaerCollaborationResult({
+      request: baseline.solvaerRequest,
+      candidate,
+      provenanceRef,
+    }),
+    true,
+  );
+  const evidence = createSolvaerCollaborationEvidence({
+    request: baseline.solvaerRequest,
+    candidate,
+    provenanceRef,
+  });
+  const decision = evaluateSolvaerDecisionHandoff({
+    request: baseline.solvaerRequest,
+    candidate,
+    provenanceRef,
+    twinState: baseline.twinState,
+    forecast: baseline.forecast,
+    proposal: baseline.proposal,
+  });
   const attention = buildSolvaerOperatorAttention({ evidence, decision });
   assert.equal(validateSolvaerOperatorAttention(attention), true);
   assert.equal(attention.requestId, baseline.solvaerRequest.requestId);
@@ -98,7 +129,8 @@ test('operator attention rejects tampered operator summaries before projection',
     /validated SOLVÆR operator evidence summary is required/,
   );
   assert.throws(
-    () => buildSolvaerOperatorAttentionFromSummary({ ...summary, candidate: { dispatchDeltaKw: 1 } }),
+    () =>
+      buildSolvaerOperatorAttentionFromSummary({ ...summary, candidate: { dispatchDeltaKw: 1 } }),
     /validated SOLVÆR operator evidence summary is required/,
   );
 });
@@ -109,20 +141,14 @@ test('operator attention integrity rejects item, evidence, and authority tamperi
   assert.equal(
     validateSolvaerOperatorAttention({
       ...attention,
-      items: [
-        { ...attention.items[0], priority: 1 },
-        attention.items[1],
-      ],
+      items: [{ ...attention.items[0], priority: 1 }, attention.items[1]],
     }),
     false,
   );
   assert.equal(
     validateSolvaerOperatorAttention({
       ...attention,
-      items: [
-        { ...attention.items[0], evidenceRef: 'd'.repeat(64) },
-        attention.items[1],
-      ],
+      items: [{ ...attention.items[0], evidenceRef: 'd'.repeat(64) }, attention.items[1]],
     }),
     false,
   );
@@ -181,20 +207,70 @@ test('operator attention rejects deceptive descriptors without executing getters
 
 test('operator attention rejects cross-experiment or cross-request decision evidence', () => {
   const baseline = runSyntheticMicrogrid(snapshot('attention-cross-snapshot'));
-  const candidate = { experimentId: baseline.experimentId, snapshotId: baseline.solvaerRequest.snapshotId, proposal: baseline.proposal };
-  const provenanceRef = { experimentId: baseline.experimentId, snapshotId: baseline.solvaerRequest.snapshotId };
-  const evidence = createSolvaerCollaborationEvidence({ request: baseline.solvaerRequest, candidate, provenanceRef });
-  const decision = evaluateSolvaerDecisionHandoff({ request: baseline.solvaerRequest, candidate, provenanceRef, twinState: baseline.twinState, forecast: baseline.forecast, proposal: baseline.proposal });
-  assert.throws(() => buildSolvaerOperatorAttention({ evidence, decision: { ...decision, experimentId: 'wrong-experiment' } }), /experiment/);
-  assert.throws(() => buildSolvaerOperatorAttention({ evidence, decision: { ...decision, requestId: 'wrong-request' } }), /requestId/);
+  const candidate = {
+    experimentId: baseline.experimentId,
+    snapshotId: baseline.solvaerRequest.snapshotId,
+    proposal: baseline.proposal,
+  };
+  const provenanceRef = {
+    experimentId: baseline.experimentId,
+    snapshotId: baseline.solvaerRequest.snapshotId,
+  };
+  const evidence = createSolvaerCollaborationEvidence({
+    request: baseline.solvaerRequest,
+    candidate,
+    provenanceRef,
+  });
+  const decision = evaluateSolvaerDecisionHandoff({
+    request: baseline.solvaerRequest,
+    candidate,
+    provenanceRef,
+    twinState: baseline.twinState,
+    forecast: baseline.forecast,
+    proposal: baseline.proposal,
+  });
+  assert.throws(
+    () =>
+      buildSolvaerOperatorAttention({
+        evidence,
+        decision: { ...decision, experimentId: 'wrong-experiment' },
+      }),
+    /experiment/,
+  );
+  assert.throws(
+    () =>
+      buildSolvaerOperatorAttention({
+        evidence,
+        decision: { ...decision, requestId: 'wrong-request' },
+      }),
+    /requestId/,
+  );
 });
 
 test('operator attention rejects inherited or accessor-backed decision identity', () => {
   const baseline = runSyntheticMicrogrid(snapshot('attention-identity-boundary'));
-  const candidate = { experimentId: baseline.experimentId, snapshotId: baseline.solvaerRequest.snapshotId, proposal: baseline.proposal };
-  const provenanceRef = { experimentId: baseline.experimentId, snapshotId: baseline.solvaerRequest.snapshotId };
-  const evidence = createSolvaerCollaborationEvidence({ request: baseline.solvaerRequest, candidate, provenanceRef });
-  const decision = evaluateSolvaerDecisionHandoff({ request: baseline.solvaerRequest, candidate, provenanceRef, twinState: baseline.twinState, forecast: baseline.forecast, proposal: baseline.proposal });
+  const candidate = {
+    experimentId: baseline.experimentId,
+    snapshotId: baseline.solvaerRequest.snapshotId,
+    proposal: baseline.proposal,
+  };
+  const provenanceRef = {
+    experimentId: baseline.experimentId,
+    snapshotId: baseline.solvaerRequest.snapshotId,
+  };
+  const evidence = createSolvaerCollaborationEvidence({
+    request: baseline.solvaerRequest,
+    candidate,
+    provenanceRef,
+  });
+  const decision = evaluateSolvaerDecisionHandoff({
+    request: baseline.solvaerRequest,
+    candidate,
+    provenanceRef,
+    twinState: baseline.twinState,
+    forecast: baseline.forecast,
+    proposal: baseline.proposal,
+  });
 
   const inherited = Object.create({ experimentId: decision.experimentId });
   Object.defineProperty(inherited, 'requestId', { value: decision.requestId, enumerable: true });

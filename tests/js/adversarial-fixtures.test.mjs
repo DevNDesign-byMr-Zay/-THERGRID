@@ -10,7 +10,9 @@ import {
 } from '../../src/adversarial-fixtures.mjs';
 
 async function loadFixture() {
-  return JSON.parse(await readFile(new URL('../../fixtures/microgrid.json', import.meta.url), 'utf8'));
+  return JSON.parse(
+    await readFile(new URL('../../fixtures/microgrid.json', import.meta.url), 'utf8'),
+  );
 }
 
 test('catalog exposes the complete adversarial evaluation matrix', () => {
@@ -51,7 +53,10 @@ test('fallback and missing-capability fixtures remain non-authoritative', async 
   for (const name of ['missing-model-capability', 'fallback-activation']) {
     const fixture = buildAdversarialFixture(base, name);
     assert.equal(fixture.mutation.expectedOutcome, 'fallback');
-    assert.equal(fixture.mutation.kind === 'fallback-activation' || fixture.mutation.model === null, true);
+    assert.equal(
+      fixture.mutation.kind === 'fallback-activation' || fixture.mutation.model === null,
+      true,
+    );
   }
 });
 

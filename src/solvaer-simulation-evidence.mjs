@@ -45,13 +45,19 @@ function deepFreeze(value) {
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
   if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonical(value[key])]));
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonical(value[key])]),
+    );
   }
   return value;
 }
 
 function fingerprint(value) {
-  return createHash('sha256').update(JSON.stringify(canonical(value)), 'utf8').digest('hex');
+  return createHash('sha256')
+    .update(JSON.stringify(canonical(value)), 'utf8')
+    .digest('hex');
 }
 
 function evidenceBody({ accepted, collaborationEvidenceRef, simulation }) {
@@ -123,7 +129,8 @@ export function validateSolvaerSimulationEvidence(evidence, source) {
     const actualBody = Object.fromEntries(
       Object.entries(evidence).filter(([key]) => key !== 'simulationEvidenceFingerprint'),
     );
-    if (JSON.stringify(canonical(actualBody)) !== JSON.stringify(canonical(expectedBody))) return false;
+    if (JSON.stringify(canonical(actualBody)) !== JSON.stringify(canonical(expectedBody)))
+      return false;
     return evidence.simulationEvidenceFingerprint === fingerprint(expectedBody);
   } catch {
     return false;

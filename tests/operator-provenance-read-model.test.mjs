@@ -78,10 +78,16 @@ test('creates a deterministic read-only operator view anchored to sealed attenti
   const artifacts = fixture();
   const view = createOperatorProvenanceReadModel(artifacts);
 
-  assert.equal(validateProvenanceGraph(artifacts.graph, { requiredTypes: ['operator-attention'] }), true);
+  assert.equal(
+    validateProvenanceGraph(artifacts.graph, { requiredTypes: ['operator-attention'] }),
+    true,
+  );
   assert.match(view.viewFingerprint, /^[a-f0-9]{64}$/);
   assert.equal(view.attentionFingerprint, artifacts.attention.attentionFingerprint);
-  assert.equal(view.provenanceNodeId, `operator-attention-${artifacts.attention.attentionFingerprint.slice(0, 16)}`);
+  assert.equal(
+    view.provenanceNodeId,
+    `operator-attention-${artifacts.attention.attentionFingerprint.slice(0, 16)}`,
+  );
   assert.equal(view.items.length, artifacts.attention.items.length);
   assert.deepEqual(view.safety, {
     advisoryOnly: true,
@@ -109,7 +115,10 @@ test('rejects a graph whose otherwise valid attention node points at another fin
   }));
   const substituted = { ...artifacts.graph, nodes, edges };
 
-  assert.equal(validateProvenanceGraph(substituted, { requiredTypes: ['operator-attention'] }), true);
+  assert.equal(
+    validateProvenanceGraph(substituted, { requiredTypes: ['operator-attention'] }),
+    true,
+  );
   assert.equal(
     validateOperatorProvenanceReadModel(view, { ...artifacts, graph: substituted }),
     false,
@@ -138,7 +147,10 @@ test('rejects duplicate attention nodes and authority widening in the read surfa
     ],
   };
 
-  assert.equal(validateProvenanceGraph(duplicateGraph, { requiredTypes: ['operator-attention'] }), false);
+  assert.equal(
+    validateProvenanceGraph(duplicateGraph, { requiredTypes: ['operator-attention'] }),
+    false,
+  );
   assert.throws(
     () => createOperatorProvenanceReadModel({ ...artifacts, graph: duplicateGraph }),
     /validated operator-attention provenance/,

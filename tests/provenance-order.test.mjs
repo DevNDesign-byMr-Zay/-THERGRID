@@ -35,7 +35,10 @@ test('rejects endpoint-valid rewiring', () => {
 });
 
 test('rejects missing and surplus links', () => {
-  assert.equal(validateProvenanceGraph({ ...baseGraph, edges: baseGraph.edges.slice(0, 1) }), false);
+  assert.equal(
+    validateProvenanceGraph({ ...baseGraph, edges: baseGraph.edges.slice(0, 1) }),
+    false,
+  );
   assert.equal(
     validateProvenanceGraph({
       ...baseGraph,
