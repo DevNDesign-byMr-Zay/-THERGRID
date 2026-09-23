@@ -34,7 +34,6 @@ test('runtime logger carries explicit service identity and level', () => {
   const logger = createRuntimeLogger({
     service: 'thergrid-test',
     level: 'warn',
-    enabled: false,
   });
 
   assert.equal(logger.level, 'warn');
