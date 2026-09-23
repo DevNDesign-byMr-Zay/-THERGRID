@@ -57,10 +57,7 @@ test('solver evidence snapshots and deeply freezes caller-owned constraints', ()
 });
 
 test('solver evidence rejects non-data constraint objects and circular evidence', () => {
-  assert.throws(
-    () => evidence({ constraints: new Date() }),
-    /constraints must use plain objects/,
-  );
+  assert.throws(() => evidence({ constraints: new Date() }), /constraints must use plain objects/);
 
   const circular = {};
   circular.self = circular;
