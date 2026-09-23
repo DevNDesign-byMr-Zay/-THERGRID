@@ -15,7 +15,9 @@ function text(value, name) {
 function snapshot(value) {
   if (Array.isArray(value)) return value.map(snapshot);
   if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, snapshot(child)]));
+    return Object.fromEntries(
+      Object.entries(value).map(([key, child]) => [key, snapshot(child)]),
+    );
   }
   return value;
 }
@@ -40,7 +42,9 @@ export function validateSolvaerCollaborationResult({
     provenanceRef,
     fallbackUsed,
   });
-  const proposal = deepFreeze(snapshot(object(result.candidate.proposal, 'candidate.proposal')));
+  const proposal = deepFreeze(
+    snapshot(object(result.candidate.proposal, 'candidate.proposal')),
+  );
   const requestedObjective = text(input.objective, 'request.objective');
   if (
     result.candidate.objective != null &&
@@ -64,7 +68,10 @@ export function validateSolvaerCollaborationResult({
     snapshotId: result.snapshotId,
     twinStateRef: text(input.twinStateRef, 'request.twinStateRef'),
     objective: requestedObjective,
-    constraints: input.constraints == null ? null : snapshot(object(input.constraints, 'request.constraints')),
+    constraints:
+      input.constraints == null
+        ? null
+        : snapshot(object(input.constraints, 'request.constraints')),
     proposal,
     provenanceRef: snapshot(result.provenanceRef),
     producerIdentity: snapshot(result.producerIdentity),
