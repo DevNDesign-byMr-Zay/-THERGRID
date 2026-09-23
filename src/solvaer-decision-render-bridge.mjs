@@ -143,6 +143,7 @@ export function buildSolvaerDecisionRenderBridge(input = {}) {
   const operatorAttention = buildSolvaerOperatorAttention({
     evidence: collaborationEvidence,
     decision,
+    twinState,
   });
   if (!validateSolvaerOperatorAttention(operatorAttention)) {
     throw new TypeError('SOLVÆR render bridge produced invalid operator attention');
