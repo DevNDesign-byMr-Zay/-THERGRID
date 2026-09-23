@@ -21,7 +21,13 @@ const snapshot = {
       stateOfChargeKwh: 60,
     },
     { id: 'load-1', kind: 'load', powerKw: 45, flexible: true },
-    { id: 'grid-1', kind: 'grid_interconnect', powerKw: -15, importLimitKw: 80, exportLimitKw: 40 },
+    {
+      id: 'grid-1',
+      kind: 'grid_interconnect',
+      powerKw: -15,
+      importLimitKw: 80,
+      exportLimitKw: 40,
+    },
   ],
   topology: {
     nodes: ['node-a'],
@@ -117,13 +123,17 @@ test('solver timeout and infeasibility fail promotion gates', () => {
 });
 
 test('fallback activation is explicit and safe when identity is recorded', () => {
-  const result = evaluateAdversarialCase(buildAdversarialCase('fallback-activation', snapshot));
+  const result = evaluateAdversarialCase(
+    buildAdversarialCase('fallback-activation', snapshot),
+  );
   assert.equal(result.accepted, true);
   assert.equal(result.safe, true);
 });
 
 test('seed drift changes evidence fingerprints', () => {
-  const result = evaluateAdversarialCase(buildAdversarialCase('seed-drift', snapshot));
+  const result = evaluateAdversarialCase(
+    buildAdversarialCase('seed-drift', snapshot),
+  );
   assert.equal(result.accepted, false);
   assert.equal(result.safe, true);
   assert.notEqual(result.details.firstFingerprint, result.details.secondFingerprint);
