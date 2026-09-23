@@ -1,7 +1,4 @@
-import {
-  createRuntimeLogger,
-  parseRuntimeConfig,
-} from '../src/runtime-observability.mjs';
+import { createRuntimeLogger, parseRuntimeConfig } from '../src/runtime-observability.mjs';
 import { startRuntimeService } from '../src/runtime-service.mjs';
 
 const config = parseRuntimeConfig(process.env);
