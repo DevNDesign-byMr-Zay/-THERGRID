@@ -13,9 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -27,8 +27,6 @@ jobs:
         run: npm run syntax
       - name: Lint maintained JavaScript
         run: npm run lint
-      - name: Print formatted collaboration result
-        run: npx --yes --package prettier@3.6.2 prettier src/solvaer-collaboration-result.mjs
       - name: Check formatting
         run: npm run format:check
       - name: Tests with coverage
@@ -39,5 +37,27 @@ jobs:
           npm run dashboard-demo
       - name: Validate container configuration
         run: docker compose config --quiet
-      - name: Build health service image
-        run: docker compose build health
+      - name: Smoke-test container runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          trap 'docker compose down --volumes --remove-orphans' EXIT
+          docker compose up --build --detach health
+
+          ready=0
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8080/health >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$ready" -ne 1 ]; then
+            docker compose logs health
+            exit 1
+          fi
+
+          curl --fail --silent http://127.0.0.1:8080/health
+          curl --fail --silent http://127.0.0.1:8080/status
+          docker compose ps
