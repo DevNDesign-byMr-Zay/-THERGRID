@@ -37,6 +37,7 @@ test('dashboard view is derived only from a validated serialized operator packag
   const dashboard = createOperatorDashboardView(evidencePackage);
 
   assert.equal(validateOperatorDashboardView(dashboard, evidencePackage), true);
+  assert.equal(dashboard.version, 2);
   assert.equal(dashboard.packageFingerprint, evidencePackage.packageFingerprint);
   assert.equal(dashboard.attentionFingerprint, evidencePackage.manifest.attentionFingerprint);
   assert.equal(
@@ -45,6 +46,10 @@ test('dashboard view is derived only from a validated serialized operator packag
   );
   assert.equal(dashboard.sourceViewFingerprint, evidencePackage.manifest.viewFingerprint);
   assert.deepEqual(dashboard.items, evidencePackage.readModel.items);
+  assert.deepEqual(
+    dashboard.items[0].assetNodeRefs,
+    evidencePackage.readModel.items[0].assetNodeRefs,
+  );
   assert.equal(dashboard.interpretation, 'operator-dashboard-read-only');
   assert.equal(dashboard.safety.advisoryOnly, true);
   assert.equal(dashboard.safety.authoritative, false);
@@ -101,6 +106,18 @@ test('dashboard rejects package, provenance identity, and authority substitution
     ),
     false,
   );
+});
+
+test('dashboard rejects source asset/node substitution', () => {
+  const evidencePackage = demoPackage();
+  const dashboard = createOperatorDashboardView(evidencePackage);
+  const items = dashboard.items.map((item) => ({
+    ...item,
+    assetNodeRefs: item.assetNodeRefs.map((ref) => ({ ...ref })),
+  }));
+  items[0].assetNodeRefs[0] = { assetId: 'substituted-asset', nodeId: 'node-a' };
+
+  assert.equal(validateOperatorDashboardView({ ...dashboard, items }, evidencePackage), false);
 });
 
 test('dashboard creation refuses loose raw attention or read-model inputs', () => {
