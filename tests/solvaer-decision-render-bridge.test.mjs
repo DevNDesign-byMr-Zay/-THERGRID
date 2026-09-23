@@ -31,25 +31,28 @@ const snapshot = {
   },
 };
 
-test('SOLVÆR decision bridge preserves experiment evidence through rendering and operator attention', () => {
-  const baseline = runSyntheticMicrogrid(snapshot);
-  const candidate = {
-    experimentId: baseline.experimentId,
-    snapshotId: snapshot.snapshotId,
-    proposal: baseline.proposal,
-    forecast: baseline.forecast,
-    rationale: 'explore a simulation-bound candidate',
-  };
-  const bridge = buildSolvaerDecisionRenderBridge({
+function bridgeInput(baseline) {
+  return {
     request: baseline.solvaerRequest,
-    candidate,
+    candidate: {
+      experimentId: baseline.experimentId,
+      snapshotId: snapshot.snapshotId,
+      proposal: baseline.proposal,
+      forecast: baseline.forecast,
+      rationale: 'explore a simulation-bound candidate',
+    },
     provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId },
     twinState: baseline.twinState,
     forecast: baseline.forecast,
     proposal: baseline.proposal,
     scene: baseline.scene,
     presentation: baseline.presentation,
-  });
+  };
+}
+
+test('SOLVÆR decision bridge preserves experiment evidence through rendering and operator attention', () => {
+  const baseline = runSyntheticMicrogrid(snapshot);
+  const bridge = buildSolvaerDecisionRenderBridge(bridgeInput(baseline));
 
   assert.equal(bridge.requestId, baseline.solvaerRequest.requestId);
   assert.equal(bridge.experimentId, baseline.experimentId);
@@ -69,6 +72,7 @@ test('SOLVÆR decision bridge preserves experiment evidence through rendering an
   );
   assert.equal(bridge.renderPacket.experimentId, baseline.experimentId);
   assert.equal(bridge.renderPacket.receiptId, bridge.decision.decisionReceipt.receiptId);
+  assert.equal(bridge.renderPacket.provenanceRef.receiptId, bridge.renderPacket.receiptId);
   assert.equal(
     bridge.renderPacket.operatorAttentionFingerprint,
     bridge.operatorAttention.attentionFingerprint,
@@ -82,25 +86,30 @@ test('SOLVÆR decision bridge preserves experiment evidence through rendering an
   });
 });
 
+test('SOLVÆR bridge rejects a scene carrying a stale decision receipt identity', () => {
+  const baseline = runSyntheticMicrogrid(snapshot);
+  const input = bridgeInput(baseline);
+  input.scene = {
+    ...baseline.scene,
+    provenanceRef: {
+      ...baseline.scene.provenanceRef,
+      receiptId: 'receipt-stale-or-substituted',
+    },
+  };
+
+  assert.throws(
+    () => buildSolvaerDecisionRenderBridge(input),
+    /scene receiptId must match SOLVÆR decision receiptId/,
+  );
+});
+
 test('SOLVÆR candidate cannot cross the render bridge with authoritative execution flags', () => {
   const baseline = runSyntheticMicrogrid(snapshot);
+  const input = bridgeInput(baseline);
+  input.candidate = { ...input.candidate, authoritative: true };
+
   assert.throws(
-    () =>
-      buildSolvaerDecisionRenderBridge({
-        request: baseline.solvaerRequest,
-        candidate: {
-          ...baseline.proposal,
-          experimentId: baseline.experimentId,
-          snapshotId: snapshot.snapshotId,
-          authoritative: true,
-        },
-        provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId },
-        twinState: baseline.twinState,
-        forecast: baseline.forecast,
-        proposal: baseline.proposal,
-        scene: baseline.scene,
-        presentation: baseline.presentation,
-      }),
+    () => buildSolvaerDecisionRenderBridge(input),
     /authority|physical actuation|validation/i,
   );
 });
@@ -108,12 +117,8 @@ test('SOLVÆR candidate cannot cross the render bridge with authoritative execut
 test('SOLVÆR bridge rejects authority accessors without evaluating them', () => {
   const baseline = runSyntheticMicrogrid(snapshot);
   let getterReads = 0;
-  const candidate = {
-    experimentId: baseline.experimentId,
-    snapshotId: snapshot.snapshotId,
-    proposal: baseline.proposal,
-  };
-  Object.defineProperty(candidate, 'authoritative', {
+  const input = bridgeInput(baseline);
+  Object.defineProperty(input.candidate, 'authoritative', {
     enumerable: true,
     get() {
       getterReads += 1;
@@ -121,19 +126,61 @@ test('SOLVÆR bridge rejects authority accessors without evaluating them', () =>
     },
   });
 
-  assert.throws(
-    () =>
-      buildSolvaerDecisionRenderBridge({
-        request: baseline.solvaerRequest,
-        candidate,
-        provenanceRef: { experimentId: baseline.experimentId, snapshotId: snapshot.snapshotId },
-        twinState: baseline.twinState,
-        forecast: baseline.forecast,
-        proposal: baseline.proposal,
-        scene: baseline.scene,
-        presentation: baseline.presentation,
-      }),
-    /must not use accessors/,
-  );
+  assert.throws(() => buildSolvaerDecisionRenderBridge(input), /must not use accessors/);
   assert.equal(getterReads, 0);
+});
+
+test('SOLVÆR bridge rejects top-level accessors before evaluating them', () => {
+  const baseline = runSyntheticMicrogrid(snapshot);
+  const input = bridgeInput(baseline);
+  let getterReads = 0;
+  Object.defineProperty(input, 'request', {
+    enumerable: true,
+    configurable: true,
+    get() {
+      getterReads += 1;
+      return baseline.solvaerRequest;
+    },
+  });
+
+  assert.throws(() => buildSolvaerDecisionRenderBridge(input), /render bridge input.request must not use accessors/);
+  assert.equal(getterReads, 0);
+});
+
+test('SOLVÆR bridge rejects inherited, symbol-bearing, and unsupported top-level inputs', () => {
+  const baseline = runSyntheticMicrogrid(snapshot);
+  const inherited = Object.assign(Object.create({ inherited: true }), bridgeInput(baseline));
+  assert.throws(() => buildSolvaerDecisionRenderBridge(inherited), /render bridge input must be a plain object/);
+
+  const symbolBearing = bridgeInput(baseline);
+  symbolBearing[Symbol('hidden')] = 'not-evidence';
+  assert.throws(() => buildSolvaerDecisionRenderBridge(symbolBearing), /symbol properties/);
+
+  const widened = { ...bridgeInput(baseline), executeNow: true };
+  assert.throws(() => buildSolvaerDecisionRenderBridge(widened), /unsupported field: executeNow/);
+});
+
+test('SOLVÆR bridge rejects deceptive provenance descriptors without evaluating them', () => {
+  const baseline = runSyntheticMicrogrid(snapshot);
+  const input = bridgeInput(baseline);
+  let getterReads = 0;
+  Object.defineProperty(input.provenanceRef, 'experimentId', {
+    enumerable: true,
+    configurable: true,
+    get() {
+      getterReads += 1;
+      return baseline.experimentId;
+    },
+  });
+
+  assert.throws(() => buildSolvaerDecisionRenderBridge(input), /provenanceRef.experimentId must not use accessors/);
+  assert.equal(getterReads, 0);
+});
+
+test('SOLVÆR bridge rejects symbol-bearing provenance before render handoff', () => {
+  const baseline = runSyntheticMicrogrid(snapshot);
+  const input = bridgeInput(baseline);
+  input.provenanceRef[Symbol('hidden')] = baseline.experimentId;
+
+  assert.throws(() => buildSolvaerDecisionRenderBridge(input), /provenanceRef must not contain symbol properties/);
 });

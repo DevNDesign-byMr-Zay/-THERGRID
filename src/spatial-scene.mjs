@@ -3,7 +3,9 @@ import { createHash } from 'node:crypto';
 const SCENE_VERSION = 2;
 
 function requireObject(value, name) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError(`${name} must be an object`);
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${name} must be an object`);
+  }
   return value;
 }
 function finite(value, name) {
@@ -11,18 +13,54 @@ function finite(value, name) {
   return value;
 }
 function id(value, name) {
-  if (typeof value !== 'string' || !value.trim()) throw new TypeError(`${name} must be a non-empty string`);
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new TypeError(`${name} must be a non-empty string`);
+  }
   return value.trim();
 }
 function sceneId(snapshotId) {
   return `scene-${createHash('sha256').update(`thergrid-scene-v${SCENE_VERSION}:${snapshotId}`, 'utf8').digest('hex').slice(0, 16)}`;
 }
 
+function readOwnData(value, key, path) {
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  if (!descriptor) return undefined;
+  if (!descriptor.enumerable) throw new TypeError(`${path}.${key} must be enumerable data`);
+  if ('get' in descriptor || 'set' in descriptor) {
+    throw new TypeError(`${path}.${key} must not use accessors`);
+  }
+  return descriptor.value;
+}
+
+function buildSceneProvenanceRef(provenance, expectedSnapshotId) {
+  if (provenance == null) return null;
+  const value = requireObject(provenance, 'provenance');
+  if (Object.getOwnPropertySymbols(value).length > 0) {
+    throw new TypeError('provenance must not contain symbol properties');
+  }
+
+  const experimentId = id(readOwnData(value, 'experimentId', 'provenance'), 'provenance.experimentId');
+  const snapshotId = id(readOwnData(value, 'snapshotId', 'provenance'), 'provenance.snapshotId');
+  if (snapshotId !== expectedSnapshotId) {
+    throw new TypeError('provenance.snapshotId must match twinState.snapshotId');
+  }
+  const receiptValue = readOwnData(value, 'receiptId', 'provenance');
+  const receiptId = receiptValue == null ? null : id(receiptValue, 'provenance.receiptId');
+
+  return Object.freeze({ experimentId, snapshotId, receiptId });
+}
+
 export function getSpatialSceneId(snapshotId) {
   return sceneId(id(snapshotId, 'snapshotId'));
 }
 
-export function buildSpatialScene({ twinState, proposal = null, alerts = [], provenance = null, attention = [] } = {}) {
+export function buildSpatialScene({
+  twinState,
+  proposal = null,
+  alerts = [],
+  provenance = null,
+  attention = [],
+} = {}) {
   const twin = requireObject(twinState, 'twinState');
   const totals = requireObject(twin.totals, 'twinState.totals');
   finite(totals.generationKw, 'twinState.totals.generationKw');
@@ -31,10 +69,13 @@ export function buildSpatialScene({ twinState, proposal = null, alerts = [], pro
   if (!Array.isArray(alerts)) throw new TypeError('alerts must be an array');
   if (!Array.isArray(attention)) throw new TypeError('attention must be an array');
 
+  const snapshotId = id(twin.snapshotId, 'twinState.snapshotId');
+  const provenanceRef = buildSceneProvenanceRef(provenance, snapshotId);
+
   return {
     sceneVersion: SCENE_VERSION,
-    sceneId: sceneId(id(twin.snapshotId, 'twinState.snapshotId')),
-    snapshotId: id(twin.snapshotId, 'twinState.snapshotId'),
+    sceneId: sceneId(snapshotId),
+    snapshotId,
     observedAt: id(twin.observedAt, 'twinState.observedAt'),
     coordinateSystem: 'thergrid-logical-grid-v1',
     rendererContract: {
@@ -58,10 +99,13 @@ export function buildSpatialScene({ twinState, proposal = null, alerts = [], pro
         priority: finite(item.priority ?? index, `attention[${index}].priority`),
         severity: id(item.severity ?? 'info', `attention[${index}].severity`),
         reason: id(item.reason ?? 'Unspecified', `attention[${index}].reason`),
-        evidenceRef: item.evidenceRef == null ? null : id(item.evidenceRef, `attention[${index}].evidenceRef`),
+        evidenceRef:
+          item.evidenceRef == null
+            ? null
+            : id(item.evidenceRef, `attention[${index}].evidenceRef`),
         advisoryOnly: true,
       })),
-      provenance: Boolean(provenance),
+      provenance: Boolean(provenanceRef),
     },
     metrics: {
       generationKw: totals.generationKw,
@@ -69,7 +113,7 @@ export function buildSpatialScene({ twinState, proposal = null, alerts = [], pro
       balanceKw: totals.balanceKw,
       renewableSharePercent: totals.renewableSharePercent ?? null,
     },
-    provenanceRef: provenance?.experimentId ?? provenance?.receiptId ?? null,
+    provenanceRef,
     proposal: proposal
       ? {
           strategy: id(proposal.strategy, 'proposal.strategy'),
