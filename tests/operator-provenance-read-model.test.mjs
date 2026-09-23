@@ -52,6 +52,7 @@ function fixture() {
   });
   const attention = buildSolvaerOperatorAttention({
     evidence,
+    twinState: run.twinState,
     decision: {
       experimentId: run.experimentId,
       requestId: run.solvaerRequest.requestId,
