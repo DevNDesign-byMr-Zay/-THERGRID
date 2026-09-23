@@ -81,6 +81,53 @@ test('routes a receipt-bound SOLVÆR candidate through simulation without promot
   assert.equal(Object.isFrozen(result.collaborationEvidenceRef), true);
 });
 
+test('binds the request identity to the exact simulation twin state', () => {
+  const fixture = collaborationFixture('snapshot-solvaer-twin-bind');
+  const mismatchedTwinState = {
+    ...fixture.pipeline.twinState,
+    snapshotId: 'snapshot-solvaer-other-twin',
+  };
+
+  assert.throws(
+    () =>
+      evaluateSolvaerCandidate({
+        request: fixture.pipeline.solvaerRequest,
+        candidate: fixture.candidate,
+        provenanceRef: fixture.provenanceRef,
+        collaborationEvidence: fixture.collaborationEvidence,
+        twinState: mismatchedTwinState,
+        proposal: fixture.pipeline.proposal,
+      }),
+    /request snapshotId must match twinState.snapshotId/,
+  );
+});
+
+test('returns immutable snapshots without freezing caller-owned inputs', () => {
+  const fixture = collaborationFixture('snapshot-solvaer-immutable-gateway');
+  const candidate = { ...fixture.candidate };
+  const provenanceRef = { ...fixture.provenanceRef };
+  const result = evaluateSolvaerCandidate({
+    request: fixture.pipeline.solvaerRequest,
+    candidate,
+    provenanceRef,
+    collaborationEvidence: fixture.collaborationEvidence,
+    twinState: fixture.pipeline.twinState,
+    proposal: fixture.pipeline.proposal,
+  });
+
+  assert.equal(Object.isFrozen(result), true);
+  assert.equal(Object.isFrozen(result.accepted), true);
+  assert.equal(Object.isFrozen(result.simulation), true);
+  assert.equal(Object.isFrozen(result.simulationEvidence), true);
+  assert.equal(Object.isFrozen(candidate), false);
+  assert.equal(Object.isFrozen(provenanceRef), false);
+
+  candidate.dispatchDeltaKw = 9;
+  provenanceRef.source = 'changed';
+  assert.notEqual(result.accepted.candidate.dispatchDeltaKw, 9);
+  assert.equal(result.accepted.provenanceRef.source, undefined);
+});
+
 test('rejects missing or tampered collaboration evidence before simulation', () => {
   const fixture = collaborationFixture('snapshot-solvaer-required-evidence');
   const args = {
