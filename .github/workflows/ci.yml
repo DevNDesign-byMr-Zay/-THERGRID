@@ -19,6 +19,14 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Resolve proposed dependency lock
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Print proposed package lock
+        shell: bash
+        run: |
+          echo "::group::THERGRID_PACKAGE_LOCK_BEGIN"
+          cat package-lock.json
+          echo "::endgroup::"
       - name: Reproducible install
         run: npm ci --ignore-scripts
       - name: Dependency security audit
