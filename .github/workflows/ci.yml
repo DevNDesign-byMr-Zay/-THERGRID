@@ -27,8 +27,6 @@ jobs:
         run: npm run syntax
       - name: Lint maintained JavaScript
         run: npm run lint
-      - name: Print formatted adversarial test
-        run: npx --yes --package prettier@3.6.2 prettier tests/adversarial-evaluation.test.mjs
       - name: Check formatting
         run: npm run format:check
       - name: Tests with coverage
