@@ -35,3 +35,30 @@ jobs:
         run: |
           npm run demo
           npm run dashboard-demo
+
+  container:
+    name: Container runtime smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate Compose configuration
+        run: docker compose config --quiet
+      - name: Build and start runtime service
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose up --build --detach
+          trap 'docker compose down --volumes --remove-orphans' EXIT
+
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8080/health >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+
+          curl --fail --silent http://127.0.0.1:8080/health
+          curl --fail --silent http://127.0.0.1:8080/status
+          docker compose ps
