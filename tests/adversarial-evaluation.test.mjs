@@ -21,7 +21,13 @@ const snapshot = {
       stateOfChargeKwh: 60,
     },
     { id: 'load-1', kind: 'load', powerKw: 45, flexible: true },
-    { id: 'grid-1', kind: 'grid_interconnect', powerKw: -15, importLimitKw: 80, exportLimitKw: 40 },
+    {
+      id: 'grid-1',
+      kind: 'grid_interconnect',
+      powerKw: -15,
+      importLimitKw: 80,
+      exportLimitKw: 40,
+    },
   ],
   topology: {
     nodes: ['node-a'],
@@ -44,6 +50,37 @@ test('builds every adversarial fixture deterministically', () => {
     });
     assert.deepEqual(first, second);
   }
+});
+
+test('freezes captured fixture state behind its fingerprint', () => {
+  const source = structuredClone(snapshot);
+  const testCase = buildAdversarialCase('fallback-activation', source);
+  const fingerprint = testCase.fingerprint;
+
+  assert.equal(Object.isFrozen(testCase), true);
+  assert.equal(Object.isFrozen(testCase.snapshot), true);
+  assert.equal(Object.isFrozen(testCase.snapshot.assets), true);
+  assert.equal(Object.isFrozen(testCase.snapshot.assets[0]), true);
+  assert.equal(Object.isFrozen(testCase.metadata), true);
+
+  source.assets[0].powerKw = 999;
+  assert.equal(testCase.snapshot.assets[0].powerKw, 40);
+  assert.equal(testCase.fingerprint, fingerprint);
+  assert.throws(() => {
+    testCase.snapshot.assets[0].powerKw = 100;
+  }, TypeError);
+});
+
+test('returns immutable evaluation evidence', () => {
+  const result = evaluateAdversarialCase(buildAdversarialCase('solver-timeout', snapshot));
+
+  assert.equal(result.safe, true);
+  assert.equal(Object.isFrozen(result), true);
+  assert.equal(Object.isFrozen(result.details), true);
+  assert.equal(Object.isFrozen(result.details.promotion), true);
+  assert.throws(() => {
+    result.details.promotion.status = 'eligible';
+  }, TypeError);
 });
 
 test('rejects stale telemetry under the freshness policy', () => {

@@ -13,6 +13,11 @@ const DEFAULT_MAX_TELEMETRY_AGE_MS = 5 * 60 * 1000;
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
+function deepFreeze(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
+}
 function fingerprint(value) {
   return createHash('sha256').update(JSON.stringify(value), 'utf8').digest('hex');
 }
@@ -77,12 +82,12 @@ export function buildAdversarialCase(name, snapshot, { now = Date.now() } = {}) 
       metadata = { seed: 7, alternateSeed: 8 };
       break;
   }
-  return Object.freeze({
+  return deepFreeze({
     version: EVALUATION_VERSION,
     name,
     fingerprint: fingerprint(candidate),
     snapshot: candidate,
-    metadata: Object.freeze(metadata),
+    metadata,
   });
 }
 
@@ -199,7 +204,7 @@ export function evaluateAdversarialCase(testCase, { now = Date.now() } = {}) {
     reason = error instanceof Error ? error.message : String(error);
   }
   const expectedRejection = value.name !== 'fallback-activation';
-  return Object.freeze({
+  return deepFreeze({
     version: EVALUATION_VERSION,
     fixture: value.name,
     accepted,
