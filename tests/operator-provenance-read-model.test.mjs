@@ -91,14 +91,8 @@ test('creates a deterministic read-only operator view anchored to sealed attenti
   );
   assert.equal(view.version, 2);
   assert.equal(view.items.length, artifacts.attention.items.length);
-  assert.deepEqual(
-    view.items[0].assetNodeRefs,
-    artifacts.attention.items[0].assetNodeRefs,
-  );
-  assert.deepEqual(
-    view.items[1].assetNodeRefs,
-    artifacts.attention.items[1].assetNodeRefs,
-  );
+  assert.deepEqual(view.items[0].assetNodeRefs, artifacts.attention.items[0].assetNodeRefs);
+  assert.deepEqual(view.items[1].assetNodeRefs, artifacts.attention.items[1].assetNodeRefs);
   assert.deepEqual(view.safety, {
     advisoryOnly: true,
     authoritative: false,
