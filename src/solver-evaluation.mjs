@@ -27,6 +27,53 @@ function canonical(value) {
   return value;
 }
 
+function snapshotEvidence(value, path = 'evidence', seen = new WeakSet()) {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new TypeError(`${path} numbers must be finite`);
+    return value;
+  }
+  if (!value || typeof value !== 'object') {
+    throw new TypeError(`${path} must contain JSON-compatible evidence`);
+  }
+  if (Object.getOwnPropertySymbols(value).length > 0) {
+    throw new TypeError(`${path} must not contain symbol properties`);
+  }
+  if (seen.has(value)) throw new TypeError(`${path} must not contain circular references`);
+  seen.add(value);
+
+  let copy;
+  if (Array.isArray(value)) {
+    copy = value.map((item, index) => snapshotEvidence(item, `${path}[${index}]`, seen));
+  } else {
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) {
+      throw new TypeError(`${path} must use plain objects`);
+    }
+    copy = {};
+    for (const [key, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(value))) {
+      if (!descriptor.enumerable || 'get' in descriptor || 'set' in descriptor) {
+        throw new TypeError(`${path}.${key} must be enumerable data`);
+      }
+      Object.defineProperty(copy, key, {
+        value: snapshotEvidence(descriptor.value, `${path}.${key}`, seen),
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+    }
+  }
+
+  seen.delete(value);
+  return copy;
+}
+
+function deepFreeze(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
+}
+
 export function buildSolverEvidence({
   experimentId,
   candidate,
@@ -41,7 +88,7 @@ export function buildSolverEvidence({
   provenance = [],
 } = {}) {
   const c = object(candidate, 'candidate');
-  return Object.freeze({
+  return deepFreeze({
     evaluationVersion: EVALUATION_VERSION,
     experimentId: text(experimentId, 'experimentId'),
     inputSnapshotId: text(inputSnapshotId, 'inputSnapshotId'),
@@ -50,7 +97,7 @@ export function buildSolverEvidence({
       solver: text(c.solver ?? 'unknown', 'candidate.solver'),
       version: text(c.version ?? 'unversioned', 'candidate.version'),
     },
-    constraints,
+    constraints: constraints == null ? null : snapshotEvidence(constraints, 'constraints'),
     seed,
     objective: finite(objective, 'objective'),
     feasible: Boolean(feasible),
