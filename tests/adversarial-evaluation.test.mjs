@@ -136,5 +136,8 @@ test('seed drift changes evidence fingerprints', () => {
   );
   assert.equal(result.accepted, false);
   assert.equal(result.safe, true);
-  assert.notEqual(result.details.firstFingerprint, result.details.secondFingerprint);
+  assert.notEqual(
+    result.details.firstFingerprint,
+    result.details.secondFingerprint,
+  );
 });
