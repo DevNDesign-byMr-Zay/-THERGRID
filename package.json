@@ -12,6 +12,9 @@
     "syntax": "find src tests scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check",
     "demo": "node scripts/demo.mjs",
     "dashboard-demo": "node scripts/dashboard-demo.mjs",
-    "check": "npm run syntax && npm run coverage && npm run demo && npm run dashboard-demo"
+    "check": "npm run syntax && npm run lint && npm run format:check && npm run coverage && npm run demo && npm run dashboard-demo",
+    "lint": "npx --yes --package eslint@10.10.0 eslint --max-warnings=0 src tests scripts",
+    "format:check": "npx --yes --package prettier@3.6.2 prettier --check 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs'",
+    "format": "npx --yes --package prettier@3.6.2 prettier --write 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs'"
   }
 }
