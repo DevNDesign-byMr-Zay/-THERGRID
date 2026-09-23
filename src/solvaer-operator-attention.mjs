@@ -306,8 +306,7 @@ export function validateSolvaerOperatorAttention(attention) {
         (expected) =>
           normalized.items[0].priority === expected.priority &&
           normalized.items[0].severity === expected.severity &&
-          normalized.items[0].recommendedAdvisoryAction ===
-            expected.recommendedAdvisoryAction,
+          normalized.items[0].recommendedAdvisoryAction === expected.recommendedAdvisoryAction,
       )
     ) {
       return false;
