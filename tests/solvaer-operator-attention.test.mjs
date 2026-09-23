@@ -110,14 +110,8 @@ test('operator attention is derived from validated SOLVÆR evidence', () => {
   assert.equal(attention.items[1].affectedMetric, 'promotion.eligibility');
   assert.equal(attention.items[0].stalenessBoundary, `snapshot:${attention.snapshotId}`);
   assert.equal(attention.items[1].recommendedAdvisoryAction, 'retain-simulation-only');
-  assert.deepEqual(
-    attention.items[0].assetNodeRefs,
-    baseline.twinState.topology.assetNodeRefs,
-  );
-  assert.deepEqual(
-    attention.items[1].assetNodeRefs,
-    baseline.twinState.topology.assetNodeRefs,
-  );
+  assert.deepEqual(attention.items[0].assetNodeRefs, baseline.twinState.topology.assetNodeRefs);
+  assert.deepEqual(attention.items[1].assetNodeRefs, baseline.twinState.topology.assetNodeRefs);
   assert.equal(attention.safety.advisoryOnly, true);
   assert.equal(attention.safety.actuatesHardware, false);
   assert.match(attention.attentionFingerprint, /^[a-f0-9]{64}$/);
