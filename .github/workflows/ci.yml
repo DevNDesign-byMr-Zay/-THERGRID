@@ -35,3 +35,7 @@ jobs:
         run: |
           npm run demo
           npm run dashboard-demo
+      - name: Validate container configuration
+        run: docker compose config --quiet
+      - name: Build health service image
+        run: docker compose build health
