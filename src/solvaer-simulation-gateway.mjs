@@ -18,7 +18,9 @@ function text(value, name) {
 function snapshot(value) {
   if (Array.isArray(value)) return value.map(snapshot);
   if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, snapshot(child)]));
+    return Object.fromEntries(
+      Object.entries(value).map(([key, child]) => [key, snapshot(child)]),
+    );
   }
   return value;
 }
@@ -28,7 +30,6 @@ function deepFreeze(value) {
   for (const child of Object.values(value)) deepFreeze(child);
   return Object.freeze(value);
 }
-
 
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
@@ -119,6 +120,10 @@ export function evaluateSolvaerCandidate({
     simulationEvidence: snapshot(simulationEvidence),
     promotionEligible: false,
     handoff: 'simulation-required',
-    safety: { advisoryOnly: true, authoritative: false, actuatesHardware: false },
+    safety: {
+      advisoryOnly: true,
+      authoritative: false,
+      actuatesHardware: false,
+    },
   });
 }
