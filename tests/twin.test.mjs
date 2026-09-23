@@ -24,6 +24,15 @@ test('synthetic microgrid produces deterministic balanced twin state', async () 
     topology: {
       nodeCount: 1,
       connectionCount: 6,
+      nodes: ['bus-main'],
+      assetNodeRefs: [
+        { assetId: 'solar-1', nodeId: 'bus-main' },
+        { assetId: 'wind-1', nodeId: 'bus-main' },
+        { assetId: 'battery-1', nodeId: 'bus-main' },
+        { assetId: 'load-fixed-1', nodeId: 'bus-main' },
+        { assetId: 'load-flex-1', nodeId: 'bus-main' },
+        { assetId: 'grid-1', nodeId: 'bus-main' },
+      ],
     },
     totals: {
       generationKw: 120,
