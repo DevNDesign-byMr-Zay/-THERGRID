@@ -75,7 +75,10 @@ test('runs the complete deterministic vertical slice with evidence gates', () =>
     physicalActuation: false,
   });
   assert.equal(first.scene.evidence.solverComparison.length, 1);
-  assert.equal(first.scene.evidence.solverComparison[0].candidate.model, 'thergrid-classical-reference');
+  assert.equal(
+    first.scene.evidence.solverComparison[0].candidate.model,
+    'thergrid-classical-reference',
+  );
   assert.equal(first.scene.evidence.solverComparison[0].advisoryOnly, true);
   assert.deepEqual(first.scene.evidence.policyGates, {
     snapshotId: fixture.snapshotId,
