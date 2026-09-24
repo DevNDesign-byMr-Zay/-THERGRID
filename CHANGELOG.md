@@ -13,6 +13,7 @@
 
 ### Changed
 
+- Release readiness now preserves the security policy, contribution guide, review ownership, and pull-request validation template as required governance.
 - Gated releases now attach a CycloneDX dependency SBOM, exact commit evidence, and SHA-256 checksums.
 - Spatial and operator presentation paths now retain validated source identity instead of reconstructing or inventing asset/node scope downstream.
 - Renderer-bound evidence remains advisory-only, non-authoritative, and non-actuating even when simulation or solver evidence is eligible for operator review.
