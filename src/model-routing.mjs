@@ -20,6 +20,14 @@ export function createModelRoute({ model = 'VÆLON', version = 'unbound' } = {})
   };
 }
 
+/**
+ * @param {{
+ *   route?: { resolve: (capability: unknown) => any },
+ *   capability?: unknown,
+ *   status?: string,
+ *   fallbackUsed?: boolean
+ * }} [options]
+ */
 export function buildModelEvidence({
   route,
   capability,
