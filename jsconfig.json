@@ -15,7 +15,9 @@
     "src/runtime-observability.mjs",
     "src/error-reporting.mjs",
     "src/model-routing.mjs",
-    "src/solvaer-optimization-contract.mjs"
+    "src/solvaer-optimization-contract.mjs",
+    "src/contracts.mjs",
+    "src/twin.mjs"
   ],
   "exclude": [
     "node_modules"
