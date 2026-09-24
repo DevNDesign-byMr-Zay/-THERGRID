@@ -33,6 +33,7 @@ const RuntimeStatusSchema = z
   })
   .strict();
 
+/** @param {Record<string, string | undefined>} environment */
 export function parseRuntimeConfig(environment = {}) {
   const parsed = RuntimeConfigSchema.parse({
     port: environment.THERGRID_PORT ?? 8080,

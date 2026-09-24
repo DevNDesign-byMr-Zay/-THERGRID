@@ -58,6 +58,7 @@ THERGRID targets Node.js 22 and commits its lockfile so a fresh clone can reprod
 npm ci --ignore-scripts
 npm audit --audit-level=moderate
 npm run syntax
+npm run typecheck
 npm test
 npm run coverage
 npm run demo
