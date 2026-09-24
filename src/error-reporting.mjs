@@ -6,6 +6,7 @@ function boundedText(value, name) {
   return text;
 }
 
+/** @param {Record<string, unknown>} [context] */
 function safeContext(context = {}) {
   if (!context || typeof context !== 'object' || Array.isArray(context)) {
     throw new TypeError('error context must be a plain object');
