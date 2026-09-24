@@ -20,6 +20,7 @@
 - Spatial and operator presentation paths now retain validated source identity instead of reconstructing or inventing asset/node scope downstream.
 - Renderer-bound evidence remains advisory-only, non-authoritative, and non-actuating even when simulation or solver evidence is eligible for operator review.
 - Release verification now proves the repository's reproducibility, safety, evidence, and security gates before a release is considered ready.
+- Dependency maintenance now has an explicit weekly npm and GitHub Actions update contract, and release readiness fails if that automation disappears.
 
 ### Release policy
 
