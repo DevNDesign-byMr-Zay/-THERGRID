@@ -23,6 +23,8 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Dependency security audit
         run: npm audit --audit-level=moderate
+      - name: Verify release-readiness contract
+        run: npm run verify:release
       - name: Syntax check
         run: npm run syntax
       - name: Lint maintained JavaScript

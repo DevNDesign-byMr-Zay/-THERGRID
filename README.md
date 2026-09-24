@@ -61,11 +61,12 @@ npm run syntax
 npm test
 npm run coverage
 npm run demo
+npm run verify:release
 ```
 
 `npm run demo` executes the deterministic synthetic-microgrid vertical slice and prints a compact evidence summary containing the snapshot, experiment, receipt, scene, render target, provenance result, promotion status, and the advisory SOLVÆR handoff state. The demo fails closed if simulation or provenance validation fails or if the promotion gate becomes authoritative.
 
-Pull requests and pushes to `main` run the same reproducible install, dependency audit, syntax checks, test coverage, and demo path. CodeQL runs separately as the maintained static security-analysis gate.
+Pull requests and pushes to `main` run the same reproducible install, dependency audit, release-readiness contract, syntax checks, test coverage, demo path, and container smoke test. CodeQL runs separately as the maintained static security-analysis gate. `npm run verify:release` confirms those maintained quality/security/safety gates are still present before a real semantic tag is cut; it does not claim that a release already exists.
 
 ## Engineering rules
 
