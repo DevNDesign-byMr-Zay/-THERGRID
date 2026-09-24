@@ -72,7 +72,7 @@ Responsibilities:
 - negotiate presentation against declared device capabilities
 - support 2D, 3D, AR/VR, and future holographic clients without changing core twin logic
 - surface provenance and confidence alongside visual state
-- carry validated asset/node power-flow evidence, forecast deltas, and simulation outcomes as renderer-neutral data rather than UI-invented state
+- carry validated asset/node power-flow evidence, forecast deltas, simulation outcomes, and solver comparison evidence as renderer-neutral data rather than UI-invented state
 - stop at a renderer-ready plan; physical actuation remains outside this layer
 
 Output: `SpatialScene` plus an optional `HolographicPresentationPlan`. The scene keeps compatibility layer flags, but its operational evidence is sourced from validated TwinState/Forecast/Simulation contracts and is carried through the checksummed renderer packet.
