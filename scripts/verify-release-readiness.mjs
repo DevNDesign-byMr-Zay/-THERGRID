@@ -4,6 +4,7 @@ const REQUIRED_FILES = Object.freeze([
   'Dockerfile',
   'compose.yml',
   'package-lock.json',
+  'CHANGELOG.md',
   'README.md',
   'docs/ARCHITECTURE.md',
   'docs/ROADMAP.md',
@@ -23,8 +24,9 @@ async function main() {
   const root = new URL('../', import.meta.url);
   await Promise.all(REQUIRED_FILES.map((path) => access(new URL(path, root))));
 
-  const [pkg, readme, ci, codeql] = await Promise.all([
+  const [pkg, changelog, readme, ci, codeql] = await Promise.all([
     text('package.json').then(JSON.parse),
+    text('CHANGELOG.md'),
     text('README.md'),
     text('.github/workflows/ci.yml'),
     text('.github/workflows/codeql.yml'),
@@ -53,6 +55,12 @@ async function main() {
       `missing script: ${name}`,
     );
   }
+
+  assert(/## Unreleased/u.test(changelog), 'changelog must describe the current unreleased state');
+  assert(
+    /No hosted GitHub release or tag is claimed/iu.test(changelog),
+    'changelog must not fabricate a published release',
+  );
 
   assert(/npm ci --ignore-scripts/u.test(ci), 'CI must use reproducible npm install');
   assert(/npm audit --audit-level=moderate/u.test(ci), 'CI must audit dependencies');
