@@ -19,6 +19,7 @@
 
 ### Release policy
 
+- Current package candidate: `0.1.0`. No hosted tag or release is claimed until the gated manual release workflow publishes it.
 - This changelog records real repository work only.
 - No hosted GitHub release or tag is claimed until one is actually published.
 - Advanced solver output never becomes authoritative solely because it outperforms a baseline.
