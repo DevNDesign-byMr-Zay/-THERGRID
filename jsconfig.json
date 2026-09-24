@@ -6,13 +6,11 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ES2022",
-    "types": [
-      "node"
-    ],
     "skipLibCheck": true,
     "strict": false
   },
   "include": [
+    "types/checkjs-shims.d.ts",
     "src/platform-health-service.mjs",
     "src/runtime-observability.mjs"
   ],
