@@ -33,17 +33,16 @@ async function main() {
   const root = new URL('../', import.meta.url);
   await Promise.all(REQUIRED_FILES.map((path) => access(new URL(path, root))));
 
-  const [pkg, changelog, readme, ci, codeql, release, envExample, dependabot] =
-    await Promise.all([
-      text('package.json').then(JSON.parse),
-      text('CHANGELOG.md'),
-      text('README.md'),
-      text('.github/workflows/ci.yml'),
-      text('.github/workflows/codeql.yml'),
-      text('.github/workflows/release.yml'),
-      text('.env.example'),
-      text('.github/dependabot.yml'),
-    ]);
+  const [pkg, changelog, readme, ci, codeql, release, envExample, dependabot] = await Promise.all([
+    text('package.json').then(JSON.parse),
+    text('CHANGELOG.md'),
+    text('README.md'),
+    text('.github/workflows/ci.yml'),
+    text('.github/workflows/codeql.yml'),
+    text('.github/workflows/release.yml'),
+    text('.env.example'),
+    text('.github/dependabot.yml'),
+  ]);
 
   assert(/^\d+\.\d+\.\d+$/u.test(pkg.version), 'package version must be semantic');
   assert(pkg.private === true, 'THERGRID package must remain private');
@@ -94,10 +93,7 @@ async function main() {
     'Dependabot must track GitHub Actions',
   );
   const weeklySchedules = dependabot.match(/interval:\s*"?weekly"?/gu) ?? [];
-  assert(
-    weeklySchedules.length >= 2,
-    'Dependabot must run weekly for npm and GitHub Actions',
-  );
+  assert(weeklySchedules.length >= 2, 'Dependabot must run weekly for npm and GitHub Actions');
   assert(/npm run coverage/u.test(ci), 'CI must enforce coverage');
   assert(/npm run demo/u.test(ci), 'CI must run evidence demo');
   assert(/npm run dashboard-demo/u.test(ci), 'CI must run dashboard demo');
