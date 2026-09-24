@@ -8,6 +8,7 @@ const REQUIRED_FILES = Object.freeze([
   'README.md',
   'docs/ARCHITECTURE.md',
   'docs/ROADMAP.md',
+  'docs/RELEASE_READINESS.md',
   '.github/workflows/ci.yml',
   '.github/workflows/codeql.yml',
   '.github/workflows/release.yml',
@@ -97,6 +98,14 @@ async function main() {
   assert(
     /release-artifacts\.sha256/u.test(release),
     'release workflow must checksum attached evidence',
+  );
+  assert(
+    /release-manifest\.json/u.test(release),
+    'release workflow must attach an exact provenance manifest',
+  );
+  assert(
+    /RELEASE_TAG/u.test(release) && /GITHUB_SHA/u.test(release),
+    'release manifest must bind requested tag and exact commit',
   );
   assert(
     /gh release create/u.test(release),
