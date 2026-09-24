@@ -6,6 +6,7 @@ const REQUIRED_FILES = Object.freeze([
   'docker-compose.yml',
   '.env.example',
   'package-lock.json',
+  'jsconfig.json',
   'CHANGELOG.md',
   'README.md',
   'docs/ARCHITECTURE.md',
@@ -59,6 +60,7 @@ async function main() {
     'demo',
     'dashboard-demo',
     'lint',
+    'typecheck',
     'format:check',
     'check',
     'verify:release',
@@ -102,6 +104,7 @@ async function main() {
   );
   const weeklySchedules = dependabot.match(/interval:\s*"?weekly"?/gu) ?? [];
   assert(weeklySchedules.length >= 2, 'Dependabot must run weekly for npm and GitHub Actions');
+  assert(/npm run typecheck/u.test(ci), 'CI must type-check maintained JavaScript');
   assert(/npm run coverage/u.test(ci), 'CI must enforce coverage');
   assert(/npm run demo/u.test(ci), 'CI must run evidence demo');
   assert(/npm run dashboard-demo/u.test(ci), 'CI must run dashboard demo');

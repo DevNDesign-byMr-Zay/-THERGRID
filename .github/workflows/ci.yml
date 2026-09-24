@@ -37,6 +37,8 @@ jobs:
         run: npm run syntax
       - name: Lint maintained JavaScript
         run: npm run lint
+      - name: Type-check maintained JavaScript
+        run: npm run typecheck
       - name: Check formatting
         run: npm run format:check
       - name: Tests with coverage
