@@ -1,7 +1,7 @@
 import { deriveTwinState } from './twin.mjs';
 import { buildPersistenceForecast, buildBaselineOperatingProposal } from './planning.mjs';
 import { buildDecisionReceipt, fingerprintDecisionReceipt } from './decision-receipt.mjs';
-import { buildSpatialScene } from './spatial-scene.mjs';
+import { buildSpatialScene, getSpatialSceneId } from './spatial-scene.mjs';
 import { planHolographicPresentation } from './holographic-device-registry.mjs';
 import { compileHolographicRenderPacket } from './holographic-renderer-contract.mjs';
 import { simulateProposal } from './simulation.mjs';
@@ -10,7 +10,11 @@ import {
   fingerprintExperiment,
   validateProvenanceGraph,
 } from './provenance.mjs';
-import { buildSolverEvidence, evaluatePromotionGate } from './solver-evaluation.mjs';
+import {
+  buildSolverEvidence,
+  compareSolverEvidence,
+  evaluatePromotionGate,
+} from './solver-evaluation.mjs';
 import { createSolvaerOptimizationRequest } from './solvaer-optimization-contract.mjs';
 
 const DEFAULT_PRESENTATION_DEVICES = Object.freeze([
@@ -53,11 +57,48 @@ export function runSyntheticMicrogrid(
   });
   const receiptWithId = { ...receipt, receiptId };
   const provenanceSeed = { experimentId, snapshotId: snapshot.snapshotId, receiptId };
+  const anticipatedSceneId = getSpatialSceneId(snapshot.snapshotId);
+  const solverEvidence = buildSolverEvidence({
+    experimentId,
+    inputSnapshotId: snapshot.snapshotId,
+    candidate: {
+      model: 'thergrid-classical-reference',
+      solver: 'thergrid-reference',
+      version: 'v1',
+    },
+    constraints: proposal.constraints ?? null,
+    seed: simulation.seed ?? null,
+    objective: Math.abs(simulation.outputs.residualBalanceKw),
+    feasible:
+      simulation.status === 'passed' && Math.abs(simulation.outputs.residualBalanceKw) <= 0.000001,
+    runtimeMs: simulation.runtimeMs,
+    timeout: false,
+    provenance: [receiptId, anticipatedSceneId],
+  });
+  const solverComparison = compareSolverEvidence([solverEvidence]);
+  const preRenderPolicyGates = Object.freeze({
+    status: simulation.status === 'passed' ? 'eligible-for-render-review' : 'rejected',
+    checks: Object.freeze({
+      simulationPassed: simulation.status === 'passed',
+      receiptValid: receiptId === fingerprintDecisionReceipt(receipt),
+      solverEvidenceComplete:
+        solverEvidence.feasible === true &&
+        solverEvidence.timeout === false &&
+        solverEvidence.provenance.length >= 2,
+    }),
+    authoritative: false,
+    reason:
+      simulation.status === 'passed'
+        ? 'validated evidence may be presented for operator review'
+        : 'simulation evidence is not eligible for operator review',
+  });
   const scene = buildSpatialScene({
     twinState,
     proposal,
     forecast,
     simulation,
+    solverComparison,
+    policyGates: preRenderPolicyGates,
     provenance: provenanceSeed,
   });
   const presentation = planHolographicPresentation({
@@ -93,23 +134,6 @@ export function runSyntheticMicrogrid(
       'spatial-scene',
       'render-packet',
     ],
-  });
-  const solverEvidence = buildSolverEvidence({
-    experimentId,
-    inputSnapshotId: snapshot.snapshotId,
-    candidate: {
-      model: 'thergrid-classical-reference',
-      solver: 'thergrid-reference',
-      version: 'v1',
-    },
-    constraints: proposal.constraints ?? null,
-    seed: simulation.seed ?? null,
-    objective: Math.abs(simulation.outputs.residualBalanceKw),
-    feasible:
-      simulation.status === 'passed' && Math.abs(simulation.outputs.residualBalanceKw) <= 0.000001,
-    runtimeMs: simulation.runtimeMs,
-    timeout: false,
-    provenance: [receiptId, scene.sceneId],
   });
   const promotion = evaluatePromotionGate({
     evidence: solverEvidence,
