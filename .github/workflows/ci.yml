@@ -28,19 +28,7 @@ jobs:
       - name: Lint maintained JavaScript
         run: npm run lint
       - name: Check formatting
-        shell: bash
-        run: |
-          if ! npm run format:check; then
-            npx --yes --package prettier@3.6.2 prettier --write \
-              src/spatial-scene.mjs \
-              tests/pipeline.test.mjs \
-              tests/spatial-scene-provenance.test.mjs
-            git diff -- \
-              src/spatial-scene.mjs \
-              tests/pipeline.test.mjs \
-              tests/spatial-scene-provenance.test.mjs
-            exit 1
-          fi
+        run: npm run format:check
       - name: Tests with coverage
         run: npm run coverage
       - name: Reproducible evidence and dashboard demos
