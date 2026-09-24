@@ -13,6 +13,7 @@ const REQUIRED_FILES = Object.freeze([
   '.github/workflows/ci.yml',
   '.github/workflows/codeql.yml',
   '.github/workflows/release.yml',
+  '.github/dependabot.yml',
   'SECURITY.md',
   'CONTRIBUTING.md',
   '.github/CODEOWNERS',
@@ -32,7 +33,7 @@ async function main() {
   const root = new URL('../', import.meta.url);
   await Promise.all(REQUIRED_FILES.map((path) => access(new URL(path, root))));
 
-  const [pkg, changelog, readme, ci, codeql, release, envExample] = await Promise.all([
+  const [pkg, changelog, readme, ci, codeql, release, envExample, dependabot] = await Promise.all([
     text('package.json').then(JSON.parse),
     text('CHANGELOG.md'),
     text('README.md'),
@@ -40,6 +41,7 @@ async function main() {
     text('.github/workflows/codeql.yml'),
     text('.github/workflows/release.yml'),
     text('.env.example'),
+    text('.github/dependabot.yml'),
   ]);
 
   assert(/^\d+\.\d+\.\d+$/u.test(pkg.version), 'package version must be semantic');
@@ -82,6 +84,16 @@ async function main() {
 
   assert(/npm ci --ignore-scripts/u.test(ci), 'CI must use reproducible npm install');
   assert(/npm audit --audit-level=moderate/u.test(ci), 'CI must audit dependencies');
+  assert(
+    /package-ecosystem:\s*"?npm"?/u.test(dependabot),
+    'Dependabot must track npm dependencies',
+  );
+  assert(
+    /package-ecosystem:\s*"?github-actions"?/u.test(dependabot),
+    'Dependabot must track GitHub Actions',
+  );
+  const weeklySchedules = dependabot.match(/interval:\s*"?weekly"?/gu) ?? [];
+  assert(weeklySchedules.length >= 2, 'Dependabot must run weekly for npm and GitHub Actions');
   assert(/npm run coverage/u.test(ci), 'CI must enforce coverage');
   assert(/npm run demo/u.test(ci), 'CI must run evidence demo');
   assert(/npm run dashboard-demo/u.test(ci), 'CI must run dashboard demo');
