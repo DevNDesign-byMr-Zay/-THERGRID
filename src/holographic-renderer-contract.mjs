@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-const RENDERER_CONTRACT_VERSION = 2;
+const RENDERER_CONTRACT_VERSION = 3;
 const TARGETS = new Set(['holo-mat', 'projector', 'volumetric-3d', 'ar-vr', 'web-dashboard']);
 const COMPILE_INPUT_KEYS = Object.freeze([
   'scene',
@@ -23,6 +23,7 @@ const PACKET_KEYS = Object.freeze([
   'layers',
   'nodes',
   'metrics',
+  'evidence',
   'provenanceRef',
   'safety',
   'checksum',
@@ -169,6 +170,12 @@ export function compileHolographicRenderPacket(input = {}) {
     layers: spatialScene.layers,
     nodes: Array.isArray(spatialScene.nodes) ? spatialScene.nodes : [],
     metrics: spatialScene.metrics ?? null,
+    evidence:
+      spatialScene.evidence ?? {
+        powerFlows: [],
+        forecastDelta: null,
+        simulation: null,
+      },
     provenanceRef: spatialScene.provenanceRef ?? null,
     safety: { authoritative: false, actuatesHardware: false, advisoryOnly: true },
   };
@@ -203,6 +210,10 @@ export function validateHolographicRenderPacket(packet) {
       return false;
     }
     if (!Array.isArray(value.nodes)) return false;
+    if (!value.evidence || typeof value.evidence !== 'object' || Array.isArray(value.evidence)) {
+      return false;
+    }
+    if (!Array.isArray(value.evidence.powerFlows)) return false;
     if (typeof value.checksum !== 'string' || !/^[a-f0-9]{64}$/.test(value.checksum)) {
       return false;
     }
