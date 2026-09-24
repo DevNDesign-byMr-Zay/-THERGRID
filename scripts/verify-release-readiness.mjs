@@ -10,6 +10,7 @@ const REQUIRED_FILES = Object.freeze([
   'docs/ROADMAP.md',
   '.github/workflows/ci.yml',
   '.github/workflows/codeql.yml',
+  '.github/workflows/release.yml',
 ]);
 
 function assert(condition, message) {
@@ -24,12 +25,13 @@ async function main() {
   const root = new URL('../', import.meta.url);
   await Promise.all(REQUIRED_FILES.map((path) => access(new URL(path, root))));
 
-  const [pkg, changelog, readme, ci, codeql] = await Promise.all([
+  const [pkg, changelog, readme, ci, codeql, release] = await Promise.all([
     text('package.json').then(JSON.parse),
     text('CHANGELOG.md'),
     text('README.md'),
     text('.github/workflows/ci.yml'),
     text('.github/workflows/codeql.yml'),
+    text('.github/workflows/release.yml'),
   ]);
 
   assert(/^\d+\.\d+\.\d+$/u.test(pkg.version), 'package version must be semantic');
@@ -70,6 +72,20 @@ async function main() {
   assert(/docker compose up --build/u.test(ci), 'CI must smoke-test the container runtime');
   assert(/pull_request:/u.test(codeql), 'CodeQL must run for pull requests');
   assert(/javascript-typescript/u.test(codeql), 'CodeQL must analyze JavaScript/TypeScript');
+  assert(/workflow_dispatch:/u.test(release), 'GitHub release workflow must remain manual-only');
+  assert(/github\.ref == 'refs\/heads\/main'/u.test(release), 'release workflow must require main');
+  assert(
+    /npm run check/u.test(release),
+    'release workflow must rerun deterministic repository checks',
+  );
+  assert(
+    /Requested tag must equal/u.test(release),
+    'release workflow must bind the tag to package version',
+  );
+  assert(
+    /gh release create/u.test(release),
+    'release workflow must publish through GitHub Releases',
+  );
   assert(
     /simulation before actuation/iu.test(readme),
     'README must preserve simulation-before-actuation rule',
