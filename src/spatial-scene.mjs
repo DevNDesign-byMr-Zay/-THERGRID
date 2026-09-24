@@ -135,11 +135,67 @@ function buildSimulationEvidence(snapshotId, simulation) {
   };
 }
 
+function buildSolverComparisonEvidence(snapshotId, comparison) {
+  if (comparison == null) {
+    return { candidates: [], selectedFingerprint: null, authoritative: false };
+  }
+  const value = requireObject(comparison, 'solverComparison');
+  if (!Array.isArray(value.candidates)) {
+    throw new TypeError('solverComparison.candidates must be an array');
+  }
+
+  const candidates = value.candidates.map((candidate, index) => {
+    const entry = requireObject(candidate, `solverComparison.candidates[${index}]`);
+    const identity = requireObject(entry.candidate, `solverComparison.candidates[${index}].candidate`);
+    const fingerprint = id(entry.fingerprint, `solverComparison.candidates[${index}].fingerprint`);
+    if (!/^[a-f0-9]{64}$/.test(fingerprint)) {
+      throw new TypeError(`solverComparison.candidates[${index}].fingerprint must be SHA-256`);
+    }
+    return {
+      fingerprint,
+      model: id(identity.model, `solverComparison.candidates[${index}].candidate.model`),
+      solver: id(identity.solver, `solverComparison.candidates[${index}].candidate.solver`),
+      version: id(identity.version, `solverComparison.candidates[${index}].candidate.version`),
+      feasible: entry.feasible === true,
+      objective: finite(entry.objective, `solverComparison.candidates[${index}].objective`),
+      runtimeMs: finite(entry.runtimeMs, `solverComparison.candidates[${index}].runtimeMs`),
+      timeout: entry.timeout === true,
+      fallback: entry.fallback == null ? null : id(entry.fallback, `solverComparison.candidates[${index}].fallback`),
+      provenanceCount: finite(
+        entry.provenanceCount,
+        `solverComparison.candidates[${index}].provenanceCount`,
+      ),
+    };
+  });
+
+  const selectedFingerprint =
+    value.selectedFingerprint == null
+      ? null
+      : id(value.selectedFingerprint, 'solverComparison.selectedFingerprint');
+  if (
+    selectedFingerprint != null &&
+    !candidates.some((candidate) => candidate.fingerprint === selectedFingerprint)
+  ) {
+    throw new TypeError('solverComparison.selectedFingerprint must reference a comparison candidate');
+  }
+
+  if (value.inputSnapshotId != null && value.inputSnapshotId !== snapshotId) {
+    throw new TypeError('solverComparison.inputSnapshotId must match twinState.snapshotId');
+  }
+
+  return {
+    candidates,
+    selectedFingerprint,
+    authoritative: false,
+  };
+}
+
 export function buildSpatialScene({
   twinState,
   proposal = null,
   forecast = null,
   simulation = null,
+  solverComparison = null,
   alerts = [],
   provenance = null,
   attention = [],
@@ -172,6 +228,7 @@ export function buildSpatialScene({
       powerFlows: true,
       forecastDelta: true,
       simulationEvidence: true,
+      solverComparison: true,
       alerts: alerts.map((alert, index) => ({
         id: id(alert.id ?? `alert-${index}`, `alerts[${index}].id`),
         severity: id(alert.severity ?? 'info', `alerts[${index}].severity`),
@@ -211,6 +268,7 @@ export function buildSpatialScene({
       powerFlows: buildPowerFlowEvidence(twin),
       forecastDelta: buildForecastDelta(twin, forecast),
       simulation: buildSimulationEvidence(snapshotId, simulation),
+      solverComparison: buildSolverComparisonEvidence(snapshotId, solverComparison),
     },
     provenanceRef,
     proposal: proposal
