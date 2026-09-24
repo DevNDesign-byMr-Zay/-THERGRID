@@ -45,12 +45,13 @@ jobs:
         run: |
           npm run demo
           npm run dashboard-demo
-      - name: Validate container configuration
-        run: docker compose config --quiet
+      - name: Validate canonical container configuration
+        run: docker compose -f docker-compose.yml config --quiet
       - name: Smoke-test container runtime
         shell: bash
         run: |
           set -euo pipefail
+          export COMPOSE_FILE=docker-compose.yml
           trap 'docker compose down --volumes --remove-orphans' EXIT
           docker compose up --build --detach health
 
