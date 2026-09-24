@@ -50,6 +50,9 @@ test('pipeline emits a validated renderer packet without changing simulation aut
   assert.equal(result.renderPacket.sceneId, result.scene.sceneId);
   assert.equal(result.renderPacket.target, 'holo-mat');
   assert.equal(result.renderPacket.deviceId, 'holo-mat-reference');
+  assert.deepEqual(result.renderPacket.evidence, result.scene.evidence);
+  assert.equal(result.renderPacket.evidence.powerFlows.length, 5);
+  assert.equal(result.renderPacket.evidence.simulation.status, 'passed');
   assert.equal(result.renderPacket.safety.authoritative, false);
   assert.equal(result.renderPacket.safety.actuatesHardware, false);
   assert.equal(result.renderPacket.safety.advisoryOnly, true);

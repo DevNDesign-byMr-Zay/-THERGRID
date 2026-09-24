@@ -84,9 +84,62 @@ function buildAttentionScope(item, index) {
   }));
 }
 
+function buildPowerFlowEvidence(twin) {
+  if (!Array.isArray(twin.assetStates)) return [];
+  return twin.assetStates.map((asset, index) => ({
+    assetId: id(asset.assetId, `twinState.assetStates[${index}].assetId`),
+    nodeId: id(asset.nodeId, `twinState.assetStates[${index}].nodeId`),
+    kind: id(asset.kind, `twinState.assetStates[${index}].kind`),
+    powerKw: finite(asset.powerKw, `twinState.assetStates[${index}].powerKw`),
+  }));
+}
+
+function buildForecastDelta(twin, forecast) {
+  if (forecast == null) return null;
+  const value = requireObject(forecast, 'forecast');
+  if (value.snapshotId !== twin.snapshotId) {
+    throw new TypeError('forecast.snapshotId must match twinState.snapshotId');
+  }
+  const generationKw = finite(value.generationKw, 'forecast.generationKw');
+  const loadKw = finite(value.loadKw, 'forecast.loadKw');
+  return {
+    method: id(value.method, 'forecast.method'),
+    forecastFor: id(value.forecastFor, 'forecast.forecastFor'),
+    generationKw,
+    loadKw,
+    generationDeltaKw: Number((generationKw - twin.totals.generationKw).toFixed(6)),
+    loadDeltaKw: Number((loadKw - twin.totals.loadKw).toFixed(6)),
+  };
+}
+
+function buildSimulationEvidence(snapshotId, simulation) {
+  if (simulation == null) return null;
+  const value = requireObject(simulation, 'simulation');
+  if (value.snapshotId !== snapshotId) {
+    throw new TypeError('simulation.snapshotId must match twinState.snapshotId');
+  }
+  const outputs = requireObject(value.outputs, 'simulation.outputs');
+  const safety = requireObject(value.safety, 'simulation.safety');
+  if (safety.advisoryOnly !== true || safety.physicalActuation !== false) {
+    throw new TypeError('simulation evidence must remain advisory-only and non-actuating');
+  }
+  return {
+    backend: id(value.backend, 'simulation.backend'),
+    status: id(value.status, 'simulation.status'),
+    durationMinutes: finite(value.durationMinutes, 'simulation.durationMinutes'),
+    runtimeMs: finite(value.runtimeMs, 'simulation.runtimeMs'),
+    residualBalanceKw: finite(outputs.residualBalanceKw, 'simulation.outputs.residualBalanceKw'),
+    gridAdjustmentKw: finite(outputs.gridAdjustmentKw, 'simulation.outputs.gridAdjustmentKw'),
+    advisoryOnly: true,
+    physicalActuation: false,
+  };
+}
+
 export function buildSpatialScene({
   twinState,
   proposal = null,
+  forecast = null,
+  simulation = null,
   alerts = [],
   provenance = null,
   attention = [],
@@ -153,6 +206,11 @@ export function buildSpatialScene({
       loadKw: totals.loadKw,
       balanceKw: totals.balanceKw,
       renewableSharePercent: totals.renewableSharePercent ?? null,
+    },
+    evidence: {
+      powerFlows: buildPowerFlowEvidence(twin),
+      forecastDelta: buildForecastDelta(twin, forecast),
+      simulation: buildSimulationEvidence(snapshotId, simulation),
     },
     provenanceRef,
     proposal: proposal

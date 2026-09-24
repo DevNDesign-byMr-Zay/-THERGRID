@@ -53,7 +53,13 @@ export function runSyntheticMicrogrid(
   });
   const receiptWithId = { ...receipt, receiptId };
   const provenanceSeed = { experimentId, snapshotId: snapshot.snapshotId, receiptId };
-  const scene = buildSpatialScene({ twinState, proposal, provenance: provenanceSeed });
+  const scene = buildSpatialScene({
+    twinState,
+    proposal,
+    forecast,
+    simulation,
+    provenance: provenanceSeed,
+  });
   const presentation = planHolographicPresentation({
     scene,
     devices: presentationDevices,

@@ -26,13 +26,18 @@ const presentation = {
   status: 'ready-for-renderer',
 };
 
-test('uses renderer contract v2 and preserves the safety boundary', () => {
+test('uses renderer contract v3 and preserves the safety boundary', () => {
   const packet = compileHolographicRenderPacket({ scene, presentation });
-  assert.equal(RENDERER_CONTRACT_VERSION, 2);
-  assert.equal(packet.contractVersion, 2);
+  assert.equal(RENDERER_CONTRACT_VERSION, 3);
+  assert.equal(packet.contractVersion, 3);
   assert.equal(packet.target, 'holo-mat');
   assert.equal(packet.deviceId, 'mat-a');
   assert.equal(packet.nodes[0].position.z, 3);
+  assert.deepEqual(packet.evidence, {
+    powerFlows: [],
+    forecastDelta: null,
+    simulation: null,
+  });
   assert.equal(packet.safety.authoritative, false);
   assert.equal(packet.safety.actuatesHardware, false);
   assert.equal(packet.safety.advisoryOnly, true);

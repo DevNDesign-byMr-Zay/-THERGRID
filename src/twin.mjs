@@ -25,6 +25,16 @@ export function deriveTwinState(input) {
     mode: asset.powerKw > 0 ? 'discharging' : asset.powerKw < 0 ? 'charging' : 'idle',
   }));
 
+  const nodeByAssetId = new Map(
+    snapshot.topology.connections.map(({ assetId, nodeId }) => [assetId, nodeId]),
+  );
+  const assetStates = snapshot.assets.map((asset) => ({
+    assetId: asset.id,
+    nodeId: nodeByAssetId.get(asset.id),
+    kind: asset.kind,
+    powerKw: asset.powerKw,
+  }));
+
   return {
     schemaVersion: 1,
     snapshotId: snapshot.snapshotId,
@@ -46,6 +56,7 @@ export function deriveTwinState(input) {
       balanceKw,
       renewableSharePercent: loadKw === 0 ? null : round((generationKw / loadKw) * 100),
     },
+    assetStates,
     storage,
     balanced: Math.abs(balanceKw) < 0.001,
   };
