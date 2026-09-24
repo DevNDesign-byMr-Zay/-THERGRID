@@ -58,7 +58,10 @@ async function main() {
     );
   }
 
-  assert(/## Unreleased/u.test(changelog), 'changelog must describe the current unreleased state');
+  assert(
+    /## Unreleased/u.test(changelog),
+    'changelog must describe the current unreleased state',
+  );
   assert(
     /No hosted GitHub release or tag is claimed/iu.test(changelog),
     'changelog must not fabricate a published release',
@@ -71,12 +74,30 @@ async function main() {
   assert(/npm run dashboard-demo/u.test(ci), 'CI must run dashboard demo');
   assert(/docker compose up --build/u.test(ci), 'CI must smoke-test the container runtime');
   assert(/pull_request:/u.test(codeql), 'CodeQL must run for pull requests');
-  assert(/javascript-typescript/u.test(codeql), 'CodeQL must analyze JavaScript/TypeScript');
-  assert(/workflow_dispatch:/u.test(release), 'GitHub release workflow must remain manual-only');
-  assert(/github\.ref == 'refs\/heads\/main'/u.test(release), 'release workflow must require main');
-  assert(/npm run check/u.test(release), 'release workflow must rerun deterministic repository checks');
-  assert(/Requested tag must equal/u.test(release), 'release workflow must bind the tag to package version');
-  assert(/gh release create/u.test(release), 'release workflow must publish through GitHub Releases');
+  assert(
+    /javascript-typescript/u.test(codeql),
+    'CodeQL must analyze JavaScript/TypeScript',
+  );
+  assert(
+    /workflow_dispatch:/u.test(release),
+    'GitHub release workflow must remain manual-only',
+  );
+  assert(
+    /github\.ref == 'refs\/heads\/main'/u.test(release),
+    'release workflow must require main',
+  );
+  assert(
+    /npm run check/u.test(release),
+    'release workflow must rerun deterministic repository checks',
+  );
+  assert(
+    /Requested tag must equal/u.test(release),
+    'release workflow must bind the tag to package version',
+  );
+  assert(
+    /gh release create/u.test(release),
+    'release workflow must publish through GitHub Releases',
+  );
   assert(
     /simulation before actuation/iu.test(readme),
     'README must preserve simulation-before-actuation rule',
