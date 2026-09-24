@@ -128,7 +128,6 @@ test('scene preserves source-backed attention scope without gaining authority', 
   assert.equal(scene.rendererContract.authoritativeSource, 'thergrid-decision-receipt');
 });
 
-
 test('scene rejects forecast evidence from another snapshot', () => {
   const run = runSyntheticMicrogrid(snapshot);
 
