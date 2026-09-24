@@ -13,12 +13,12 @@
     "demo": "node scripts/demo.mjs",
     "dashboard-demo": "node scripts/dashboard-demo.mjs",
     "check": "npm run verify:release && npm run syntax && npm run lint && npm run typecheck && npm run format:check && npm run coverage && npm run demo && npm run dashboard-demo",
-    "lint": "npx --yes --package eslint@10.10.0 eslint --max-warnings=0 src tests scripts",
-    "format:check": "npx --yes --package prettier@3.6.2 prettier --check 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs'",
-    "format": "npx --yes --package prettier@3.6.2 prettier --write 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs'",
+    "lint": "eslint --max-warnings=0 src tests scripts",
+    "format:check": "prettier --check 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs'",
+    "format": "prettier --write 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs'",
     "health": "node src/platform-health-service.mjs",
     "verify:release": "node scripts/verify-release-readiness.mjs",
-    "typecheck": "npx --yes --package typescript@5.9.3 tsc -p jsconfig.json"
+    "typecheck": "tsc -p jsconfig.json"
   },
   "dependencies": {
     "pino": "10.3.1",
@@ -32,5 +32,10 @@
     "energy-simulation",
     "spatial-intelligence",
     "operator-review"
-  ]
+  ],
+  "devDependencies": {
+    "eslint": "10.10.0",
+    "prettier": "3.6.2",
+    "typescript": "5.9.3"
+  }
 }

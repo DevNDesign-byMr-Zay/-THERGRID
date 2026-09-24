@@ -49,6 +49,7 @@ async function main() {
     dependabot,
     classification,
     projectScope,
+    lockfile,
   ] = await Promise.all([
     text('package.json').then(JSON.parse),
     text('CHANGELOG.md'),
@@ -60,6 +61,7 @@ async function main() {
     text('.github/dependabot.yml'),
     text('.repo-class.json').then(JSON.parse),
     text('docs/PROJECT_SCOPE.md'),
+    text('package-lock.json').then(JSON.parse),
   ]);
 
   assert(/^\d+\.\d+\.\d+$/u.test(pkg.version), 'package version must be semantic');
@@ -80,6 +82,36 @@ async function main() {
   assert(
     typeof pkg.engines?.node === 'string' && pkg.engines.node.includes('22'),
     'Node 22 runtime contract is required',
+  );
+
+  const expectedDevToolchain = Object.freeze({
+    eslint: '10.10.0',
+    prettier: '3.6.2',
+    typescript: '5.9.3',
+  });
+  assert(
+    JSON.stringify(pkg.devDependencies) === JSON.stringify(expectedDevToolchain),
+    'development toolchain must stay exactly pinned',
+  );
+  assert(
+    JSON.stringify(lockfile.packages?.['']?.devDependencies) ===
+      JSON.stringify(expectedDevToolchain),
+    'package-lock root dev toolchain must match package.json',
+  );
+  for (const [name, version] of Object.entries(expectedDevToolchain)) {
+    assert(
+      lockfile.packages?.[`node_modules/${name}`]?.version === version,
+      `locked ${name} version must remain ${version}`,
+    );
+  }
+  assert(!/npx\s/u.test(pkg.scripts.lint), 'lint must use the locally locked eslint binary');
+  assert(
+    !/npx\s/u.test(pkg.scripts['format:check']),
+    'format check must use the locally locked prettier binary',
+  );
+  assert(
+    !/npx\s/u.test(pkg.scripts.typecheck),
+    'typecheck must use the locally locked TypeScript binary',
   );
 
   for (const name of [
