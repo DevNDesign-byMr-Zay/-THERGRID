@@ -53,6 +53,9 @@ test('pipeline emits a validated renderer packet without changing simulation aut
   assert.deepEqual(result.renderPacket.evidence, result.scene.evidence);
   assert.equal(result.renderPacket.evidence.powerFlows.length, 5);
   assert.equal(result.renderPacket.evidence.simulation.status, 'passed');
+  assert.equal(result.renderPacket.evidence.solverComparison.length, 1);
+  assert.equal(result.renderPacket.evidence.policyGates.status, 'eligible-for-render-review');
+  assert.equal(result.renderPacket.evidence.policyGates.authoritative, false);
   assert.equal(result.renderPacket.safety.authoritative, false);
   assert.equal(result.renderPacket.safety.actuatesHardware, false);
   assert.equal(result.renderPacket.safety.advisoryOnly, true);

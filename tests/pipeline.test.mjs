@@ -74,6 +74,24 @@ test('runs the complete deterministic vertical slice with evidence gates', () =>
     advisoryOnly: true,
     physicalActuation: false,
   });
+  assert.equal(first.scene.evidence.solverComparison.length, 1);
+  assert.equal(
+    first.scene.evidence.solverComparison[0].candidate.model,
+    'thergrid-classical-reference',
+  );
+  assert.equal(first.scene.evidence.solverComparison[0].advisoryOnly, true);
+  assert.deepEqual(first.scene.evidence.policyGates, {
+    snapshotId: fixture.snapshotId,
+    status: 'eligible-for-render-review',
+    reason: 'validated evidence may be presented for operator review',
+    checks: {
+      receiptValid: true,
+      simulationPassed: true,
+      solverEvidenceComplete: true,
+    },
+    authoritative: false,
+    advisoryOnly: true,
+  });
   assert.equal(first.presentation.status, 'ready-for-renderer');
   assert.equal(first.presentation.target, 'holo-mat');
   assert.equal(first.presentation.deviceId, 'holo-mat-reference');

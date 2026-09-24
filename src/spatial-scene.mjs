@@ -112,6 +112,53 @@ function buildForecastDelta(twin, forecast) {
   };
 }
 
+function buildSolverComparisonEvidence(snapshotId, comparison) {
+  if (comparison == null) return [];
+  if (!Array.isArray(comparison)) {
+    throw new TypeError('solverComparison must be an array');
+  }
+
+  return comparison.map((entry, index) => {
+    const value = requireObject(entry, `solverComparison[${index}]`);
+    const candidate = requireObject(value.candidate, `solverComparison[${index}].candidate`);
+    return {
+      fingerprint: id(value.fingerprint, `solverComparison[${index}].fingerprint`),
+      candidate: {
+        model: id(candidate.model, `solverComparison[${index}].candidate.model`),
+        solver: id(candidate.solver, `solverComparison[${index}].candidate.solver`),
+        version: id(candidate.version, `solverComparison[${index}].candidate.version`),
+      },
+      feasible: value.feasible === true,
+      objective: finite(value.objective, `solverComparison[${index}].objective`),
+      runtimeMs: finite(value.runtimeMs, `solverComparison[${index}].runtimeMs`),
+      timeout: value.timeout === true,
+      fallback:
+        value.fallback == null ? null : id(value.fallback, `solverComparison[${index}].fallback`),
+      provenanceCount: finite(value.provenanceCount, `solverComparison[${index}].provenanceCount`),
+      inputSnapshotId: snapshotId,
+      advisoryOnly: true,
+    };
+  });
+}
+
+function buildPolicyGateEvidence(snapshotId, policyGates) {
+  if (policyGates == null) return null;
+  const value = requireObject(policyGates, 'policyGates');
+  const checks = requireObject(value.checks, 'policyGates.checks');
+  return {
+    snapshotId,
+    status: id(value.status, 'policyGates.status'),
+    reason: id(value.reason, 'policyGates.reason'),
+    checks: Object.fromEntries(
+      Object.entries(checks)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, passed]) => [id(key, 'policy gate check'), passed === true]),
+    ),
+    authoritative: false,
+    advisoryOnly: true,
+  };
+}
+
 function buildSimulationEvidence(snapshotId, simulation) {
   if (simulation == null) return null;
   const value = requireObject(simulation, 'simulation');
@@ -140,6 +187,8 @@ export function buildSpatialScene({
   proposal = null,
   forecast = null,
   simulation = null,
+  solverComparison = [],
+  policyGates = null,
   alerts = [],
   provenance = null,
   attention = [],
@@ -211,6 +260,8 @@ export function buildSpatialScene({
       powerFlows: buildPowerFlowEvidence(twin),
       forecastDelta: buildForecastDelta(twin, forecast),
       simulation: buildSimulationEvidence(snapshotId, simulation),
+      solverComparison: buildSolverComparisonEvidence(snapshotId, solverComparison),
+      policyGates: buildPolicyGateEvidence(snapshotId, policyGates),
     },
     provenanceRef,
     proposal: proposal
