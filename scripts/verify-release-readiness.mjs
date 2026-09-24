@@ -8,6 +8,7 @@ const REQUIRED_FILES = Object.freeze([
   'README.md',
   'docs/ARCHITECTURE.md',
   'docs/ROADMAP.md',
+  'docs/RELEASE_READINESS.md',
   '.github/workflows/ci.yml',
   '.github/workflows/codeql.yml',
   '.github/workflows/release.yml',
