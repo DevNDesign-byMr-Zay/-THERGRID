@@ -7,6 +7,8 @@ const REQUIRED_FILES = Object.freeze([
   '.env.example',
   'package-lock.json',
   'jsconfig.json',
+  '.repo-class.json',
+  'docs/PROJECT_SCOPE.md',
   'src/error-reporting.mjs',
   'CHANGELOG.md',
   'README.md',
@@ -36,7 +38,18 @@ async function main() {
   const root = new URL('../', import.meta.url);
   await Promise.all(REQUIRED_FILES.map((path) => access(new URL(path, root))));
 
-  const [pkg, changelog, readme, ci, codeql, release, envExample, dependabot] = await Promise.all([
+  const [
+    pkg,
+    changelog,
+    readme,
+    ci,
+    codeql,
+    release,
+    envExample,
+    dependabot,
+    classification,
+    projectScope,
+  ] = await Promise.all([
     text('package.json').then(JSON.parse),
     text('CHANGELOG.md'),
     text('README.md'),
@@ -45,11 +58,25 @@ async function main() {
     text('.github/workflows/release.yml'),
     text('.env.example'),
     text('.github/dependabot.yml'),
+    text('.repo-class.json').then(JSON.parse),
+    text('docs/PROJECT_SCOPE.md'),
   ]);
 
   assert(/^\d+\.\d+\.\d+$/u.test(pkg.version), 'package version must be semantic');
   assert(pkg.private === true, 'THERGRID package must remain private');
   assert(pkg.type === 'module', 'THERGRID must remain ESM');
+  assert(
+    classification.primaryClass === 'application-service',
+    'repository classification must remain application-service',
+  );
+  assert(
+    classification.excludedClasses?.includes('infrastructure-as-code'),
+    'repository classification must explicitly exclude infrastructure-as-code',
+  );
+  assert(
+    /not an infrastructure-as-code repository/iu.test(projectScope),
+    'project scope must preserve the application-vs-IaC boundary',
+  );
   assert(
     typeof pkg.engines?.node === 'string' && pkg.engines.node.includes('22'),
     'Node 22 runtime contract is required',
@@ -108,6 +135,7 @@ async function main() {
   const weeklySchedules = dependabot.match(/interval:\s*"?weekly"?/gu) ?? [];
   assert(weeklySchedules.length >= 2, 'Dependabot must run weekly for npm and GitHub Actions');
   assert(/npm run typecheck/u.test(ci), 'CI must type-check maintained JavaScript');
+  assert(/npm test/u.test(ci), 'CI must expose the conventional npm test suite');
   assert(/npm run coverage/u.test(ci), 'CI must enforce coverage');
   assert(
     /NODE_V8_COVERAGE:\s*coverage\/v8/u.test(ci) &&

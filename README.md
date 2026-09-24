@@ -2,6 +2,8 @@
 
 THERGRID is a self-auditing, AI-operated renewable-energy digital twin with a spatial/holographic command interface and a quantum-simulation layer.
 
+> **Repository classification:** THERGRID is a Node.js application service for digital-twin, energy-simulation, and spatial-intelligence workflows. It is **not an infrastructure-as-code repository**; Docker/Compose are used only for reproducible application verification. See [docs/PROJECT_SCOPE.md](docs/PROJECT_SCOPE.md).
+
 ## Project direction
 
 The goal is to build a defensible systems platform that can model distributed energy assets, ingest live or simulated telemetry, estimate grid state, test operating strategies, visualize the system spatially, and produce an auditable record of every recommendation or autonomous action.

@@ -23,5 +23,14 @@
   "dependencies": {
     "pino": "10.3.1",
     "zod": "4.6.5"
-  }
+  },
+  "description": "Node.js digital-twin and energy-simulation application service with advisory spatial intelligence, evidence, and operator-review contracts.",
+  "keywords": [
+    "application-service",
+    "backend",
+    "digital-twin",
+    "energy-simulation",
+    "spatial-intelligence",
+    "operator-review"
+  ]
 }
