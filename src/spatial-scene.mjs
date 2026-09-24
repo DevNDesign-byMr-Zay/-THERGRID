@@ -138,10 +138,7 @@ export function buildSpatialScene({
         recommendedAdvisoryAction:
           item.recommendedAdvisoryAction == null
             ? null
-            : id(
-                item.recommendedAdvisoryAction,
-                `attention[${index}].recommendedAdvisoryAction`,
-              ),
+            : id(item.recommendedAdvisoryAction, `attention[${index}].recommendedAdvisoryAction`),
         stalenessBoundary:
           item.stalenessBoundary == null
             ? null
