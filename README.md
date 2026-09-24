@@ -89,6 +89,10 @@ docker compose -f docker-compose.yml up --build
 
 The health service is expected to become healthy at `http://127.0.0.1:8080/health` without external credentials.
 
+## Coverage evidence
+
+The blocking Node coverage gate now writes raw V8 coverage from the exact CI test run and retains it as a 30-day workflow artifact tied to the tested commit. Coverage thresholds are unchanged; the artifact adds reviewer-visible evidence without weakening the gate.
+
 ## Provider-neutral error reporting
 
 `startPlatformHealthService()` accepts an optional `onError(error, context)` callback for connecting a deployment-specific error tracker without coupling THERGRID to one vendor SDK. Startup and configuration failures are reported with frozen, bounded context; reporter failures are isolated and never replace the original runtime error.
