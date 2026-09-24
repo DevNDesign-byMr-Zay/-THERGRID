@@ -41,6 +41,8 @@ jobs:
         run: npm run typecheck
       - name: Check formatting
         run: npm run format:check
+      - name: Run conventional test suite
+        run: npm test
       - name: Tests with coverage
         env:
           NODE_V8_COVERAGE: coverage/v8
