@@ -13,7 +13,9 @@
     "types/checkjs-shims.d.ts",
     "src/platform-health-service.mjs",
     "src/runtime-observability.mjs",
-    "src/error-reporting.mjs"
+    "src/error-reporting.mjs",
+    "src/model-routing.mjs",
+    "src/solvaer-optimization-contract.mjs"
   ],
   "exclude": [
     "node_modules"

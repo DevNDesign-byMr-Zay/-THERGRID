@@ -58,6 +58,15 @@ function rejectAuthority(value, name) {
 /**
  * Defines the SOLVÆR optimization handoff without granting authority over
  * THERGRID simulation, promotion, or physical infrastructure.
+ *
+ * @param {{
+ *   experimentId?: unknown,
+ *   snapshotId?: unknown,
+ *   twinStateRef?: unknown,
+ *   objective?: unknown,
+ *   constraints?: unknown,
+ *   requestId?: unknown
+ * }} [options]
  */
 export function createSolvaerOptimizationRequest({
   experimentId,
@@ -92,6 +101,14 @@ export function createSolvaerOptimizationRequest({
   });
 }
 
+/**
+ * @param {{
+ *   request?: unknown,
+ *   candidate?: unknown,
+ *   provenanceRef?: unknown,
+ *   fallbackUsed?: boolean
+ * }} [options]
+ */
 export function acceptSolvaerOptimizationResult({
   request,
   candidate,
