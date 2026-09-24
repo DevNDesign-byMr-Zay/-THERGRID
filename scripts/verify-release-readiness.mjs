@@ -63,6 +63,10 @@ async function main() {
     /No hosted GitHub release or tag is claimed/iu.test(changelog),
     'changelog must not fabricate a published release',
   );
+  assert(
+    changelog.includes(`Current package candidate: \`${pkg.version}\``),
+    'changelog candidate version must match package.json',
+  );
 
   assert(/npm ci --ignore-scripts/u.test(ci), 'CI must use reproducible npm install');
   assert(/npm audit --audit-level=moderate/u.test(ci), 'CI must audit dependencies');
