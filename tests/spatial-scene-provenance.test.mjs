@@ -127,3 +127,37 @@ test('scene preserves source-backed attention scope without gaining authority', 
   });
   assert.equal(scene.rendererContract.authoritativeSource, 'thergrid-decision-receipt');
 });
+
+
+test('scene rejects forecast evidence from another snapshot', () => {
+  const run = runSyntheticMicrogrid(snapshot);
+
+  assert.throws(
+    () =>
+      buildSpatialScene({
+        twinState: run.twinState,
+        forecast: { ...run.forecast, snapshotId: 'other-snapshot' },
+        simulation: run.simulation,
+        provenance: run.scene.provenanceRef,
+      }),
+    /forecast\.snapshotId must match twinState\.snapshotId/,
+  );
+});
+
+test('scene rejects simulation evidence that claims actuation authority', () => {
+  const run = runSyntheticMicrogrid(snapshot);
+
+  assert.throws(
+    () =>
+      buildSpatialScene({
+        twinState: run.twinState,
+        forecast: run.forecast,
+        simulation: {
+          ...run.simulation,
+          safety: { advisoryOnly: true, physicalActuation: true },
+        },
+        provenance: run.scene.provenanceRef,
+      }),
+    /simulation evidence must remain advisory-only and non-actuating/,
+  );
+});
