@@ -39,6 +39,9 @@ jobs:
         run: npm run lint
       - name: Check formatting
         run: npm run format:check
+      - name: Show formatter repair for release verifier
+        if: failure()
+        run: npx --yes --package prettier@3.6.2 prettier scripts/verify-release-readiness.mjs
       - name: Tests with coverage
         run: npm run coverage
       - name: Reproducible evidence and dashboard demos
