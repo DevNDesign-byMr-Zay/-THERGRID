@@ -3,6 +3,7 @@ import { access, readFile } from 'node:fs/promises';
 const REQUIRED_FILES = Object.freeze([
   'Dockerfile',
   'compose.yml',
+  'docker-compose.yml',
   '.env.example',
   'package-lock.json',
   'CHANGELOG.md',
@@ -78,7 +79,14 @@ async function main() {
     'changelog candidate version must match package.json',
   );
 
-  for (const key of ['PORT', 'SERVICE_NAME', 'THERGRID_PORT', 'THERGRID_LOG_LEVEL']) {
+  for (const key of [
+    'PORT',
+    'SERVICE_NAME',
+    'THERGRID_PORT',
+    'THERGRID_LOG_LEVEL',
+    'GITHUB_SHA',
+    'RELEASE_TAG',
+  ]) {
     assert(new RegExp(`^${key}=`, 'mu').test(envExample), `.env.example must document ${key}`);
   }
 
@@ -97,6 +105,10 @@ async function main() {
   assert(/npm run coverage/u.test(ci), 'CI must enforce coverage');
   assert(/npm run demo/u.test(ci), 'CI must run evidence demo');
   assert(/npm run dashboard-demo/u.test(ci), 'CI must run dashboard demo');
+  assert(
+    /docker compose -f docker-compose\.yml config --quiet/u.test(ci),
+    'CI must validate canonical docker-compose.yml',
+  );
   assert(/docker compose up --build/u.test(ci), 'CI must smoke-test the container runtime');
   assert(/pull_request:/u.test(codeql), 'CodeQL must run for pull requests');
   assert(/javascript-typescript/u.test(codeql), 'CodeQL must analyze JavaScript/TypeScript');

@@ -78,6 +78,16 @@ cp .env.example .env
 
 `PORT` and `SERVICE_NAME` configure the HTTP health service. `THERGRID_PORT` and `THERGRID_LOG_LEVEL` configure the reusable runtime-observability contract. The example contains no credentials, tokens, customer data, or infrastructure secrets.
 
+### Container startup
+
+The canonical fresh-clone Compose file is `docker-compose.yml`:
+
+```bash
+docker compose -f docker-compose.yml up --build
+```
+
+The health service is expected to become healthy at `http://127.0.0.1:8080/health` without external credentials.
+
 ## Engineering rules
 
 - Simulation before actuation. No direct real-world control surface until explicit safety, authorization, rollback, and human-approval contracts exist.

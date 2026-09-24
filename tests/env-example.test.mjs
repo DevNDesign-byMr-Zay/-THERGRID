@@ -26,7 +26,14 @@ test('.env.example covers the maintained health and observability configuration'
 
   assert.deepEqual(
     Object.keys(values).sort(),
-    ['PORT', 'SERVICE_NAME', 'THERGRID_LOG_LEVEL', 'THERGRID_PORT'].sort(),
+    [
+      'GITHUB_SHA',
+      'PORT',
+      'RELEASE_TAG',
+      'SERVICE_NAME',
+      'THERGRID_LOG_LEVEL',
+      'THERGRID_PORT',
+    ].sort(),
   );
 
   assert.deepEqual(parseHealthServiceConfig(values), {
