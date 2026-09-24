@@ -135,6 +135,7 @@ async function main() {
   const weeklySchedules = dependabot.match(/interval:\s*"?weekly"?/gu) ?? [];
   assert(weeklySchedules.length >= 2, 'Dependabot must run weekly for npm and GitHub Actions');
   assert(/npm run typecheck/u.test(ci), 'CI must type-check maintained JavaScript');
+  assert(/npm test/u.test(ci), 'CI must expose the conventional npm test suite');
   assert(/npm run coverage/u.test(ci), 'CI must enforce coverage');
   assert(
     /NODE_V8_COVERAGE:\s*coverage\/v8/u.test(ci) &&
