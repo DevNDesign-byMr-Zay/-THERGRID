@@ -48,6 +48,12 @@ test('runs the complete deterministic vertical slice with evidence gates', () =>
   assert.equal(first.simulation.safety.physicalActuation, false);
   assert.match(first.receipt.receiptId, /^[a-f0-9]{64}$/);
   assert.equal(first.scene.sceneVersion, 2);
+  assert.deepEqual(first.scene.nodes, [
+    {
+      id: 'node-a',
+      assetIds: ['solar-1', 'wind-1', 'battery-1', 'load-1', 'grid-1'],
+    },
+  ]);
   assert.equal(first.scene.rendererContract.mode, 'renderer-neutral');
   assert.equal(first.presentation.status, 'ready-for-renderer');
   assert.equal(first.presentation.target, 'holo-mat');
