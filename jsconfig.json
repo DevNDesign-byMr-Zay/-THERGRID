@@ -6,11 +6,15 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ES2022",
+    "types": [
+      "node"
+    ],
     "skipLibCheck": true,
     "strict": false
   },
   "include": [
-    "src/**/*.mjs"
+    "src/platform-health-service.mjs",
+    "src/runtime-observability.mjs"
   ],
   "exclude": [
     "node_modules"
