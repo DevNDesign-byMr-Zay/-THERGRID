@@ -7,6 +7,7 @@ const REQUIRED_FILES = Object.freeze([
   '.env.example',
   'package-lock.json',
   'jsconfig.json',
+  'src/error-reporting.mjs',
   'CHANGELOG.md',
   'README.md',
   'docs/ARCHITECTURE.md',
@@ -114,6 +115,11 @@ async function main() {
   );
   assert(/docker compose up --build/u.test(ci), 'CI must smoke-test the container runtime');
   assert(/pull_request:/u.test(codeql), 'CodeQL must run for pull requests');
+  const errorReporting = await text('src/error-reporting.mjs');
+  assert(
+    /createErrorReporter/u.test(errorReporting) && /onError/u.test(errorReporting),
+    'provider-neutral error reporter must remain available',
+  );
   assert(/javascript-typescript/u.test(codeql), 'CodeQL must analyze JavaScript/TypeScript');
   assert(/workflow_dispatch:/u.test(release), 'GitHub release workflow must remain manual-only');
   assert(/github\.ref == 'refs\/heads\/main'/u.test(release), 'release workflow must require main');

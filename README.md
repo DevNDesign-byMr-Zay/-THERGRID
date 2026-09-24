@@ -89,6 +89,10 @@ docker compose -f docker-compose.yml up --build
 
 The health service is expected to become healthy at `http://127.0.0.1:8080/health` without external credentials.
 
+## Provider-neutral error reporting
+
+`startPlatformHealthService()` accepts an optional `onError(error, context)` callback for connecting a deployment-specific error tracker without coupling THERGRID to one vendor SDK. Startup and configuration failures are reported with frozen, bounded context; reporter failures are isolated and never replace the original runtime error.
+
 ## Engineering rules
 
 - Simulation before actuation. No direct real-world control surface until explicit safety, authorization, rollback, and human-approval contracts exist.

@@ -12,7 +12,8 @@
   "include": [
     "types/checkjs-shims.d.ts",
     "src/platform-health-service.mjs",
-    "src/runtime-observability.mjs"
+    "src/runtime-observability.mjs",
+    "src/error-reporting.mjs"
   ],
   "exclude": [
     "node_modules"
