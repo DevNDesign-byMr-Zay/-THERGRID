@@ -84,3 +84,49 @@ test('scene provenance getters are rejected without evaluation', () => {
   );
   assert.equal(getterReads, 0);
 });
+
+
+test('scene preserves source-backed attention scope without gaining authority', () => {
+  const run = runSyntheticMicrogrid(snapshot);
+  const attention = [
+    {
+      id: 'attention-source-scope',
+      priority: 90,
+      severity: 'warning',
+      reason: 'Review source-bound simulation evidence.',
+      evidenceRef: 'e'.repeat(64),
+      affectedMetric: 'simulation.status',
+      recommendedAdvisoryAction: 'review-failed-simulation-evidence',
+      stalenessBoundary: `snapshot:${snapshot.snapshotId}`,
+      assetNodeRefs: run.twinState.topology.assetNodeRefs,
+    },
+  ];
+
+  const scene = buildSpatialScene({
+    twinState: run.twinState,
+    proposal: run.proposal,
+    provenance: run.scene.provenanceRef,
+    attention,
+  });
+
+  assert.deepEqual(scene.nodes, [
+    { id: 'node-a', assetIds: ['solar-1', 'load-1', 'grid-1'] },
+  ]);
+  assert.deepEqual(scene.layers.attention[0], {
+    id: 'attention-source-scope',
+    priority: 90,
+    severity: 'warning',
+    reason: 'Review source-bound simulation evidence.',
+    evidenceRef: 'e'.repeat(64),
+    affectedMetric: 'simulation.status',
+    recommendedAdvisoryAction: 'review-failed-simulation-evidence',
+    stalenessBoundary: `snapshot:${snapshot.snapshotId}`,
+    assetNodeRefs: [
+      { assetId: 'solar-1', nodeId: 'node-a' },
+      { assetId: 'load-1', nodeId: 'node-a' },
+      { assetId: 'grid-1', nodeId: 'node-a' },
+    ],
+    advisoryOnly: true,
+  });
+  assert.equal(scene.rendererContract.authoritativeSource, 'thergrid-decision-receipt');
+});
