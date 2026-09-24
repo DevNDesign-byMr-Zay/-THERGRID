@@ -55,6 +55,25 @@ test('runs the complete deterministic vertical slice with evidence gates', () =>
     },
   ]);
   assert.equal(first.scene.rendererContract.mode, 'renderer-neutral');
+  assert.equal(first.scene.evidence.powerFlows.length, 5);
+  assert.deepEqual(first.scene.evidence.forecastDelta, {
+    method: 'persistence-v1',
+    forecastFor: first.forecast.forecastFor,
+    generationKw: 60,
+    loadKw: 45,
+    generationDeltaKw: 0,
+    loadDeltaKw: 0,
+  });
+  assert.deepEqual(first.scene.evidence.simulation, {
+    backend: 'thergrid-classical-reference-v1',
+    status: 'passed',
+    durationMinutes: 15,
+    runtimeMs: 0,
+    residualBalanceKw: 0,
+    gridAdjustmentKw: 0,
+    advisoryOnly: true,
+    physicalActuation: false,
+  });
   assert.equal(first.presentation.status, 'ready-for-renderer');
   assert.equal(first.presentation.target, 'holo-mat');
   assert.equal(first.presentation.deviceId, 'holo-mat-reference');
