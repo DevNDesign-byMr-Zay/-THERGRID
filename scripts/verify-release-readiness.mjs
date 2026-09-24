@@ -3,6 +3,7 @@ import { access, readFile } from 'node:fs/promises';
 const REQUIRED_FILES = Object.freeze([
   'Dockerfile',
   'compose.yml',
+  '.env.example',
   'package-lock.json',
   'CHANGELOG.md',
   'README.md',
@@ -31,13 +32,14 @@ async function main() {
   const root = new URL('../', import.meta.url);
   await Promise.all(REQUIRED_FILES.map((path) => access(new URL(path, root))));
 
-  const [pkg, changelog, readme, ci, codeql, release] = await Promise.all([
+  const [pkg, changelog, readme, ci, codeql, release, envExample] = await Promise.all([
     text('package.json').then(JSON.parse),
     text('CHANGELOG.md'),
     text('README.md'),
     text('.github/workflows/ci.yml'),
     text('.github/workflows/codeql.yml'),
     text('.github/workflows/release.yml'),
+    text('.env.example'),
   ]);
 
   assert(/^\d+\.\d+\.\d+$/u.test(pkg.version), 'package version must be semantic');
@@ -73,6 +75,10 @@ async function main() {
     changelog.includes(`Current package candidate: \`${pkg.version}\``),
     'changelog candidate version must match package.json',
   );
+
+  for (const key of ['PORT', 'SERVICE_NAME', 'THERGRID_PORT', 'THERGRID_LOG_LEVEL']) {
+    assert(new RegExp(`^${key}=`, 'mu').test(envExample), `.env.example must document ${key}`);
+  }
 
   assert(/npm ci --ignore-scripts/u.test(ci), 'CI must use reproducible npm install');
   assert(/npm audit --audit-level=moderate/u.test(ci), 'CI must audit dependencies');
