@@ -1,6 +1,19 @@
 # Changelog
 
-## Unreleased — deterministic spatial-intelligence hardening
+## Unreleased — post-release hardening
+
+### Added
+
+- Provider-neutral startup/config error reporting with bounded context and isolated reporter failures.
+- Raw V8 coverage retention from the exact blocking Node coverage run.
+- Canonical runtime/type-check support for the platform health and observability surface.
+
+### Changed
+
+- Root container/runtime discovery and environment metadata are now validated through the maintained release-readiness contract.
+- Current package candidate: `0.1.1`. The `v0.1.0` release remains the latest hosted milestone; this candidate is not published until the gated manual release workflow publishes it.
+
+## 0.1.0 — 2026-09-24 — deterministic spatial-intelligence hardening
 
 ### Added
 
@@ -24,8 +37,7 @@
 
 ### Release policy
 
-- Current package candidate: `0.1.0`. No hosted tag or release is claimed until the gated manual release workflow publishes it.
+- Published as `v0.1.0` on 2026-09-24 through the gated manual release workflow.
 - This changelog records real repository work only.
-- No hosted GitHub release or tag is claimed until one is actually published.
 - Advanced solver output never becomes authoritative solely because it outperforms a baseline.
 
