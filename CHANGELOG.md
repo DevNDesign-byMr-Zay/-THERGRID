@@ -4,6 +4,7 @@
 
 ### Added
 
+- Pinned ESLint, Prettier, and TypeScript as exact local development dependencies with a synchronized npm lockfile and release-readiness parity checks.
 - Machine-readable and reviewer-facing classification identifying THERGRID as a Node.js application service rather than infrastructure-as-code.
 - An explicit conventional `npm test` CI signal so automated scanners can detect the runnable suite.
 - Release-readiness enforcement that preserves the application-vs-IaC boundary.
