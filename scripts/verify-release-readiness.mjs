@@ -54,26 +54,14 @@ async function main() {
     );
   }
 
-  assert(
-    /npm ci --ignore-scripts/u.test(ci),
-    'CI must use reproducible npm install',
-  );
-  assert(
-    /npm audit --audit-level=moderate/u.test(ci),
-    'CI must audit dependencies',
-  );
+  assert(/npm ci --ignore-scripts/u.test(ci), 'CI must use reproducible npm install');
+  assert(/npm audit --audit-level=moderate/u.test(ci), 'CI must audit dependencies');
   assert(/npm run coverage/u.test(ci), 'CI must enforce coverage');
   assert(/npm run demo/u.test(ci), 'CI must run evidence demo');
   assert(/npm run dashboard-demo/u.test(ci), 'CI must run dashboard demo');
-  assert(
-    /docker compose up --build/u.test(ci),
-    'CI must smoke-test the container runtime',
-  );
+  assert(/docker compose up --build/u.test(ci), 'CI must smoke-test the container runtime');
   assert(/pull_request:/u.test(codeql), 'CodeQL must run for pull requests');
-  assert(
-    /javascript-typescript/u.test(codeql),
-    'CodeQL must analyze JavaScript/TypeScript',
-  );
+  assert(/javascript-typescript/u.test(codeql), 'CodeQL must analyze JavaScript/TypeScript');
   assert(
     /simulation before actuation/iu.test(readme),
     'README must preserve simulation-before-actuation rule',
