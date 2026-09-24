@@ -107,6 +107,12 @@ async function main() {
   assert(weeklySchedules.length >= 2, 'Dependabot must run weekly for npm and GitHub Actions');
   assert(/npm run typecheck/u.test(ci), 'CI must type-check maintained JavaScript');
   assert(/npm run coverage/u.test(ci), 'CI must enforce coverage');
+  assert(
+    /NODE_V8_COVERAGE:\s*coverage\/v8/u.test(ci) &&
+      /actions\/upload-artifact@v7/u.test(ci) &&
+      /path:\s*coverage\/v8\//u.test(ci),
+    'CI must retain runtime coverage evidence',
+  );
   assert(/npm run demo/u.test(ci), 'CI must run evidence demo');
   assert(/npm run dashboard-demo/u.test(ci), 'CI must run dashboard demo');
   assert(
