@@ -120,6 +120,9 @@ function buildSimulationEvidence(snapshotId, simulation) {
   }
   const outputs = requireObject(value.outputs, 'simulation.outputs');
   const safety = requireObject(value.safety, 'simulation.safety');
+  if (safety.advisoryOnly !== true || safety.physicalActuation !== false) {
+    throw new TypeError('simulation evidence must remain advisory-only and non-actuating');
+  }
   return {
     backend: id(value.backend, 'simulation.backend'),
     status: id(value.status, 'simulation.status'),
@@ -127,8 +130,8 @@ function buildSimulationEvidence(snapshotId, simulation) {
     runtimeMs: finite(value.runtimeMs, 'simulation.runtimeMs'),
     residualBalanceKw: finite(outputs.residualBalanceKw, 'simulation.outputs.residualBalanceKw'),
     gridAdjustmentKw: finite(outputs.gridAdjustmentKw, 'simulation.outputs.gridAdjustmentKw'),
-    advisoryOnly: safety.advisoryOnly === true,
-    physicalActuation: safety.physicalActuation === true,
+    advisoryOnly: true,
+    physicalActuation: false,
   };
 }
 
