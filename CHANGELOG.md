@@ -1,6 +1,18 @@
 # Changelog
 
-## Unreleased — post-release hardening
+## Unreleased — pre-rescore detector hardening
+
+### Added
+
+- Machine-readable and reviewer-facing classification identifying THERGRID as a Node.js application service rather than infrastructure-as-code.
+- An explicit conventional `npm test` CI signal so automated scanners can detect the runnable suite.
+- Release-readiness enforcement that preserves the application-vs-IaC boundary.
+
+### Changed
+
+- Current package candidate: `0.1.2`. The `v0.1.1` release is the latest hosted milestone; this candidate is not published until the gated manual release workflow publishes it.
+
+## 0.1.1 — 2026-09-24 — post-release hardening
 
 ### Added
 
@@ -11,7 +23,7 @@
 ### Changed
 
 - Root container/runtime discovery and environment metadata are now validated through the maintained release-readiness contract.
-- Current package candidate: `0.1.1`. The `v0.1.0` release remains the latest hosted milestone; this candidate is not published until the gated manual release workflow publishes it.
+- Published as `v0.1.1` on 2026-09-24 through the gated manual release workflow.
 
 ## 0.1.0 — 2026-09-24 — deterministic spatial-intelligence hardening
 
