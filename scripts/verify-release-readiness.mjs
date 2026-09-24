@@ -2,7 +2,7 @@ import { access, readFile } from 'node:fs/promises';
 
 const REQUIRED_FILES = Object.freeze([
   'Dockerfile',
-  'compose.yaml',
+  'compose.yml',
   'package-lock.json',
   'README.md',
   'docs/ARCHITECTURE.md',
