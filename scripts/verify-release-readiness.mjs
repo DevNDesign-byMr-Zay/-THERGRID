@@ -94,7 +94,10 @@ async function main() {
     'Dependabot must track GitHub Actions',
   );
   const weeklySchedules = dependabot.match(/interval:\s*"?weekly"?/gu) ?? [];
-  assert(weeklySchedules.length >= 2, 'Dependabot must run weekly for npm and GitHub Actions');
+  assert(
+    weeklySchedules.length >= 2,
+    'Dependabot must run weekly for npm and GitHub Actions',
+  );
   assert(/npm run coverage/u.test(ci), 'CI must enforce coverage');
   assert(/npm run demo/u.test(ci), 'CI must run evidence demo');
   assert(/npm run dashboard-demo/u.test(ci), 'CI must run dashboard demo');
