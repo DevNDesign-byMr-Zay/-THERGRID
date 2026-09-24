@@ -18,7 +18,7 @@
     "format": "npx --yes --package prettier@3.6.2 prettier --write 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs'",
     "health": "node src/platform-health-service.mjs",
     "verify:release": "node scripts/verify-release-readiness.mjs",
-    "typecheck": "npx --yes --package typescript@5.9.3 tsc -p jsconfig.json"
+    "typecheck": "npx --yes --package typescript@5.9.3 --package @types/node@22.18.6 tsc -p jsconfig.json"
   },
   "dependencies": {
     "pino": "10.3.1",
