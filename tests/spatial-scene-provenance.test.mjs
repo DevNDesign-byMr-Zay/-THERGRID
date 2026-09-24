@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runSyntheticMicrogrid } from '../src/pipeline.mjs';
 import { buildSpatialScene } from '../src/spatial-scene.mjs';
+import { buildSolverEvidence, compareSolverEvidence } from '../src/solver-evaluation.mjs';
 
 const snapshot = {
   schemaVersion: 1,
@@ -158,5 +159,107 @@ test('scene rejects simulation evidence that claims actuation authority', () => 
         provenance: run.scene.provenanceRef,
       }),
     /simulation evidence must remain advisory-only and non-actuating/,
+  );
+});
+
+
+test('scene carries deterministic candidate solver comparison without authority', () => {
+  const run = runSyntheticMicrogrid(snapshot);
+  const baseline = buildSolverEvidence({
+    experimentId: run.experimentId,
+    inputSnapshotId: snapshot.snapshotId,
+    candidate: {
+      model: 'classical-reference',
+      solver: 'thergrid-reference',
+      version: 'v1',
+    },
+    seed: 0,
+    objective: 0,
+    feasible: true,
+    runtimeMs: 0,
+    provenance: [run.receipt.receiptId, run.scene.sceneId],
+  });
+  const candidate = buildSolverEvidence({
+    experimentId: run.experimentId,
+    inputSnapshotId: snapshot.snapshotId,
+    candidate: {
+      model: 'quantum-inspired',
+      solver: 'thergrid-quantum-inspired-contract',
+      version: 'v1',
+    },
+    seed: 7,
+    objective: 0.25,
+    feasible: true,
+    runtimeMs: 3,
+    provenance: [run.receipt.receiptId, run.scene.sceneId],
+  });
+  const candidates = compareSolverEvidence([baseline, candidate]);
+  const solverComparison = {
+    inputSnapshotId: snapshot.snapshotId,
+    candidates,
+    selectedFingerprint: candidates[0].fingerprint,
+  };
+
+  const scene = buildSpatialScene({
+    twinState: run.twinState,
+    forecast: run.forecast,
+    simulation: run.simulation,
+    provenance: run.scene.provenanceRef,
+    solverComparison,
+  });
+
+  assert.equal(scene.layers.solverComparison, true);
+  assert.equal(scene.evidence.solverComparison.candidates.length, 2);
+  assert.equal(
+    scene.evidence.solverComparison.selectedFingerprint,
+    candidates[0].fingerprint,
+  );
+  assert.equal(scene.evidence.solverComparison.candidates[0].objective, 0);
+  assert.equal(scene.evidence.solverComparison.candidates[1].objective, 0.25);
+  assert.equal(scene.evidence.solverComparison.authoritative, false);
+});
+
+test('scene rejects solver comparison selection and snapshot substitution', () => {
+  const run = runSyntheticMicrogrid(snapshot);
+  const evidence = buildSolverEvidence({
+    experimentId: run.experimentId,
+    inputSnapshotId: snapshot.snapshotId,
+    candidate: {
+      model: 'classical-reference',
+      solver: 'thergrid-reference',
+      version: 'v1',
+    },
+    seed: 0,
+    objective: 0,
+    feasible: true,
+    runtimeMs: 0,
+    provenance: [run.receipt.receiptId, run.scene.sceneId],
+  });
+  const candidates = compareSolverEvidence([evidence]);
+
+  assert.throws(
+    () =>
+      buildSpatialScene({
+        twinState: run.twinState,
+        solverComparison: {
+          inputSnapshotId: snapshot.snapshotId,
+          candidates,
+          selectedFingerprint: 'f'.repeat(64),
+        },
+      }),
+    /selectedFingerprint must reference a comparison candidate/,
+  );
+
+  assert.throws(
+    () =>
+      buildSpatialScene({
+        twinState: run.twinState,
+        solverComparison: {
+          inputSnapshotId: 'other-snapshot',
+          candidates,
+          selectedFingerprint: candidates[0].fingerprint,
+        },
+      }),
+    /inputSnapshotId must match twinState\.snapshotId/,
   );
 });
