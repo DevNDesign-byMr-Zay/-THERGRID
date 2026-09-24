@@ -42,6 +42,14 @@ test('synthetic microgrid produces deterministic balanced twin state', async () 
       balanceKw: 0,
       renewableSharePercent: 96.774194,
     },
+    assetStates: [
+      { assetId: 'solar-1', nodeId: 'bus-main', kind: 'solar', powerKw: 78 },
+      { assetId: 'wind-1', nodeId: 'bus-main', kind: 'wind', powerKw: 42 },
+      { assetId: 'battery-1', nodeId: 'bus-main', kind: 'battery', powerKw: -18 },
+      { assetId: 'load-fixed-1', nodeId: 'bus-main', kind: 'load', powerKw: 96 },
+      { assetId: 'load-flex-1', nodeId: 'bus-main', kind: 'load', powerKw: 28 },
+      { assetId: 'grid-1', nodeId: 'bus-main', kind: 'grid_interconnect', powerKw: 22 },
+    ],
     storage: [
       {
         assetId: 'battery-1',
