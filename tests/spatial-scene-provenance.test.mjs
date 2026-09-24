@@ -161,7 +161,6 @@ test('scene rejects simulation evidence that claims actuation authority', () => 
   );
 });
 
-
 test('scene rejects malformed solver comparison and keeps policy gates non-authoritative', () => {
   const run = runSyntheticMicrogrid(snapshot);
 
