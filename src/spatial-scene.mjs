@@ -57,6 +57,33 @@ export function getSpatialSceneId(snapshotId) {
   return sceneId(id(snapshotId, 'snapshotId'));
 }
 
+function buildSceneNodes(twin) {
+  const topology = twin.topology;
+  if (!topology || typeof topology !== 'object' || Array.isArray(topology)) return [];
+  if (!Array.isArray(topology.nodes) || !Array.isArray(topology.assetNodeRefs)) return [];
+
+  return topology.nodes.map((nodeId, nodeIndex) => {
+    const canonicalNodeId = id(nodeId, `twinState.topology.nodes[${nodeIndex}]`);
+    const assetIds = topology.assetNodeRefs
+      .filter((ref) => ref?.nodeId === canonicalNodeId)
+      .map((ref, refIndex) =>
+        id(ref.assetId, `twinState.topology.assetNodeRefs[${refIndex}].assetId`),
+      );
+    return {
+      id: canonicalNodeId,
+      assetIds,
+    };
+  });
+}
+
+function buildAttentionScope(item, index) {
+  if (!Array.isArray(item.assetNodeRefs)) return [];
+  return item.assetNodeRefs.map((ref, refIndex) => ({
+    assetId: id(ref?.assetId, `attention[${index}].assetNodeRefs[${refIndex}].assetId`),
+    nodeId: id(ref?.nodeId, `attention[${index}].assetNodeRefs[${refIndex}].nodeId`),
+  }));
+}
+
 export function buildSpatialScene({
   twinState,
   proposal = null,
@@ -86,7 +113,7 @@ export function buildSpatialScene({
       supportedTargets: ['holo-mat', 'projector', 'volumetric-3d', 'ar-vr', 'web-dashboard'],
       authoritativeSource: 'thergrid-decision-receipt',
     },
-    nodes: [],
+    nodes: buildSceneNodes(twin),
     layers: {
       topology: true,
       powerFlows: true,
@@ -104,6 +131,19 @@ export function buildSpatialScene({
         reason: id(item.reason ?? 'Unspecified', `attention[${index}].reason`),
         evidenceRef:
           item.evidenceRef == null ? null : id(item.evidenceRef, `attention[${index}].evidenceRef`),
+        affectedMetric:
+          item.affectedMetric == null
+            ? null
+            : id(item.affectedMetric, `attention[${index}].affectedMetric`),
+        recommendedAdvisoryAction:
+          item.recommendedAdvisoryAction == null
+            ? null
+            : id(item.recommendedAdvisoryAction, `attention[${index}].recommendedAdvisoryAction`),
+        stalenessBoundary:
+          item.stalenessBoundary == null
+            ? null
+            : id(item.stalenessBoundary, `attention[${index}].stalenessBoundary`),
+        assetNodeRefs: buildAttentionScope(item, index),
         advisoryOnly: true,
       })),
       provenance: Boolean(provenanceRef),
