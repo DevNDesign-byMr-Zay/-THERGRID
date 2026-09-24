@@ -4,6 +4,7 @@ import { once } from 'node:events';
 import {
   createPlatformHealthServer,
   parseHealthServiceConfig,
+  startPlatformHealthService,
 } from '../src/platform-health-service.mjs';
 
 test('parses bounded health service configuration', () => {
@@ -60,4 +61,27 @@ test('serves health and status endpoints without Express', async (t) => {
 
   assert.equal(messages.filter((entry) => entry.level === 'info').length, 2);
   assert.equal(messages.filter((entry) => entry.level === 'warn').length, 1);
+});
+
+test('reports invalid startup configuration and preserves the original failure', async () => {
+  const reports = [];
+  const logger = { info() {}, warn() {}, error() {} };
+
+  await assert.rejects(
+    () =>
+      startPlatformHealthService(
+        { PORT: '70000', SERVICE_NAME: 'thergrid-test' },
+        {
+          logger,
+          onError(error, context) {
+            reports.push({ error, context });
+          },
+        },
+      ),
+    /Too big|less than or equal to 65535|PORT/i,
+  );
+
+  assert.equal(reports.length, 1);
+  assert.equal(reports[0].context.scope, 'health-service-config');
+  assert.equal(Object.isFrozen(reports[0].context), true);
 });

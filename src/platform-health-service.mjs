@@ -3,6 +3,8 @@ import { pathToFileURL } from 'node:url';
 import pino from 'pino';
 import { z } from 'zod';
 
+import { createErrorReporter } from './error-reporting.mjs';
+
 const ENV_SCHEMA = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(8080),
   SERVICE_NAME: z.string().trim().min(1).default('thergrid'),
@@ -49,18 +51,40 @@ export function createPlatformHealthServer({
   });
 }
 
-export async function startPlatformHealthService(environment = process.env) {
-  const config = parseHealthServiceConfig(environment);
-  const logger = pino({ name: config.SERVICE_NAME });
+export async function startPlatformHealthService(
+  environment = process.env,
+  { onError = null, logger: providedLogger = null } = {},
+) {
+  const bootstrapLogger = providedLogger ?? pino({ name: 'thergrid-health' });
+  const reportError = createErrorReporter({ onError, logger: bootstrapLogger });
+
+  let config;
+  try {
+    config = parseHealthServiceConfig(environment);
+  } catch (error) {
+    reportError(error, { scope: 'health-service-config' });
+    throw error;
+  }
+
+  const logger = providedLogger ?? pino({ name: config.SERVICE_NAME });
   const server = createPlatformHealthServer({
     serviceName: config.SERVICE_NAME,
     logger,
   });
 
-  await new Promise((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(config.PORT, '0.0.0.0', resolve);
-  });
+  try {
+    await new Promise((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(config.PORT, '0.0.0.0', resolve);
+    });
+  } catch (error) {
+    reportError(error, {
+      scope: 'health-service-start',
+      service: config.SERVICE_NAME,
+      port: config.PORT,
+    });
+    throw error;
+  }
 
   logger.info(
     {
