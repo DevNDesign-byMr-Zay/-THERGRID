@@ -160,3 +160,36 @@ test('scene rejects simulation evidence that claims actuation authority', () => 
     /simulation evidence must remain advisory-only and non-actuating/,
   );
 });
+
+
+test('scene rejects malformed solver comparison and keeps policy gates non-authoritative', () => {
+  const run = runSyntheticMicrogrid(snapshot);
+
+  assert.throws(
+    () =>
+      buildSpatialScene({
+        twinState: run.twinState,
+        solverComparison: [{ candidate: {}, objective: Number.NaN }],
+      }),
+    /solverComparison/,
+  );
+
+  const scene = buildSpatialScene({
+    twinState: run.twinState,
+    policyGates: {
+      status: 'review-only',
+      reason: 'operator review required',
+      checks: { simulationPassed: true, provenanceValid: false },
+      authoritative: true,
+    },
+  });
+
+  assert.deepEqual(scene.evidence.policyGates, {
+    snapshotId: snapshot.snapshotId,
+    status: 'review-only',
+    reason: 'operator review required',
+    checks: { provenanceValid: false, simulationPassed: true },
+    authoritative: false,
+    advisoryOnly: true,
+  });
+});
