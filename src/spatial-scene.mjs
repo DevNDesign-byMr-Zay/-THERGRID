@@ -133,13 +133,8 @@ function buildSolverComparisonEvidence(snapshotId, comparison) {
       runtimeMs: finite(value.runtimeMs, `solverComparison[${index}].runtimeMs`),
       timeout: value.timeout === true,
       fallback:
-        value.fallback == null
-          ? null
-          : id(value.fallback, `solverComparison[${index}].fallback`),
-      provenanceCount: finite(
-        value.provenanceCount,
-        `solverComparison[${index}].provenanceCount`,
-      ),
+        value.fallback == null ? null : id(value.fallback, `solverComparison[${index}].fallback`),
+      provenanceCount: finite(value.provenanceCount, `solverComparison[${index}].provenanceCount`),
       inputSnapshotId: snapshotId,
       advisoryOnly: true,
     };
