@@ -30,13 +30,7 @@ jobs:
       - name: Lint maintained JavaScript
         run: npm run lint
       - name: Check formatting
-        shell: bash
-        run: |
-          if ! npm run format:check; then
-            npx --yes --package prettier@3.6.2 prettier --write scripts/verify-release-readiness.mjs
-            git diff -- scripts/verify-release-readiness.mjs
-            exit 1
-          fi
+        run: npm run format:check
       - name: Tests with coverage
         run: npm run coverage
       - name: Reproducible evidence and dashboard demos
