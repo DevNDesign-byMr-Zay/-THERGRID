@@ -38,7 +38,18 @@ async function main() {
   const root = new URL('../', import.meta.url);
   await Promise.all(REQUIRED_FILES.map((path) => access(new URL(path, root))));
 
-  const [pkg, changelog, readme, ci, codeql, release, envExample, dependabot, classification, projectScope] = await Promise.all([
+  const [
+    pkg,
+    changelog,
+    readme,
+    ci,
+    codeql,
+    release,
+    envExample,
+    dependabot,
+    classification,
+    projectScope,
+  ] = await Promise.all([
     text('package.json').then(JSON.parse),
     text('CHANGELOG.md'),
     text('README.md'),
@@ -54,9 +65,18 @@ async function main() {
   assert(/^\d+\.\d+\.\d+$/u.test(pkg.version), 'package version must be semantic');
   assert(pkg.private === true, 'THERGRID package must remain private');
   assert(pkg.type === 'module', 'THERGRID must remain ESM');
-  assert(classification.primaryClass === 'application-service', 'repository classification must remain application-service');
-  assert(classification.excludedClasses?.includes('infrastructure-as-code'), 'repository classification must explicitly exclude infrastructure-as-code');
-  assert(/not an infrastructure-as-code repository/iu.test(projectScope), 'project scope must preserve the application-vs-IaC boundary');
+  assert(
+    classification.primaryClass === 'application-service',
+    'repository classification must remain application-service',
+  );
+  assert(
+    classification.excludedClasses?.includes('infrastructure-as-code'),
+    'repository classification must explicitly exclude infrastructure-as-code',
+  );
+  assert(
+    /not an infrastructure-as-code repository/iu.test(projectScope),
+    'project scope must preserve the application-vs-IaC boundary',
+  );
   assert(
     typeof pkg.engines?.node === 'string' && pkg.engines.node.includes('22'),
     'Node 22 runtime contract is required',
