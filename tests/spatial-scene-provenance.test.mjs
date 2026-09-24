@@ -85,7 +85,6 @@ test('scene provenance getters are rejected without evaluation', () => {
   assert.equal(getterReads, 0);
 });
 
-
 test('scene preserves source-backed attention scope without gaining authority', () => {
   const run = runSyntheticMicrogrid(snapshot);
   const attention = [
@@ -109,9 +108,7 @@ test('scene preserves source-backed attention scope without gaining authority', 
     attention,
   });
 
-  assert.deepEqual(scene.nodes, [
-    { id: 'node-a', assetIds: ['solar-1', 'load-1', 'grid-1'] },
-  ]);
+  assert.deepEqual(scene.nodes, [{ id: 'node-a', assetIds: ['solar-1', 'load-1', 'grid-1'] }]);
   assert.deepEqual(scene.layers.attention[0], {
     id: 'attention-source-scope',
     priority: 90,
