@@ -170,12 +170,11 @@ export function compileHolographicRenderPacket(input = {}) {
     layers: spatialScene.layers,
     nodes: Array.isArray(spatialScene.nodes) ? spatialScene.nodes : [],
     metrics: spatialScene.metrics ?? null,
-    evidence:
-      spatialScene.evidence ?? {
-        powerFlows: [],
-        forecastDelta: null,
-        simulation: null,
-      },
+    evidence: spatialScene.evidence ?? {
+      powerFlows: [],
+      forecastDelta: null,
+      simulation: null,
+    },
     provenanceRef: spatialScene.provenanceRef ?? null,
     safety: { authoritative: false, actuatesHardware: false, advisoryOnly: true },
   };
