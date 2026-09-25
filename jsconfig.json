@@ -17,7 +17,9 @@
     "src/model-routing.mjs",
     "src/solvaer-optimization-contract.mjs",
     "src/contracts.mjs",
-    "src/twin.mjs"
+    "src/twin.mjs",
+    "src/planning.mjs",
+    "src/simulation.mjs"
   ],
   "exclude": [
     "node_modules"
