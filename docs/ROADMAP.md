@@ -1,5 +1,7 @@
 # THERGRID Roadmap
 
+> **Scope note:** This document describes planned phase outcomes. The maintained source tree already contains a deterministic synthetic vertical slice and advisory contracts for some later-phase boundaries; those contracts do not imply live integrations, operator UI delivery, or physical actuation. See the README's **Implemented today** section for current claims.
+
 ## Phase 0 — Foundation
 
 Goal: make the repository understandable and runnable before advanced systems work begins.

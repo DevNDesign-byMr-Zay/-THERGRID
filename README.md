@@ -1,12 +1,12 @@
 # THERGRID
 
-THERGRID is a self-auditing, AI-operated renewable-energy digital twin with a spatial/holographic command interface and a quantum-simulation layer.
+THERGRID is a self-auditing Node.js renewable-energy digital-twin application service. Its maintained vertical slice produces advisory evidence and renderer-neutral presentation plans; it does not operate physical infrastructure.
 
 > **Repository classification:** THERGRID is a Node.js application service for digital-twin, energy-simulation, and spatial-intelligence workflows. It is **not an infrastructure-as-code repository**; Docker/Compose are used only for reproducible application verification. See [docs/PROJECT_SCOPE.md](docs/PROJECT_SCOPE.md).
 
 ## Project direction
 
-The goal is to build a defensible systems platform that can model distributed energy assets, ingest live or simulated telemetry, estimate grid state, test operating strategies, visualize the system spatially, and produce an auditable record of every recommendation or autonomous action.
+The goal is to build a defensible systems platform that can model distributed energy assets, ingest live or simulated telemetry, estimate grid state, test operating strategies, visualize the system spatially, and produce an auditable record of every recommendation. Autonomous action is not implemented.
 
 THERGRID should grow as a modular platform rather than one monolithic AI. The current Mr. Zay model family — ROARY with the next-generation VÆLON, AUREN, and SOLVÆR concepts — should connect through explicit contracts so each intelligence layer can evolve without breaking the digital twin, spatial interface, audit plane, or simulation stack.
 
@@ -73,6 +73,7 @@ npm ci --ignore-scripts
 npm audit --audit-level=moderate
 npm run syntax
 npm run typecheck
+npm run typecheck:strict-renderer
 npm test
 npm run coverage
 npm run demo
@@ -82,6 +83,8 @@ npm run verify:release
 `npm run demo` executes the deterministic synthetic-microgrid vertical slice and prints a compact evidence summary containing the snapshot, experiment, receipt, scene, render target, provenance result, promotion status, and the advisory SOLVÆR handoff state. The demo fails closed if simulation or provenance validation fails or if the promotion gate becomes authoritative.
 
 Pull requests and pushes to `main` run the same reproducible install, dependency audit, release-readiness contract, syntax checks, test coverage, demo path, and container smoke test. CodeQL runs separately as the maintained static security-analysis gate. `npm run verify:release` confirms those maintained quality/security/safety gates are still present before a real semantic tag is cut; it does not claim that a release already exists.
+
+`npm run typecheck:strict-renderer` applies TypeScript strict checking to the compact renderer evidence and no-actuation policy boundary. It retains the existing JavaScript migration's explicit `noImplicitAny: false` exception; broad strict-mode conversion is intentionally not claimed.
 
 ## Environment configuration
 
