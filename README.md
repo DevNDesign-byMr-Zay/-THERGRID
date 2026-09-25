@@ -10,6 +10,18 @@ The goal is to build a defensible systems platform that can model distributed en
 
 THERGRID should grow as a modular platform rather than one monolithic AI. The current Mr. Zay model family — ROARY with the next-generation VÆLON, AUREN, and SOLVÆR concepts — should connect through explicit contracts so each intelligence layer can evolve without breaking the digital twin, spatial interface, audit plane, or simulation stack.
 
+## Implemented today
+
+The current maintained application already provides a tested vertical slice rather than empty platform scaffolding:
+
+- validated microgrid snapshot contracts and derived digital-twin state;
+- deterministic persistence forecasting and baseline operating proposals;
+- advisory-only simulation with explicit no-actuation safety evidence;
+- decision receipts, provenance, and reproducible evidence fingerprints;
+- renderer-neutral spatial/holographic presentation contracts;
+- model-routing and SOLVÆR collaboration boundaries that remain advisory;
+- runtime health/observability, dependency auditing, coverage gates, CodeQL, and container smoke verification.
+
 ## Core capability pillars
 
 1. **Energy digital twin** — asset topology, telemetry normalization, state estimation, forecasting, scenario replay, and renewable-generation/storage/load models.
@@ -18,7 +30,7 @@ THERGRID should grow as a modular platform rather than one monolithic AI. The cu
 4. **Quantum simulation gateway** — provider-neutral interfaces for optimization and simulation experiments, with deterministic classical baselines and fallbacks so quantum claims remain measurable.
 5. **Audit and safety plane** — immutable decision receipts, approval boundaries, replayable simulations, provenance, model/version tracking, and fail-closed controls for anything that could affect physical infrastructure.
 
-## Proposed repository shape
+## Target architecture (not yet the current tree)
 
 ```text
 apps/
