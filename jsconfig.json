@@ -19,7 +19,9 @@
     "src/contracts.mjs",
     "src/twin.mjs",
     "src/planning.mjs",
-    "src/simulation.mjs"
+    "src/simulation.mjs",
+    "src/decision-receipt.mjs",
+    "src/solver-evaluation.mjs"
   ],
   "exclude": [
     "node_modules"

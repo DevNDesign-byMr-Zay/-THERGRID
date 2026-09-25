@@ -74,6 +74,21 @@ function deepFreeze(value) {
   return Object.freeze(value);
 }
 
+/**
+ * @param {{
+ *   experimentId?: unknown,
+ *   candidate?: any,
+ *   inputSnapshotId?: unknown,
+ *   constraints?: unknown,
+ *   seed?: unknown,
+ *   objective?: number,
+ *   feasible?: boolean,
+ *   runtimeMs?: number,
+ *   timeout?: boolean,
+ *   fallback?: string | null,
+ *   provenance?: unknown[]
+ * }} [options]
+ */
 export function buildSolverEvidence({
   experimentId,
   candidate,
@@ -133,6 +148,12 @@ export function compareSolverEvidence(evidences = []) {
   });
 }
 
+/**
+ * @param {{
+ *   evidence?: any,
+ *   validation?: any
+ * }} [options]
+ */
 export function evaluatePromotionGate({ evidence, validation } = {}) {
   const value = object(evidence, 'evidence');
   const provenance = Array.isArray(value.provenance) ? value.provenance : [];
