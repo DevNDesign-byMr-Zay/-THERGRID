@@ -21,7 +21,10 @@
     "src/planning.mjs",
     "src/simulation.mjs",
     "src/decision-receipt.mjs",
-    "src/solver-evaluation.mjs"
+    "src/solver-evaluation.mjs",
+    "src/solver-adapter.mjs",
+    "src/holographic-renderer-contract.mjs",
+    "src/holographic-render-packet-policy.mjs"
   ],
   "exclude": [
     "node_modules"

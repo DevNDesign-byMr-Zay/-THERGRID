@@ -7,6 +7,7 @@ const REQUIRED_FILES = Object.freeze([
   '.env.example',
   'package-lock.json',
   'jsconfig.json',
+  'jsconfig.strict-renderer.json',
   '.repo-class.json',
   'docs/PROJECT_SCOPE.md',
   'src/error-reporting.mjs',
@@ -51,6 +52,7 @@ async function main() {
     projectScope,
     lockfile,
     typeConfig,
+    strictRendererTypeConfig,
   ] = await Promise.all([
     text('package.json').then(JSON.parse),
     text('CHANGELOG.md'),
@@ -64,6 +66,7 @@ async function main() {
     text('docs/PROJECT_SCOPE.md'),
     text('package-lock.json').then(JSON.parse),
     text('jsconfig.json').then(JSON.parse),
+    text('jsconfig.strict-renderer.json').then(JSON.parse),
   ]);
 
   assert(/^\d+\.\d+\.\d+$/u.test(pkg.version), 'package version must be semantic');
@@ -96,10 +99,28 @@ async function main() {
     'src/simulation.mjs',
     'src/decision-receipt.mjs',
     'src/solver-evaluation.mjs',
+    'src/solver-adapter.mjs',
+    'src/holographic-renderer-contract.mjs',
+    'src/holographic-render-packet-policy.mjs',
   ]) {
     assert(
       typeConfig.include?.includes(path),
       `critical maintained typecheck surface missing: ${path}`,
+    );
+  }
+  assert(
+    strictRendererTypeConfig.compilerOptions?.strict === true &&
+      strictRendererTypeConfig.compilerOptions?.checkJs === true &&
+      strictRendererTypeConfig.compilerOptions?.noImplicitAny === false,
+    'renderer evidence safety boundary must remain strict checkJs',
+  );
+  for (const path of [
+    'src/holographic-renderer-contract.mjs',
+    'src/holographic-render-packet-policy.mjs',
+  ]) {
+    assert(
+      strictRendererTypeConfig.include?.includes(path),
+      `strict renderer typecheck surface missing: ${path}`,
     );
   }
 
@@ -140,6 +161,7 @@ async function main() {
     'dashboard-demo',
     'lint',
     'typecheck',
+    'typecheck:strict-renderer',
     'format:check',
     'check',
     'verify:release',
@@ -186,6 +208,10 @@ async function main() {
   const weeklySchedules = dependabot.match(/interval:\s*"?weekly"?/gu) ?? [];
   assert(weeklySchedules.length >= 2, 'Dependabot must run weekly for npm and GitHub Actions');
   assert(/npm run typecheck/u.test(ci), 'CI must type-check maintained JavaScript');
+  assert(
+    /npm run typecheck:strict-renderer/u.test(ci),
+    'CI must strictly type-check the renderer evidence safety boundary',
+  );
   assert(/npm test/u.test(ci), 'CI must expose the conventional npm test suite');
   assert(/npm run coverage/u.test(ci), 'CI must enforce coverage');
   assert(

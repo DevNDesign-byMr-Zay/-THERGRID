@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "skipLibCheck": true,
+    "strict": true,
+    "noImplicitAny": false
+  },
+  "include": [
+    "types/checkjs-shims.d.ts",
+    "src/holographic-renderer-contract.mjs",
+    "src/holographic-render-packet-policy.mjs"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

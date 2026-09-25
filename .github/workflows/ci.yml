@@ -39,6 +39,8 @@ jobs:
         run: npm run lint
       - name: Type-check maintained JavaScript
         run: npm run typecheck
+      - name: Strictly type-check renderer evidence safety boundary
+        run: npm run typecheck:strict-renderer
       - name: Check formatting
         run: npm run format:check
       - name: Run conventional test suite

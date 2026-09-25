@@ -12,13 +12,14 @@
     "syntax": "find src tests scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check",
     "demo": "node scripts/demo.mjs",
     "dashboard-demo": "node scripts/dashboard-demo.mjs",
-    "check": "npm run verify:release && npm run syntax && npm run lint && npm run typecheck && npm run format:check && npm run coverage && npm run demo && npm run dashboard-demo",
+    "check": "npm run verify:release && npm run syntax && npm run lint && npm run typecheck && npm run typecheck:strict-renderer && npm run format:check && npm run coverage && npm run demo && npm run dashboard-demo",
     "lint": "eslint --max-warnings=0 src tests scripts",
     "format:check": "prettier --check 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs'",
     "format": "prettier --write 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs'",
     "health": "node src/platform-health-service.mjs",
     "verify:release": "node scripts/verify-release-readiness.mjs",
-    "typecheck": "tsc -p jsconfig.json"
+    "typecheck": "tsc -p jsconfig.json",
+    "typecheck:strict-renderer": "tsc -p jsconfig.strict-renderer.json"
   },
   "dependencies": {
     "pino": "10.3.1",
