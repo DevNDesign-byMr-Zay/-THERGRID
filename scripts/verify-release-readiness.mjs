@@ -237,8 +237,14 @@ async function main() {
     /gh release create/u.test(release),
     'release workflow must publish through GitHub Releases',
   );
-  assert(/## Implemented today/u.test(readme), 'README must identify currently implemented capability');
-  assert(/## Target architecture \(not yet the current tree\)/u.test(readme), 'README must separate target architecture from the current tree');
+  assert(
+    /## Implemented today/u.test(readme),
+    'README must identify currently implemented capability',
+  );
+  assert(
+    /## Target architecture \(not yet the current tree\)/u.test(readme),
+    'README must separate target architecture from the current tree',
+  );
   assert(
     /simulation before actuation/iu.test(readme),
     'README must preserve simulation-before-actuation rule',
