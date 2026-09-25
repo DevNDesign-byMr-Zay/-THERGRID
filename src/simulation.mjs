@@ -11,6 +11,13 @@ function finite(value, name) {
   return value;
 }
 
+/**
+ * @param {{
+ *   twinState?: any,
+ *   proposal?: any,
+ *   durationMinutes?: number
+ * }} [options]
+ */
 export function simulateProposal({ twinState, proposal, durationMinutes = 15 } = {}) {
   const twin = requireObject(twinState, 'twinState');
   const decision = requireObject(proposal, 'proposal');
