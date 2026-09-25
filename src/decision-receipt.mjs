@@ -23,6 +23,13 @@ function requireFiniteNumber(value, name) {
   return value;
 }
 
+/**
+ * @param {{
+ *   twinState?: any,
+ *   forecast?: any,
+ *   proposal?: any
+ * }} [options]
+ */
 export function buildDecisionReceipt({ twinState, forecast, proposal } = {}) {
   const twin = requireObject(twinState, 'twinState');
   const predicted = requireObject(forecast, 'forecast');
