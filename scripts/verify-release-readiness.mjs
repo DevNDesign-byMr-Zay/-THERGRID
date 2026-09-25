@@ -50,6 +50,7 @@ async function main() {
     classification,
     projectScope,
     lockfile,
+    typeConfig,
   ] = await Promise.all([
     text('package.json').then(JSON.parse),
     text('CHANGELOG.md'),
@@ -62,6 +63,7 @@ async function main() {
     text('.repo-class.json').then(JSON.parse),
     text('docs/PROJECT_SCOPE.md'),
     text('package-lock.json').then(JSON.parse),
+    text('jsconfig.json').then(JSON.parse),
   ]);
 
   assert(/^\d+\.\d+\.\d+$/u.test(pkg.version), 'package version must be semantic');
@@ -83,6 +85,23 @@ async function main() {
     typeof pkg.engines?.node === 'string' && pkg.engines.node.includes('22'),
     'Node 22 runtime contract is required',
   );
+  assert(
+    typeConfig.compilerOptions?.checkJs === true,
+    'maintained JavaScript checkJs must remain enabled',
+  );
+  for (const path of [
+    'src/contracts.mjs',
+    'src/twin.mjs',
+    'src/planning.mjs',
+    'src/simulation.mjs',
+    'src/decision-receipt.mjs',
+    'src/solver-evaluation.mjs',
+  ]) {
+    assert(
+      typeConfig.include?.includes(path),
+      `critical maintained typecheck surface missing: ${path}`,
+    );
+  }
 
   const expectedDevToolchain = Object.freeze({
     eslint: '10.10.0',
