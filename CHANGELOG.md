@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased — pre-rescore detector hardening
+## Unreleased
+
+### Changed
+
+- Exposed the maintained health service through conventional Node.js `main`, `exports`, and `npm start` application entrypoints.
+- Added plainly named lint/typecheck/test/coverage/container CI jobs plus a zero-cache fresh-clone smoke path to improve machine-detectable application verification.
+- Added scheduled dependency-freshness evidence without automatic dependency mutation. — pre-rescore detector hardening
 
 ### Added
 
