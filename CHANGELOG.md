@@ -17,7 +17,7 @@
 
 ### Changed
 
-- Current package candidate: `0.1.2`. The `v0.1.1` release is the latest hosted milestone; this candidate is not published until the gated manual release workflow publishes it.
+- Current package candidate: `0.1.3`. The `v0.1.2` release is the latest hosted milestone; this candidate is not published until the gated manual release workflow publishes it.
 
 ## 0.1.1 — 2026-09-24 — post-release hardening
 
