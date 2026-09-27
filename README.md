@@ -66,7 +66,7 @@ Phase 1 is considered reproducible only when that path is deterministic, tested 
 
 ## Reproducible verification
 
-THERGRID targets Node.js 22 and commits its lockfile so a fresh clone can reproduce the maintained quality path.
+THERGRID targets Node.js 22 and commits its lockfile so a fresh clone can reproduce the maintained quality path. The conventional application entrypoint is `npm start`, which runs `src/platform-health-service.mjs`.
 
 ```bash
 npm ci --ignore-scripts
