@@ -230,10 +230,7 @@ async function main() {
     /\n  fresh-clone-smoke:\n/u.test(ci),
     'CI must expose a plainly named fresh-clone-smoke job',
   );
-  assert(
-    /\n  container-smoke:\n/u.test(ci),
-    'CI must expose a plainly named container-smoke job',
-  );
+  assert(/\n  container-smoke:\n/u.test(ci), 'CI must expose a plainly named container-smoke job');
   assert(/npm run typecheck/u.test(ci), 'CI must type-check maintained JavaScript');
   assert(
     /npm run typecheck:strict-renderer/u.test(ci),
@@ -249,10 +246,7 @@ async function main() {
   );
   assert(/npm run demo/u.test(ci), 'CI must run evidence demo');
   assert(/npm run dashboard-demo/u.test(ci), 'CI must run dashboard demo');
-  assert(
-    /rm -rf node_modules coverage/u.test(ci),
-    'fresh-clone CI must remove prior build state',
-  );
+  assert(/rm -rf node_modules coverage/u.test(ci), 'fresh-clone CI must remove prior build state');
   assert(
     /docker compose -f docker-compose\.yml build --no-cache/u.test(ci),
     'fresh-clone CI must rebuild the application container without cached layers',
