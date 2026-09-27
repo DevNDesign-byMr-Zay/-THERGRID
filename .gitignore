@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Test / coverage output
+coverage/
+.nyc_output/
+
+# Logs
+*.log
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/

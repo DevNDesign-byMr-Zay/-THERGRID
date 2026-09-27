@@ -19,6 +19,7 @@ const REQUIRED_FILES = Object.freeze([
   '.github/workflows/ci.yml',
   '.github/workflows/codeql.yml',
   '.github/workflows/release.yml',
+  '.github/workflows/dependency-freshness.yml',
   '.github/dependabot.yml',
   'SECURITY.md',
   'CONTRIBUTING.md',
@@ -46,6 +47,7 @@ async function main() {
     ci,
     codeql,
     release,
+    dependencyFreshness,
     envExample,
     dependabot,
     classification,
@@ -60,6 +62,7 @@ async function main() {
     text('.github/workflows/ci.yml'),
     text('.github/workflows/codeql.yml'),
     text('.github/workflows/release.yml'),
+    text('.github/workflows/dependency-freshness.yml'),
     text('.env.example'),
     text('.github/dependabot.yml'),
     text('.repo-class.json').then(JSON.parse),
@@ -72,6 +75,18 @@ async function main() {
   assert(/^\d+\.\d+\.\d+$/u.test(pkg.version), 'package version must be semantic');
   assert(pkg.private === true, 'THERGRID package must remain private');
   assert(pkg.type === 'module', 'THERGRID must remain ESM');
+  assert(
+    pkg.main === 'src/platform-health-service.mjs',
+    'package main must expose the application service entrypoint',
+  );
+  assert(
+    pkg.exports === './src/platform-health-service.mjs',
+    'package exports must expose the application service entrypoint',
+  );
+  assert(
+    pkg.scripts?.start === 'node src/platform-health-service.mjs',
+    'npm start must launch the application service entrypoint',
+  );
   assert(
     classification.primaryClass === 'application-service',
     'repository classification must remain application-service',
@@ -207,6 +222,15 @@ async function main() {
   );
   const weeklySchedules = dependabot.match(/interval:\s*"?weekly"?/gu) ?? [];
   assert(weeklySchedules.length >= 2, 'Dependabot must run weekly for npm and GitHub Actions');
+  assert(/\n  typecheck:\n/u.test(ci), 'CI must expose a plainly named typecheck job');
+  assert(/\n  lint:\n/u.test(ci), 'CI must expose a plainly named lint job');
+  assert(/\n  test:\n/u.test(ci), 'CI must expose a plainly named test job');
+  assert(/\n  coverage:\n/u.test(ci), 'CI must expose a plainly named coverage job');
+  assert(
+    /\n  fresh-clone-smoke:\n/u.test(ci),
+    'CI must expose a plainly named fresh-clone-smoke job',
+  );
+  assert(/\n  container-smoke:\n/u.test(ci), 'CI must expose a plainly named container-smoke job');
   assert(/npm run typecheck/u.test(ci), 'CI must type-check maintained JavaScript');
   assert(
     /npm run typecheck:strict-renderer/u.test(ci),
@@ -222,6 +246,23 @@ async function main() {
   );
   assert(/npm run demo/u.test(ci), 'CI must run evidence demo');
   assert(/npm run dashboard-demo/u.test(ci), 'CI must run dashboard demo');
+  assert(/rm -rf node_modules coverage/u.test(ci), 'fresh-clone CI must remove prior build state');
+  assert(
+    /docker compose -f docker-compose\.yml build --no-cache/u.test(ci),
+    'fresh-clone CI must rebuild the application container without cached layers',
+  );
+  assert(
+    /schedule:/u.test(dependencyFreshness),
+    'dependency freshness evidence must run on a schedule',
+  );
+  assert(
+    /npm outdated --json/u.test(dependencyFreshness),
+    'dependency freshness workflow must inspect current direct versions',
+  );
+  assert(
+    /actions\/upload-artifact@v7/u.test(dependencyFreshness),
+    'dependency freshness workflow must retain machine-readable evidence',
+  );
   assert(
     /docker compose -f docker-compose\.yml config --quiet/u.test(ci),
     'CI must validate canonical docker-compose.yml',
