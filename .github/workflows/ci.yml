@@ -9,6 +9,162 @@ permissions:
   contents: read
 
 jobs:
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Run maintained typecheck
+        run: npm run typecheck
+      - name: Run strict renderer typecheck
+        run: npm run typecheck:strict-renderer
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Run lint
+        run: npm run lint
+      - name: Check formatting
+        run: npm run format:check
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Run conventional tests
+        run: npm test
+
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Run blocking coverage gate
+        env:
+          NODE_V8_COVERAGE: coverage/v8
+        run: npm run coverage
+
+  fresh-clone-smoke:
+    name: fresh-clone-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout without prior build state
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Setup Node without dependency cache
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Prove clean locked install and full maintained verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf node_modules coverage
+          npm ci --ignore-scripts
+          npm audit --audit-level=moderate
+          npm run check
+      - name: Build application container without cached layers
+        run: docker compose -f docker-compose.yml build --no-cache
+      - name: Start clean application service and probe health
+        shell: bash
+        run: |
+          set -euo pipefail
+          export COMPOSE_FILE=docker-compose.yml
+          docker compose up --detach health
+          trap 'docker compose down --volumes --remove-orphans' EXIT
+
+          ready=0
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8080/health >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$ready" -ne 1 ]; then
+            docker compose logs health
+            exit 1
+          fi
+
+          curl --fail --silent http://127.0.0.1:8080/health
+          curl --fail --silent http://127.0.0.1:8080/status
+
+  container-smoke:
+    name: container-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Validate canonical Compose configuration
+        run: docker compose -f docker-compose.yml config --quiet
+      - name: Build and smoke-test application container
+        shell: bash
+        run: |
+          set -euo pipefail
+          export COMPOSE_FILE=docker-compose.yml
+          docker compose up --build --detach health
+          trap 'docker compose down --volumes --remove-orphans' EXIT
+
+          ready=0
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8080/health >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$ready" -ne 1 ]; then
+            docker compose logs health
+            exit 1
+          fi
+
+          curl --fail --silent http://127.0.0.1:8080/health
+          curl --fail --silent http://127.0.0.1:8080/status
+
   quality:
     runs-on: ubuntu-latest
     steps:
