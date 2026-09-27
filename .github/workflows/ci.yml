@@ -45,7 +45,17 @@ jobs:
       - name: Run lint
         run: npm run lint
       - name: Check formatting
-        run: npm run format:check
+        shell: bash
+        run: |
+          set -euo pipefail
+          if npm run format:check; then
+            exit 0
+          fi
+          npm run format >/dev/null
+          echo "::group::Required Prettier changes"
+          git --no-pager diff -- src tests scripts
+          echo "::endgroup::"
+          exit 1
 
   test:
     name: test
