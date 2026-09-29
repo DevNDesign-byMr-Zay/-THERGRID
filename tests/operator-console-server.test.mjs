@@ -55,6 +55,21 @@ test('operator console serves the holographic brand asset', async () => {
   });
 });
 
+test('operator console serves the SOLVÆR, AUREN, and VÆLON model marks', async () => {
+  await withServer(async (baseUrl) => {
+    for (const path of [
+      '/assets/ai/solvaer.jpg',
+      '/assets/ai/auren.jpg',
+      '/assets/ai/vaelon.jpg',
+    ]) {
+      const response = await fetch(`${baseUrl}${path}`);
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get('content-type'), 'image/jpeg');
+      assert.ok((await response.arrayBuffer()).byteLength > 1000);
+    }
+  });
+});
+
 test('operator console remains read-only over HTTP', async () => {
   await withServer(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/capabilities`, { method: 'POST' });
