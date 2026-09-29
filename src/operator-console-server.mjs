@@ -25,6 +25,10 @@ const STATIC_FILES = Object.freeze({
     path: '../apps/operator-console/assets/aethergrid-mark.svg',
     type: 'image/svg+xml; charset=utf-8',
   },
+  '/assets/reference/nyc-grid.webp': {
+    path: '../apps/operator-console/assets/reference/nyc-grid.webp',
+    type: 'image/webp',
+  },
   '/assets/brand/aethergrid-logo-transparent.webp': {
     path: '../apps/operator-console/assets/brand/aethergrid-logo-transparent.webp',
     type: 'image/webp',
