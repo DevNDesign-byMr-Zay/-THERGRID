@@ -9,6 +9,10 @@ const STATIC_FILES = Object.freeze({
   '/index.html': { path: '../apps/operator-console/index.html', type: 'text/html; charset=utf-8' },
   '/styles.css': { path: '../apps/operator-console/styles.css', type: 'text/css; charset=utf-8' },
   '/app.js': { path: '../apps/operator-console/app.js', type: 'text/javascript; charset=utf-8' },
+  '/model-logos.js': {
+    path: '../apps/operator-console/model-logos.js',
+    type: 'text/javascript; charset=utf-8',
+  },
   '/assets/aethergrid-mark.svg': {
     path: '../apps/operator-console/assets/aethergrid-mark.svg',
     type: 'image/svg+xml; charset=utf-8',
