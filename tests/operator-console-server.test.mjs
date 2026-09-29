@@ -68,6 +68,22 @@ test('operator console serves the holographic brand asset', async () => {
   });
 });
 
+test('operator console serves reusable ÆTHERGRID brand assets', async () => {
+  await withServer(async (baseUrl) => {
+    for (const asset of [
+      '/assets/brand/aethergrid-logo-transparent.webp',
+      '/assets/brand/agents/solvaer.webp',
+      '/assets/brand/agents/auren.webp',
+      '/assets/brand/agents/vaelon.webp',
+    ]) {
+      const response = await fetch(`${baseUrl}${asset}`);
+      assert.equal(response.status, 200);
+      assert.match(response.headers.get('content-type'), /^image\/webp/);
+      assert.ok((await response.arrayBuffer()).byteLength > 1000);
+    }
+  });
+});
+
 test('operator console remains read-only over HTTP', async () => {
   await withServer(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/capabilities`, { method: 'POST' });
