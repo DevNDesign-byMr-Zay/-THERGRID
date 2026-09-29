@@ -4,6 +4,7 @@ node_modules/
 # Test / coverage output
 coverage/
 .nyc_output/
+dist/
 
 # Logs
 *.log
