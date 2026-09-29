@@ -75,6 +75,9 @@ The bounded model-collaboration surface:
 
 These are explicit roles, not permission to bypass THERGRID safety or provenance contracts.
 
+
+Each model uses its dedicated visual identity in the console. The maintained UI assets preserve the supplied SOLVÆR circular seal and AUREN / VÆLON triangular marks without recoloring them; compact model rows and full AI collaboration cards use the same model-specific artwork.
+
 ### EVIDENCE
 
 The audit plane for decision receipts, provenance fingerprints, operator attention, simulation evidence, and holographic render-packet integrity.
