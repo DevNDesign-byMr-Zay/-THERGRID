@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">ÆTHERGRID quantum holographic grid mark</title>
+  <defs>
+    <linearGradient id="g" x1="10" y1="10" x2="118" y2="118">
+      <stop offset="0" stop-color="#36f1ff"/>
+      <stop offset=".5" stop-color="#7464ff"/>
+      <stop offset="1" stop-color="#e55cff"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <circle cx="64" cy="64" r="50" fill="#08111e" stroke="url(#g)" stroke-width="4"/>
+  <path d="M64 18 98 42 90 86 64 110 38 86 30 42Z" fill="none" stroke="url(#g)" stroke-width="3" filter="url(#glow)"/>
+  <path d="M64 18 64 110M30 42 98 86M98 42 30 86M38 86 90 86" fill="none" stroke="#58eaff" stroke-opacity=".6" stroke-width="2"/>
+  <circle cx="64" cy="18" r="5" fill="#5df5ff"/>
+  <circle cx="98" cy="42" r="5" fill="#7a68ff"/>
+  <circle cx="90" cy="86" r="5" fill="#e965ff"/>
+  <circle cx="64" cy="110" r="5" fill="#5df5ff"/>
+  <circle cx="38" cy="86" r="5" fill="#7a68ff"/>
+  <circle cx="30" cy="42" r="5" fill="#e965ff"/>
+  <circle cx="64" cy="64" r="10" fill="url(#g)" filter="url(#glow)"/>
+</svg>

@@ -4,6 +4,22 @@ THERGRID is a self-auditing Node.js renewable-energy digital-twin application se
 
 > **Repository classification:** THERGRID is a Node.js application service for digital-twin, energy-simulation, and spatial-intelligence workflows. It is **not an infrastructure-as-code repository**; Docker/Compose are used only for reproducible application verification. See [docs/PROJECT_SCOPE.md](docs/PROJECT_SCOPE.md).
 
+
+## ÆTHERGRID product identity
+
+**ÆTHERGRID** is the operator-facing intelligence experience built on the maintained THERGRID application service. Its purpose is to let an operator **see the grid, explore scenarios, and verify every recommendation** through one evidence-bound surface that combines the energy digital twin, AI collaboration, quantum/quantum-inspired optimization experiments, holographic spatial presentation, and the existing audit/safety plane.
+
+The repository/package names remain THERGRID / `thergrid` for continuity. ÆTHERGRID names the maintained operator product, not a separate authority layer.
+
+The first real UI now lives at `apps/operator-console/` and is runnable with:
+
+```bash
+npm run operator-console
+```
+
+It exposes **GRID / HOLOGRAPHIC / QUANTUM / AI / EVIDENCE** views and reads a local, read-only capability contract generated from the existing model-routing, quantum-inspired optimization, holographic device-registry, evidence, and safety boundaries. See [docs/OPERATOR_CONSOLE.md](docs/OPERATOR_CONSOLE.md).
+
+
 ## Project direction
 
 The goal is to build a defensible systems platform that can model distributed energy assets, ingest live or simulated telemetry, estimate grid state, test operating strategies, visualize the system spatially, and produce an auditable record of every recommendation. Autonomous action is not implemented.
@@ -34,7 +50,7 @@ The current maintained application already provides a tested vertical slice rath
 
 ```text
 apps/
-  operator-console/          # web / spatial command experience
+  operator-console/          # IMPLEMENTED ÆTHERGRID web / spatial operator experience
 services/
   twin-engine/               # topology, state, telemetry and scenario model
   optimization-engine/       # renewable generation, storage and load planning
@@ -54,7 +70,7 @@ tests/
   fixtures/
 ```
 
-The folders above are the target architecture. Add them only as real code or documentation lands; do not create empty scaffolding just to make the tree look complete.
+The folders above remain the target architecture except `apps/operator-console/`, which is now a real maintained application surface. Add the remaining folders only as real code or documentation lands; do not create empty scaffolding just to make the tree look complete.
 
 ## Phase 1 acceptance target
 

@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#07101b" />
+    <title>ÆTHERGRID Operator Console</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="ambient ambient-a"></div>
+    <div class="ambient ambient-b"></div>
+
+    <header class="topbar">
+      <div class="brand">
+        <img src="/assets/aethergrid-mark.svg" alt="" class="brand-mark" />
+        <div>
+          <div class="eyebrow">QUANTUM · HOLOGRAPHIC · AI</div>
+          <h1>ÆTHERGRID</h1>
+        </div>
+      </div>
+      <div class="status-strip">
+        <span class="status-chip safe">ADVISORY ONLY</span>
+        <span class="status-chip" id="twinStatus">TWIN · LOADING</span>
+        <span class="status-chip" id="evidenceStatus">EVIDENCE · LOADING</span>
+      </div>
+    </header>
+
+    <nav class="console-tabs" aria-label="Operator console sections">
+      <button class="tab is-active" data-tab="grid">GRID</button>
+      <button class="tab" data-tab="holographic">HOLOGRAPHIC</button>
+      <button class="tab" data-tab="quantum">QUANTUM</button>
+      <button class="tab" data-tab="ai">AI</button>
+      <button class="tab" data-tab="evidence">EVIDENCE</button>
+    </nav>
+
+    <main class="console">
+      <section class="hero panel">
+        <div class="hero-copy">
+          <div class="eyebrow">OPERATOR INTELLIGENCE LAYER</div>
+          <h2>See the grid. Explore the future. Verify every recommendation.</h2>
+          <p id="productPurpose">Loading ÆTHERGRID capability contract…</p>
+          <div class="hero-actions">
+            <button class="primary-action" data-open-tab="holographic">
+              Open Holographic Field
+            </button>
+            <button class="secondary-action" data-open-tab="quantum">Inspect Quantum Layer</button>
+          </div>
+        </div>
+        <div class="hero-orbit" aria-hidden="true">
+          <div class="orbit orbit-one"></div>
+          <div class="orbit orbit-two"></div>
+          <div class="orbit-core"></div>
+          <span class="orbit-label label-ai">AI</span>
+          <span class="orbit-label label-q">Q</span>
+          <span class="orbit-label label-h">H</span>
+        </div>
+      </section>
+
+      <section class="view is-active" data-view="grid">
+        <div class="grid-layout">
+          <article class="panel field-panel">
+            <div class="panel-head">
+              <div>
+                <div class="eyebrow">DIGITAL TWIN</div>
+                <h3>Grid State Field</h3>
+              </div>
+              <span class="mini-status">SYNTHETIC PREVIEW</span>
+            </div>
+
+            <div class="holo-field">
+              <svg
+                viewBox="0 0 760 440"
+                role="img"
+                aria-label="Renderer-neutral energy topology preview"
+              >
+                <defs>
+                  <linearGradient id="flow" x1="0" x2="1">
+                    <stop offset="0" stop-color="#4befff" />
+                    <stop offset=".5" stop-color="#6e68ff" />
+                    <stop offset="1" stop-color="#e35eff" />
+                  </linearGradient>
+                  <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="4" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+                <path class="grid-plane" d="M70 338 360 170 690 335 390 408Z" />
+                <path
+                  class="grid-line"
+                  d="M120 310 410 400M190 270 480 380M260 230 550 365M330 190 620 345"
+                />
+                <path class="grid-line" d="M155 390 450 220M260 405 545 250M360 410 630 285" />
+                <path
+                  class="energy-flow"
+                  d="M160 276 C260 190, 330 250, 380 290 S520 365, 620 285"
+                />
+                <path class="energy-flow secondary" d="M225 355 C300 280, 380 245, 520 270" />
+                <g class="node solar" transform="translate(155 272)">
+                  <circle r="28" />
+                  <circle r="8" class="node-core" />
+                  <text x="0" y="52">SOLAR</text>
+                </g>
+                <g class="node battery" transform="translate(375 292)">
+                  <circle r="32" />
+                  <circle r="9" class="node-core" />
+                  <text x="0" y="57">STORAGE</text>
+                </g>
+                <g class="node load" transform="translate(525 268)">
+                  <circle r="26" />
+                  <circle r="7" class="node-core" />
+                  <text x="0" y="50">LOAD</text>
+                </g>
+                <g class="node grid" transform="translate(620 286)">
+                  <circle r="30" />
+                  <circle r="8" class="node-core" />
+                  <text x="0" y="54">GRID</text>
+                </g>
+              </svg>
+              <div class="field-note">Renderer-neutral · no actuation authority</div>
+            </div>
+
+            <div class="metric-row">
+              <div class="metric">
+                <span class="metric-label">Twin</span>
+                <strong id="twinMetric">—</strong>
+                <small>validated state</small>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Holographic</span>
+                <strong id="holoMetric">—</strong>
+                <small>presentation</small>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Quantum</span>
+                <strong id="quantumMetric">—</strong>
+                <small>experimental</small>
+              </div>
+            </div>
+          </article>
+
+          <aside class="stack">
+            <article class="panel compact-panel">
+              <div class="eyebrow">AI ORCHESTRATION</div>
+              <h3>Model Family</h3>
+              <div class="model-list" id="modelList"></div>
+            </article>
+
+            <article class="panel compact-panel safety-panel">
+              <div class="eyebrow">AUTHORITY BOUNDARY</div>
+              <h3>Human-in-the-loop</h3>
+              <ul class="safety-list">
+                <li><span>Recommendations</span><strong>ADVISORY</strong></li>
+                <li><span>Hardware actuation</span><strong>DISABLED</strong></li>
+                <li><span>Infrastructure dispatch</span><strong>DISABLED</strong></li>
+                <li><span>Evidence trail</span><strong>REQUIRED</strong></li>
+              </ul>
+            </article>
+          </aside>
+        </div>
+      </section>
+
+      <section class="view" data-view="holographic">
+        <div class="two-col">
+          <article class="panel holo-stage-panel">
+            <div class="panel-head">
+              <div>
+                <div class="eyebrow">HOLOGRAPHIC COMMAND SURFACE</div>
+                <h3>Spatial Scene Preview</h3>
+              </div>
+              <span class="mini-status cyan">READ ONLY</span>
+            </div>
+            <div class="layer-stage">
+              <div class="scene-layer layer-4"><span>OPERATOR ATTENTION</span><b>z 80</b></div>
+              <div class="scene-layer layer-3"><span>SIMULATION OUTCOME</span><b>z 55</b></div>
+              <div class="scene-layer layer-2"><span>POWER FLOWS</span><b>z 30</b></div>
+              <div class="scene-layer layer-1"><span>DIGITAL TWIN</span><b>z 0</b></div>
+            </div>
+          </article>
+          <article class="panel">
+            <div class="eyebrow">RENDER TARGETS</div>
+            <h3>Presentation adapters</h3>
+            <div class="target-grid" id="holoTargets"></div>
+            <div class="boundary-note">
+              Holographic output can carry evidence, alerts, flows and scenario state. It cannot
+              silently promote a recommendation or actuate infrastructure.
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="view" data-view="quantum">
+        <div class="two-col">
+          <article class="panel quantum-panel">
+            <div class="panel-head">
+              <div>
+                <div class="eyebrow">VÆLON QUANTUM BOUNDARY</div>
+                <h3>Optimization Experiment</h3>
+              </div>
+              <span class="mini-status purple">EXPERIMENTAL</span>
+            </div>
+            <div class="quantum-core">
+              <div class="q-ring r1"></div>
+              <div class="q-ring r2"></div>
+              <div class="q-ring r3"></div>
+              <div class="q-center">Q</div>
+            </div>
+            <div class="compare-grid">
+              <div class="compare-card">
+                <span>CONTROL</span>
+                <strong>Classical baseline</strong>
+                <small>Required for every claimed improvement</small>
+              </div>
+              <div class="compare-arrow">→</div>
+              <div class="compare-card highlight">
+                <span>EXPERIMENT</span>
+                <strong id="quantumBackend">Loading…</strong>
+                <small id="quantumAlgorithm">Loading…</small>
+              </div>
+            </div>
+          </article>
+          <article class="panel">
+            <div class="eyebrow">PROGRESSION</div>
+            <h3>Quantum readiness path</h3>
+            <ol class="progression" id="quantumProgression"></ol>
+          </article>
+        </div>
+      </section>
+
+      <section class="view" data-view="ai">
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="eyebrow">AI COLLABORATION LAYER</div>
+              <h3>Bounded intelligence, explicit roles</h3>
+            </div>
+            <span class="mini-status cyan">ADVISORY</span>
+          </div>
+          <div class="ai-grid" id="aiGrid"></div>
+        </article>
+      </section>
+
+      <section class="view" data-view="evidence">
+        <div class="two-col">
+          <article class="panel">
+            <div class="eyebrow">AUDIT & SAFETY PLANE</div>
+            <h3>Evidence chain</h3>
+            <div class="evidence-chain" id="evidenceChain"></div>
+          </article>
+          <article class="panel">
+            <div class="eyebrow">OPERATOR GUARANTEES</div>
+            <h3>What this interface cannot do</h3>
+            <div class="guardrails">
+              <div><span>Physical actuation</span><b>FALSE</b></div>
+              <div><span>Infrastructure deployment</span><b>FALSE</b></div>
+              <div><span>Silent candidate promotion</span><b>FALSE</b></div>
+              <div><span>Advisory review</span><b class="ok">TRUE</b></div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>ÆTHERGRID · Operator review surface</span>
+      <span id="apiState">Connecting to local capability contract…</span>
+    </footer>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

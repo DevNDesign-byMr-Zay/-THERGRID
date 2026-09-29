@@ -10,6 +10,12 @@
 
 ### Added
 
+- Introduced the **ÆTHERGRID** operator product identity on top of the maintained THERGRID application service.
+- Added a real `apps/operator-console/` UI with GRID / HOLOGRAPHIC / QUANTUM / AI / EVIDENCE views.
+- Added a read-only operator capability contract backed by the existing VÆLON model route, quantum-inspired optimization backend, holographic device registry, and safety boundaries.
+- Added a local operator-console server and `npm run operator-console` launcher with tests for static assets, read-only API behavior, and no-actuation safety.
+- Added operator-console product/architecture documentation covering the human-in-the-loop authority boundary.
+
 - Pinned ESLint, Prettier, and TypeScript as exact local development dependencies with a synchronized npm lockfile and release-readiness parity checks.
 - Machine-readable and reviewer-facing classification identifying THERGRID as a Node.js application service rather than infrastructure-as-code.
 - An explicit conventional `npm test` CI signal so automated scanners can detect the runnable suite.

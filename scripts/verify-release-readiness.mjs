@@ -11,6 +11,12 @@ const REQUIRED_FILES = Object.freeze([
   '.repo-class.json',
   'docs/PROJECT_SCOPE.md',
   'src/error-reporting.mjs',
+  'src/operator-console-capabilities.mjs',
+  'src/operator-console-server.mjs',
+  'apps/operator-console/index.html',
+  'apps/operator-console/styles.css',
+  'apps/operator-console/app.js',
+  'docs/OPERATOR_CONSOLE.md',
   'CHANGELOG.md',
   'README.md',
   'docs/ARCHITECTURE.md',
@@ -174,6 +180,7 @@ async function main() {
     'syntax',
     'demo',
     'dashboard-demo',
+    'operator-console',
     'lint',
     'typecheck',
     'typecheck:strict-renderer',
@@ -246,6 +253,10 @@ async function main() {
   );
   assert(/npm run demo/u.test(ci), 'CI must run evidence demo');
   assert(/npm run dashboard-demo/u.test(ci), 'CI must run dashboard demo');
+  assert(
+    pkg.scripts['operator-console'] === 'node scripts/operator-console.mjs',
+    'operator-console script must launch the maintained ÆTHERGRID UI server',
+  );
   assert(/rm -rf node_modules coverage/u.test(ci), 'fresh-clone CI must remove prior build state');
   assert(
     /docker compose -f docker-compose\.yml build --no-cache/u.test(ci),
