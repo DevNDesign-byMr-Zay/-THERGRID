@@ -55,6 +55,17 @@ test('operator console serves the holographic brand asset', async () => {
   });
 });
 
+test('operator console serves dedicated AI model logo assets', async () => {
+  await withServer(async (baseUrl) => {
+    for (const model of ['solvaer', 'auren', 'vaelon']) {
+      const response = await fetch(`${baseUrl}/assets/ai/${model}.jpg`);
+      assert.equal(response.status, 200);
+      assert.match(response.headers.get('content-type'), /^image\/jpeg/);
+      assert.ok((await response.arrayBuffer()).byteLength > 4000);
+    }
+  });
+});
+
 test('operator console remains read-only over HTTP', async () => {
   await withServer(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/capabilities`, { method: 'POST' });
