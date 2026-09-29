@@ -17,6 +17,22 @@ const STATIC_FILES = Object.freeze({
     path: '../apps/operator-console/assets/aethergrid-mark.svg',
     type: 'image/svg+xml; charset=utf-8',
   },
+  '/assets/brand/aethergrid-logo-transparent.webp': {
+    path: '../apps/operator-console/assets/brand/aethergrid-logo-transparent.webp',
+    type: 'image/webp',
+  },
+  '/assets/brand/agents/solvaer.webp': {
+    path: '../apps/operator-console/assets/brand/agents/solvaer.webp',
+    type: 'image/webp',
+  },
+  '/assets/brand/agents/auren.webp': {
+    path: '../apps/operator-console/assets/brand/agents/auren.webp',
+    type: 'image/webp',
+  },
+  '/assets/brand/agents/vaelon.webp': {
+    path: '../apps/operator-console/assets/brand/agents/vaelon.webp',
+    type: 'image/webp',
+  },
 });
 
 function json(res, statusCode, payload) {
