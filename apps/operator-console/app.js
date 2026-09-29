@@ -5,6 +5,11 @@ const state = {
 };
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
+const MODEL_LOGOS = Object.freeze({
+  'VÆLON': '/assets/ai/vaelon.jpg',
+  AUREN: '/assets/ai/auren.jpg',
+  'SOLVÆR': '/assets/ai/solvaer.jpg',
+});
 const qs = (selector) => document.querySelector(selector);
 const qsa = (selector) => [...document.querySelectorAll(selector)];
 
@@ -26,6 +31,24 @@ function formatKw(value) {
   return Number.isFinite(number) ? `${number.toFixed(1)} kW` : '—';
 }
 
+function createModelLogo(modelId, className, decorative = false) {
+  const source = MODEL_LOGOS[modelId];
+  if (!source) {
+    const fallback = document.createElement('div');
+    fallback.className = `${className} model-logo-fallback`;
+    fallback.textContent = modelId.slice(0, 1);
+    return fallback;
+  }
+
+  const image = document.createElement('img');
+  image.className = className;
+  image.src = source;
+  image.alt = decorative ? '' : `${modelId} model logo`;
+  image.decoding = 'async';
+  image.loading = 'lazy';
+  return image;
+}
+
 function setActiveTab(tab) {
   state.activeTab = tab;
   qsa('.tab').forEach((button) => button.classList.toggle('is-active', button.dataset.tab === tab));
@@ -44,9 +67,7 @@ function renderModels(models) {
     const compact = document.createElement('div');
     compact.className = 'model-item';
 
-    const icon = document.createElement('div');
-    icon.className = 'model-icon';
-    icon.textContent = model.id.slice(0, 1);
+    const icon = createModelLogo(model.id, 'model-icon', true);
 
     const copy = document.createElement('div');
     const title = document.createElement('strong');
@@ -65,11 +86,19 @@ function renderModels(models) {
     eyebrow.className = 'eyebrow';
     eyebrow.textContent = `AI ROLE 0${index + 1}`;
 
+    const identity = document.createElement('div');
+    identity.className = 'ai-card-identity';
+
+    const logo = createModelLogo(model.id, 'ai-card-logo');
+
+    const identityCopy = document.createElement('div');
     const heading = document.createElement('h4');
     heading.textContent = model.id;
 
     const description = document.createElement('p');
     description.textContent = label(model.role);
+    identityCopy.append(heading, description);
+    identity.append(logo, identityCopy);
 
     const caps = document.createElement('div');
     caps.className = 'capabilities';
@@ -80,7 +109,7 @@ function renderModels(models) {
       caps.append(pill);
     });
 
-    card.append(eyebrow, heading, description, caps);
+    card.append(eyebrow, identity, caps);
     grid.append(card);
   });
 }
