@@ -82,7 +82,11 @@ test('operator console serves reusable ÆTHERGRID brand assets', async () => {
       const response = await fetch(`${baseUrl}${asset}`);
       assert.equal(response.status, 200);
       assert.match(response.headers.get('content-type'), /^image\/webp/);
-      assert.ok((await response.arrayBuffer()).byteLength > 1000);
+      const bytes = Buffer.from(await response.arrayBuffer());
+      assert.ok(bytes.byteLength > 1000);
+      assert.equal(bytes.subarray(0, 4).toString('ascii'), 'RIFF');
+      assert.equal(bytes.subarray(8, 12).toString('ascii'), 'WEBP');
+      assert.equal(bytes.readUInt32LE(4) + 8, bytes.byteLength);
     }
   });
 });
