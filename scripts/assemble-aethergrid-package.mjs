@@ -8,7 +8,8 @@ import { createOperatorConsoleState } from '../src/operator-console-state.mjs';
 
 const SOURCE_ROOT = fileURLToPath(new URL('../apps/operator-console/', import.meta.url));
 const OUTPUT_PATH = resolve(
-  process.argv[2] ?? fileURLToPath(new URL('../dist/aethergrid-operator-console.zip', import.meta.url)),
+  process.argv[2] ??
+    fileURLToPath(new URL('../dist/aethergrid-operator-console.zip', import.meta.url)),
 );
 const ARCHIVE_ROOT = 'aethergrid-operator-console';
 
@@ -148,7 +149,10 @@ for (const absolute of sourceFiles) {
 }
 
 for (const required of REQUIRED_FILES) {
-  assert(sourceByRelativePath.has(required), `missing required ÆTHERGRID package file: ${required}`);
+  assert(
+    sourceByRelativePath.has(required),
+    `missing required ÆTHERGRID package file: ${required}`,
+  );
   assert(
     sourceByRelativePath.get(required).length > 0,
     `required ÆTHERGRID package file is empty: ${required}`,
@@ -167,7 +171,10 @@ assert(
   Array.isArray(uiManifest.navigation) && uiManifest.navigation.length === 5,
   'ui.json must define all five ÆTHERGRID surfaces',
 );
-assert(/<html\b/iu.test(html) && /ÆTHERGRID/u.test(html), 'index.html must contain the full UI shell');
+assert(
+  /<html\b/iu.test(html) && /ÆTHERGRID/u.test(html),
+  'index.html must contain the full UI shell',
+);
 
 const generatedFiles = new Map([
   [
@@ -189,7 +196,10 @@ const inventory = [...payloadFiles.entries()]
     sha256: sha256(data),
   }));
 
-assert(inventory.every((entry) => entry.bytes > 0), 'archive payload cannot contain empty files');
+assert(
+  inventory.every((entry) => entry.bytes > 0),
+  'archive payload cannot contain empty files',
+);
 
 const packageContents = Buffer.from(
   `${JSON.stringify(
