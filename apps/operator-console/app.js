@@ -39,7 +39,9 @@ function renderModels(models) {
     const card = document.createElement('article');
     card.className = 'ai-card';
     card.style.setProperty('--card-glow', colors[index % colors.length]);
-    const caps = model.capabilities.map((capability) => `<span class="capability">${label(capability)}</span>`).join('');
+    const caps = model.capabilities
+      .map((capability) => `<span class="capability">${label(capability)}</span>`)
+      .join('');
     card.innerHTML = `
       <div class="eyebrow">AI ROLE 0${index + 1}</div>
       <h4>${model.id}</h4>
@@ -113,7 +115,9 @@ async function loadCapabilities() {
   }
 }
 
-qsa('.tab').forEach((button) => button.addEventListener('click', () => setActiveTab(button.dataset.tab)));
+qsa('.tab').forEach((button) =>
+  button.addEventListener('click', () => setActiveTab(button.dataset.tab)),
+);
 qsa('[data-open-tab]').forEach((button) =>
   button.addEventListener('click', () => setActiveTab(button.dataset.openTab)),
 );
