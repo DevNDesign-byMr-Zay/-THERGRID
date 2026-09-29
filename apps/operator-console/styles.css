@@ -934,3 +934,67 @@ h3 {
 .evidence-node.info::before {
   background: var(--cyan);
 }
+
+
+/* Dedicated AI model identities */
+.model-icon {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid rgba(123, 176, 220, 0.28);
+  background: #030507;
+  box-shadow: 0 0 18px rgba(75, 239, 255, 0.08);
+}
+
+.model-icon-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ai-card-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ai-card-heading {
+  min-width: 0;
+}
+
+.ai-card-heading h4 {
+  margin: 5px 0 0;
+}
+
+.ai-card-logo {
+  display: block;
+  width: 78px;
+  height: 78px;
+  flex: 0 0 78px;
+  object-fit: cover;
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  background: #030507;
+  box-shadow:
+    0 0 26px rgba(75, 239, 255, 0.1),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.model-logo-solvaer {
+  border-radius: 50%;
+}
+
+.model-logo-triangular {
+  border-radius: 16px;
+}
+
+.ai-card > p,
+.ai-card .capabilities {
+  position: relative;
+  z-index: 1;
+}
