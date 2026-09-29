@@ -22,6 +22,7 @@ const REQUIRED_FILES = Object.freeze([
   'model-logos.js',
   'README.md',
   'assets/aethergrid-mark.svg',
+  'assets/reference/nyc-grid.webp',
   'assets/brand/aethergrid-logo-transparent.webp',
   'assets/brand/agents/vaelon.webp',
   'assets/brand/agents/auren.webp',
