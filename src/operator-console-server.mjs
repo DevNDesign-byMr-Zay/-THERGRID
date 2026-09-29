@@ -13,6 +13,18 @@ const STATIC_FILES = Object.freeze({
     path: '../apps/operator-console/assets/aethergrid-mark.svg',
     type: 'image/svg+xml; charset=utf-8',
   },
+  '/assets/ai/solvaer.jpg': {
+    path: '../apps/operator-console/assets/ai/solvaer.jpg',
+    type: 'image/jpeg',
+  },
+  '/assets/ai/auren.jpg': {
+    path: '../apps/operator-console/assets/ai/auren.jpg',
+    type: 'image/jpeg',
+  },
+  '/assets/ai/vaelon.jpg': {
+    path: '../apps/operator-console/assets/ai/vaelon.jpg',
+    type: 'image/jpeg',
+  },
 });
 
 function json(res, statusCode, payload) {
