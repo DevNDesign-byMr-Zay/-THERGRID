@@ -53,7 +53,7 @@ jobs:
           fi
           npm run format >/dev/null
           echo "::group::Required Prettier changes"
-          git --no-pager diff -- src tests scripts
+          git --no-pager diff -- src tests scripts apps
           echo "::endgroup::"
           exit 1
 
