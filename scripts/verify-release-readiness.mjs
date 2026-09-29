@@ -362,6 +362,24 @@ async function main() {
     'README must document renderer-neutral spatial evidence',
   );
 
+  const operatorConsole = await text('apps/operator-console/index.html');
+  const modelLogos = await text('apps/operator-console/model-logos.js');
+  assert(
+    /\/assets\/brand\/aethergrid-logo-transparent\.webp/u.test(operatorConsole),
+    'operator console must render the canonical ÆTHERGRID product logo',
+  );
+  for (const [model, asset] of [
+    ['VÆLON', 'vaelon.webp'],
+    ['AUREN', 'auren.webp'],
+    ['SOLVÆR', 'solvaer.webp'],
+  ]) {
+    assert(modelLogos.includes(model), `operator console model map must include ${model}`);
+    assert(
+      modelLogos.includes(`/assets/brand/agents/${asset}`),
+      `operator console model map must use the canonical ${model} brand asset`,
+    );
+  }
+
   process.stdout.write(
     `THERGRID release readiness verified for v${pkg.version}: reproducible quality, security, container, evidence, and safety gates are present\n`,
   );
