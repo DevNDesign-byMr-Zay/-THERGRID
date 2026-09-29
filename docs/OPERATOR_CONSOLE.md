@@ -46,7 +46,7 @@ The first maintained UI lives at `apps/operator-console/` and exposes five opera
 
 The default digital-twin view. It presents the system as an energy topology with renewable generation, storage, load, grid connection, and renderer-neutral flow relationships.
 
-The current field is explicitly labeled as a synthetic preview until it is fed from a validated live/simulated dashboard view.
+The field is now fed from the validated synthetic operator-state chain. Asset nodes, power flows, generation/load/balance totals, and scene identity come from the maintained digital-twin and spatial-scene contracts. It remains explicitly labeled **validated synthetic** because live telemetry is not connected.
 
 ### HOLOGRAPHIC
 
@@ -104,32 +104,56 @@ http://127.0.0.1:8090
 
 Override the port with `AETHERGRID_CONSOLE_PORT`.
 
-The console serves a read-only capability endpoint:
+The console serves two read-only endpoints:
 
 ```text
 GET /api/capabilities
+GET /api/operator-state
 ```
 
-That endpoint is built from maintained application modules rather than a disconnected UI fixture:
+`/api/capabilities` describes what the platform can do. `/api/operator-state` is a deterministic validated operator run composed through the maintained digital-twin, SOLVÆR simulation projection, operator-attention, provenance, dashboard-view, spatial-scene, and holographic render-packet contracts.
+
+The endpoints are built from maintained application modules rather than disconnected UI fixtures:
 
 - `src/model-routing.mjs`
 - `src/holographic-device-registry.mjs`
 - `packages/optimization-engine/quantum-inspired.js`
 - `src/operator-console-capabilities.mjs`
+- `src/operator-console-state.mjs`
+- `src/operator-dashboard-view.mjs`
+- `src/operator-evidence-package.mjs`
+- `src/spatial-scene.mjs`
+- `src/holographic-renderer-contract.mjs`
 
 All non-GET requests are rejected by the console server.
 
 ## Current UI boundary
 
-The initial console is a production-oriented shell, not yet a live telemetry dashboard. It intentionally does not invent:
+The console is now evidence-driven for its GRID, HOLOGRAPHIC, and EVIDENCE surfaces. The maintained synthetic snapshot runs through:
 
-- live grid values;
+```text
+validated snapshot
+  → digital twin
+  → forecast / proposal / simulation
+  → SOLVÆR simulation projection
+  → operator evidence summary
+  → operator attention
+  → provenance read model
+  → evidence package
+  → dashboard view
+  → attention-enriched spatial scene
+  → web-dashboard render packet
+```
+
+The UI intentionally does not invent:
+
+- live grid telemetry;
 - remote quantum-provider results;
 - hardware state;
 - operator approvals;
 - autonomous AI decisions.
 
-The next integration step is to feed the GRID / HOLOGRAPHIC / EVIDENCE views from the already validated operator evidence package and dashboard view contracts.
+The next product integration is a provider-neutral telemetry ingestion adapter that can replace the validated synthetic snapshot without changing the downstream evidence and authority contracts.
 
 ## Brand direction
 
