@@ -127,6 +127,19 @@ The endpoints are built from maintained application modules rather than disconne
 
 All non-GET requests are rejected by the console server.
 
+## Complete distributable UI package
+
+ÆTHERGRID is maintained in both human-readable HTML and machine-readable JSON form:
+
+- `apps/operator-console/index.html` is the complete HTML shell;
+- `apps/operator-console/app.json` is the application/package manifest;
+- `apps/operator-console/ui.json` describes the five visible UI surfaces, brand assets, model identities, navigation, and authority boundary;
+- `apps/operator-console/README.md` documents the package and review flow.
+
+Run `npm run package:aethergrid` to build `dist/aethergrid-operator-console.zip`. The packaging task refuses missing or zero-byte required files and embeds populated `capabilities.json` and `operator-state.json` snapshots generated from the maintained contracts. It also writes `PACKAGE_CONTENTS.json` and `SHA256SUMS.txt` into the archive so reviewers can confirm file presence, byte sizes, and content hashes.
+
+The packaged `app.js` first attempts the live read-only API. When the archive is served independently from a static server, it falls back to those populated JSON snapshots so the interface remains fully reviewable instead of degrading into empty placeholders.
+
 ## Current UI boundary
 
 The console is now evidence-driven for its GRID, HOLOGRAPHIC, and EVIDENCE surfaces. The maintained synthetic snapshot runs through:
