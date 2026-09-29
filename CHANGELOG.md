@@ -10,6 +10,9 @@
 
 ### Added
 
+- Rebuilt the ÆTHERGRID operator console to match the approved modern command-center reference, including the New York Metro digital-twin field, side navigation, AI collaboration rail, animated metrics/quantum/scenario surfaces, holographic previews, evidence history, and export tools.
+- Fixed extracted-HTML rendering by replacing root-relative browser dependencies with direct-file-compatible relative assets and adding the maintained NYC field visual to every verified ZIP.
+
 - Introduced the **ÆTHERGRID** operator product identity on top of the maintained THERGRID application service.
 - Added a real `apps/operator-console/` UI with GRID / HOLOGRAPHIC / QUANTUM / AI / EVIDENCE views.
 - Added a read-only operator capability contract backed by the existing VÆLON model route, quantum-inspired optimization backend, holographic device registry, and safety boundaries.

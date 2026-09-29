@@ -31,6 +31,11 @@ test('operator console serves the ÆTHERGRID application shell', async () => {
     assert.match(body, /HOLOGRAPHIC/);
     assert.match(body, /QUANTUM/);
     assert.match(body, /\/assets\/brand\/aethergrid-logo-transparent\.webp/u);
+    assert.match(body, /NEW YORK METRO/u);
+    assert.match(body, /AI COLLABORATION/u);
+    assert.match(body, /QUANTUM OPTIMIZATION/u);
+    assert.match(body, /\.\/styles\.css/u);
+    assert.match(body, /\.\/app\.js/u);
   });
 });
 
@@ -93,6 +98,18 @@ test('operator console serves the holographic brand asset', async () => {
     assert.equal(response.status, 200);
     assert.match(response.headers.get('content-type'), /^image\/svg\+xml/);
     assert.match(await response.text(), /quantum holographic grid mark/);
+  });
+});
+
+test('operator console serves the modern NYC reference field asset', async () => {
+  await withServer(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/assets/reference/nyc-grid.svg`);
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-type'), /^image\/svg\+xml/);
+    const body = await response.text();
+    assert.match(body, /New York Metro digital twin field/u);
+    assert.match(body, /linearGradient/u);
+    assert.ok(body.length > 4000);
   });
 });
 

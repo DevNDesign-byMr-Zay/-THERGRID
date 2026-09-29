@@ -140,6 +140,15 @@ Run `npm run package:aethergrid` to build `dist/aethergrid-operator-console.zip`
 
 The packaged `app.js` first attempts the live read-only API. When the archive is served independently from a static server, it falls back to those populated JSON snapshots so the interface remains fully reviewable instead of degrading into empty placeholders.
 
+
+## Modern reference dashboard
+
+The maintained HTML now follows the approved command-center reference: a branded top mode rail, left system navigation, New York Metro digital-twin field, always-visible VÆLON/AUREN/SOLVÆR collaboration rail, real-time metric cards, quantum optimization, scenario comparison, holographic previews, evidence history, and export/report surfaces.
+
+All browser dependencies used by `index.html` are relative (`./styles.css`, `./app.js`, and `./assets/...`). Opening the extracted `index.html` directly therefore renders the complete styled demonstration UI instead of the browser's unstyled fallback. When served through `npm run operator-console`, the same interface can enhance demonstration values from the maintained read-only runtime contracts.
+
+Motion includes energy-flow dashes, pulsing topology nodes, chart line reveals, quantum wave animation, navigation sheen, hover depth, live status pulses, and bounded toast feedback. `prefers-reduced-motion` remains respected.
+
 ## Current UI boundary
 
 The console is now evidence-driven for its GRID, HOLOGRAPHIC, and EVIDENCE surfaces. The maintained synthetic snapshot runs through:

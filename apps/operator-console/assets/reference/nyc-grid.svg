@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 540" role="img" aria-labelledby="title desc">
+  <title id="title">New York Metro digital twin field</title>
+  <desc id="desc">Stylized night-time metro energy network with Manhattan skyline, renewable generation, storage and transmission corridors.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#06152d"/>
+      <stop offset=".48" stop-color="#07172b"/>
+      <stop offset="1" stop-color="#020812"/>
+    </linearGradient>
+    <radialGradient id="cityGlow" cx=".55" cy=".45" r=".52">
+      <stop offset="0" stop-color="#164c99" stop-opacity=".52"/>
+      <stop offset=".5" stop-color="#0a2450" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#061e37"/>
+      <stop offset=".45" stop-color="#03111f"/>
+      <stop offset="1" stop-color="#07152a"/>
+    </linearGradient>
+    <linearGradient id="road" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#18dfff"/>
+      <stop offset=".45" stop-color="#ffbd4c"/>
+      <stop offset="1" stop-color="#b650ff"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="grid" width="54" height="54" patternUnits="userSpaceOnUse">
+      <path d="M54 0H0V54" fill="none" stroke="#1d5a85" stroke-opacity=".12" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="540" fill="url(#sky)"/>
+  <rect width="1200" height="540" fill="url(#cityGlow)"/>
+  <circle cx="900" cy="85" r="130" fill="#6a27ff" opacity=".08"/>
+  <circle cx="1030" cy="180" r="190" fill="#00c8ff" opacity=".05"/>
+  <path d="M0 335 C155 285 246 335 370 315 S612 255 774 294 1016 355 1200 302V540H0Z" fill="url(#water)"/>
+  <path d="M0 350 C170 310 280 365 410 330 S665 278 820 315 1058 370 1200 328" fill="none" stroke="#1f6aa0" stroke-opacity=".22" stroke-width="2"/>
+  <path d="M0 394 C170 352 293 407 450 371 S744 319 920 361 1080 399 1200 382" fill="none" stroke="#2b74a4" stroke-opacity=".13"/>
+  <g opacity=".94">
+    <path d="M0 325H1200" stroke="#1a3d64" stroke-width="2"/>
+    <g fill="#07182a" stroke="#2470a8" stroke-opacity=".55">
+      <path d="M330 320V188h42v132z"/><path d="M378 320V130h50v190z"/><path d="M438 320V202h35v118z"/>
+      <path d="M482 320V85h57v235z"/><path d="M548 320V165h39v155z"/><path d="M596 320V116h53v204z"/>
+      <path d="M660 320V215h36v105z"/><path d="M706 320V145h46v175z"/><path d="M765 320V180h37v140z"/>
+      <path d="M814 320V232h33v88z"/><path d="M852 320V169h42v151z"/>
+    </g>
+    <path d="M500 85l10-57 10 57" fill="#0a2038" stroke="#50baff" stroke-opacity=".7"/>
+    <path d="M620 116l9-47 9 47" fill="#0a2038" stroke="#8b7cff" stroke-opacity=".55"/>
+    <g fill="#51d4ff">
+      <circle cx="353" cy="218" r="2"/><circle cx="353" cy="242" r="2"/><circle cx="401" cy="167" r="2"/>
+      <circle cx="402" cy="195" r="2"/><circle cx="504" cy="128" r="2"/><circle cx="506" cy="161" r="2"/>
+      <circle cx="570" cy="198" r="2"/><circle cx="621" cy="153" r="2"/><circle cx="621" cy="193" r="2"/>
+      <circle cx="731" cy="188" r="2"/><circle cx="731" cy="232" r="2"/><circle cx="873" cy="204" r="2"/>
+    </g>
+    <g fill="#ffb44a" opacity=".9">
+      <circle cx="402" cy="220" r="2"/><circle cx="504" cy="204" r="2"/><circle cx="621" cy="224" r="2"/>
+      <circle cx="731" cy="259" r="2"/><circle cx="873" cy="252" r="2"/>
+    </g>
+  </g>
+  <g opacity=".75">
+    <path d="M70 410L260 340 420 365 610 300 820 353 1130 250" fill="none" stroke="url(#road)" stroke-width="5" filter="url(#glow)"/>
+    <path d="M80 458L300 410 530 420 690 365 900 420 1180 355" fill="none" stroke="#20ddff" stroke-width="3" stroke-opacity=".8" filter="url(#glow)"/>
+    <path d="M120 300L320 272 500 310 740 250 980 292 1180 230" fill="none" stroke="#ffbd55" stroke-width="3" stroke-opacity=".55" filter="url(#glow)"/>
+  </g>
+  <g transform="translate(75 344)" stroke="#27b9ff" fill="#071a2d">
+    <path d="M0 60h130l-24-54H24z" stroke-width="2"/>
+    <path d="M27 15l20 42M55 11l15 46M83 8l9 49M14 31h101" stroke="#38d4ff" stroke-opacity=".55"/>
+  </g>
+  <g stroke="#d7eaff" stroke-width="2" opacity=".72">
+    <g transform="translate(960 305)"><path d="M0 64V0"/><circle cy="0" r="5" fill="#eaffff"/><path d="M0 0l-32 12M0 0l26 22M0 0l5-36"/></g>
+    <g transform="translate(1035 335) scale(.8)"><path d="M0 64V0"/><circle cy="0" r="5" fill="#eaffff"/><path d="M0 0l-32 12M0 0l26 22M0 0l5-36"/></g>
+    <g transform="translate(1090 315) scale(.65)"><path d="M0 64V0"/><circle cy="0" r="5" fill="#eaffff"/><path d="M0 0l-32 12M0 0l26 22M0 0l5-36"/></g>
+  </g>
+  <rect width="1200" height="540" fill="url(#grid)"/>
+  <g filter="url(#glow)">
+    <circle cx="225" cy="392" r="5" fill="#39eaff"/><circle cx="480" cy="362" r="5" fill="#5df4ff"/>
+    <circle cx="708" cy="320" r="5" fill="#d45cff"/><circle cx="1030" cy="375" r="5" fill="#27dcff"/>
+    <circle cx="865" cy="283" r="4" fill="#ffb84d"/>
+  </g>
+</svg>

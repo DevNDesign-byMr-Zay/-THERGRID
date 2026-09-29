@@ -21,6 +21,7 @@ const REQUIRED_FILES = Object.freeze([
   'apps/operator-console/styles.css',
   'apps/operator-console/app.js',
   'apps/operator-console/model-logos.js',
+  'apps/operator-console/assets/reference/nyc-grid.svg',
   'apps/operator-console/assets/brand/aethergrid-logo-transparent.webp',
   'apps/operator-console/assets/brand/agents/solvaer.webp',
   'apps/operator-console/assets/brand/agents/auren.webp',
@@ -381,6 +382,18 @@ async function main() {
   );
 
   const operatorConsole = await text('apps/operator-console/index.html');
+  const operatorConsoleStyles = await text('apps/operator-console/styles.css');
+  assert(
+    /href="\.\/styles\.css"/u.test(operatorConsole) &&
+      /src="\.\/app\.js"/u.test(operatorConsole) &&
+      /\.\/assets\/brand\/aethergrid-logo-transparent\.webp/u.test(operatorConsole) &&
+      /\.\/assets\/reference\/nyc-grid\.svg/u.test(operatorConsoleStyles),
+    'operator console must keep direct-file-compatible relative assets',
+  );
+  assert(
+    !/href="\/styles\.css"/u.test(operatorConsole) && !/src="\/app\.js"/u.test(operatorConsole),
+    'operator console must not regress to root-relative HTML dependencies',
+  );
   const operatorAppManifest = JSON.parse(await text('apps/operator-console/app.json'));
   const operatorUiManifest = JSON.parse(await text('apps/operator-console/ui.json'));
   const modelLogos = await text('apps/operator-console/model-logos.js');
