@@ -385,9 +385,7 @@ async function fetchJson(primaryPath, fallbackPath) {
       headers: { accept: 'application/json' },
     });
     if (!fallback.ok) {
-      throw new Error(
-        `${primaryError.message}; ${fallbackPath} returned HTTP ${fallback.status}`,
-      );
+      throw new Error(`${primaryError.message}; ${fallbackPath} returned HTTP ${fallback.status}`);
     }
     return fallback.json();
   }
