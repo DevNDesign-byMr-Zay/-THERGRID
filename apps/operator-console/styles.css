@@ -257,8 +257,7 @@ button {
   height: auto;
   transform: translate(-50%, -50%);
   object-fit: contain;
-  filter:
-    drop-shadow(0 0 18px rgba(75, 239, 255, 0.28))
+  filter: drop-shadow(0 0 18px rgba(75, 239, 255, 0.28))
     drop-shadow(0 0 38px rgba(128, 104, 255, 0.18));
 }
 .orbit-label {
