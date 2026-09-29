@@ -28,12 +28,8 @@ function formatKw(value) {
 
 function setActiveTab(tab) {
   state.activeTab = tab;
-  qsa('.tab').forEach((button) =>
-    button.classList.toggle('is-active', button.dataset.tab === tab),
-  );
-  qsa('.view').forEach((view) =>
-    view.classList.toggle('is-active', view.dataset.view === tab),
-  );
+  qsa('.tab').forEach((button) => button.classList.toggle('is-active', button.dataset.tab === tab));
+  qsa('.view').forEach((view) => view.classList.toggle('is-active', view.dataset.view === tab));
 }
 
 function renderModels(models) {
@@ -203,12 +199,25 @@ function spatialLayerDefinitions(renderPacket) {
   const layers = renderPacket.layers ?? {};
   const definitions = [];
 
-  if (layers.topology) definitions.push({ label: 'DIGITAL TWIN TOPOLOGY', detail: 'validated scene nodes' });
-  if (layers.powerFlows) definitions.push({ label: 'POWER FLOWS', detail: `${renderPacket.evidence.powerFlows.length} asset flows` });
-  if (layers.forecastDelta) definitions.push({ label: 'FORECAST DELTA', detail: 'scenario persistence evidence' });
-  if (layers.simulationEvidence) definitions.push({ label: 'SIMULATION EVIDENCE', detail: renderPacket.evidence.simulation?.status ?? 'unknown' });
+  if (layers.topology)
+    definitions.push({ label: 'DIGITAL TWIN TOPOLOGY', detail: 'validated scene nodes' });
+  if (layers.powerFlows)
+    definitions.push({
+      label: 'POWER FLOWS',
+      detail: `${renderPacket.evidence.powerFlows.length} asset flows`,
+    });
+  if (layers.forecastDelta)
+    definitions.push({ label: 'FORECAST DELTA', detail: 'scenario persistence evidence' });
+  if (layers.simulationEvidence)
+    definitions.push({
+      label: 'SIMULATION EVIDENCE',
+      detail: renderPacket.evidence.simulation?.status ?? 'unknown',
+    });
   if (Array.isArray(layers.attention) && layers.attention.length) {
-    definitions.push({ label: 'OPERATOR ATTENTION', detail: `${layers.attention.length} sealed item(s)` });
+    definitions.push({
+      label: 'OPERATOR ATTENTION',
+      detail: `${layers.attention.length} sealed item(s)`,
+    });
   }
 
   return definitions;
@@ -253,8 +262,7 @@ function renderSpatial(operatorState) {
 
   const device = document.createElement('div');
   device.className = 'render-detail';
-  device.textContent =
-    `${renderPacket.deviceId ?? 'no device'} · ${label(renderPacket.status)} · checksum ${shortFingerprint(renderPacket.checksum, 12)}`;
+  device.textContent = `${renderPacket.deviceId ?? 'no device'} · ${label(renderPacket.status)} · checksum ${shortFingerprint(renderPacket.checksum, 12)}`;
 
   summary.append(status, device);
 }

@@ -1,9 +1,7 @@
 import { runSyntheticMicrogrid } from './pipeline.mjs';
 import { buildProvenanceGraph, validateProvenanceGraph } from './provenance.mjs';
 import { buildSpatialScene } from './spatial-scene.mjs';
-import {
-  planHolographicPresentation,
-} from './holographic-device-registry.mjs';
+import { planHolographicPresentation } from './holographic-device-registry.mjs';
 import {
   compileHolographicRenderPacket,
   validateHolographicRenderPacket,
@@ -360,7 +358,4 @@ export function createOperatorConsoleState() {
   });
 }
 
-export {
-  OPERATOR_CONSOLE_STATE_VERSION,
-  SYNTHETIC_OPERATOR_FIXTURE,
-};
+export { OPERATOR_CONSOLE_STATE_VERSION, SYNTHETIC_OPERATOR_FIXTURE };
