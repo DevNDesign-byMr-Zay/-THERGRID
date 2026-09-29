@@ -70,7 +70,7 @@
   "hero": {
     "title": "NEW YORK METRO",
     "subtitle": "DIGITAL TWIN · LIVE VIEW",
-    "referenceField": "assets/reference/nyc-grid.webp"
+    "referenceField": "assets/reference/nyc-grid.svg"
   },
   "aiModels": [
     {
