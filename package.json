@@ -14,7 +14,7 @@
     "demo": "node scripts/demo.mjs",
     "dashboard-demo": "node scripts/dashboard-demo.mjs",
     "check": "npm run verify:release && npm run syntax && npm run lint && npm run typecheck && npm run typecheck:strict-renderer && npm run format:check && npm run coverage && npm run demo && npm run dashboard-demo",
-    "lint": "eslint --max-warnings=0 src tests scripts",
+    "lint": "eslint --max-warnings=0 src tests scripts apps/operator-console/app.js",
     "format:check": "prettier --check 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs' 'apps/operator-console/**/*.{html,css,js}'",
     "format": "prettier --write 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs' 'apps/operator-console/**/*.{html,css,js}'",
     "health": "node src/platform-health-service.mjs",
