@@ -17,6 +17,9 @@
 - Added operator-console product/architecture documentation covering the human-in-the-loop authority boundary.
 - Added reusable canonical ÆTHERGRID, VÆLON, AUREN, and SOLVÆR brand assets and wired the product/agent marks directly into the maintained operator-console UI.
 - Added release-readiness and HTTP assertions so missing, truncated, or disconnected brand assets fail verification instead of silently degrading the interface.
+- Added complete ÆTHERGRID `app.json` and `ui.json` manifests plus package documentation so the UI is reviewable in both HTML and machine-readable JSON form.
+- Added a deterministic `aethergrid-operator-console.zip` builder that rejects missing/empty files and embeds populated capability/operator-state JSON snapshots, a file inventory, and SHA-256 checksums.
+- Added CI/release artifact retention so every verified package contains the full UI, canonical brand assets, JSON manifests, and runtime snapshots rather than empty placeholders.
 - Wired GRID, HOLOGRAPHIC, and EVIDENCE views to a validated synthetic operator-state chain spanning the twin, SOLVÆR projection, operator dashboard/evidence package, enriched spatial scene, and holographic render packet.
 
 - Pinned ESLint, Prettier, and TypeScript as exact local development dependencies with a synchronized npm lockfile and release-readiness parity checks.
