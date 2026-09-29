@@ -30,6 +30,7 @@ test('operator console serves the ÆTHERGRID application shell', async () => {
     assert.match(body, /ÆTHERGRID/);
     assert.match(body, /HOLOGRAPHIC/);
     assert.match(body, /QUANTUM/);
+    assert.match(body, /\/assets\/brand\/aethergrid-logo-transparent\.webp/u);
   });
 });
 
