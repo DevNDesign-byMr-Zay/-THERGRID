@@ -103,13 +103,13 @@ test('operator console serves the holographic brand asset', async () => {
 
 test('operator console serves the modern NYC reference field asset', async () => {
   await withServer(async (baseUrl) => {
-    const response = await fetch(`${baseUrl}/assets/reference/nyc-grid.webp`);
+    const response = await fetch(`${baseUrl}/assets/reference/nyc-grid.svg`);
     assert.equal(response.status, 200);
-    assert.match(response.headers.get('content-type'), /^image\/webp/);
-    const bytes = Buffer.from(await response.arrayBuffer());
-    assert.ok(bytes.byteLength > 10000);
-    assert.equal(bytes.subarray(0, 4).toString('ascii'), 'RIFF');
-    assert.equal(bytes.subarray(8, 12).toString('ascii'), 'WEBP');
+    assert.match(response.headers.get('content-type'), /^image\/svg\+xml/);
+    const body = await response.text();
+    assert.match(body, /New York Metro digital twin field/u);
+    assert.match(body, /linearGradient/u);
+    assert.ok(body.length > 4000);
   });
 });
 
