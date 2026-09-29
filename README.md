@@ -17,7 +17,7 @@ The first real UI now lives at `apps/operator-console/` and is runnable with:
 npm run operator-console
 ```
 
-It exposes **GRID / HOLOGRAPHIC / QUANTUM / AI / EVIDENCE** views. The console now reads both a local capability contract and a validated operator-state contract: the latter runs a maintained synthetic microgrid through the existing digital twin, SOLVÆR simulation projection, operator evidence package/dashboard view, attention-enriched spatial scene, and holographic render-packet boundaries. The UI remains explicit that this is validated synthetic evidence, not live telemetry. See [docs/OPERATOR_CONSOLE.md](docs/OPERATOR_CONSOLE.md).
+It exposes **GRID / HOLOGRAPHIC / QUANTUM / AI / EVIDENCE** views. The same UI is also described by `apps/operator-console/app.json` and `apps/operator-console/ui.json`, and `npm run package:aethergrid` produces a verified ZIP containing the complete HTML/CSS/JS UI, brand assets, populated JSON runtime snapshots, a file inventory, and SHA-256 checksums. The console now reads both a local capability contract and a validated operator-state contract: the latter runs a maintained synthetic microgrid through the existing digital twin, SOLVÆR simulation projection, operator evidence package/dashboard view, attention-enriched spatial scene, and holographic render-packet boundaries. The UI remains explicit that this is validated synthetic evidence, not live telemetry. See [docs/OPERATOR_CONSOLE.md](docs/OPERATOR_CONSOLE.md).
 
 
 ## Project direction
