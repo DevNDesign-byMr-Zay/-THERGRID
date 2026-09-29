@@ -6,9 +6,9 @@ const state = {
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const MODEL_LOGOS = Object.freeze({
-  'VÆLON': '/assets/ai/vaelon.jpg',
+  VÆLON: '/assets/ai/vaelon.jpg',
   AUREN: '/assets/ai/auren.jpg',
-  'SOLVÆR': '/assets/ai/solvaer.jpg',
+  SOLVÆR: '/assets/ai/solvaer.jpg',
 });
 
 const qs = (selector) => document.querySelector(selector);
