@@ -375,11 +375,15 @@ function renderOperatorState(operatorState) {
 
 async function fetchJson(primaryPath, fallbackPath) {
   try {
-    const response = await fetch(primaryPath, { headers: { accept: 'application/json' } });
+    const response = await fetch(primaryPath, {
+      headers: { accept: 'application/json' },
+    });
     if (!response.ok) throw new Error(`${primaryPath} returned HTTP ${response.status}`);
     return response.json();
   } catch (primaryError) {
-    const fallback = await fetch(fallbackPath, { headers: { accept: 'application/json' } });
+    const fallback = await fetch(fallbackPath, {
+      headers: { accept: 'application/json' },
+    });
     if (!fallback.ok) {
       throw new Error(
         `${primaryError.message}; ${fallbackPath} returned HTTP ${fallback.status}`,
