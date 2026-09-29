@@ -78,9 +78,10 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/create-release-manifest.mjs "${{ steps.release_tag.outputs.tag }}" "$GITHUB_SHA" release-manifest.json
+          npm run package:aethergrid
           npm sbom --sbom-format=cyclonedx > sbom.cdx.json
           printf '%s\n' "$GITHUB_SHA" > release-commit.txt
-          sha256sum sbom.cdx.json release-commit.txt release-manifest.json > release-artifacts.sha256
+          sha256sum sbom.cdx.json release-commit.txt release-manifest.json dist/aethergrid-operator-console.zip > release-artifacts.sha256
 
       - name: Verify release evidence checksums
         run: sha256sum --check release-artifacts.sha256
@@ -96,6 +97,7 @@ jobs:
             release-commit.txt
             release-manifest.json
             release-artifacts.sha256
+            dist/aethergrid-operator-console.zip
 
 
       - name: Publish GitHub release
@@ -103,7 +105,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${{ steps.release_tag.outputs.tag }}" \
-            sbom.cdx.json release-commit.txt release-artifacts.sha256 release-manifest.json \
+            sbom.cdx.json release-commit.txt release-artifacts.sha256 release-manifest.json dist/aethergrid-operator-console.zip \
             --target "$GITHUB_SHA" \
             --title "${{ steps.release_tag.outputs.tag }}" \
             --generate-notes
