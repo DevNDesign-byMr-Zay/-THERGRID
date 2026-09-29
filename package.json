@@ -10,17 +10,18 @@
     "start": "node src/platform-health-service.mjs",
     "test": "node --test tests/*.test.mjs tests/**/*.test.mjs",
     "coverage": "node --test --experimental-test-coverage --test-coverage-lines=90 --test-coverage-branches=70 --test-coverage-functions=90",
-    "syntax": "find src tests scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check",
+    "syntax": "find src tests scripts apps \\( -name '*.mjs' -o -name '*.js' \\) -print0 | xargs -0 -n1 node --check",
     "demo": "node scripts/demo.mjs",
     "dashboard-demo": "node scripts/dashboard-demo.mjs",
     "check": "npm run verify:release && npm run syntax && npm run lint && npm run typecheck && npm run typecheck:strict-renderer && npm run format:check && npm run coverage && npm run demo && npm run dashboard-demo",
     "lint": "eslint --max-warnings=0 src tests scripts",
-    "format:check": "prettier --check 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs'",
-    "format": "prettier --write 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs'",
+    "format:check": "prettier --check 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs' 'apps/operator-console/**/*.{html,css,js,svg}'",
+    "format": "prettier --write 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs' 'apps/operator-console/**/*.{html,css,js,svg}'",
     "health": "node src/platform-health-service.mjs",
     "verify:release": "node scripts/verify-release-readiness.mjs",
     "typecheck": "tsc -p jsconfig.json",
-    "typecheck:strict-renderer": "tsc -p jsconfig.strict-renderer.json"
+    "typecheck:strict-renderer": "tsc -p jsconfig.strict-renderer.json",
+    "operator-console": "node scripts/operator-console.mjs"
   },
   "dependencies": {
     "pino": "10.3.1",
