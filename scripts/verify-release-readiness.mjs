@@ -17,6 +17,7 @@ const REQUIRED_FILES = Object.freeze([
   'apps/operator-console/index.html',
   'apps/operator-console/styles.css',
   'apps/operator-console/app.js',
+  'apps/operator-console/model-logos.js',
   'docs/OPERATOR_CONSOLE.md',
   'CHANGELOG.md',
   'README.md',

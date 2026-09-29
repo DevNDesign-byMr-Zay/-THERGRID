@@ -1,3 +1,5 @@
+import { MODEL_LOGOS } from './model-logos.js';
+
 const state = {
   capabilities: null,
   operatorState: null,
@@ -46,7 +48,12 @@ function renderModels(models) {
 
     const icon = document.createElement('div');
     icon.className = 'model-icon';
-    icon.textContent = model.id.slice(0, 1);
+    const compactLogo = document.createElement('img');
+    compactLogo.className = 'model-logo';
+    compactLogo.src = MODEL_LOGOS[model.id];
+    compactLogo.alt = `${model.id} logo`;
+    compactLogo.decoding = 'async';
+    icon.append(compactLogo);
 
     const copy = document.createElement('div');
     const title = document.createElement('strong');
@@ -61,12 +68,27 @@ function renderModels(models) {
     card.className = 'ai-card';
     card.style.setProperty('--card-glow', colors[index % colors.length]);
 
+    const cardHeader = document.createElement('div');
+    cardHeader.className = 'ai-card-heading';
+
+    const cardLogo = document.createElement('img');
+    cardLogo.className = 'ai-card-logo';
+    cardLogo.src = MODEL_LOGOS[model.id];
+    cardLogo.alt = `${model.id} logo`;
+    cardLogo.decoding = 'async';
+
+    const headingCopy = document.createElement('div');
+    headingCopy.className = 'ai-card-heading-copy';
+
     const eyebrow = document.createElement('div');
     eyebrow.className = 'eyebrow';
     eyebrow.textContent = `AI ROLE 0${index + 1}`;
 
     const heading = document.createElement('h4');
     heading.textContent = model.id;
+
+    headingCopy.append(eyebrow, heading);
+    cardHeader.append(cardLogo, headingCopy);
 
     const description = document.createElement('p');
     description.textContent = label(model.role);
@@ -80,7 +102,7 @@ function renderModels(models) {
       caps.append(pill);
     });
 
-    card.append(eyebrow, heading, description, caps);
+    card.append(cardHeader, description, caps);
     grid.append(card);
   });
 }

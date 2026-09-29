@@ -46,6 +46,19 @@ test('operator console serves the read-only platform capability contract', async
   });
 });
 
+test('operator console serves embedded VÆLON, AUREN, and SOLVÆR brand icons', async () => {
+  await withServer(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/model-logos.js`);
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-type'), /^text\/javascript/);
+    const body = await response.text();
+    assert.match(body, /VÆLON/u);
+    assert.match(body, /AUREN/u);
+    assert.match(body, /SOLVÆR/u);
+    assert.match(body, /data:image\/webp;base64,/u);
+  });
+});
+
 test('operator console serves the holographic brand asset', async () => {
   await withServer(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/assets/aethergrid-mark.svg`);
