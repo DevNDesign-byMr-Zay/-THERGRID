@@ -15,6 +15,9 @@ const REQUIRED_FILES = Object.freeze([
   'src/operator-console-server.mjs',
   'src/operator-console-state.mjs',
   'apps/operator-console/index.html',
+  'apps/operator-console/app.json',
+  'apps/operator-console/ui.json',
+  'apps/operator-console/README.md',
   'apps/operator-console/styles.css',
   'apps/operator-console/app.js',
   'apps/operator-console/model-logos.js',
@@ -39,6 +42,7 @@ const REQUIRED_FILES = Object.freeze([
   '.github/CODEOWNERS',
   '.github/pull_request_template.md',
   'scripts/create-release-manifest.mjs',
+  'scripts/assemble-aethergrid-package.mjs',
 ]);
 
 function assert(condition, message) {
@@ -194,6 +198,7 @@ async function main() {
     'format:check',
     'check',
     'verify:release',
+    'package:aethergrid',
   ]) {
     assert(
       typeof pkg.scripts?.[name] === 'string' && pkg.scripts[name].trim(),
@@ -261,8 +266,16 @@ async function main() {
   assert(/npm run demo/u.test(ci), 'CI must run evidence demo');
   assert(/npm run dashboard-demo/u.test(ci), 'CI must run dashboard demo');
   assert(
+    /npm run package:aethergrid/u.test(ci),
+    'CI must build and verify the complete ÆTHERGRID UI archive',
+  );
+  assert(
     pkg.scripts['operator-console'] === 'node scripts/operator-console.mjs',
     'operator-console script must launch the maintained ÆTHERGRID UI server',
+  );
+  assert(
+    pkg.scripts['package:aethergrid'] === 'node scripts/assemble-aethergrid-package.mjs',
+    'package:aethergrid must build the maintained complete ÆTHERGRID ZIP',
   );
   assert(/rm -rf node_modules coverage/u.test(ci), 'fresh-clone CI must remove prior build state');
   assert(
@@ -316,6 +329,11 @@ async function main() {
     'release workflow must attach an exact provenance manifest',
   );
   assert(
+    /npm run package:aethergrid/u.test(release) &&
+      /dist\/aethergrid-operator-console\.zip/u.test(release),
+    'release workflow must build and attach the complete ÆTHERGRID UI ZIP',
+  );
+  assert(
     /RELEASE_TAG/u.test(release) && /GITHUB_SHA/u.test(release),
     'release manifest must bind requested tag and exact commit',
   );
@@ -363,7 +381,28 @@ async function main() {
   );
 
   const operatorConsole = await text('apps/operator-console/index.html');
+  const operatorAppManifest = JSON.parse(await text('apps/operator-console/app.json'));
+  const operatorUiManifest = JSON.parse(await text('apps/operator-console/ui.json'));
   const modelLogos = await text('apps/operator-console/model-logos.js');
+
+  assert(
+    operatorAppManifest.product === 'ÆTHERGRID' &&
+      operatorAppManifest.version === pkg.version &&
+      operatorAppManifest.entrypoints?.html === 'index.html' &&
+      operatorAppManifest.machineReadableUi === 'ui.json',
+    'ÆTHERGRID app.json must remain complete and version-aligned',
+  );
+  assert(
+    operatorAppManifest.packageContract?.includesHtmlUi === true &&
+      operatorAppManifest.packageContract?.includesJsonUi === true &&
+      operatorAppManifest.packageContract?.requiresNonEmptyFiles === true,
+    'ÆTHERGRID app.json must require complete HTML/JSON package content',
+  );
+  assert(
+    JSON.stringify(operatorUiManifest.navigation?.map((item) => item.label)) ===
+      JSON.stringify(['GRID', 'HOLOGRAPHIC', 'QUANTUM', 'AI', 'EVIDENCE']),
+    'ÆTHERGRID ui.json must describe all five maintained operator surfaces',
+  );
   assert(
     /\/assets\/brand\/aethergrid-logo-transparent\.webp/u.test(operatorConsole),
     'operator console must render the canonical ÆTHERGRID product logo',

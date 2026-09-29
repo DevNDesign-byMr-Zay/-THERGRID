@@ -373,17 +373,29 @@ function renderOperatorState(operatorState) {
     `Capability v${state.capabilities?.version ?? '?'} · operator state v${operatorState.version} · validated synthetic evidence · connected`;
 }
 
-async function fetchJson(path) {
-  const response = await fetch(path, { headers: { accept: 'application/json' } });
-  if (!response.ok) throw new Error(`${path} returned HTTP ${response.status}`);
-  return response.json();
+async function fetchJson(primaryPath, fallbackPath) {
+  try {
+    const response = await fetch(primaryPath, {
+      headers: { accept: 'application/json' },
+    });
+    if (!response.ok) throw new Error(`${primaryPath} returned HTTP ${response.status}`);
+    return response.json();
+  } catch (primaryError) {
+    const fallback = await fetch(fallbackPath, {
+      headers: { accept: 'application/json' },
+    });
+    if (!fallback.ok) {
+      throw new Error(`${primaryError.message}; ${fallbackPath} returned HTTP ${fallback.status}`);
+    }
+    return fallback.json();
+  }
 }
 
 async function loadConsole() {
   try {
     const [capabilities, operatorState] = await Promise.all([
-      fetchJson('/api/capabilities'),
-      fetchJson('/api/operator-state'),
+      fetchJson('/api/capabilities', './capabilities.json'),
+      fetchJson('/api/operator-state', './operator-state.json'),
     ]);
     renderCapabilities(capabilities);
     renderOperatorState(operatorState);

@@ -53,7 +53,7 @@ jobs:
           fi
           npm run format >/dev/null
           echo "::group::Required Prettier changes"
-          git --no-pager diff -- src tests scripts
+          git --no-pager diff -- src tests scripts apps
           echo "::endgroup::"
           exit 1
 
@@ -191,6 +191,15 @@ jobs:
         run: npm audit --audit-level=moderate
       - name: Verify release-readiness contract
         run: npm run verify:release
+      - name: Build verified ÆTHERGRID UI archive
+        run: npm run package:aethergrid
+      - name: Retain verified ÆTHERGRID UI archive
+        uses: actions/upload-artifact@v7
+        with:
+          name: aethergrid-ui-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 30
+          path: dist/aethergrid-operator-console.zip
       - name: Smoke-test release manifest generation
         shell: bash
         run: |
