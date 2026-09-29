@@ -31,6 +31,11 @@ test('operator console serves the ÆTHERGRID application shell', async () => {
     assert.match(body, /HOLOGRAPHIC/);
     assert.match(body, /QUANTUM/);
     assert.match(body, /\/assets\/brand\/aethergrid-logo-transparent\.webp/u);
+    assert.match(body, /NEW YORK METRO/u);
+    assert.match(body, /AI COLLABORATION/u);
+    assert.match(body, /QUANTUM OPTIMIZATION/u);
+    assert.match(body, /\.\/styles\.css/u);
+    assert.match(body, /\.\/app\.js/u);
   });
 });
 
@@ -93,6 +98,18 @@ test('operator console serves the holographic brand asset', async () => {
     assert.equal(response.status, 200);
     assert.match(response.headers.get('content-type'), /^image\/svg\+xml/);
     assert.match(await response.text(), /quantum holographic grid mark/);
+  });
+});
+
+test('operator console serves the modern NYC reference field asset', async () => {
+  await withServer(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/assets/reference/nyc-grid.webp`);
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-type'), /^image\/webp/);
+    const bytes = Buffer.from(await response.arrayBuffer());
+    assert.ok(bytes.byteLength > 10000);
+    assert.equal(bytes.subarray(0, 4).toString('ascii'), 'RIFF');
+    assert.equal(bytes.subarray(8, 12).toString('ascii'), 'WEBP');
   });
 });
 
