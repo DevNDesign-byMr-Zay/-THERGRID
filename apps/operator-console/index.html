@@ -65,14 +65,15 @@
                 <div class="eyebrow">DIGITAL TWIN</div>
                 <h3>Grid State Field</h3>
               </div>
-              <span class="mini-status">SYNTHETIC PREVIEW</span>
+              <span class="mini-status" id="dataSourceStatus">VALIDATING…</span>
             </div>
 
             <div class="holo-field">
               <svg
+                id="gridScene"
                 viewBox="0 0 760 440"
                 role="img"
-                aria-label="Renderer-neutral energy topology preview"
+                aria-label="Validated renderer-neutral energy topology"
               >
                 <defs>
                   <linearGradient id="flow" x1="0" x2="1">
@@ -94,50 +95,27 @@
                   d="M120 310 410 400M190 270 480 380M260 230 550 365M330 190 620 345"
                 />
                 <path class="grid-line" d="M155 390 450 220M260 405 545 250M360 410 630 285" />
-                <path
-                  class="energy-flow"
-                  d="M160 276 C260 190, 330 250, 380 290 S520 365, 620 285"
-                />
-                <path class="energy-flow secondary" d="M225 355 C300 280, 380 245, 520 270" />
-                <g class="node solar" transform="translate(155 272)">
-                  <circle r="28" />
-                  <circle r="8" class="node-core" />
-                  <text x="0" y="52">SOLAR</text>
-                </g>
-                <g class="node battery" transform="translate(375 292)">
-                  <circle r="32" />
-                  <circle r="9" class="node-core" />
-                  <text x="0" y="57">STORAGE</text>
-                </g>
-                <g class="node load" transform="translate(525 268)">
-                  <circle r="26" />
-                  <circle r="7" class="node-core" />
-                  <text x="0" y="50">LOAD</text>
-                </g>
-                <g class="node grid" transform="translate(620 286)">
-                  <circle r="30" />
-                  <circle r="8" class="node-core" />
-                  <text x="0" y="54">GRID</text>
-                </g>
+                <g id="gridFlows"></g>
+                <g id="gridNodes"></g>
               </svg>
-              <div class="field-note">Renderer-neutral · no actuation authority</div>
+              <div class="field-note" id="fieldNote">Loading validated operator state…</div>
             </div>
 
             <div class="metric-row">
               <div class="metric">
-                <span class="metric-label">Twin</span>
-                <strong id="twinMetric">—</strong>
-                <small>validated state</small>
+                <span class="metric-label">Generation</span>
+                <strong id="generationMetric">—</strong>
+                <small>validated kW</small>
               </div>
               <div class="metric">
-                <span class="metric-label">Holographic</span>
-                <strong id="holoMetric">—</strong>
-                <small>presentation</small>
+                <span class="metric-label">Load</span>
+                <strong id="loadMetric">—</strong>
+                <small>validated kW</small>
               </div>
               <div class="metric">
-                <span class="metric-label">Quantum</span>
-                <strong id="quantumMetric">—</strong>
-                <small>experimental</small>
+                <span class="metric-label">Balance</span>
+                <strong id="balanceMetric">—</strong>
+                <small>validated kW</small>
               </div>
             </div>
           </article>
@@ -173,16 +151,16 @@
               </div>
               <span class="mini-status cyan">READ ONLY</span>
             </div>
-            <div class="layer-stage">
-              <div class="scene-layer layer-4"><span>OPERATOR ATTENTION</span><b>z 80</b></div>
-              <div class="scene-layer layer-3"><span>SIMULATION OUTCOME</span><b>z 55</b></div>
-              <div class="scene-layer layer-2"><span>POWER FLOWS</span><b>z 30</b></div>
-              <div class="scene-layer layer-1"><span>DIGITAL TWIN</span><b>z 0</b></div>
+            <div class="layer-stage" id="spatialLayers">
+              <div class="scene-loading">Loading validated spatial layers…</div>
             </div>
           </article>
           <article class="panel">
             <div class="eyebrow">RENDER TARGETS</div>
             <h3>Presentation adapters</h3>
+            <div class="render-summary" id="renderSummary">
+              <span class="mini-status">TARGET · LOADING</span>
+            </div>
             <div class="target-grid" id="holoTargets"></div>
             <div class="boundary-note">
               Holographic output can carry evidence, alerts, flows and scenario state. It cannot
@@ -266,7 +244,7 @@
 
     <footer class="footer">
       <span>ÆTHERGRID · Operator review surface</span>
-      <span id="apiState">Connecting to local capability contract…</span>
+      <span id="apiState">Connecting to validated ÆTHERGRID contracts…</span>
     </footer>
 
     <script type="module" src="/app.js"></script>
