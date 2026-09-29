@@ -32,7 +32,7 @@
       "AUREN": "assets/brand/agents/auren.webp",
       "SOLVÆR": "assets/brand/agents/solvaer.webp"
     },
-    "referenceField": "assets/reference/nyc-grid.webp"
+    "referenceField": "assets/reference/nyc-grid.svg"
   },
   "runtime": {
     "primaryApi": {
