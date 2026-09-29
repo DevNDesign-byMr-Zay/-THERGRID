@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "id": "aethergrid.operator-console",
+  "name": "ÆTHERGRID Operator Console",
+  "product": "ÆTHERGRID",
+  "version": "0.1.3",
+  "repositoryPackage": "thergrid",
+  "description": "Evidence-bound operator intelligence surface for digital-twin, holographic, quantum-inspired, AI collaboration, and audit review workflows.",
+  "entrypoints": {
+    "html": "index.html",
+    "script": "app.js",
+    "styles": "styles.css",
+    "modelLogos": "model-logos.js"
+  },
+  "machineReadableUi": "ui.json",
+  "runtimeSnapshots": {
+    "capabilities": "capabilities.json",
+    "operatorState": "operator-state.json"
+  },
+  "surfaces": [
+    "GRID",
+    "HOLOGRAPHIC",
+    "QUANTUM",
+    "AI",
+    "EVIDENCE"
+  ],
+  "assets": {
+    "interfaceMark": "assets/aethergrid-mark.svg",
+    "productLogo": "assets/brand/aethergrid-logo-transparent.webp",
+    "agents": {
+      "VÆLON": "assets/brand/agents/vaelon.webp",
+      "AUREN": "assets/brand/agents/auren.webp",
+      "SOLVÆR": "assets/brand/agents/solvaer.webp"
+    }
+  },
+  "runtime": {
+    "primaryApi": {
+      "capabilities": "/api/capabilities",
+      "operatorState": "/api/operator-state"
+    },
+    "staticFallback": true,
+    "recommendedLocalCommand": "npm run operator-console"
+  },
+  "safety": {
+    "advisoryOnly": true,
+    "physicalActuation": false,
+    "infrastructureDispatch": false,
+    "silentCandidatePromotion": false,
+    "humanReviewRequired": true
+  },
+  "packageContract": {
+    "archiveName": "aethergrid-operator-console.zip",
+    "requiresNonEmptyFiles": true,
+    "includesHtmlUi": true,
+    "includesJsonUi": true,
+    "includesRuntimeSnapshots": true,
+    "includesBrandAssets": true
+  }
+}
