@@ -7,8 +7,14 @@ import { createOperatorConsoleState } from './operator-console-state.mjs';
 const STATIC_FILES = Object.freeze({
   '/': { path: '../apps/operator-console/index.html', type: 'text/html; charset=utf-8' },
   '/index.html': { path: '../apps/operator-console/index.html', type: 'text/html; charset=utf-8' },
-  '/app.json': { path: '../apps/operator-console/app.json', type: 'application/json; charset=utf-8' },
-  '/ui.json': { path: '../apps/operator-console/ui.json', type: 'application/json; charset=utf-8' },
+  '/app.json': {
+    path: '../apps/operator-console/app.json',
+    type: 'application/json; charset=utf-8',
+  },
+  '/ui.json': {
+    path: '../apps/operator-console/ui.json',
+    type: 'application/json; charset=utf-8',
+  },
   '/styles.css': { path: '../apps/operator-console/styles.css', type: 'text/css; charset=utf-8' },
   '/app.js': { path: '../apps/operator-console/app.js', type: 'text/javascript; charset=utf-8' },
   '/model-logos.js': {
