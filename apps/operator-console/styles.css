@@ -867,3 +867,70 @@ h3 {
     scroll-behavior: auto !important;
   }
 }
+
+.node.wind circle:first-child {
+  stroke: #7ad8ff;
+}
+.node-power {
+  fill: #84a8c7 !important;
+  font-size: 10px !important;
+  font-weight: 650 !important;
+}
+
+.scene-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.scene-layer-copy {
+  display: grid;
+  gap: 4px;
+}
+.scene-layer-copy small {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+}
+
+.render-summary {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(8, 18, 30, 0.72);
+}
+.render-detail {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.target-card.is-active {
+  border-color: rgba(75, 239, 255, 0.5);
+  background: linear-gradient(145deg, rgba(34, 84, 111, 0.34), rgba(42, 30, 79, 0.3));
+  box-shadow: inset 0 0 0 1px rgba(75, 239, 255, 0.14);
+}
+.target-card.is-active strong {
+  color: var(--cyan);
+}
+
+.evidence-node.warning::before {
+  background: var(--amber);
+  box-shadow: 0 0 15px rgba(255, 214, 107, 0.35);
+}
+.evidence-node.critical::before {
+  background: var(--danger);
+  box-shadow: 0 0 15px rgba(255, 109, 134, 0.35);
+}
+.evidence-node.info::before {
+  background: var(--cyan);
+}

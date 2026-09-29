@@ -13,6 +13,7 @@ const REQUIRED_FILES = Object.freeze([
   'src/error-reporting.mjs',
   'src/operator-console-capabilities.mjs',
   'src/operator-console-server.mjs',
+  'src/operator-console-state.mjs',
   'apps/operator-console/index.html',
   'apps/operator-console/styles.css',
   'apps/operator-console/app.js',
