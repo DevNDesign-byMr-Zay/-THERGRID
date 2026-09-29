@@ -2,24 +2,33 @@
   "schemaVersion": 1,
   "product": "ÆTHERGRID",
   "experience": "operator-console",
-  "headline": "See the grid. Explore the future. Verify every recommendation.",
+  "headline": "NEW YORK METRO · DIGITAL TWIN · LIVE VIEW",
   "visualDirection": {
-    "base": "deep gunmetal / near-black",
+    "base": "deep gunmetal / near-black operator console",
     "accents": [
-      "cyan",
-      "violet",
-      "spectral magenta"
+      "electric cyan",
+      "cobalt blue",
+      "quantum violet",
+      "evidence amber",
+      "nominal green"
     ],
     "motion": [
-      "energy-flow dashes",
-      "orbital system motion",
-      "layered holographic depth"
+      "animated energy-flow paths",
+      "pulsing spatial nodes",
+      "chart draw-ins",
+      "quantum wave motion",
+      "tab sheen",
+      "status pulse",
+      "panel hover depth",
+      "toast transitions"
     ],
     "principles": [
-      "scientific operator software",
-      "evidence-first hierarchy",
-      "visible safety state",
-      "restrained holographic depth"
+      "dense modern command-center hierarchy",
+      "elegant luminous glass panels",
+      "map-first spatial intelligence",
+      "always-visible AI collaboration",
+      "evidence-first operator safety",
+      "direct-file usability"
     ]
   },
   "header": {
@@ -59,16 +68,9 @@
     }
   ],
   "hero": {
-    "eyebrow": "OPERATOR INTELLIGENCE LAYER",
-    "primaryAction": {
-      "label": "Open Holographic Field",
-      "target": "holographic"
-    },
-    "secondaryAction": {
-      "label": "Inspect Quantum Layer",
-      "target": "quantum"
-    },
-    "productLogo": "assets/brand/aethergrid-logo-transparent.webp"
+    "title": "NEW YORK METRO",
+    "subtitle": "DIGITAL TWIN · LIVE VIEW",
+    "referenceField": "assets/reference/nyc-grid.webp"
   },
   "aiModels": [
     {
@@ -101,6 +103,49 @@
     "packagedFallback": [
       "capabilities.json",
       "operator-state.json"
+    ]
+  },
+  "layout": {
+    "topHeader": [
+      "ÆTHERGRID brand lockup",
+      "GRID / HOLOGRAPHIC / QUANTUM / AI / EVIDENCE modes",
+      "system nominal status",
+      "local clock",
+      "profile controls"
+    ],
+    "leftRail": [
+      "OVERVIEW",
+      "GRID",
+      "HOLOGRAPHIC",
+      "QUANTUM",
+      "AI",
+      "SCENARIOS",
+      "EVIDENCE",
+      "SETTINGS",
+      "NYC METRO region status",
+      "ADVISORY ONLY authority card"
+    ],
+    "primary": [
+      "NEW YORK METRO digital-twin field",
+      "renewable / load / storage / city telemetry cards",
+      "animated energy paths",
+      "map tools and legend"
+    ],
+    "rightRail": [
+      "VÆLON",
+      "AUREN",
+      "SOLVÆR",
+      "AI operator prompt"
+    ],
+    "analytics": [
+      "system metrics",
+      "quantum optimization",
+      "scenario comparison"
+    ],
+    "lower": [
+      "holographic views",
+      "recent evidence",
+      "export & report"
     ]
   }
 }
