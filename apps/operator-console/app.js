@@ -5,6 +5,12 @@ const state = {
 };
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
+const MODEL_LOGOS = Object.freeze({
+  'VÆLON': '/assets/ai/vaelon.jpg',
+  AUREN: '/assets/ai/auren.jpg',
+  'SOLVÆR': '/assets/ai/solvaer.jpg',
+});
+
 const qs = (selector) => document.querySelector(selector);
 const qsa = (selector) => [...document.querySelectorAll(selector)];
 
@@ -45,8 +51,14 @@ function renderModels(models) {
     compact.className = 'model-item';
 
     const icon = document.createElement('div');
-    icon.className = 'model-icon';
-    icon.textContent = model.id.slice(0, 1);
+    icon.className = `model-icon model-logo-${model.id === 'SOLVÆR' ? 'solvaer' : 'triangular'}`;
+
+    const iconImage = document.createElement('img');
+    iconImage.className = 'model-icon-image';
+    iconImage.src = MODEL_LOGOS[model.id];
+    iconImage.alt = '';
+    iconImage.loading = 'eager';
+    icon.append(iconImage);
 
     const copy = document.createElement('div');
     const title = document.createElement('strong');
@@ -68,6 +80,20 @@ function renderModels(models) {
     const heading = document.createElement('h4');
     heading.textContent = model.id;
 
+    const brandLogo = document.createElement('img');
+    brandLogo.className = `ai-card-logo model-logo-${model.id === 'SOLVÆR' ? 'solvaer' : 'triangular'}`;
+    brandLogo.src = MODEL_LOGOS[model.id];
+    brandLogo.alt = `${model.id} logo`;
+    brandLogo.loading = 'eager';
+
+    const headingCopy = document.createElement('div');
+    headingCopy.className = 'ai-card-heading';
+    headingCopy.append(eyebrow, heading);
+
+    const cardHeader = document.createElement('div');
+    cardHeader.className = 'ai-card-header';
+    cardHeader.append(brandLogo, headingCopy);
+
     const description = document.createElement('p');
     description.textContent = label(model.role);
 
@@ -80,7 +106,7 @@ function renderModels(models) {
       caps.append(pill);
     });
 
-    card.append(eyebrow, heading, description, caps);
+    card.append(cardHeader, description, caps);
     grid.append(card);
   });
 }
