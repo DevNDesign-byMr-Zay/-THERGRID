@@ -2,6 +2,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 
 import { createOperatorConsoleCapabilities } from './operator-console-capabilities.mjs';
+import { createOperatorConsoleState } from './operator-console-state.mjs';
 
 const STATIC_FILES = Object.freeze({
   '/': { path: '../apps/operator-console/index.html', type: 'text/html; charset=utf-8' },
@@ -35,12 +36,18 @@ function parsePort(value, fallback = 8090) {
 
 export function createOperatorConsoleServer({
   capabilities = createOperatorConsoleCapabilities(),
+  operatorState = createOperatorConsoleState(),
 } = {}) {
   return http.createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
 
     if (req.method === 'GET' && url.pathname === '/api/capabilities') {
       json(res, 200, capabilities);
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/operator-state') {
+      json(res, 200, operatorState);
       return;
     }
 
