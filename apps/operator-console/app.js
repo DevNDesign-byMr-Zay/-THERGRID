@@ -1,5 +1,3 @@
-import { MODEL_LOGOS } from './model-logos.js';
-
 const state = {
   capabilities: null,
   operatorState: null,
@@ -7,6 +5,11 @@ const state = {
 };
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
+const MODEL_LOGOS = Object.freeze({
+  VÆLON: '/assets/ai/vaelon.jpg',
+  AUREN: '/assets/ai/auren.jpg',
+  SOLVÆR: '/assets/ai/solvaer.jpg',
+});
 const qs = (selector) => document.querySelector(selector);
 const qsa = (selector) => [...document.querySelectorAll(selector)];
 
@@ -28,6 +31,24 @@ function formatKw(value) {
   return Number.isFinite(number) ? `${number.toFixed(1)} kW` : '—';
 }
 
+function createModelLogo(modelId, className, decorative = false) {
+  const source = MODEL_LOGOS[modelId];
+  if (!source) {
+    const fallback = document.createElement('div');
+    fallback.className = `${className} model-logo-fallback`;
+    fallback.textContent = modelId.slice(0, 1);
+    return fallback;
+  }
+
+  const image = document.createElement('img');
+  image.className = className;
+  image.src = source;
+  image.alt = decorative ? '' : `${modelId} model logo`;
+  image.decoding = 'async';
+  image.loading = 'lazy';
+  return image;
+}
+
 function setActiveTab(tab) {
   state.activeTab = tab;
   qsa('.tab').forEach((button) => button.classList.toggle('is-active', button.dataset.tab === tab));
@@ -46,14 +67,7 @@ function renderModels(models) {
     const compact = document.createElement('div');
     compact.className = 'model-item';
 
-    const icon = document.createElement('div');
-    icon.className = 'model-icon';
-    const compactLogo = document.createElement('img');
-    compactLogo.className = 'model-logo';
-    compactLogo.src = MODEL_LOGOS[model.id];
-    compactLogo.alt = `${model.id} logo`;
-    compactLogo.decoding = 'async';
-    icon.append(compactLogo);
+    const icon = createModelLogo(model.id, 'model-icon', true);
 
     const copy = document.createElement('div');
     const title = document.createElement('strong');
@@ -68,30 +82,23 @@ function renderModels(models) {
     card.className = 'ai-card';
     card.style.setProperty('--card-glow', colors[index % colors.length]);
 
-    const cardHeader = document.createElement('div');
-    cardHeader.className = 'ai-card-heading';
-
-    const cardLogo = document.createElement('img');
-    cardLogo.className = 'ai-card-logo';
-    cardLogo.src = MODEL_LOGOS[model.id];
-    cardLogo.alt = `${model.id} logo`;
-    cardLogo.decoding = 'async';
-
-    const headingCopy = document.createElement('div');
-    headingCopy.className = 'ai-card-heading-copy';
-
     const eyebrow = document.createElement('div');
     eyebrow.className = 'eyebrow';
     eyebrow.textContent = `AI ROLE 0${index + 1}`;
 
+    const identity = document.createElement('div');
+    identity.className = 'ai-card-identity';
+
+    const logo = createModelLogo(model.id, 'ai-card-logo');
+
+    const identityCopy = document.createElement('div');
     const heading = document.createElement('h4');
     heading.textContent = model.id;
 
-    headingCopy.append(eyebrow, heading);
-    cardHeader.append(cardLogo, headingCopy);
-
     const description = document.createElement('p');
     description.textContent = label(model.role);
+    identityCopy.append(heading, description);
+    identity.append(logo, identityCopy);
 
     const caps = document.createElement('div');
     caps.className = 'capabilities';
@@ -102,7 +109,7 @@ function renderModels(models) {
       caps.append(pill);
     });
 
-    card.append(cardHeader, description, caps);
+    card.append(eyebrow, identity, caps);
     grid.append(card);
   });
 }

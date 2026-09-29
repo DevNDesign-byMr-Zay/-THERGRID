@@ -46,25 +46,27 @@ test('operator console serves the read-only platform capability contract', async
   });
 });
 
-test('operator console serves embedded VÆLON, AUREN, and SOLVÆR brand icons', async () => {
-  await withServer(async (baseUrl) => {
-    const response = await fetch(`${baseUrl}/model-logos.js`);
-    assert.equal(response.status, 200);
-    assert.match(response.headers.get('content-type'), /^text\/javascript/);
-    const body = await response.text();
-    assert.match(body, /VÆLON/u);
-    assert.match(body, /AUREN/u);
-    assert.match(body, /SOLVÆR/u);
-    assert.match(body, /data:image\/webp;base64,/u);
-  });
-});
-
 test('operator console serves the holographic brand asset', async () => {
   await withServer(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/assets/aethergrid-mark.svg`);
     assert.equal(response.status, 200);
     assert.match(response.headers.get('content-type'), /^image\/svg\+xml/);
     assert.match(await response.text(), /quantum holographic grid mark/);
+  });
+});
+
+test('operator console serves the SOLVÆR, AUREN, and VÆLON model marks', async () => {
+  await withServer(async (baseUrl) => {
+    for (const path of [
+      '/assets/ai/solvaer.jpg',
+      '/assets/ai/auren.jpg',
+      '/assets/ai/vaelon.jpg',
+    ]) {
+      const response = await fetch(`${baseUrl}${path}`);
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get('content-type'), 'image/jpeg');
+      assert.ok((await response.arrayBuffer()).byteLength > 1000);
+    }
   });
 });
 
