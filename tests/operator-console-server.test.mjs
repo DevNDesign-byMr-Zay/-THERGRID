@@ -34,6 +34,30 @@ test('operator console serves the ÆTHERGRID application shell', async () => {
   });
 });
 
+test('operator console serves complete JSON application and UI manifests', async () => {
+  await withServer(async (baseUrl) => {
+    const appResponse = await fetch(`${baseUrl}/app.json`);
+    assert.equal(appResponse.status, 200);
+    assert.match(appResponse.headers.get('content-type'), /^application\/json/);
+    const app = await appResponse.json();
+    assert.equal(app.product, 'ÆTHERGRID');
+    assert.equal(app.entrypoints.html, 'index.html');
+    assert.equal(app.machineReadableUi, 'ui.json');
+    assert.equal(app.packageContract.includesHtmlUi, true);
+    assert.equal(app.packageContract.includesJsonUi, true);
+
+    const uiResponse = await fetch(`${baseUrl}/ui.json`);
+    assert.equal(uiResponse.status, 200);
+    assert.match(uiResponse.headers.get('content-type'), /^application\/json/);
+    const ui = await uiResponse.json();
+    assert.equal(ui.product, 'ÆTHERGRID');
+    assert.deepEqual(
+      ui.navigation.map((item) => item.label),
+      ['GRID', 'HOLOGRAPHIC', 'QUANTUM', 'AI', 'EVIDENCE'],
+    );
+  });
+});
+
 test('operator console serves the read-only platform capability contract', async () => {
   await withServer(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/capabilities`);
