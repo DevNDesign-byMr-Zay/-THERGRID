@@ -6,7 +6,7 @@ The maintained operator console keeps reusable product and AI-agent artwork unde
 
 - `aethergrid-logo-transparent.webp` — transparent-background ÆTHERGRID logo extracted from the approved operator-console visual direction.
 
-The existing `assets/aethergrid-mark.svg` remains the lightweight renderer-native interface glyph. The transparent brand logo is the reusable marketing, documentation, presentation, and future UI asset.
+The existing `assets/aethergrid-mark.svg` remains the lightweight renderer-native interface glyph. The transparent brand logo is the canonical product mark for marketing, documentation, presentation, and maintained UI use; the operator-console hero now renders this repository asset directly.
 
 ## AI agent marks
 

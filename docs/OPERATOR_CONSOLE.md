@@ -166,4 +166,6 @@ The next product integration is a provider-neutral telemetry ingestion adapter t
 - evidence and safety status always visible;
 - motion used to communicate energy flow and dimensionality, not decoration.
 
+The hero orbit renders the canonical transparent ÆTHERGRID product mark from `apps/operator-console/assets/brand/`, while the AI model list and collaboration cards render the maintained VÆLON, AUREN, and SOLVÆR marks from `apps/operator-console/assets/brand/agents/`.
+
 Quantum, holographic, and AI visuals should communicate the underlying contracts clearly and should never imply unsupported authority.

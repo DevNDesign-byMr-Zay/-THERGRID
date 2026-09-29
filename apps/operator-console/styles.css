@@ -248,16 +248,17 @@ button {
   border-color: rgba(226, 92, 255, 0.2);
   animation: spinReverse 18s linear infinite;
 }
-.orbit-core {
+.orbit-brand {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 72px;
-  height: 72px;
-  transform: translate(-50%, -50%) rotate(45deg);
-  background: linear-gradient(135deg, var(--cyan), var(--violet), var(--magenta));
-  border: 8px solid rgba(6, 14, 24, 0.72);
-  box-shadow: 0 0 50px rgba(75, 239, 255, 0.3);
+  z-index: 2;
+  width: min(176px, 58%);
+  height: auto;
+  transform: translate(-50%, -50%);
+  object-fit: contain;
+  filter: drop-shadow(0 0 18px rgba(75, 239, 255, 0.28))
+    drop-shadow(0 0 38px rgba(128, 104, 255, 0.18));
 }
 .orbit-label {
   position: absolute;
