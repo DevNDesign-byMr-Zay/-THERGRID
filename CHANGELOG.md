@@ -15,6 +15,8 @@
 - Added a read-only operator capability contract backed by the existing VÆLON model route, quantum-inspired optimization backend, holographic device registry, and safety boundaries.
 - Added a local operator-console server and `npm run operator-console` launcher with tests for static assets, read-only API behavior, and no-actuation safety.
 - Added operator-console product/architecture documentation covering the human-in-the-loop authority boundary.
+- Added reusable canonical ÆTHERGRID, VÆLON, AUREN, and SOLVÆR brand assets and wired the product/agent marks directly into the maintained operator-console UI.
+- Added release-readiness and HTTP assertions so missing, truncated, or disconnected brand assets fail verification instead of silently degrading the interface.
 - Wired GRID, HOLOGRAPHIC, and EVIDENCE views to a validated synthetic operator-state chain spanning the twin, SOLVÆR projection, operator dashboard/evidence package, enriched spatial scene, and holographic render packet.
 
 - Pinned ESLint, Prettier, and TypeScript as exact local development dependencies with a synchronized npm lockfile and release-readiness parity checks.
