@@ -46,7 +46,7 @@ test('operator console serves the read-only platform capability contract', async
   });
 });
 
-test('operator console serves embedded VÆLON, AUREN, and SOLVÆR brand icons', async () => {
+test('operator console maps VÆLON, AUREN, and SOLVÆR to reusable brand assets', async () => {
   await withServer(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/model-logos.js`);
     assert.equal(response.status, 200);
@@ -55,7 +55,10 @@ test('operator console serves embedded VÆLON, AUREN, and SOLVÆR brand icons', 
     assert.match(body, /VÆLON/u);
     assert.match(body, /AUREN/u);
     assert.match(body, /SOLVÆR/u);
-    assert.match(body, /data:image\/webp;base64,/u);
+    assert.match(body, /\/assets\/brand\/agents\/vaelon\.webp/u);
+    assert.match(body, /\/assets\/brand\/agents\/auren\.webp/u);
+    assert.match(body, /\/assets\/brand\/agents\/solvaer\.webp/u);
+    assert.doesNotMatch(body, /data:image\/webp;base64,/u);
   });
 });
 
