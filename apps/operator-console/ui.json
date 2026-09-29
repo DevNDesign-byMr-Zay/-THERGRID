@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "product": "ÆTHERGRID",
+  "experience": "operator-console",
+  "headline": "See the grid. Explore the future. Verify every recommendation.",
+  "visualDirection": {
+    "base": "deep gunmetal / near-black",
+    "accents": [
+      "cyan",
+      "violet",
+      "spectral magenta"
+    ],
+    "motion": [
+      "energy-flow dashes",
+      "orbital system motion",
+      "layered holographic depth"
+    ],
+    "principles": [
+      "scientific operator software",
+      "evidence-first hierarchy",
+      "visible safety state",
+      "restrained holographic depth"
+    ]
+  },
+  "header": {
+    "eyebrow": "QUANTUM · HOLOGRAPHIC · AI",
+    "brand": "ÆTHERGRID",
+    "status": [
+      "ADVISORY ONLY",
+      "TWIN",
+      "EVIDENCE"
+    ]
+  },
+  "navigation": [
+    {
+      "id": "grid",
+      "label": "GRID",
+      "purpose": "Validated digital-twin topology, power flow, generation, load, and balance."
+    },
+    {
+      "id": "holographic",
+      "label": "HOLOGRAPHIC",
+      "purpose": "Renderer-neutral spatial review of evidence, alerts, flows, and scenario state."
+    },
+    {
+      "id": "quantum",
+      "label": "QUANTUM",
+      "purpose": "VÆLON optimization experiments shown beside a deterministic classical baseline."
+    },
+    {
+      "id": "ai",
+      "label": "AI",
+      "purpose": "Bounded VÆLON, AUREN, and SOLVÆR collaboration roles."
+    },
+    {
+      "id": "evidence",
+      "label": "EVIDENCE",
+      "purpose": "Decision evidence, fingerprints, provenance, operator attention, and safety guarantees."
+    }
+  ],
+  "hero": {
+    "eyebrow": "OPERATOR INTELLIGENCE LAYER",
+    "primaryAction": {
+      "label": "Open Holographic Field",
+      "target": "holographic"
+    },
+    "secondaryAction": {
+      "label": "Inspect Quantum Layer",
+      "target": "quantum"
+    },
+    "productLogo": "assets/brand/aethergrid-logo-transparent.webp"
+  },
+  "aiModels": [
+    {
+      "id": "VÆLON",
+      "role": "optimization and scenario exploration",
+      "logo": "assets/brand/agents/vaelon.webp"
+    },
+    {
+      "id": "AUREN",
+      "role": "semantic and operator meaning",
+      "logo": "assets/brand/agents/auren.webp"
+    },
+    {
+      "id": "SOLVÆR",
+      "role": "bounded candidate computation and simulation evidence",
+      "logo": "assets/brand/agents/solvaer.webp"
+    }
+  ],
+  "authorityBoundary": {
+    "recommendations": "ADVISORY",
+    "hardwareActuation": "DISABLED",
+    "infrastructureDispatch": "DISABLED",
+    "evidenceTrail": "REQUIRED"
+  },
+  "dataSources": {
+    "liveRuntime": [
+      "/api/capabilities",
+      "/api/operator-state"
+    ],
+    "packagedFallback": [
+      "capabilities.json",
+      "operator-state.json"
+    ]
+  }
+}
