@@ -1,3 +1,5 @@
+import type { SpatialOverlaySnapshot } from '../overlays/spatial-overlay';
+
 import type {
   LayerState,
   SpatialFeatureSelection,
@@ -17,6 +19,8 @@ export interface LegacyNativeSpatialBridge {
   setLayers?(layers: readonly LayerState[]): void;
   selectFeature?(id: string | null): void;
   setVisualMode?(mode: VisualMode): void;
+  applyOverlay?(snapshot: SpatialOverlaySnapshot): void;
+  clearOverlay?(layerId: string): void;
   pick?(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null> | SpatialFeatureSelection | null;
   resize?(): void;
   destroy?(): void;
@@ -65,6 +69,14 @@ export class NativeSpatialRendererAdapter implements SpatialRenderer {
   setVisualMode(mode: VisualMode): void {
     this.#visualMode = mode;
     this.#bridge.setVisualMode?.(mode);
+  }
+
+  applyOverlay(snapshot: SpatialOverlaySnapshot): void {
+    this.#bridge.applyOverlay?.(snapshot);
+  }
+
+  clearOverlay(layerId: string): void {
+    this.#bridge.clearOverlay?.(layerId);
   }
 
   async pick(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null> {
