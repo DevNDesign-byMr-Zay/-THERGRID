@@ -154,3 +154,27 @@ test('v4 streamed 3D buildings have actual visual-mode styling', async () => {
   assert.match(controller, /mode === 'reality'/u);
   assert.match(controller, /Reality mode requires a configured photorealistic 3D Tiles provider/u);
 });
+
+
+test('v4 live atmosphere is source-backed and drives Cesium clouds and fog', async () => {
+  const [contract, service, weatherLayer, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/renderer/overlays/atmospheric-overlay.ts'),
+    text('apps/aethergrid-console/web/src/services/city-environment.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/weather-atmosphere-layer.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(contract, /weatherPhenomenon/u);
+  assert.match(contract, /'rain'/u);
+  assert.match(contract, /'snow'/u);
+  assert.match(contract, /'fog'/u);
+  assert.match(service, /\/api\/aethergrid\/environment/u);
+  assert.match(service, /source\.live === true/u);
+  assert.match(weatherLayer, /CloudCollection/u);
+  assert.match(weatherLayer, /scene\.fog\.density/u);
+  assert.match(weatherLayer, /visualDensityScalar/u);
+  assert.match(weatherLayer, /cloudCoverPercent/u);
+  assert.match(weatherLayer, /windDirectionDegrees/u);
+  assert.match(app, /ATMOSPHERE/u);
+  assert.match(app, /loadCityEnvironment/u);
+});
