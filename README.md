@@ -145,3 +145,18 @@ The blocking Node coverage gate now writes raw V8 coverage from the exact CI tes
 **Working deterministic vertical slice under hardening.** The repository now contains the synthetic microgrid path, evidence/provenance gates, simulation-bound model handoffs, renderer-neutral spatial output, source-backed topology and operator-attention identity, plus operational scene evidence for asset power state, forecast deltas, and simulation outcomes. Current work is focused on reproducibility, security evidence, adversarial validation, and keeping every model boundary advisory until explicit downstream authorization exists.
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the working technical plan.
+
+
+## ÆTHERGRID v4.0 Production Provider Foundation (Batch 18)
+
+ÆTHERGRID v4.0 Batch 18 introduces a server-side provider runtime and configuration registry that normalizes all external integrations (spatial, geospatial, weather, air quality, seismic, terrain, quantum, AI, energy, transit, and hydrology).
+
+Key capabilities in this batch:
+1. **Central Validated Environment Configuration**: `zod`-validated config schema supporting current and forward-compatible providers (Cesium, Tomorrow.io, Overture, EIA, D-Wave, NWS, transit, hydrology).
+2. **Provider Registry**: Normalized readiness tracking (`ready`, `degraded`, `unconfigured`, `unavailable`, `fallback`).
+3. **Secret Redaction**: Defensive credential redaction from runtime responses, logs, errors, and exports.
+4. **Outbound Provider URL Policy**: Bounded outbound URL policy restricting server-side fetch calls to approved provider endpoints.
+5. **Resilience Infrastructure**: Memory cache store, circuit breaker, and provider rate limiters.
+6. **Safe Public Runtime Endpoint**: `GET /api/aethergrid/runtime/providers` exposing secret-redacted provider readiness metadata.
+
+See [docs/PROVIDER-ARCHITECTURE.md](docs/PROVIDER-ARCHITECTURE.md) for full architectural specifications.

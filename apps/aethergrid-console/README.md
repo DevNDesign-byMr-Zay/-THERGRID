@@ -325,3 +325,16 @@ AETHERGRID_OPEN_METEO_API_KEY=
 ```
 
 When the live elevation provider is unavailable, the renderer uses a clearly labeled flat local fallback. Terrain source attribution is shown alongside OpenStreetMap attribution. Terrain summaries may be passed to the AI team as bounded context, but no terrain or AI path grants physical actuation authority.
+
+
+## ÆTHERGRID v4.0 Production Provider Foundation (Batch 18)
+
+Batch 18 establishes the production backend provider, configuration, secret-safety, and runtime foundation for ÆTHERGRID v4.0.
+
+### Features
+- **Centralized Environment Schema ()**: Schema-validated environment config powered by Zod.
+- **Secret Redaction ()**: Strips configured API keys, bearer tokens, and CRN strings from logs, runtime outputs, errors, and exports.
+- **Outbound URL Safety Policy ()**: Restricts server-side outbound HTTP calls to validated provider endpoints and safe local developer services (e.g. local Ollama).
+- **Provider Registry ()**: Wraps existing runtimes (spatial, geo, weather, air quality, seismic, terrain, quantum, AI, energy, transit, hydrology) and exposes normalized status (, , , , ).
+- **Resilience Primitives**: In-memory cache (), circuit breaker (), and per-provider rate limiter ().
+- **Public Runtime Endpoint**:  provides safe, secret-redacted provider readiness metadata.
