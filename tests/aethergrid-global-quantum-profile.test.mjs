@@ -59,15 +59,23 @@ test('live geospatial runtime converts Overpass building geometry into 3D-ready 
     assert.match(String(options.headers['user-agent']), /AETHERGRID/u);
     return new Response(
       JSON.stringify({
-        elements: Array.from({ length: 8 }, (_, index) => ({
-          type: 'way',
-          id: 1000 + index,
-          tags: { building: 'yes', 'building:levels': String(3 + index) },
-          geometry: geometry.map((point) => ({
-            lat: point.lat + index * 0.00012,
-            lon: point.lon + index * 0.00012,
+        elements: [
+          ...Array.from({ length: 8 }, (_, index) => ({
+            type: 'way',
+            id: 1000 + index,
+            tags: { building: 'yes', 'building:levels': String(3 + index) },
+            geometry: geometry.map((point) => ({
+              lat: point.lat + index * 0.00012,
+              lon: point.lon + index * 0.00012,
+            })),
           })),
-        })),
+          {
+            type: 'way',
+            id: 2001,
+            tags: { highway: 'primary', name: 'Test Avenue' },
+            geometry: geometry.slice(0, 3),
+          },
+        ],
       }),
       { status: 200, headers: { 'content-type': 'application/json' } },
     );
@@ -90,6 +98,10 @@ test('live geospatial runtime converts Overpass building geometry into 3D-ready 
   assert.ok(first.buildings.length >= 5);
   assert.ok(first.buildings.every((building) => building.footprint.length >= 5));
   assert.ok(first.buildings.every((building) => building.heightM > 0));
+  assert.equal(first.roads.length, 1);
+  assert.equal(first.roads[0].name, 'Test Avenue');
+  assert.equal(first.roads[0].highwayType, 'primary');
+  assert.ok(first.roads[0].path.length >= 2);
   assert.equal(first.source.attribution, '© OpenStreetMap contributors');
 
   const second = await runtime.cityMesh('new-york');
@@ -109,6 +121,7 @@ test('geospatial provider failure degrades explicitly to local fallback geometry
   assert.equal(mesh.source.live, false);
   assert.equal(mesh.source.provider, 'local-fallback');
   assert.ok(mesh.buildings.length >= 100);
+  assert.ok(mesh.roads.length >= 10);
 });
 
 test('IBM Quantum adapter authenticates, discovers backends, submits sampler jobs and keeps credentials private', async () => {
