@@ -1388,6 +1388,45 @@
     }
   }
 
+  function buildStandaloneCityMesh(city, count = 120) {
+    let seed = [...String(city?.id || 'city')].reduce(
+      (value, character) => (Math.imul(value, 31) + character.charCodeAt(0)) >>> 0,
+      2166136261,
+    );
+    const random = () => {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+    const buildings = Array.from({ length: count }, (_, index) => {
+      const x = (random() - 0.5) * 1500;
+      const z = (random() - 0.5) * 1500;
+      const width = 10 + random() * 35;
+      const depth = 10 + random() * 35;
+      return {
+        id: `standalone-${index + 1}`,
+        name: '',
+        heightM: 9 + random() * 110,
+        footprint: [
+          [x - width, z - depth],
+          [x + width, z - depth],
+          [x + width, z + depth],
+          [x - width, z + depth],
+          [x - width, z - depth],
+        ],
+      };
+    });
+    return {
+      schemaVersion: 1,
+      city,
+      source: {
+        provider: 'standalone-local-fallback',
+        live: false,
+        attribution: 'Live OpenStreetMap geometry requires the Node backend.',
+      },
+      buildings,
+    };
+  }
+
   async function loadLiveCity(cityId = state.geospatial.selectedCityId, { force = false } = {}) {
     const city = state.geospatial.cities.find((item) => item.id === cityId);
     if (city) handleGlobalCitySelection(city);
@@ -1420,8 +1459,18 @@
         `${result.city.name} · ${result.buildings.length} buildings · ${result.source?.provider}`,
       );
     } catch (error) {
-      if (status) status.innerHTML = `<b>City load failed</b><p>${escapeHtml(error.message || String(error))}</p>`;
-      if (q('#geoSourceStatus')) q('#geoSourceStatus').textContent = 'CITY LOAD FAILED';
+      const fallbackCity =
+        city || state.geospatial.cities.find((item) => item.id === cityId) || DEFAULT_GLOBAL_CITIES[0];
+      const fallback = buildStandaloneCityMesh(fallbackCity);
+      state.geospatial.cityMesh = fallback;
+      cityGrid?.loadCityMesh(fallback);
+      setGlobalMode('city');
+      if (status) {
+        status.innerHTML = `<b>${escapeHtml(fallbackCity.name)} · standalone fallback</b><p>Live geometry could not be reached. Interactive 3D geometry remains available, but it is explicitly local fallback—not OpenStreetMap data.</p>`;
+      }
+      if (q('#geoSourceStatus')) q('#geoSourceStatus').textContent = 'STANDALONE FALLBACK · NOT LIVE MAP DATA';
+      if (q('#geoAttribution')) q('#geoAttribution').textContent = fallback.source.attribution;
+      showToast('STANDALONE CITY MODE', error.message || 'Backend unavailable; rendering local fallback geometry.');
     }
   }
 
