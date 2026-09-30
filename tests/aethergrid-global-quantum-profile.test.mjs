@@ -565,10 +565,7 @@ test('terrain runtime samples real-coordinate elevation grids through a provider
   assert.equal(interpolateTerrainRelativeElevation(terrain, -900, -900), 0);
   assert.equal(interpolateTerrainRelativeElevation(terrain, 0, 0), 6);
   assert.equal(interpolateTerrainRelativeElevation(terrain, 900, 900), 12);
-  assert.equal(
-    interpolateTerrainRelativeElevation(terrain, -450, -450),
-    3,
-  );
+  assert.equal(interpolateTerrainRelativeElevation(terrain, -450, -450), 3);
   assert.match(terrain.source.attribution, /Open-Meteo/u);
   assert.equal(runtime.summary().credentialsExposed, false);
   assert.equal(runtime.summary().resolutionMeters, 90);
