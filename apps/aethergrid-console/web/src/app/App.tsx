@@ -23,6 +23,10 @@ import type {
 } from '../renderer/spatial-renderer';
 import { loadCityEnvironment } from '../services/city-environment';
 import {
+  loadGlobalLiveContext,
+  type GlobalLiveContext
+} from '../services/global-live-context';
+import {
   loadCityLiveContext,
   seismicToOverlay,
   type CityLiveSnapshot
@@ -117,6 +121,7 @@ const CITY_TARGETS: readonly CityTarget[] = [
 ];
 
 const INITIAL_LAYERS: readonly LayerState[] = [
+  { id: 'world', visible: true },
   { id: 'terrain', visible: true },
   { id: 'buildings', visible: true },
   { id: 'roads', visible: true },
@@ -142,6 +147,7 @@ export function App() {
   const { clock, state: temporal } = useTemporalClock();
   const appearance = useAppearance();
   const [city, setCity] = useState<CityTarget>(CITY_TARGETS[0]);
+  const [scope, setScope] = useState<'world' | 'city'>('city');
   const [visualMode, setVisualMode] = useState<VisualMode>('solid');
   const [layers, setLayers] = useState<readonly LayerState[]>(INITIAL_LAYERS);
   const [selection, setSelection] = useState<SpatialFeatureSelection | null>(null);
@@ -155,6 +161,7 @@ export function App() {
   const [atmosphere, setAtmosphere] = useState<AtmosphericOverlaySnapshot | null>(null);
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
   const [liveContext, setLiveContext] = useState<CityLiveSnapshot | null>(null);
+  const [globalLive, setGlobalLive] = useState<GlobalLiveContext | null>(null);
   const [liveContextError, setLiveContextError] = useState<string | null>(null);
 
   const temporalInstant = useMemo(
@@ -166,6 +173,23 @@ export function App() {
     }),
     [temporal]
   );
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const refresh = () => {
+      void loadGlobalLiveContext(controller.signal)
+        .then(setGlobalLive)
+        .catch(() => undefined);
+    };
+
+    refresh();
+    const timer = globalThis.setInterval(refresh, 60_000);
+    return () => {
+      controller.abort();
+      globalThis.clearInterval(timer);
+    };
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -229,6 +253,7 @@ export function App() {
     });
     if (cityMatch) {
       setCity(cityMatch);
+      setScope('city');
       setSearchValue('');
       return;
     }
@@ -250,6 +275,7 @@ export function App() {
           pitchDegrees: -35,
           custom: true
         });
+        setScope('city');
         setSearchValue('');
         return;
       }
@@ -258,9 +284,29 @@ export function App() {
     setSearchError('Enter a supported city or latitude, longitude.');
   };
 
+  const sceneTarget = useMemo<SpatialTarget>(
+    () =>
+      scope === 'world'
+        ? {
+            latitude: 20,
+            longitude: 0,
+            rangeMeters: 11_800_000,
+            pitchDegrees: -88,
+            headingDegrees: 0,
+            journey: 'global'
+          }
+        : { ...city, journey: 'full' },
+    [scope, city]
+  );
+
+  const worldOverlay = useMemo(
+    () => (globalLive && temporal.mode === 'live' ? globalLive.overlay : null),
+    [globalLive, temporal.mode]
+  );
+
   const agentContext = useMemo(
     () => ({
-      region: city.name,
+      region: scope === 'world' ? 'Global' : city.name,
       view: visualMode,
       temporalMode: temporal.mode,
       temporalCursor: temporal.cursorIso,
@@ -301,6 +347,7 @@ export function App() {
     }),
     [
       city,
+      scope,
       visualMode,
       temporal.mode,
       temporal.cursorIso,
@@ -318,10 +365,10 @@ export function App() {
 
   const activeOverlays = useMemo(
     () =>
-      [...semanticOverlays, powerOverlay, seismicOverlay].filter(
+      [worldOverlay, ...semanticOverlays, powerOverlay, seismicOverlay].filter(
         (snapshot): snapshot is SpatialOverlaySnapshot => Boolean(snapshot)
       ),
-    [semanticOverlays, powerOverlay, seismicOverlay]
+    [worldOverlay, semanticOverlays, powerOverlay, seismicOverlay]
   );
 
   const toggleLayer = (id: string) => {
@@ -403,7 +450,10 @@ export function App() {
                 className={target.id === city.id ? 'active' : ''}
                 key={target.id}
                 type="button"
-                onClick={() => setCity(target)}
+                onClick={() => {
+                  setCity(target);
+                  setScope('city');
+                }}
               >
                 <span>{target.name}</span>
                 <small>{target.district}</small>
@@ -432,7 +482,24 @@ export function App() {
               <span className="eyebrow">ACTIVE FRAME</span>
               <strong>{temporal.mode.toUpperCase()}</strong>
             </div>
-            <div className="visual-modes" role="group" aria-label="Visual mode">
+            <div className="stage-controls">
+              <div className="scope-modes" role="group" aria-label="Spatial scope">
+                <button
+                  type="button"
+                  className={scope === 'world' ? 'active' : ''}
+                  onClick={() => setScope('world')}
+                >
+                  WORLD
+                </button>
+                <button
+                  type="button"
+                  className={scope === 'city' ? 'active' : ''}
+                  onClick={() => setScope('city')}
+                >
+                  CITY
+                </button>
+              </div>
+              <div className="visual-modes" role="group" aria-label="Visual mode">
               {VISUAL_MODES.map((mode) => (
                 <button
                   key={mode}
@@ -443,11 +510,12 @@ export function App() {
                   {mode.toUpperCase()}
                 </button>
               ))}
+              </div>
             </div>
           </div>
 
           <SpatialViewport
-            target={city}
+            target={sceneTarget}
             time={temporalInstant}
             layers={layers}
             visualMode={visualMode}
@@ -458,30 +526,54 @@ export function App() {
 
           <DataSourceBadge
             label={
-              powerOverlayError
-                ? 'POWER DATA'
-                : powerOverlay?.live
-                  ? 'OSM POWER'
-                  : 'POWER'
+              scope === 'world'
+                ? 'GLOBAL LIVE'
+                : powerOverlayError
+                  ? 'POWER DATA'
+                  : powerOverlay?.live
+                    ? 'OSM POWER'
+                    : 'POWER'
             }
             state={
-              powerOverlayError
-                ? 'unavailable'
-                : powerOverlay?.live
+              scope === 'world'
+                ? globalLive?.overlay.live
                   ? 'live'
-                  : powerOverlay
+                  : globalLive
                     ? 'fallback'
                     : 'loading'
+                : powerOverlayError
+                  ? 'unavailable'
+                  : powerOverlay?.live
+                    ? 'live'
+                    : powerOverlay
+                      ? 'fallback'
+                      : 'loading'
             }
-            attribution={powerOverlay?.attribution}
-            sourceTime={powerOverlay?.sourceTime}
-            fetchedAt={powerOverlay?.fetchedAt}
-            error={powerOverlayError}
+            attribution={
+              scope === 'world'
+                ? globalLive?.overlay.attribution
+                : powerOverlay?.attribution
+            }
+            sourceTime={
+              scope === 'world'
+                ? globalLive?.overlay.sourceTime
+                : powerOverlay?.sourceTime
+            }
+            fetchedAt={
+              scope === 'world'
+                ? globalLive?.overlay.fetchedAt
+                : powerOverlay?.fetchedAt
+            }
+            error={scope === 'world' ? null : powerOverlayError}
           />
 
           <div className="scene-caption">
-            <span>{city.name}</span>
-            <strong>{city.latitude.toFixed(4)}°, {city.longitude.toFixed(4)}°</strong>
+            <span>{scope === 'world' ? 'GLOBAL GOD’S-EYE' : city.name}</span>
+            <strong>
+              {scope === 'world'
+                ? `${globalLive?.cityCount ?? CITY_TARGETS.length} CITIES · ${globalLive?.earthquakeCount ?? 0} SEISMIC EVENTS`
+                : `${city.latitude.toFixed(4)}°, ${city.longitude.toFixed(4)}°`}
+            </strong>
             <small>CLICK OR TAP A 3D FEATURE TO INSPECT</small>
           </div>
         </section>
