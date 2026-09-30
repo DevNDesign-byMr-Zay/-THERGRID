@@ -4,6 +4,7 @@ import {
   ColorMaterialProperty,
   ConstantProperty,
   CustomDataSource,
+  DistanceDisplayCondition,
   Entity,
   PointGraphics,
   PolygonGraphics,
@@ -65,6 +66,26 @@ function nodeColor(node: SpatialOverlayNode): Color {
   return colorForIntensity(intensity, 0.96);
 }
 
+
+function nodeFarDistance(node: SpatialOverlayNode): number {
+  if (node.kind === 'city' || node.kind === 'event') return 30_000_000;
+  if (node.kind === 'generation') return 320_000;
+  if (node.kind === 'substation') return 220_000;
+  return 180_000;
+}
+
+function edgeFarDistance(edge: SpatialOverlayEdge): number {
+  if (edge.kind === 'coastline') return 180_000;
+  if (edge.kind === 'waterway') return 110_000;
+  if (edge.kind === 'route') return 80_000;
+  if (edge.kind === 'transmission' || edge.kind === 'distribution') return 220_000;
+  return 140_000;
+}
+
+function areaFarDistance(area: SpatialOverlayArea): number {
+  return area.kind === 'water' ? 100_000 : 80_000;
+}
+
 function nodeEntity(node: SpatialOverlayNode): Entity {
   const intensity = overlayIntensity(node.intensity);
   return new Entity({
@@ -76,7 +97,13 @@ function nodeEntity(node: SpatialOverlayNode): Entity {
       color: nodeColor(node),
       outlineColor: new ConstantProperty(Color.WHITE.withAlpha(0.35)),
       outlineWidth: 1.25,
-      disableDepthTestDistance: 1_500_000
+      distanceDisplayCondition: new ConstantProperty(
+        new DistanceDisplayCondition(0, nodeFarDistance(node))
+      ),
+      disableDepthTestDistance:
+        node.kind === 'city' || node.kind === 'event'
+          ? Number.POSITIVE_INFINITY
+          : 1_500_000
     }),
     properties: {
       overlayKind: node.kind,
@@ -116,6 +143,9 @@ function edgeEntity(edge: SpatialOverlayEdge): Entity {
               ? 1.1 + intensity * 1.4
               : 1.4 + intensity * 2.8,
       material: new ColorMaterialProperty(edgeColor(edge, intensity)),
+      distanceDisplayCondition: new ConstantProperty(
+        new DistanceDisplayCondition(0, edgeFarDistance(edge))
+      ),
       clampToGround: edge.kind === 'route' || edge.kind === 'waterway' || edge.kind === 'coastline'
     }),
     properties: {
@@ -144,6 +174,9 @@ function areaEntity(area: SpatialOverlayArea): Entity {
       outlineColor: water
         ? Color.fromCssColorString('#70ddff').withAlpha(0.45)
         : Color.fromCssColorString('#83e8b7').withAlpha(0.34),
+      distanceDisplayCondition: new ConstantProperty(
+        new DistanceDisplayCondition(0, areaFarDistance(area))
+      ),
       perPositionHeight: true
     }),
     properties: {
