@@ -105,7 +105,16 @@
     "relation-building-geometry",
     "skyline-data-quality-readout",
     "light-dark-system-appearance",
-    "city-specific-camera-framing"
+    "city-specific-camera-framing",
+    "live-global-seismic-feed",
+    "live-city-air-quality",
+    "weather-vector-animation",
+    "precipitation-animation",
+    "air-quality-particle-animation",
+    "seismic-pulse-animation",
+    "global-aqi-city-pulses",
+    "global-utc-sweep",
+    "source-driven-city-use-case-animation"
   ],
   "agents": [
     {
@@ -360,7 +369,10 @@
         "outage-impact",
         "emergency-access",
         "renewable-siting",
-        "load-growth"
+        "load-growth",
+        "weather-readiness",
+        "air-quality-exposure",
+        "seismic-awareness"
       ],
       "advisoryOnly": true
     },
@@ -376,7 +388,30 @@
       "endpoint": "GET /api/aethergrid/environment",
       "runtimeEndpoint": "GET /api/aethergrid/environment/runtime",
       "currentConditions": true
-    }
+    },
+    "liveContext": {
+      "airQualityProvider": "Open-Meteo Air Quality",
+      "seismicProvider": "USGS Earthquake Hazards Program",
+      "globalEndpoint": "GET /api/aethergrid/global-live",
+      "cityEndpoint": "GET /api/aethergrid/city-live",
+      "animatedLayers": [
+        "weather",
+        "air",
+        "seismic"
+      ]
+    },
+    "globeAnimations": [
+      "atmospheric-shell-pulse",
+      "utc-sweep",
+      "city-air-quality-pulses",
+      "recent-seismic-event-pulses"
+    ],
+    "cityAnimations": [
+      "wind-vectors",
+      "precipitation-streaks",
+      "air-quality-particles",
+      "directional-seismic-rings"
+    ]
   },
   "profile": {
     "persistence": "backend local JSON with browser cache fallback",
