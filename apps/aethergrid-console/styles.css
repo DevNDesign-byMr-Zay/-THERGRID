@@ -61,3 +61,10 @@ button,input{font:inherit}
 @keyframes busy-gradient{to{background-position:-200% 0}}
 @keyframes bars-in{from{transform:scaleY(.05);opacity:.15}to{transform:scaleY(1);opacity:1}}
 @media(max-width:1100px){.command-grid{grid-template-columns:1fr}.telemetry-badge{display:none}}
+.grid-energy-canvas{position:absolute;left:13.1%;top:11.8%;width:62.4%;height:43%;opacity:.68;mix-blend-mode:screen;filter:saturate(1.15) drop-shadow(0 0 8px rgba(56,154,255,.24))}
+.hud-clock{position:absolute;right:10.9%;top:.55%;min-width:104px;padding:2px 5px;border-radius:6px;background:rgba(2,8,20,.58);color:#cfe7ff;text-align:right;font-size:8.7px;line-height:1.35;letter-spacing:.02em;backdrop-filter:blur(5px)}
+.hud-clock b{display:block;color:#f3f8ff;font-size:9.5px;font-weight:600}
+.stream-state{position:absolute;right:1.4%;top:5.25%;display:flex;align-items:center;gap:5px;padding:3px 7px;border-radius:999px;border:1px solid rgba(67,158,255,.18);background:rgba(2,10,25,.48);font-size:8px;color:#9abde9;opacity:.72}
+.stream-state i{width:5px;height:5px;border-radius:50%;background:#52ef8b;box-shadow:0 0 8px rgba(82,239,139,.6)}
+.stream-state.offline i{background:#ffbd57;box-shadow:0 0 8px rgba(255,189,87,.55)}
+@media(prefers-reduced-motion:reduce){.grid-energy-canvas{display:none}}
