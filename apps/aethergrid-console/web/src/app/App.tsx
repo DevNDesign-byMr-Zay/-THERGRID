@@ -792,6 +792,7 @@ export function App() {
             <div className="scenario-scene-badge">
               <span>MODELED SCENARIO · SOURCE DATA UNCHANGED</span>
               <strong>{scenarioVisual.stressFactor.toFixed(2)}× NETWORK STRESS</strong>
+              <small>DIM = SOURCE BASELINE · BRIGHT = MODELED SCENARIO</small>
             </div>
           ) : null}
 
