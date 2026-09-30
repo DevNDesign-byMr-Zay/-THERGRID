@@ -9,6 +9,11 @@
 - Added scheduled dependency-freshness evidence without automatic dependency mutation.
 
 ### Added
+- Added source-backed OpenStreetMap water areas, waterways and coastline alongside the existing source-backed skyline identity.
+- Added mapped parks and green-space geometry with independent WATER and GREEN city-layer controls.
+- Added source-tagged façade material tint groups while preserving the existing named/tall landmark-anchor system.
+- Added Flood Context and Green Infrastructure as bounded advisory workflows, expanding the maintained city-operation catalog to 12.
+- Added a strict no-invented-geography fallback contract for water, coastline and green-space layers.
 - Added source-backed CITY IDENTITY and LANDMARKS surfaces using named/tall structures from each bounded OpenStreetMap city sample.
 - Added skyline identity metadata for named structures and tall-structure counts, with interactive selection of source-backed anchors.
 - Added semantic weather rendering that distinguishes modeled rain, snow, fog and thunderstorm states instead of using one generic precipitation effect.
