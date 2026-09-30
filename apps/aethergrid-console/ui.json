@@ -130,7 +130,15 @@
     "semantic-weather-rendering",
     "modeled-snow-animation",
     "modeled-fog-animation",
-    "modeled-thunderstorm-animation"
+    "modeled-thunderstorm-animation",
+    "source-backed-water-areas",
+    "source-backed-waterways",
+    "source-backed-coastline",
+    "source-backed-green-areas",
+    "source-tagged-building-material-overlays",
+    "flood-context-use-case",
+    "green-infrastructure-use-case",
+    "no-invented-environmental-geometry"
   ],
   "agents": [
     {
@@ -390,7 +398,9 @@
         "air-quality-exposure",
         "seismic-awareness",
         "heat-stress",
-        "visibility-operations"
+        "visibility-operations",
+        "flood-context",
+        "green-infrastructure"
       ],
       "advisoryOnly": true
     },
@@ -435,7 +445,9 @@
         "air",
         "seismic",
         "clouds",
-        "illumination"
+        "illumination",
+        "water",
+        "green"
       ]
     },
     "globeAnimations": [
@@ -486,6 +498,13 @@
       "basedOn": "current provider weather_code + precipitation + visibility",
       "lightningStrikeClaim": false,
       "streetSensorClaim": false
+    },
+    "geographicIdentity": {
+      "mappedWater": true,
+      "mappedGreenSpace": true,
+      "mappedCoastline": true,
+      "sourceTaggedBuildingMaterials": true,
+      "noSyntheticWaterOrGreenFallback": true
     }
   },
   "profile": {
@@ -503,5 +522,6 @@
     ],
     "maxGridSize": 9,
     "serverSideCredentials": true
-  }
+  },
+  "version": "2.9.1"
 }
