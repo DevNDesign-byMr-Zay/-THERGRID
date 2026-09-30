@@ -552,3 +552,22 @@ test('v4 layer controls expose only implemented layers with live feature counts'
   assert.match(app, /layerCounts\[layer\.id\] \?\? 0/u);
   assert.doesNotMatch(app, /id: 'transit'/u);
 });
+
+test('v4 intelligence workspace tabs preserve mounted AI scenario quantum evidence and system state', async () => {
+  const [app, styles] = await Promise.all([
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/app/app.css'),
+  ]);
+
+  assert.match(app, /data-workspace=\{intelWorkspace\}/u);
+  assert.match(app, /CONTEXT/u);
+  assert.match(app, /SCENARIO/u);
+  assert.match(app, /QUANTUM/u);
+  assert.match(app, /EVIDENCE/u);
+  assert.match(app, /SYSTEM/u);
+  assert.match(app, /intel-workspace intel-ai/u);
+  assert.match(app, /intel-workspace intel-quantum/u);
+  assert.match(styles, /\.intel-workspace,\s*\.intel-context-panel \{\s*display: none/u);
+  assert.match(styles, /data-workspace='ai'/u);
+  assert.match(styles, /data-workspace='evidence'/u);
+});
