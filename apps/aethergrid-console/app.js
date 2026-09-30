@@ -2744,6 +2744,47 @@
     stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Skyline Max</b><em>${skylineMax}</em></span><span><b>P95 Height</b><em>${p95}</em></span><span><b>Height Data</b><em>${heightCoverage}</em></span><span><b>Weather</b><em>${weather}</em></span><span><b>Air</b><em>${airQuality}</em></span><span><b>Humidity</b><em>${humidity}</em></span><span><b>Sunrise / Sunset</b><em>${sunriseSunset}</em></span><span><b>Seismic</b><em>${seismicLabel}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
   }
 
+  function updateCityIdentity(mesh) {
+    const container = q('#cityIdentity');
+    if (!container || !mesh) return;
+    const skyline = mesh.skylineProfile || {};
+    const terrainRelief =
+      mesh.terrain &&
+      Number.isFinite(Number(mesh.terrain.maxElevationM)) &&
+      Number.isFinite(Number(mesh.terrain.minElevationM))
+        ? Math.max(
+            0,
+            Number(mesh.terrain.maxElevationM) - Number(mesh.terrain.minElevationM),
+          )
+        : null;
+    const anchors = (skyline.namedStructures || []).slice(0, 8);
+    const weather = weatherPhenomenon(mesh.environment);
+    const profile = [
+      ['Max', Number(skyline.maxHeightM || 0) > 0 ? `${Number(skyline.maxHeightM).toFixed(0)} m` : '—'],
+      ['P95', Number(skyline.p95HeightM || 0) > 0 ? `${Number(skyline.p95HeightM).toFixed(0)} m` : '—'],
+      ['Named', Number(skyline.namedStructureCount || anchors.length).toLocaleString()],
+      ['Tall', Number(skyline.tallStructureCount || 0).toLocaleString()],
+      ['Roof Tags', Number(skyline.roofTaggedCount || 0).toLocaleString()],
+      ['Relief', terrainRelief == null ? '—' : `${terrainRelief.toFixed(0)} m`],
+      ['Weather', weather],
+      ['Height Data', `${Number(skyline.sourceBackedHeightCoveragePercent || 0).toFixed(0)}%`],
+    ];
+    const anchorHtml = anchors.length
+      ? anchors
+          .map(
+            (item) =>
+              `<button class="identity-anchor" data-city-anchor="${escapeHtml(item.id)}"><span>${escapeHtml(item.name)}</span><em>${Number(item.heightM || 0).toFixed(0)} m${item.heightSource ? ` · ${escapeHtml(item.heightSource)}` : ''}</em></button>`,
+          )
+          .join('')
+      : '<div class="empty-state">No named mapped structures were returned in this bounded sample.</div>';
+    container.innerHTML = `<div class="identity-profile">${profile
+      .map(
+        ([label, value]) =>
+          `<span><b>${escapeHtml(label)}</b><em>${escapeHtml(value)}</em></span>`,
+      )
+      .join('')}</div><div class="identity-anchor-list"><small>SOURCE-BACKED IDENTITY ANCHORS</small>${anchorHtml}</div><p class="identity-boundary">Named/tall anchors come from the loaded OpenStreetMap building sample. Weather identity comes from current provider model context; no landmark or weather layer is treated as direct sensing.</p>`;
+  }
+
   function showCityTransition(city, stage = 'Aligning global coordinate…', progress = 8) {
     const overlay = q('#cityTransitionOverlay');
     if (!overlay) return;
@@ -2784,6 +2825,7 @@
     await cityGrid?.cinematicEntrance(1050);
     updateCityTransition('City digital twin ready', 100);
     updateGlobalGridStats(result);
+    updateCityIdentity(result);
     if (q('#geoSourceStatus')) {
       const airMode = result.liveContext?.airQuality?.source?.live ? 'AIR LIVE' : 'AIR FALLBACK';
       const seismicMode = result.liveContext?.seismic?.source?.live ? 'SEISMIC LIVE' : 'SEISMIC FALLBACK';
@@ -3092,6 +3134,22 @@
     globalGlobe?.reset();
     setGlobalMode('globe');
   });
+  q('#cityIdentity')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-city-anchor]');
+    if (!button) return;
+    const node = cityGrid?.graphNodes?.find((item) => item.id === button.dataset.cityAnchor);
+    if (!node) {
+      showToast('IDENTITY ANCHOR', 'The mapped structure is listed in the source profile but is not selectable in this sampled renderer.');
+      return;
+    }
+    cityGrid?.selectNode(node);
+    cityGrid?.setPreset('isometric');
+    showToast(
+      'CITY IDENTITY ANCHOR',
+      `${node.label || node.id}${Number(node.heightM || 0) ? ` · ${Number(node.heightM).toFixed(0)} m` : ''}`,
+    );
+  });
+
   q('#cityMeshStatus')?.addEventListener('click', (event) => {
     if (!event.target.closest('[data-action="reload-city-live"]')) return;
     const selected = state.geospatial.cities.find(
