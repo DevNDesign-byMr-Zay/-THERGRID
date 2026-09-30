@@ -14,6 +14,7 @@ export type VisualMode =
   | 'reality';
 
 export type TemporalMode = 'live' | 'historical' | 'forecast' | 'scenario';
+export type SpatialInteractionMode = 'inspect' | 'measure';
 
 export interface SpatialTarget {
   id?: string;
