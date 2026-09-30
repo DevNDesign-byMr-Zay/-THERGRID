@@ -287,8 +287,7 @@ async function main() {
     'CI must strictly type-check the renderer evidence safety boundary',
   );
   assert(
-    /Type-check v4 spatial application/u.test(v4Web) &&
-      /npm run typecheck/u.test(v4Web),
+    /Type-check v4 spatial application/u.test(v4Web) && /npm run typecheck/u.test(v4Web),
     'v4 web CI must type-check the spatial application',
   );
   assert(
