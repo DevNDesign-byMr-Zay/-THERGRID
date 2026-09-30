@@ -1480,6 +1480,42 @@ button {
 
 
 
+
+.measurement-scene-badge {
+  position: absolute;
+  left: 50%;
+  bottom: 58px;
+  z-index: 6;
+  transform: translateX(-50%);
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 7px 10px;
+  border: 1px solid rgba(201, 167, 255, 0.22);
+  border-radius: 7px;
+  background: rgba(15, 10, 24, 0.8);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+.measurement-scene-badge span {
+  color: #7f6b9c;
+  font-size: 6px;
+  letter-spacing: 0.1em;
+}
+
+.measurement-scene-badge strong {
+  color: #e0ceff;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+
+.measurement-scene-badge small {
+  color: #75668a;
+  font-size: 5px;
+  letter-spacing: 0.06em;
+}
+
 .illumination-scene-badge {
   position: absolute;
   right: 16px;
