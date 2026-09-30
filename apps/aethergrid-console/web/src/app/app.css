@@ -604,6 +604,121 @@ button {
 
 
 
+
+.identity-card {
+  padding: 13px;
+  border: 1px solid rgba(112, 231, 255, 0.12);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(112, 231, 255, 0.08), transparent 38%),
+    linear-gradient(145deg, rgba(16, 23, 35, 0.78), rgba(7, 11, 18, 0.84));
+}
+
+.identity-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.identity-head small,
+.identity-head strong {
+  display: block;
+}
+
+.identity-head small {
+  color: #5f7286;
+  font-size: 8px;
+  letter-spacing: 0.14em;
+}
+
+.identity-head strong {
+  margin-top: 3px;
+  font: 600 11px ui-monospace, "SFMono-Regular", Consolas, monospace;
+  letter-spacing: 0.1em;
+}
+
+.identity-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.identity-metrics span {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.045);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.identity-metrics small,
+.identity-metrics strong {
+  display: block;
+}
+
+.identity-metrics small {
+  color: #596d81;
+  font-size: 7px;
+  letter-spacing: 0.1em;
+}
+
+.identity-metrics strong {
+  margin-top: 4px;
+  color: #dcecf6;
+  font-size: 9px;
+}
+
+.identity-quality {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 9px;
+  padding: 8px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.045);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+  color: #5c7184;
+  font-size: 7px;
+  letter-spacing: 0.08em;
+}
+
+.identity-quality strong {
+  color: var(--cyan);
+  font-size: 8px;
+}
+
+.identity-landmarks {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.identity-landmarks div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #8da0b1;
+  font-size: 8px;
+}
+
+.identity-landmarks div span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identity-landmarks div small {
+  color: #5e7386;
+  flex: 0 0 auto;
+  font-size: 7px;
+}
+
+.identity-landmarks p {
+  margin: 0;
+  color: #64798c;
+  font-size: 8px;
+}
+
 .live-context-card {
   padding: 13px;
   border: 1px solid rgba(255, 255, 255, 0.055);
@@ -948,7 +1063,8 @@ button {
 :root[data-theme='light'] .intel-card,
 :root[data-theme='light'] .selection-card,
 :root[data-theme='light'] .weather-card,
-:root[data-theme='light'] .live-context-card {
+:root[data-theme='light'] .live-context-card,
+:root[data-theme='light'] .identity-card {
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.8), rgba(234, 241, 247, 0.8));
 }
 
