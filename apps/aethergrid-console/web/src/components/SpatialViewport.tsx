@@ -1,4 +1,7 @@
-import type { AtmosphericOverlaySnapshot } from '../renderer/overlays/atmospheric-overlay';
+import type {
+  AirQualityOverlaySnapshot,
+  AtmosphericOverlaySnapshot
+} from '../renderer/overlays/atmospheric-overlay';
 import type { SpatialOverlaySnapshot } from '../renderer/overlays/spatial-overlay';
 
 import { useEffect, useRef, useState } from 'react';
@@ -23,6 +26,7 @@ interface SpatialViewportProps {
   visualMode: VisualMode;
   overlays?: readonly SpatialOverlaySnapshot[];
   atmosphere?: AtmosphericOverlaySnapshot | null;
+  airQuality?: AirQualityOverlaySnapshot | null;
   onSelection?(selection: SpatialFeatureSelection | null): void;
 }
 
@@ -41,6 +45,7 @@ export function SpatialViewport({
   visualMode,
   overlays = [],
   atmosphere = null,
+  airQuality = null,
   onSelection
 }: SpatialViewportProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -73,6 +78,7 @@ export function SpatialViewport({
       manager.setTime(time);
       for (const snapshot of overlays) manager.applyOverlay(snapshot);
       if (atmosphere) manager.applyAtmosphere(atmosphere);
+      if (airQuality) manager.applyAirQuality(airQuality);
       overlayIdsRef.current = new Set(overlays.map((snapshot) => snapshot.layerId));
       await manager.flyTo(target);
       if (!cancelled) setStatus(manager.status());
@@ -158,6 +164,13 @@ export function SpatialViewport({
     if (atmosphere) manager.applyAtmosphere(atmosphere);
     else manager.clearAtmosphere();
   }, [atmosphere, status.ready]);
+
+  useEffect(() => {
+    const manager = managerRef.current;
+    if (!manager || !status.ready) return;
+    if (airQuality) manager.applyAirQuality(airQuality);
+    else manager.clearAirQuality();
+  }, [airQuality, status.ready]);
 
   useEffect(() => {
     const manager = managerRef.current;
