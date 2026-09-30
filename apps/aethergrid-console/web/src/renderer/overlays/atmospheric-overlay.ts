@@ -58,3 +58,27 @@ export function weatherPhenomenon(
   if (code === 0) return 'clear';
   return 'mixed';
 }
+
+
+export interface AirQualityOverlaySnapshot {
+  id: string;
+  coordinate: {
+    latitude: number;
+    longitude: number;
+  };
+  eventTime: string;
+  sourceTime: string | null;
+  fetchedAt: string | null;
+  live: boolean;
+  fallback: boolean;
+  attribution: string | null;
+  current: {
+    usAqi: number | null;
+    category: string;
+    pm25UgM3: number | null;
+    pm10UgM3: number | null;
+    ozoneUgM3: number | null;
+    windSpeedKph: number | null;
+    windDirectionDegrees: number | null;
+  } | null;
+}
