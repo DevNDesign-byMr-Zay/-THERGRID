@@ -7,6 +7,7 @@ import test from 'node:test';
 import { createGeoRuntime } from '../apps/aethergrid-console/geo-runtime.mjs';
 import { createProfileStore } from '../apps/aethergrid-console/profile-store.mjs';
 import { API_VERSION, createQuantumRuntime } from '../apps/aethergrid-console/quantum-runtime.mjs';
+import { createTerrainRuntime } from '../apps/aethergrid-console/terrain-runtime.mjs';
 
 test('operator profile persists sanitized local identity data without secrets', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'aethergrid-profile-'));
@@ -181,6 +182,68 @@ test('geospatial coordinate explorer supports arbitrary valid world coordinates'
     runtime.pointMesh({ lat: 120, lon: 2.3522 }),
     /latitude must be between -90 and 90/u,
   );
+});
+
+test('terrain runtime samples real-coordinate elevation grids through a provider adapter', async () => {
+  let requestUrl = '';
+  const runtime = createTerrainRuntime({
+    env: {
+      AETHERGRID_TERRAIN_PROVIDER: 'open-meteo',
+      AETHERGRID_ELEVATION_URL: 'https://elevation.example.test/v1/elevation',
+    },
+    fetchImpl: async (url) => {
+      requestUrl = String(url);
+      const parsed = new URL(requestUrl);
+      const count = parsed.searchParams.get('latitude').split(',').length;
+      assert.equal(count, 25);
+      assert.equal(parsed.searchParams.get('longitude').split(',').length, 25);
+      return new Response(
+        JSON.stringify({
+          elevation: Array.from({ length: count }, (_, index) => 30 + index * 0.5),
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    },
+  });
+
+  const terrain = await runtime.sample({
+    lat: 40.7128,
+    lon: -74.006,
+    radiusM: 900,
+    gridSize: 5,
+  });
+  assert.match(requestUrl, /^https:\/\/elevation\.example\.test\/v1\/elevation\?/u);
+  assert.equal(terrain.source.live, true);
+  assert.equal(terrain.source.provider, 'Open-Meteo Elevation');
+  assert.equal(terrain.gridSize, 5);
+  assert.equal(terrain.points.length, 25);
+  assert.equal(terrain.minElevationM, 30);
+  assert.equal(terrain.maxElevationM, 42);
+  assert.equal(terrain.points[0].relativeElevationM, 0);
+  assert.match(terrain.source.attribution, /Open-Meteo/u);
+  assert.equal(runtime.summary().credentialsExposed, false);
+  assert.equal(runtime.summary().resolutionMeters, 90);
+});
+
+test('terrain runtime degrades explicitly to a flat local surface when elevation is unavailable', async () => {
+  const runtime = createTerrainRuntime({
+    env: {
+      AETHERGRID_TERRAIN_PROVIDER: 'open-meteo',
+      AETHERGRID_ELEVATION_URL: 'https://elevation.example.test/v1/elevation',
+    },
+    fetchImpl: async () => new Response('unavailable', { status: 503 }),
+  });
+  const terrain = await runtime.sample({
+    lat: 35.6762,
+    lon: 139.6503,
+    radiusM: 900,
+    gridSize: 7,
+  });
+  assert.equal(terrain.source.live, false);
+  assert.equal(terrain.source.provider, 'flat-local-fallback');
+  assert.equal(terrain.points.length, 49);
+  assert.ok(terrain.points.every((point) => point.relativeElevationM === 0));
+  assert.match(terrain.source.error, /Elevation HTTP 503/u);
 });
 
 test('IBM Quantum adapter submits jobs while keeping credentials private', async () => {
