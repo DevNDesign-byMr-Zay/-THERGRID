@@ -470,3 +470,35 @@ Heat Stress combines apparent temperature, modeled relative humidity, UV, and ma
 
 ### Fidelity boundary
 ÆTHERGRID continues to distinguish source-backed structure from visualization. Building geometry and supported heights/roofs come from mapped source data when available; weather and air quality remain provider model context; seismic events remain event-feed context; skyline lights and cloud particles are procedural render layers driven by those bounded inputs rather than claims of direct sensing.
+
+## Batch 15 — Source-backed city identity and semantic weather
+
+Status: IMPLEMENTED / VERIFYING
+
+### City identity
+- extend skyline profiles with source-backed named structures and tall-structure counts;
+- render independent landmark points and vertical skyline spines for named/tall mapped structures;
+- expose LANDMARKS as an independent city layer;
+- add an interactive CITY IDENTITY inspector with skyline, terrain, roof, weather and height-coverage metrics;
+- selecting an identity anchor highlights the matching renderer node;
+- source-backed names and heights remain tied to the bounded OpenStreetMap sample.
+
+### Semantic weather animation
+- classify current provider weather codes into Clear / Cloudy / Fog / Rain / Snow / Thunderstorm / Mixed presentation states;
+- rain retains wind drift and continuous fall;
+- snow uses a separate drifting/falling point field;
+- fog uses a low-altitude field scaled by modeled visibility;
+- thunderstorm state adds a pulsing procedural bolt field while precipitation remains separate.
+
+### Fidelity boundary
+- a named structure is displayed only when the source building carries a name;
+- unnamed tall structures may be highlighted as tall mapped geometry but are not assigned invented landmark names;
+- thunder pulses indicate a modeled thunderstorm weather code, not detected strike coordinates;
+- weather particles visualize provider model state and are not street-level sensors.
+
+### Verification requirements
+- geospatial tests must prove named skyline anchors survive parsing and ordering;
+- semantic UI tests must require LANDMARKS, CITY IDENTITY and the weather-specific geometry paths;
+- standalone packaging must retain landmark extraction, identity inspector, snow, fog and storm rendering;
+- release-readiness must enforce the no-fake-landmark and no-detected-lightning claims;
+- the full engineering and CodeQL gates remain mandatory before merge.
