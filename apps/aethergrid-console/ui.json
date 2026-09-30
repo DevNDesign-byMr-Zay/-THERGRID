@@ -57,7 +57,9 @@
     "runtime-provider-status",
     "direct-node-picking",
     "custom-scenario-builder",
-    "weighted-optimization-controls"
+    "weighted-optimization-controls",
+    "evidence-drill-down",
+    "agent-evidence-receipts"
   ],
   "agents": [
     {
@@ -187,5 +189,17 @@
       "storage-reserve",
       "weather-risk"
     ]
+  },
+  "evidenceModel": {
+    "listEndpoint": "GET /api/aethergrid/evidence",
+    "detailEndpoint": "GET /api/aethergrid/evidence/:id",
+    "records": [
+      "SCENARIO",
+      "OPTIMIZATION",
+      "AI_AGENT",
+      "AI_TEAM"
+    ],
+    "contributionReceipts": true,
+    "advisoryOnly": true
   }
 }
