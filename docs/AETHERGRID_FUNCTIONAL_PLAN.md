@@ -240,3 +240,51 @@ Status: IMPLEMENTED / VERIFYING
 - IBM job-result visualization and estimator workflows;
 - additional quantum providers behind the same adapter contract;
 - authenticated multi-user profile/session system for hosted deployments.
+
+## Batch 9 — Global grid intelligence and shared agent context
+
+Status: IMPLEMENTED / VERIFYING
+
+### Arbitrary coordinate exploration
+- operator-entered latitude/longitude;
+- bounded 250 m–2 km local radius;
+- custom coordinate nodes injected into the live globe session;
+- animated globe-to-coordinate descent;
+- same interactive city WebGL renderer used by preset cities.
+
+### Real mapped grid layers
+- live OpenStreetMap building footprints;
+- live road topology;
+- live mapped power line / minor-line / cable geometry;
+- live mapped substation / plant / generator / transformer assets;
+- independent BUILDINGS / ROADS / POWER GRID / ASSET NODES controls;
+- power metadata such as voltage, circuits and operator preserved when present;
+- deterministic local fallback power topology for standalone/offline mode;
+- visible source attribution and fallback state.
+
+### 4D city review
+- city renderer retains x/y/z geometry plus time-phase animation;
+- GLOBAL workspace exposes a dedicated 24-hour time index;
+- time affects spatial animation without altering source provenance.
+
+### Shared agent context
+- last loaded geospatial summary becomes bounded AI context;
+- last quantum submission/result state becomes bounded AI context;
+- individual agents and team synthesis receive the same external-context envelope;
+- credentials, bearer tokens, and actuation authority never enter that envelope.
+
+### Verification requirements
+- parser tests cover OSM buildings, roads, power lines and power assets;
+- custom coordinate validation is tested;
+- standalone fallback contains buildings, roads and power topology;
+- HTML/app manifests advertise the new controls and routes;
+- ZIP assembly fails if coordinate or power-grid controls disappear;
+- release-readiness fails if the live power parser, coordinate endpoint, or agent context disappears.
+
+### Next expansion
+- terrain/elevation provider adapter;
+- transmission/asset relationship graph inference from source topology;
+- weather/renewables overlays behind separately attributed adapters;
+- hosted multi-user authentication/session boundary;
+- additional quantum providers behind the provider-neutral runtime;
+- richer quantum result charts and estimator workflows.
