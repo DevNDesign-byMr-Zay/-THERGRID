@@ -98,7 +98,14 @@
     "city-visual-modes",
     "city-operations-use-cases",
     "dedicated-agent-chat-threads",
-    "persistent-agent-conversation-history"
+    "persistent-agent-conversation-history",
+    "live-open-weather-city-context",
+    "city-local-live-time-sync",
+    "source-backed-roof-geometry",
+    "relation-building-geometry",
+    "skyline-data-quality-readout",
+    "light-dark-system-appearance",
+    "city-specific-camera-framing"
   ],
   "agents": [
     {
@@ -187,6 +194,7 @@
   "settings": {
     "persistence": "localStorage",
     "controls": [
+      "appearance-mode",
       "default-workspace",
       "density",
       "animation-intensity",
@@ -197,7 +205,12 @@
       "live-stream",
       "fallback-refresh"
     ],
-    "secretsStoredInBrowser": false
+    "secretsStoredInBrowser": false,
+    "appearanceModes": [
+      "dark",
+      "light",
+      "system"
+    ]
   },
   "aiRuntime": {
     "individualAgents": [
@@ -323,7 +336,8 @@
       "roads",
       "power-lines",
       "power-assets",
-      "terrain"
+      "terrain",
+      "roofs"
     ],
     "liveTerrain": true,
     "terrainProvider": "Open-Meteo Elevation / Copernicus DEM GLO-90",
@@ -349,6 +363,19 @@
         "load-growth"
       ],
       "advisoryOnly": true
+    },
+    "skylineFocusPresets": true,
+    "citySpecificCameraFraming": true,
+    "sourceBackedRoofs": true,
+    "relationBuildingGeometry": true,
+    "maxSupportedBuildingHeightM": 1200,
+    "skylineDataQualityReadout": true,
+    "liveTimeSync": true,
+    "environment": {
+      "provider": "Open-Meteo",
+      "endpoint": "GET /api/aethergrid/environment",
+      "runtimeEndpoint": "GET /api/aethergrid/environment/runtime",
+      "currentConditions": true
     }
   },
   "profile": {
