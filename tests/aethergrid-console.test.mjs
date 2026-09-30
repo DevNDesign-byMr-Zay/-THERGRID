@@ -21,7 +21,11 @@ test('ÆTHERGRID serves the approved interactive dashboard shell', async () => {
     const response = await fetch(`${baseUrl}/`);
     assert.equal(response.status, 200);
     const html = await response.text();
-    assert.match(html, /dashboard-reference\.webp/u);
+    assert.match(html, /data:image\/webp;base64,/u);
+    assert.doesNotMatch(html, /href="\.\/styles\.css"/u);
+    assert.doesNotMatch(html, /src="\.\/app\.js"/u);
+    assert.match(html, /<style>[\s\S]+\.dashboard-stage/u);
+    assert.match(html, /<script>[\s\S]+runOptimization/u);
     assert.match(html, /data-action="run-optimization"/u);
     assert.match(html, /data-action="ai-chat"/u);
     assert.match(html, /data-action="export-operator"/u);
