@@ -19,6 +19,7 @@ const REQUIRED_FILES = Object.freeze([
   'ai-runtime.mjs',
   'profile-store.mjs',
   'geo-runtime.mjs',
+  'terrain-runtime.mjs',
   'quantum-runtime.mjs',
   'app.json',
   'ui.json',
@@ -174,6 +175,7 @@ assert(/id="globalGlobe"/u.test(sourceHtml), 'runtime index.html must expose the
 assert(/id="globalPointLat"/u.test(sourceHtml), 'runtime index.html must expose arbitrary latitude controls');
 assert(/id="globalPointLon"/u.test(sourceHtml), 'runtime index.html must expose arbitrary longitude controls');
 assert(/data-global-layer="infrastructure"/u.test(sourceHtml), 'runtime index.html must expose the live power-grid layer toggle');
+assert(/data-global-layer="terrain"/u.test(sourceHtml), 'runtime index.html must expose the live terrain layer toggle');
 assert(/id="globalTimeSlider"/u.test(sourceHtml), 'runtime index.html must expose the global 4D time index');
 assert(/id="profileForm"/u.test(sourceHtml), 'runtime index.html must expose the persistent operator profile form');
 assert(/id="quantumCircuit"/u.test(sourceHtml), 'runtime index.html must expose real quantum job controls');
@@ -204,8 +206,11 @@ assert(/data-workspace="holographic"/u.test(standaloneHtml), 'standalone HTML mu
 assert(/id="settingDefaultWorkspace"/u.test(standaloneHtml), 'standalone HTML must retain functional settings controls');
 assert(/id="globalPointLat"/u.test(standaloneHtml), 'standalone HTML must retain coordinate exploration controls');
 assert(/data-global-layer="infrastructure"/u.test(standaloneHtml), 'standalone HTML must retain the power-grid layer control');
+assert(/data-global-layer="terrain"/u.test(standaloneHtml), 'standalone HTML must retain the terrain layer control');
 assert(/async function loadCoordinateCity/u.test(standaloneHtml), 'standalone HTML must retain coordinate explorer behavior');
+assert(/loadTerrainFor/u.test(standaloneHtml), 'standalone HTML must retain live terrain request wiring');
 assert(/infrastructureLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL power-grid geometry');
+assert(/terrainLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL terrain geometry');
 payload.set('standalone.html', Buffer.from(standaloneHtml, 'utf8'));
 
 const inventory = [...payload.entries()]
@@ -228,6 +233,7 @@ payload.set(
           'native-webgl-4d-grid',
           'global-coordinate-explorer',
           'live-osm-buildings-roads-power-grid',
+          'live-elevation-terrain',
           'replaceable-ai-agents',
           'ibm-quantum-compute-adapter',
           'persistent-operator-profile'
