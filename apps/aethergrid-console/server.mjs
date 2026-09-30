@@ -263,6 +263,17 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/evidence') {
       return json(response, 200, { evidence: state.evidence, activity: state.activity });
     }
+    if (
+      request.method === 'GET' &&
+      url.pathname.startsWith('/api/aethergrid/evidence/') &&
+      url.pathname !== '/api/aethergrid/evidence/'
+    ) {
+      const id = decodeURIComponent(url.pathname.slice('/api/aethergrid/evidence/'.length));
+      const record = state.evidence.find((item) => item.id === id || item.receipt === id);
+      if (!record) return json(response, 404, { error: 'evidence_not_found' });
+      return json(response, 200, { evidence: record, advisoryOnly: true });
+    }
+
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
       return json(response, 200, agentRuntime.summary());
     }
@@ -338,7 +349,24 @@ const server = http.createServer(async (request, response) => {
         `Scenario loaded: ${scenario}${scenario === 'custom' ? ` ${JSON.stringify(state.system.scenarioParameters)}` : ''}.`,
         'scenario',
       );
-      return json(response, 200, { state: snapshot() });
+      const scenarioRecord = {
+        id: `scenario-${Date.now()}`,
+        title: `Scenario: ${scenario}`,
+        type: 'SCENARIO',
+        age: 'just now',
+        status: 'VERIFIED',
+        details: {
+          region: state.system.region,
+          scenario,
+          parameters: scenario === 'custom' ? { ...state.system.scenarioParameters } : null,
+          view: state.system.view,
+          advisoryOnly: true,
+        },
+      };
+      scenarioRecord.receipt = createHash('sha256').update(JSON.stringify(scenarioRecord)).digest('hex');
+      state.evidence.unshift(scenarioRecord);
+      state.evidence = state.evidence.slice(0, 24);
+      return json(response, 200, { state: snapshot(), evidence: scenarioRecord });
     }
 
     if (request.method === 'POST' && url.pathname === '/api/aethergrid/reset') {
@@ -552,8 +580,29 @@ const server = http.createServer(async (request, response) => {
         `${agentId} completed an advisory model request using ${result.runtime.provider}/${result.runtime.model || 'fallback'}.`,
         'ai',
       );
+      const agentRecord = {
+        id: result.receipt.slice(0, 16),
+        title: `${agentId} Advisory Analysis`,
+        type: 'AI_AGENT',
+        age: 'just now',
+        status: 'VERIFIED',
+        receipt: result.receipt,
+        details: {
+          agent: agentId,
+          provider: result.runtime.provider,
+          model: result.runtime.model,
+          fallbackUsed: result.runtime.fallbackUsed,
+          latencyMs: result.runtime.latencyMs,
+          region: state.system.region,
+          scenario: state.system.scenario,
+          advisoryOnly: true,
+        },
+      };
+      state.evidence.unshift(agentRecord);
+      state.evidence = state.evidence.slice(0, 24);
       return json(response, 200, {
         ...result,
+        evidence: agentRecord,
         advisoryOnly: true,
         activity: state.activity,
       });
@@ -577,8 +626,33 @@ const server = http.createServer(async (request, response) => {
         `ÆTHERGRID team completed a coordinated advisory request with ${result.contributions.length} agent contributions.`,
         'ai-team',
       );
+      const teamRecord = {
+        id: result.receipt.slice(0, 16),
+        title: 'ÆTHERGRID Multi-Agent Synthesis',
+        type: 'AI_TEAM',
+        age: 'just now',
+        status: 'VERIFIED',
+        receipt: result.receipt,
+        details: {
+          provider: result.runtime.provider,
+          model: result.runtime.model,
+          fallbackUsed: result.runtime.fallbackUsed,
+          contributionReceipts: result.contributions.map((item) => ({
+            agent: item.agent,
+            receipt: item.receipt,
+            provider: item.runtime.provider,
+            model: item.runtime.model,
+          })),
+          region: state.system.region,
+          scenario: state.system.scenario,
+          advisoryOnly: true,
+        },
+      };
+      state.evidence.unshift(teamRecord);
+      state.evidence = state.evidence.slice(0, 24);
       return json(response, 200, {
         ...result,
+        evidence: teamRecord,
         advisoryOnly: true,
         activity: state.activity,
       });
