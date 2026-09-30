@@ -48,7 +48,13 @@
     "technical-evidence",
     "health-check",
     "view-reset",
-    "live-event-stream"
+    "live-event-stream",
+    "workspace-router",
+    "persistent-settings",
+    "individual-agent-runtime",
+    "team-agent-runtime",
+    "replaceable-model-providers",
+    "runtime-provider-status"
   ],
   "agents": [
     {
@@ -116,5 +122,51 @@
     "backgroundImageRequired": false
   },
   "designReferenceRepositoryPath": "assets/dashboard-reference.webp",
-  "designReferenceIncludedInRuntimePackage": false
+  "designReferenceIncludedInRuntimePackage": false,
+  "workspaceRouting": {
+    "mode": "exclusive-view",
+    "workspaces": [
+      "grid",
+      "holographic",
+      "quantum",
+      "ai",
+      "scenarios",
+      "evidence",
+      "settings"
+    ],
+    "persistentSessionRoute": true
+  },
+  "settings": {
+    "persistence": "localStorage",
+    "controls": [
+      "default-workspace",
+      "density",
+      "animation-intensity",
+      "reduced-motion",
+      "auto-rotate",
+      "spatial-labels",
+      "default-4d-hour",
+      "live-stream",
+      "fallback-refresh"
+    ],
+    "secretsStoredInBrowser": false
+  },
+  "aiRuntime": {
+    "individualAgents": [
+      "VÆLON",
+      "AUREN",
+      "SOLVÆR"
+    ],
+    "teamMode": true,
+    "providers": [
+      "local",
+      "openai-compatible",
+      "ollama"
+    ],
+    "replaceableModels": true,
+    "runtimeSummaryEndpoint": "GET /api/aethergrid/runtime",
+    "individualEndpoint": "POST /api/aethergrid/agents/:id",
+    "teamEndpoint": "POST /api/aethergrid/team",
+    "providerSecretsClientVisible": false
+  }
 }
