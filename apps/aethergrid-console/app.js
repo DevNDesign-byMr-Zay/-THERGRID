@@ -1417,31 +1417,33 @@
         );
       }
       if (this.layers.water) {
+        const waterBoost = this.operationProfile === 'flood-context' ? 1.55 : 1;
         this.drawBuffer(
           this.geometry.waterFaces,
           gl.TRIANGLES,
-          isLightTheme() ? [0.18, 0.62, 0.82, 0.18] : [0.04, 0.38, 0.68, 0.24],
-          0.008 * amplitude,
+          isLightTheme() ? [0.18, 0.62, 0.82, 0.18 * waterBoost] : [0.04, 0.38, 0.68, 0.24 * waterBoost],
+          0.012 * amplitude * waterBoost,
         );
         this.drawBuffer(
           this.geometry.waterLines,
           gl.LINES,
-          isLightTheme() ? [0.08, 0.46, 0.68, 0.62] : [0.12, 0.72, 1, 0.7],
-          0.018 * amplitude,
+          isLightTheme() ? [0.08, 0.46, 0.68, 0.62 * waterBoost] : [0.12, 0.72, 1, 0.7 * waterBoost],
+          0.026 * amplitude * waterBoost,
         );
       }
       if (this.layers.green) {
+        const greenBoost = this.operationProfile === 'green-infrastructure' ? 1.6 : 1;
         this.drawBuffer(
           this.geometry.greenFaces,
           gl.TRIANGLES,
-          isLightTheme() ? [0.2, 0.58, 0.28, 0.14] : [0.08, 0.48, 0.24, 0.18],
-          0.006 * amplitude,
+          isLightTheme() ? [0.2, 0.58, 0.28, 0.14 * greenBoost] : [0.08, 0.48, 0.24, 0.18 * greenBoost],
+          0.01 * amplitude * greenBoost,
         );
         this.drawBuffer(
           this.geometry.greenLines,
           gl.LINES,
-          isLightTheme() ? [0.12, 0.48, 0.22, 0.44] : [0.22, 0.8, 0.42, 0.46],
-          0.014 * amplitude,
+          isLightTheme() ? [0.12, 0.48, 0.22, 0.44 * greenBoost] : [0.22, 0.8, 0.42, 0.46 * greenBoost],
+          0.022 * amplitude * greenBoost,
         );
       }
       if (this.layers.grid) this.drawBuffer(this.geometry.grid, gl.LINES, [0.09, 0.42, 0.75, this.cityVisualMode === 'operations' ? 0.18 : 0.42], 0.045 * amplitude);
@@ -1562,7 +1564,8 @@
           focus === 'weather' ||
           focus === 'resource-flow' ||
           focus === 'grid-flow' ||
-          focus === 'visibility'
+          focus === 'visibility' ||
+          focus === 'flood-context'
             ? 1
             : 0.58;
         gl.uniform1f(this.loc.time, temporal * (1 + Math.min(2.4, windSpeed / 30)));
@@ -1602,7 +1605,12 @@
       if (this.layers.air) {
         const aqi = clamp(Number(this.liveContext?.airQuality?.current?.usAqi || 0), 0, 500);
         const airBoost =
-          focus === 'air-quality' || focus === 'visibility' || focus === 'heat' ? 1 : 0.42;
+          focus === 'air-quality' ||
+          focus === 'visibility' ||
+          focus === 'heat' ||
+          focus === 'green-infrastructure'
+            ? 1
+            : 0.42;
         const airColor =
           aqi >= 151
             ? [1, 0.34, 0.4, 0.74 * airBoost]
@@ -2646,6 +2654,10 @@
       roads,
       powerLines,
       powerAssets,
+      waterAreas: [],
+      waterways: [],
+      coastlines: [],
+      greenAreas: [],
       terrain: {
         source: {
           provider: 'flat-local-fallback',
@@ -2696,9 +2708,19 @@
     const sunriseSunset = mesh.environment?.solar
       ? `${compactSolarTime(mesh.environment.solar.sunrise)} / ${compactSolarTime(mesh.environment.solar.sunset)}`
       : '—';
+    const waterFeatureCount =
+      (mesh.waterAreas || []).length + (mesh.waterways || []).length + (mesh.coastlines || []).length;
+    const greenFeatureCount = (mesh.greenAreas || []).length;
+    const landmarkThreshold = Math.max(70, Number(skyline.p95HeightM || 0));
+    const landmarkCount = (mesh.buildings || []).filter(
+      (building) =>
+        String(building.name || '').trim() &&
+        !['inferred', 'synthetic-fallback'].includes(String(building.heightSource || '')) &&
+        Number(building.heightM || 0) >= landmarkThreshold,
+    ).length;
     const seismic = mesh.liveContext?.seismic || null;
     const seismicLabel = seismic ? `${Number(seismic.eventCount || 0)} nearby · M${Number(seismic.maxMagnitude || 0).toFixed(1)} max` : '—';
-    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Skyline Max</b><em>${skylineMax}</em></span><span><b>P95 Height</b><em>${p95}</em></span><span><b>Height Data</b><em>${heightCoverage}</em></span><span><b>Weather</b><em>${weather}</em></span><span><b>Air</b><em>${airQuality}</em></span><span><b>Humidity</b><em>${humidity}</em></span><span><b>Sunrise / Sunset</b><em>${sunriseSunset}</em></span><span><b>Seismic</b><em>${seismicLabel}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
+    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Skyline Max</b><em>${skylineMax}</em></span><span><b>P95 Height</b><em>${p95}</em></span><span><b>Height Data</b><em>${heightCoverage}</em></span><span><b>Weather</b><em>${weather}</em></span><span><b>Air</b><em>${airQuality}</em></span><span><b>Humidity</b><em>${humidity}</em></span><span><b>Sunrise / Sunset</b><em>${sunriseSunset}</em></span><span><b>Water Features</b><em>${waterFeatureCount}</em></span><span><b>Green Areas</b><em>${greenFeatureCount}</em></span><span><b>Landmarks</b><em>${landmarkCount}</em></span><span><b>Seismic</b><em>${seismicLabel}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
   }
 
   function showCityTransition(city, stage = 'Aligning global coordinate…', progress = 8) {
@@ -2744,9 +2766,14 @@
     if (q('#geoSourceStatus')) {
       const airMode = result.liveContext?.airQuality?.source?.live ? 'AIR LIVE' : 'AIR FALLBACK';
       const seismicMode = result.liveContext?.seismic?.source?.live ? 'SEISMIC LIVE' : 'SEISMIC FALLBACK';
+      const waterCount =
+        (result.waterAreas || []).length +
+        (result.waterways || []).length +
+        (result.coastlines || []).length;
+      const greenCount = (result.greenAreas || []).length;
       q('#geoSourceStatus').textContent = result.source?.live
-        ? `LIVE OSM · ${airMode} · ${seismicMode}`
-        : `LOCAL GEOMETRY · ${airMode} · ${seismicMode}`;
+        ? `LIVE OSM · WATER ${waterCount} · GREEN ${greenCount} · ${airMode} · ${seismicMode}`
+        : `LOCAL GEOMETRY · WATER/GREEN NOT INVENTED · ${airMode} · ${seismicMode}`;
     }
     if (q('#geoAttribution')) {
       const attributions = [
@@ -2760,7 +2787,7 @@
         attributions.join(' · ') ||
         'Live city geometry unavailable; using local fallback geometry.';
       q('#geoAttribution').textContent =
-        `${sourceText} · City-light points are procedural visualization from mapped geometry + daylight state, not measured window occupancy.`;
+        `${sourceText} · Water/green/landmark geometry appears only when present in the mapped source. Material tint uses mapped building material/colour tags when available. City-light points are procedural visualization from mapped geometry + daylight state, not measured window occupancy.`;
     }
     if (status) {
       const skyline = result.skylineProfile || {};
@@ -2781,7 +2808,7 @@
       const weatherAt = result.environment?.source?.modelTime || result.environment?.current?.time || 'unavailable';
       const airAt = result.liveContext?.airQuality?.source?.modelTime || 'unavailable';
       const quakeAt = result.liveContext?.seismic?.source?.generatedAt || result.liveContext?.seismic?.source?.fetchedAt || 'unavailable';
-      q('#geoProvenance').innerHTML = `<span><b>Geometry</b><em>${escapeHtml(result.source?.provider || 'local')}</em></span><span><b>OSM State</b><em>${escapeHtml(upstream)}</em></span><span><b>Weather</b><em>${escapeHtml(result.environment?.source?.provider || 'local')} · ${escapeHtml(weatherAt)}</em></span><span><b>Air</b><em>${escapeHtml(result.liveContext?.airQuality?.source?.provider || 'local')} · ${escapeHtml(airAt)}</em></span><span><b>Seismic</b><em>${escapeHtml(result.liveContext?.seismic?.source?.provider || 'local')} · ${escapeHtml(quakeAt)}</em></span><span><b>Height Coverage</b><em>${Number(result.skylineProfile?.sourceBackedHeightCoveragePercent || 0).toFixed(0)}%</em></span><span><b>Actuation</b><em>Disabled</em></span>`;
+      q('#geoProvenance').innerHTML = `<span><b>Geometry</b><em>${escapeHtml(result.source?.provider || 'local')}</em></span><span><b>OSM State</b><em>${escapeHtml(upstream)}</em></span><span><b>Water / Green</b><em>${(result.waterAreas || []).length + (result.waterways || []).length + (result.coastlines || []).length} / ${(result.greenAreas || []).length}</em></span><span><b>Weather</b><em>${escapeHtml(result.environment?.source?.provider || 'local')} · ${escapeHtml(weatherAt)}</em></span><span><b>Air</b><em>${escapeHtml(result.liveContext?.airQuality?.source?.provider || 'local')} · ${escapeHtml(airAt)}</em></span><span><b>Seismic</b><em>${escapeHtml(result.liveContext?.seismic?.source?.provider || 'local')} · ${escapeHtml(quakeAt)}</em></span><span><b>Height Coverage</b><em>${Number(result.skylineProfile?.sourceBackedHeightCoveragePercent || 0).toFixed(0)}%</em></span><span><b>Actuation</b><em>Disabled</em></span>`;
     }
     renderActivity();
     showToast(
