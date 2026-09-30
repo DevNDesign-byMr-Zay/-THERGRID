@@ -1,6 +1,7 @@
 import type {
   OverlayCoordinate,
   OverlayNodeKind,
+  SpatialOverlayArea,
   SpatialOverlayEdge,
   SpatialOverlayNode,
   SpatialOverlaySnapshot
@@ -30,6 +31,28 @@ interface CityPowerLine {
   path?: readonly (readonly [number, number])[];
 }
 
+interface CityRoad {
+  id: string;
+  name?: string;
+  highwayType?: string;
+  path?: readonly (readonly [number, number])[];
+}
+
+interface CityLinearWater {
+  id: string;
+  name?: string;
+  waterwayType?: string;
+  path?: readonly (readonly [number, number])[];
+}
+
+interface CityAreaFeature {
+  id: string;
+  name?: string;
+  waterType?: string;
+  greenType?: string;
+  footprint?: readonly (readonly [number, number])[];
+}
+
 interface CityMeshResponse {
   city: CityDescriptor;
   source?: {
@@ -41,6 +64,11 @@ interface CityMeshResponse {
   };
   powerAssets?: readonly CityPowerAsset[];
   powerLines?: readonly CityPowerLine[];
+  roads?: readonly CityRoad[];
+  waterAreas?: readonly CityAreaFeature[];
+  waterways?: readonly CityLinearWater[];
+  coastlines?: readonly CityLinearWater[];
+  greenAreas?: readonly CityAreaFeature[];
 }
 
 function localMetersToCoordinate(
@@ -70,6 +98,163 @@ function voltageIntensity(voltage: number | null | undefined): number {
   if (!Number.isFinite(voltage) || Number(voltage) <= 0) return 0.42;
   const normalized = Math.log10(Math.max(1, Number(voltage))) / 6;
   return Math.min(1, Math.max(0.25, normalized));
+}
+
+
+function sourceFields(mesh: CityMeshResponse) {
+  const source = sourceFields(mesh);
+  const eventTime = source.eventTime;
+  return {
+    eventTime,
+    sourceTime: source.upstreamTimestamp ?? null,
+    fetchedAt: source.fetchedAt ?? null,
+    live: source.live === true,
+    stale: false,
+    fallback: source.live !== true,
+    attribution: source.attribution ?? source.provider ?? null
+  };
+}
+
+function pathToEdges(
+  mesh: CityMeshResponse,
+  path: readonly (readonly [number, number])[],
+  featureId: string,
+  kind: SpatialOverlayEdge['kind'],
+  label: string,
+  properties: Readonly<Record<string, unknown>> = {}
+): SpatialOverlayEdge[] {
+  const edges: SpatialOverlayEdge[] = [];
+  for (let index = 1; index < path.length; index += 1) {
+    edges.push({
+      id: `${featureId}:segment:${index}`,
+      kind,
+      from: localMetersToCoordinate(mesh.city, path[index - 1], 6),
+      to: localMetersToCoordinate(mesh.city, path[index], 6),
+      label,
+      intensity: kind === 'coastline' ? 0.82 : kind === 'waterway' ? 0.68 : 0.44,
+      properties
+    });
+  }
+  return edges;
+}
+
+export function cityMeshToSemanticOverlays(
+  mesh: CityMeshResponse
+): readonly SpatialOverlaySnapshot[] {
+  const source = sourceFields(mesh);
+
+  const roadEdges = (mesh.roads ?? []).flatMap((road) =>
+    pathToEdges(
+      mesh,
+      road.path ?? [],
+      road.id,
+      'route',
+      road.name || road.highwayType || road.id,
+      { highwayType: road.highwayType ?? '' }
+    )
+  );
+
+  const waterEdges = [
+    ...(mesh.waterways ?? []).flatMap((waterway) =>
+      pathToEdges(
+        mesh,
+        waterway.path ?? [],
+        waterway.id,
+        'waterway',
+        waterway.name || waterway.waterwayType || waterway.id,
+        { waterwayType: waterway.waterwayType ?? '' }
+      )
+    ),
+    ...(mesh.coastlines ?? []).flatMap((coastline) =>
+      pathToEdges(
+        mesh,
+        coastline.path ?? [],
+        coastline.id,
+        'coastline',
+        coastline.name || 'Coastline'
+      )
+    )
+  ];
+
+  const waterAreas: SpatialOverlayArea[] = (mesh.waterAreas ?? [])
+    .filter((area) => (area.footprint?.length ?? 0) >= 3)
+    .map((area) => ({
+      id: area.id,
+      kind: 'water',
+      positions: (area.footprint ?? []).map((point) =>
+        localMetersToCoordinate(mesh.city, point, 4)
+      ),
+      label: area.name || area.waterType || area.id,
+      intensity: 0.62,
+      properties: { waterType: area.waterType ?? '' }
+    }));
+
+  const greenAreas: SpatialOverlayArea[] = (mesh.greenAreas ?? [])
+    .filter((area) => (area.footprint?.length ?? 0) >= 3)
+    .map((area) => ({
+      id: area.id,
+      kind: 'green',
+      positions: (area.footprint ?? []).map((point) =>
+        localMetersToCoordinate(mesh.city, point, 5)
+      ),
+      label: area.name || area.greenType || area.id,
+      intensity: 0.52,
+      properties: { greenType: area.greenType ?? '' }
+    }));
+
+  return [
+    {
+      id: `roads:${mesh.city.id}:${source.eventTime}`,
+      layerId: 'roads',
+      ...source,
+      nodes: [],
+      edges: roadEdges,
+      areas: []
+    },
+    {
+      id: `water:${mesh.city.id}:${source.eventTime}`,
+      layerId: 'water',
+      ...source,
+      nodes: [],
+      edges: waterEdges,
+      areas: waterAreas
+    },
+    {
+      id: `green:${mesh.city.id}:${source.eventTime}`,
+      layerId: 'green',
+      ...source,
+      nodes: [],
+      edges: [],
+      areas: greenAreas
+    }
+  ];
+}
+
+export interface CitySpatialBundle {
+  power: SpatialOverlaySnapshot;
+  semantics: readonly SpatialOverlaySnapshot[];
+}
+
+export function cityMeshToSpatialBundle(mesh: CityMeshResponse): CitySpatialBundle {
+  return {
+    power: cityMeshToPowerOverlay(mesh),
+    semantics: cityMeshToSemanticOverlays(mesh)
+  };
+}
+
+async function cityMeshRequest(
+  url: string,
+  errorLabel: string,
+  signal?: AbortSignal
+): Promise<CityMeshResponse> {
+  const response = await fetch(url, {
+    headers: { accept: 'application/json' },
+    signal
+  });
+  if (!response.ok) {
+    throw new Error(`${errorLabel} failed with HTTP ${response.status}`);
+  }
+  return (await response.json()) as CityMeshResponse;
 }
 
 export function cityMeshToPowerOverlay(mesh: CityMeshResponse): SpatialOverlaySnapshot {
@@ -118,12 +303,12 @@ export function cityMeshToPowerOverlay(mesh: CityMeshResponse): SpatialOverlaySn
     id: `power:${mesh.city.id}:${eventTime}`,
     layerId: 'energy',
     eventTime,
-    sourceTime: source.upstreamTimestamp ?? null,
-    fetchedAt: source.fetchedAt ?? null,
-    live: source.live === true,
-    stale: false,
-    fallback: source.live !== true,
-    attribution: source.attribution ?? source.provider ?? null,
+    sourceTime: source.sourceTime,
+    fetchedAt: source.fetchedAt,
+    live: source.live,
+    stale: source.stale,
+    fallback: source.fallback,
+    attribution: source.attribution,
     nodes,
     edges
   };
@@ -133,17 +318,12 @@ export async function loadCityPowerOverlay(
   cityId: string,
   signal?: AbortSignal
 ): Promise<SpatialOverlaySnapshot> {
-  const response = await fetch(
+  const mesh = await cityMeshRequest(
     `/api/aethergrid/geospatial/city/${encodeURIComponent(cityId)}`,
-    {
-      headers: { accept: 'application/json' },
-      signal
-    }
+    'city power overlay request',
+    signal
   );
-  if (!response.ok) {
-    throw new Error(`city power overlay request failed with HTTP ${response.status}`);
-  }
-  return cityMeshToPowerOverlay((await response.json()) as CityMeshResponse);
+  return cityMeshToPowerOverlay(mesh);
 }
 
 
@@ -159,15 +339,43 @@ export async function loadCoordinatePowerOverlay(
     name,
     radiusM: '1200'
   });
-  const response = await fetch(
+  const mesh = await cityMeshRequest(
     `/api/aethergrid/geospatial/point?${query.toString()}`,
-    {
-      headers: { accept: 'application/json' },
-      signal
-    }
+    'coordinate power overlay request',
+    signal
   );
-  if (!response.ok) {
-    throw new Error(`coordinate power overlay request failed with HTTP ${response.status}`);
-  }
-  return cityMeshToPowerOverlay((await response.json()) as CityMeshResponse);
+  return cityMeshToPowerOverlay(mesh);
+}
+
+
+export async function loadCitySpatialBundle(
+  cityId: string,
+  signal?: AbortSignal
+): Promise<CitySpatialBundle> {
+  const mesh = await cityMeshRequest(
+    `/api/aethergrid/geospatial/city/${encodeURIComponent(cityId)}`,
+    'city spatial bundle request',
+    signal
+  );
+  return cityMeshToSpatialBundle(mesh);
+}
+
+export async function loadCoordinateSpatialBundle(
+  latitude: number,
+  longitude: number,
+  name = 'Coordinate Explorer',
+  signal?: AbortSignal
+): Promise<CitySpatialBundle> {
+  const query = new URLSearchParams({
+    lat: String(latitude),
+    lon: String(longitude),
+    name,
+    radiusM: '1200'
+  });
+  const mesh = await cityMeshRequest(
+    `/api/aethergrid/geospatial/point?${query.toString()}`,
+    'coordinate spatial bundle request',
+    signal
+  );
+  return cityMeshToSpatialBundle(mesh);
 }
