@@ -246,6 +246,66 @@ test('terrain runtime degrades explicitly to a flat local surface when elevation
   assert.match(terrain.source.error, /Elevation HTTP 503/u);
 });
 
+
+
+test('terrain runtime samples attributed elevation and preserves flat fallback', async () => {
+  const fetchImpl = async (url) => {
+    const parsed = new URL(String(url));
+    assert.equal(parsed.origin, 'https://elevation.example.test');
+    const latitudes = parsed.searchParams.get('latitude').split(',');
+    const longitudes = parsed.searchParams.get('longitude').split(',');
+    assert.equal(latitudes.length, 25);
+    assert.equal(longitudes.length, 25);
+    return new Response(
+      JSON.stringify({
+        elevation: Array.from({ length: 25 }, (_, index) => 12 + (index % 5) * 3),
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
+  };
+
+  const runtime = createTerrainRuntime({
+    env: {
+      AETHERGRID_TERRAIN_PROVIDER: 'open-meteo',
+      AETHERGRID_ELEVATION_URL: 'https://elevation.example.test/v1/elevation',
+    },
+    fetchImpl,
+  });
+
+  const summary = runtime.summary();
+  assert.equal(summary.provider, 'open-meteo');
+  assert.equal(summary.credentialsExposed, false);
+  assert.match(summary.attribution, /Copernicus DEM GLO-90/u);
+
+  const terrain = await runtime.sample({
+    lat: 40.7128,
+    lon: -74.006,
+    radiusM: 900,
+    gridSize: 5,
+  });
+  assert.equal(terrain.source.live, true);
+  assert.equal(terrain.source.provider, 'Open-Meteo Elevation');
+  assert.equal(terrain.gridSize, 5);
+  assert.equal(terrain.points.length, 25);
+  assert.equal(terrain.minElevationM, 12);
+  assert.equal(terrain.maxElevationM, 24);
+  assert.ok(terrain.points.every((point) => Number.isFinite(point.relativeElevationM)));
+
+  const fallback = createTerrainRuntime({
+    env: { AETHERGRID_TERRAIN_PROVIDER: 'flat-local' },
+  });
+  const flat = await fallback.sample({
+    lat: 51.5074,
+    lon: -0.1278,
+    radiusM: 500,
+    gridSize: 3,
+  });
+  assert.equal(flat.source.provider, 'flat-local-fallback');
+  assert.equal(flat.source.live, false);
+  assert.equal(flat.points.length, 9);
+  assert.ok(flat.points.every((point) => point.elevationM === 0));
+});
+
 test('IBM Quantum adapter submits jobs while keeping credentials private', async () => {
   const requests = [];
   const fetchImpl = async (url, options = {}) => {
