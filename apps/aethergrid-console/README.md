@@ -144,3 +144,30 @@ AETHERGRID_IBM_QUANTUM_BACKEND=<backend name>
 ```
 
 The browser never receives the API key or IAM bearer token. Submitting a job is not treated as proof that QPU execution completed; the evidence record distinguishes submission from completed hardware execution.
+
+## Global grid intelligence v2
+
+The GLOBAL workspace now goes beyond preset city descent.
+
+Operators can enter any valid latitude/longitude pair and request an on-demand local spatial mesh around that coordinate. In backend-connected mode, the geospatial runtime asks the configured OpenStreetMap Overpass endpoint for:
+
+- building footprints and available height/level metadata;
+- roads/highways;
+- mapped power lines, minor lines, and cables;
+- mapped substations, plants, generators, and transformers.
+
+Each source category remains an independent WebGL layer. Buildings, roads, the power grid, and asset nodes can be toggled without replacing the scene with a raster map. The city renderer also has its own time index so the same x/y/z geometry can be reviewed as a 4D presentation surface.
+
+The custom coordinate route is:
+
+```text
+GET /api/aethergrid/geospatial/point?lat=<latitude>&lon=<longitude>&radiusM=<250-2000>&name=<label>
+```
+
+OpenStreetMap data remains attribution-bound and operator-triggered. If the live provider is unavailable, the app shows deterministic local fallback geometry and labels it as fallback.
+
+## Agent external context
+
+VÆLON, AUREN, SOLVÆR, and TEAM requests now receive a bounded external-context summary containing the most recently loaded geospatial scene and quantum job state. The AI runtime receives counts, provider identity, coordinate/region context, job identity/status, and evidence receipts—not provider secrets or unrestricted infrastructure authority.
+
+This means an agent can reason about what the operator actually loaded in GLOBAL or QUANTUM without silently controlling those systems. Physical actuation remains disabled.
