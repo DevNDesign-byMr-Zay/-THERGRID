@@ -790,3 +790,16 @@ test('v4 saved views restore spatial layers use case and exact 4d cursor without
   assert.match(app, /clock\.scrub\(bookmark\.cursorIso, bookmark\.temporalMode\)/u);
   assert.doesNotMatch(app, /restoreBookmark[\s\S]{0,1000}applyScenario\(/u);
 });
+
+test('v4 scenario comparison ghosts preserve source baseline beside modeled power routes', async () => {
+  const [layer, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(layer, /scenarioGhostEntity/u);
+  assert.match(layer, /source-baseline/u);
+  assert.match(layer, /snapshot\.layerId === 'energy'/u);
+  assert.match(layer, /ghost\.show =\s*Boolean\(scenario\)/u);
+  assert.match(app, /DIM = SOURCE BASELINE · BRIGHT = MODELED SCENARIO/u);
+});
