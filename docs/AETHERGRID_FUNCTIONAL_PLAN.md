@@ -153,7 +153,7 @@ A fresh ZIP is considered functional when:
 
 ## Current verified state
 
-Batches 1–13 are verified on `main`; Batch 14 is implemented on the feature branch and must pass the maintained gates before entering `main`.
+Batches 1–14 are verified on `main`; Batch 15 is implemented on the feature branch and must pass the maintained gates before entering `main`.
 
 - Grid, Global, Holographic, Quantum, AI, Scenarios, Evidence and Settings are distinct routed workspaces.
 - WebGL node picking, scenario editing/duplication, evidence drill-down, agent receipts, persistent settings/profile, global coordinate exploration, mapped grid infrastructure, terrain and quantum provider workflows are all present.
@@ -472,9 +472,7 @@ Heat Stress combines apparent temperature, modeled relative humidity, UV, and ma
 ÆTHERGRID continues to distinguish source-backed structure from visualization. Building geometry and supported heights/roofs come from mapped source data when available; weather and air quality remain provider model context; seismic events remain event-feed context; skyline lights and cloud particles are procedural render layers driven by those bounded inputs rather than claims of direct sensing.
 
 ## Batch 15 — Source-backed city identity and semantic weather
-
 Status: IMPLEMENTED / VERIFYING
-
 ### City identity
 - extend skyline profiles with source-backed named structures and tall-structure counts;
 - render independent landmark points and vertical skyline spines for named/tall mapped structures;
@@ -482,23 +480,71 @@ Status: IMPLEMENTED / VERIFYING
 - add an interactive CITY IDENTITY inspector with skyline, terrain, roof, weather and height-coverage metrics;
 - selecting an identity anchor highlights the matching renderer node;
 - source-backed names and heights remain tied to the bounded OpenStreetMap sample.
-
 ### Semantic weather animation
 - classify current provider weather codes into Clear / Cloudy / Fog / Rain / Snow / Thunderstorm / Mixed presentation states;
 - rain retains wind drift and continuous fall;
 - snow uses a separate drifting/falling point field;
 - fog uses a low-altitude field scaled by modeled visibility;
 - thunderstorm state adds a pulsing procedural bolt field while precipitation remains separate.
-
 ### Fidelity boundary
 - a named structure is displayed only when the source building carries a name;
 - unnamed tall structures may be highlighted as tall mapped geometry but are not assigned invented landmark names;
 - thunder pulses indicate a modeled thunderstorm weather code, not detected strike coordinates;
 - weather particles visualize provider model state and are not street-level sensors.
-
 ### Verification requirements
 - geospatial tests must prove named skyline anchors survive parsing and ordering;
 - semantic UI tests must require LANDMARKS, CITY IDENTITY and the weather-specific geometry paths;
 - standalone packaging must retain landmark extraction, identity inspector, snow, fog and storm rendering;
 - release-readiness must enforce the no-fake-landmark and no-detected-lightning claims;
 - the full engineering and CodeQL gates remain mandatory before merge.
+## Batch 15B — Source-backed environmental geometry
+### Physical city identity
+- OpenStreetMap water polygons from mapped water tags;
+- linear river/canal/stream/tidal-channel geometry;
+- mapped coastline geometry;
+- mapped park/garden/reserve/grass/meadow/wood/grassland polygons;
+- independent WATER and GREEN renderer layers;
+- fallback mode intentionally leaves water/green layers empty rather than fabricating local geography.
+### Built identity
+- building material/colour tags are grouped into restrained glass, masonry, metal and natural-material overlays;
+- base source-backed building geometry remains the authoritative shape;
+- named tall buildings with source-backed heights receive a separate LANDMARKS outline;
+- landmark threshold is `max(70 m, city P95 source-backed height)`;
+- material/landmark overlays remain absent where source metadata is absent.
+### New source-driven operations
+- Flood Context;
+- Green Infrastructure;
+- maintained city-operation total: 12.
+Flood Context uses mapped hydrologic geometry, terrain relief, current modeled precipitation, road and infrastructure context only as a bounded attention proxy. Green Infrastructure uses mapped green-space geometry, built form and current modeled heat/humidity/AQI as a bounded planning proxy.
+- live OSM test fixtures must include water polygon, linear waterway, coastline, green polygon and source-tagged named tall building;
+- fallback tests must prove no water/green geography is invented;
+- UI and standalone package must preserve WATER, GREEN and LANDMARKS controls;
+- native WebGL source must preserve water surfaces/lines, green surfaces/lines, material groups and landmark lines;
+- city-operation tests must exercise all 12 workflows and expose mapped feature counts;
+- manifests and release-readiness must require the v2.9 identity contract;
+- all maintained CI and CodeQL gates remain mandatory before merge.
+These layers improve geographic recognizability but remain only as complete as the underlying open map. Absence of a mapped feature is not evidence that the real-world feature does not exist. Material tint is tag-derived visualization, not photorealistic façade reconstruction.
+## Batch 15C — Water, green space, materials, and landmark identity
+### City geography
+- bounded OpenStreetMap requests now include mapped water areas, waterways, coastline, parks and green-space features;
+- water/green geometry is projected into the same local metric frame as buildings, roads, terrain and mapped grid assets;
+- WATER and GREEN are independent native-WebGL layers;
+- local fallback geometry intentionally returns no synthetic water, coastline or green space.
+### Architectural identity
+- source `building:material`, `building:colour`, `roof:material` and `roof:colour` fields remain available to the renderer;
+- source-tagged façades are grouped into restrained glass, masonry, metal and natural-material overlays;
+- buildings without supported source tags stay on the neutral base material;
+- named buildings with source-backed height at or above max(70 m, city P95 height) receive a separate LANDMARKS edge-emphasis layer;
+- landmark emphasis does not invent names, heights, materials or landmark status for unmapped structures.
+### Planning workflows
+Twelve maintained city workflows now include:
+- the ten existing v2.8 workflows.
+Flood Context combines mapped water/coastline geometry, terrain, precipitation, roads and infrastructure into a bounded attention proxy. It is not a hydrologic, drainage, surge, river-stage or inundation model. Green Infrastructure combines mapped green space with current heat/humidity/AQI and built density for screening only; it is not canopy measurement, health exposure analysis or a siting directive.
+- geospatial tests must prove water area, waterway, coastline and park parsing from representative Overpass fixtures;
+- fallback tests must prove environmental geometry is not fabricated;
+- semantic HTML tests must require WATER, GREEN, LANDMARKS, Flood Context and Green Infrastructure controls;
+- WebGL source tests must require water/green faces and lines, landmark lines and all source-tagged material buffers;
+- city-operation tests must exercise all twelve workflows and expose mapped environmental counts in data-quality evidence;
+- packaging and release-readiness must require the v2.9 controls, buffers, manifest capabilities and source-tag query/parser contracts;
+- test, lint, typecheck, coverage, fresh-clone, container, quality/release-readiness, package and CodeQL gates remain mandatory.
+v2.9 improves city distinctiveness by adding more source-backed context, not by inventing photorealism. Missing map tags remain missing. Water, coastline, parks, material identity and landmark emphasis are rendered only when their upstream geometry/metadata exists in the bounded source response.
