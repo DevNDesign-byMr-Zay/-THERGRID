@@ -1459,6 +1459,41 @@ button {
 }
 
 
+
+.illumination-scene-badge {
+  position: absolute;
+  right: 16px;
+  bottom: 112px;
+  z-index: 6;
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  padding: 7px 9px;
+  border: 1px solid rgba(255, 211, 125, 0.18);
+  border-radius: 7px;
+  background: rgba(12, 10, 7, 0.76);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+.illumination-scene-badge span {
+  color: #8c7c5d;
+  font-size: 6px;
+  letter-spacing: 0.1em;
+}
+
+.illumination-scene-badge strong {
+  color: #ffe3a6;
+  font-size: 8px;
+  letter-spacing: 0.07em;
+}
+
+.illumination-scene-badge small {
+  color: #75684f;
+  font-size: 5px;
+  letter-spacing: 0.06em;
+}
+
 .scenario-scene-badge {
   position: absolute;
   top: 118px;
