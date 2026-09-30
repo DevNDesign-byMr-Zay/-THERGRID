@@ -26,6 +26,16 @@ const REQUIRED_FILES = Object.freeze([
   'apps/operator-console/assets/brand/agents/solvaer.webp',
   'apps/operator-console/assets/brand/agents/auren.webp',
   'apps/operator-console/assets/brand/agents/vaelon.webp',
+  'apps/aethergrid-console/index.html',
+  'apps/aethergrid-console/styles.css',
+  'apps/aethergrid-console/app.js',
+  'apps/aethergrid-console/server.mjs',
+  'apps/aethergrid-console/app.json',
+  'apps/aethergrid-console/ui.json',
+  'apps/aethergrid-console/manifest.webmanifest',
+  'apps/aethergrid-console/sw.js',
+  'apps/aethergrid-console/README.md',
+  'apps/aethergrid-console/assets/dashboard-reference.webp',
   'docs/BRAND_ASSETS.md',
   'docs/OPERATOR_CONSOLE.md',
   'CHANGELOG.md',
@@ -44,6 +54,7 @@ const REQUIRED_FILES = Object.freeze([
   '.github/pull_request_template.md',
   'scripts/create-release-manifest.mjs',
   'scripts/assemble-aethergrid-package.mjs',
+  'scripts/assemble-aethergrid-full-app.mjs',
 ]);
 
 function assert(condition, message) {
@@ -200,6 +211,8 @@ async function main() {
     'check',
     'verify:release',
     'package:aethergrid',
+    'aethergrid-app',
+    'package:aethergrid-app',
   ]) {
     assert(
       typeof pkg.scripts?.[name] === 'string' && pkg.scripts[name].trim(),
@@ -266,6 +279,10 @@ async function main() {
   );
   assert(/npm run demo/u.test(ci), 'CI must run evidence demo');
   assert(/npm run dashboard-demo/u.test(ci), 'CI must run dashboard demo');
+  assert(
+    /npm run package:aethergrid-app/u.test(ci),
+    'CI must build the complete ÆTHERGRID frontend and backend archive',
+  );
   assert(
     /npm run package:aethergrid/u.test(ci),
     'CI must build and verify the complete ÆTHERGRID UI archive',
@@ -379,6 +396,28 @@ async function main() {
   assert(
     /renderer-neutral/iu.test(readme),
     'README must document renderer-neutral spatial evidence',
+  );
+
+  const exactAethergridHtml = await text('apps/aethergrid-console/index.html');
+  const exactAethergridApp = JSON.parse(await text('apps/aethergrid-console/app.json'));
+  const exactAethergridUi = JSON.parse(await text('apps/aethergrid-console/ui.json'));
+  assert(
+    /assets\/dashboard-reference\.webp/u.test(exactAethergridHtml) &&
+      /data-action="run-optimization"/u.test(exactAethergridHtml) &&
+      /data-action="ai-chat"/u.test(exactAethergridHtml),
+    'ÆTHERGRID exact dashboard HTML must preserve the approved canvas and functional controls',
+  );
+  assert(
+    exactAethergridApp.entrypoints?.standaloneHtml === 'index.html' &&
+      exactAethergridApp.entrypoints?.backend === 'server.mjs' &&
+      exactAethergridApp.visualContract?.referenceViewport?.join('x') === '1536x1024',
+    'ÆTHERGRID app manifest must bind the standalone HTML, backend, and approved viewport',
+  );
+  assert(
+    exactAethergridUi.referenceImage === 'assets/dashboard-reference.webp' &&
+      exactAethergridUi.interactiveCapabilities?.includes('run-optimization') &&
+      exactAethergridUi.interactiveCapabilities?.includes('ai-chat'),
+    'ÆTHERGRID UI contract must bind the approved reference canvas and interactive capabilities',
   );
 
   const operatorConsole = await text('apps/operator-console/index.html');
