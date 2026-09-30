@@ -1,4 +1,4 @@
-import { describe, it } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { parseEnv } from '../apps/aethergrid-console/config/env-schema.mjs';
@@ -17,9 +17,27 @@ import {
   PROVIDER_STATUS,
 } from '../apps/aethergrid-console/providers/provider-health.mjs';
 import { createProviderRegistry } from '../apps/aethergrid-console/providers/provider-registry.mjs';
+import { createRequestContext } from '../apps/aethergrid-console/providers/request-context.mjs';
+import { createProviderReceipt } from '../apps/aethergrid-console/providers/provider-receipt.mjs';
+import { createProviderAdapter } from '../apps/aethergrid-console/providers/adapter.mjs';
 import { server } from '../apps/aethergrid-console/server.mjs';
 
-describe('ÆTHERGRID v4.0 Batch 18 — Provider, Configuration, Secret-Safety & Runtime Foundation', () => {
+describe('ÆTHERGRID v4.0 — Provider, Configuration, Secret-Safety & Runtime Execution Foundation', () => {
+  let activePort = 0;
+
+  before(async () => {
+    if (!server.listening) {
+      await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    }
+    activePort = server.address().port;
+  });
+
+  after(async () => {
+    if (server.listening) {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
   describe('1. Central Validated Environment Configuration', () => {
     it('parses valid default environment settings correctly', () => {
       const parsed = parseEnv({});
@@ -191,15 +209,8 @@ describe('ÆTHERGRID v4.0 Batch 18 — Provider, Configuration, Secret-Safety & 
     });
   });
 
-  describe('8. Safe Public Runtime Endpoint Verification', () => {
+  describe('8. Provider Endpoints Verification', () => {
     it('responds to GET /api/aethergrid/runtime/providers with safe metadata and no secrets', async () => {
-      const port = server.address()?.port || 8090;
-      let listening = true;
-      if (!server.listening) {
-        await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-      }
-      const activePort = server.address().port;
-
       const res = await fetch(`http://127.0.0.1:${activePort}/api/aethergrid/runtime/providers`);
       assert.equal(res.status, 200);
 
@@ -216,10 +227,64 @@ describe('ÆTHERGRID v4.0 Batch 18 — Provider, Configuration, Secret-Safety & 
       assert.ok(!textPayload.includes('apiKey'));
       assert.ok(!textPayload.includes('serviceCrn'));
       assert.ok(!textPayload.includes('token'));
+    });
 
-      if (listening && server.listening) {
-        await new Promise((resolve) => server.close(resolve));
+    it('responds to GET /api/aethergrid/config/public with browser-safe metadata and no secret keys', async () => {
+      const res = await fetch(`http://127.0.0.1:${activePort}/api/aethergrid/config/public`);
+      assert.equal(res.status, 200);
+
+      const body = await res.json();
+      assert.ok(body.spatial);
+      assert.ok('provider' in body.spatial);
+      assert.ok('cesiumIonToken' in body.spatial);
+      assert.ok('realityEnabled' in body.spatial);
+
+      const textPayload = JSON.stringify(body);
+      assert.ok(!textPayload.includes('AETHERGRID_IBM_QUANTUM_API_KEY'));
+      assert.ok(!textPayload.includes('AETHERGRID_OPENAI_API_KEY'));
+      assert.ok(!textPayload.includes('secret'));
+    });
+
+    it('responds to normalized provider API routes with safe metadata and provenance receipts', async () => {
+      const endpoints = [
+        '/api/aethergrid/weather/current',
+        '/api/aethergrid/weather/forecast',
+        '/api/aethergrid/hazards/alerts',
+        '/api/aethergrid/hydrology/gauges',
+        '/api/aethergrid/energy/context',
+        '/api/aethergrid/transit/vehicles',
+      ];
+
+      for (const ep of endpoints) {
+        const res = await fetch(`http://127.0.0.1:${activePort}${ep}`);
+        assert.equal(res.status, 200, `Endpoint ${ep} should return 200`);
+        const json = await res.json();
+        assert.ok(json, `Endpoint ${ep} should return JSON`);
       }
+    });
+
+    it('creates normalized provider adapter and provenance receipts', () => {
+      const context = createRequestContext({ userNode: 'test-node' });
+      assert.ok(context.requestId.startsWith('req-'));
+      assert.equal(context.userNode, 'test-node');
+
+      const receipt = createProviderReceipt({
+        provider: 'open-meteo',
+        dataset: 'weather',
+        cacheState: 'hit',
+        live: true,
+      });
+      assert.equal(receipt.provider, 'open-meteo');
+      assert.equal(receipt.cacheState, 'hit');
+      assert.equal(receipt.live, true);
+
+      const adapter = createProviderAdapter({
+        id: 'test-adapter',
+        capabilities: ['weather'],
+        request: async () => ({ status: 'ok' }),
+      });
+      assert.equal(adapter.id, 'test-adapter');
+      assert.deepEqual(adapter.capabilities, ['weather']);
     });
   });
 });

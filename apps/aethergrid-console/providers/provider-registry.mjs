@@ -5,6 +5,7 @@ import { createUrlPolicy } from '../security/url-policy.mjs';
 import { createCacheStore } from './cache-store.mjs';
 import { createCircuitBreaker } from './circuit-breaker.mjs';
 import { createRateLimiter } from './rate-limiter.mjs';
+import { createProviderReceipt } from './provider-receipt.mjs';
 
 export function createProviderRegistry(options = {}) {
   const rawEnv = options.env || process.env;
@@ -23,6 +24,9 @@ export function createProviderRegistry(options = {}) {
     config.terrain.elevationUrl,
     config.quantum.ibm.baseUrl,
     config.quantum.ibm.iamUrl,
+    config.futureProviders.tomorrowIo.baseUrl || 'https://api.tomorrow.io/v4',
+    config.futureProviders.nws.apiUrl || 'https://api.weather.gov',
+    config.futureProviders.eia.baseUrl || 'https://api.eia.gov/v2',
   ]);
 
   const cache = createCacheStore();
@@ -43,7 +47,7 @@ export function createProviderRegistry(options = {}) {
     return rateLimiters.get(providerId);
   }
 
-  // Initialize standard providers into health tracking
+  // Register providers
   health.registerProvider('spatial', {
     name: 'Native WebGL 4D Grid',
     capabilities: ['spatial'],
@@ -95,22 +99,163 @@ export function createProviderRegistry(options = {}) {
   });
 
   health.registerProvider('energy', {
-    name: 'Local Microgrid Simulation',
+    name: 'Local Microgrid Simulator & EIA Context',
     capabilities: ['energy'],
     status: PROVIDER_STATUS.READY,
   });
 
+  health.registerProvider('hazards', {
+    name: 'NWS Alerts Provider',
+    capabilities: ['hazards'],
+    status: PROVIDER_STATUS.READY,
+  });
+
   health.registerProvider('transit', {
-    name: config.futureProviders.transit.provider || 'Transit Provider',
+    name: config.futureProviders.transit.provider || 'GTFS-RT Transit Feed Registry',
     capabilities: ['transit'],
     status: config.futureProviders.transit.apiKey ? PROVIDER_STATUS.READY : PROVIDER_STATUS.UNCONFIGURED,
   });
 
   health.registerProvider('hydrology', {
-    name: config.futureProviders.hydrology.provider || 'Hydrology Provider',
+    name: config.futureProviders.hydrology.provider || 'NOAA/NWPS Hydrology Provider',
     capabilities: ['hydrology'],
     status: config.futureProviders.hydrology.apiKey ? PROVIDER_STATUS.READY : PROVIDER_STATUS.UNCONFIGURED,
   });
+
+  async function executeProviderRequest(providerId, params = {}, fetcher, fallbackFetcher) {
+    const breaker = getBreaker(providerId);
+    const limiter = getRateLimiter(providerId);
+
+    const cacheKey = params.cacheKey || `${providerId}:${JSON.stringify(params)}`;
+    const cacheTtlMs = params.ttlMs || 60000;
+
+    // Check rate limit
+    if (!limiter.tryAcquire()) {
+      health.recordExecution(providerId, {
+        error: true,
+        degraded: true,
+        circuitState: breaker.getState(),
+      });
+      if (typeof fallbackFetcher === 'function') {
+        const fallbackData = await fallbackFetcher({ reason: 'rate_limited' });
+        const receipt = createProviderReceipt({
+          provider: providerId,
+          dataset: params.dataset || providerId,
+          cacheState: 'miss',
+          live: false,
+          fallback: true,
+          attribution: params.attribution || '',
+        });
+        return { data: fallbackData, receipt };
+      }
+      throw new Error(`Rate limit exceeded for provider '${providerId}'`);
+    }
+
+    // Check cache
+    const cached = cache.get(cacheKey);
+    if (cached.found && !cached.isStale) {
+      health.recordExecution(providerId, {
+        success: true,
+        cacheHit: true,
+        latencyMs: 0,
+        circuitState: breaker.getState(),
+        rateLimitRemaining: limiter.getStatus().remaining,
+      });
+      const receipt = createProviderReceipt({
+        provider: providerId,
+        dataset: params.dataset || providerId,
+        cacheState: 'hit',
+        live: true,
+        stale: false,
+        attribution: params.attribution || '',
+      });
+      return { data: cached.value, receipt };
+    }
+
+    const startTime = Date.now();
+    try {
+      if (params.url) {
+        urlPolicy.validateUrl(params.url);
+      }
+
+      const cbResult = await breaker.execute(
+        async () => {
+          const data = await fetcher();
+          cache.set(cacheKey, data, cacheTtlMs);
+          return data;
+        },
+        async (errInfo) => {
+          if (cached.found) {
+            return {
+              staleData: cached.value,
+              isStale: true,
+            };
+          }
+          if (typeof fallbackFetcher === 'function') {
+            const fallbackData = await fallbackFetcher(errInfo);
+            return {
+              fallbackData,
+              isFallback: true,
+            };
+          }
+          throw errInfo.error || new Error(`Provider '${providerId}' unavailable`);
+        },
+      );
+
+      const latencyMs = Date.now() - startTime;
+
+      if (cbResult.usedFallback) {
+        const isStale = Boolean(cbResult.result?.isStale);
+        const data = isStale ? cbResult.result.staleData : cbResult.result.fallbackData;
+        health.recordExecution(providerId, {
+          success: true,
+          fallbackActive: !isStale,
+          degraded: true,
+          latencyMs,
+          circuitState: breaker.getState(),
+          rateLimitRemaining: limiter.getStatus().remaining,
+        });
+        const receipt = createProviderReceipt({
+          provider: providerId,
+          dataset: params.dataset || providerId,
+          cacheState: isStale ? 'stale' : 'miss',
+          live: false,
+          stale: isStale,
+          fallback: !isStale,
+          attribution: params.attribution || '',
+        });
+        return { data, receipt };
+      }
+
+      health.recordExecution(providerId, {
+        success: true,
+        cacheHit: false,
+        latencyMs,
+        circuitState: breaker.getState(),
+        rateLimitRemaining: limiter.getStatus().remaining,
+      });
+
+      const receipt = createProviderReceipt({
+        provider: providerId,
+        dataset: params.dataset || providerId,
+        cacheState: 'miss',
+        live: true,
+        stale: false,
+        attribution: params.attribution || '',
+      });
+
+      return { data: cbResult.result, receipt };
+    } catch (err) {
+      const latencyMs = Date.now() - startTime;
+      health.recordExecution(providerId, {
+        error: true,
+        latencyMs,
+        circuitState: breaker.getState(),
+      });
+      const redactedMsg = redactor.redactString(err.message || String(err));
+      throw new Error(`Provider Execution Error [${providerId}]: ${redactedMsg}`);
+    }
+  }
 
   function getProvidersByCapability(capability) {
     const all = health.getAllStatuses();
@@ -124,49 +269,54 @@ export function createProviderRegistry(options = {}) {
   }
 
   function getSafePublicRuntimeMetadata() {
+    const healthStatuses = health.getAllStatuses();
     return Object.freeze({
       spatial: {
         provider: 'native-webgl',
-        status: PROVIDER_STATUS.READY,
+        status: healthStatuses.spatial?.status || PROVIDER_STATUS.READY,
       },
       geo: {
         provider: config.geo.provider,
-        status: health.getProviderStatus('geo')?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses.geo?.status || PROVIDER_STATUS.READY,
       },
       terrain: {
         provider: config.terrain.provider,
-        status: health.getProviderStatus('terrain')?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses.terrain?.status || PROVIDER_STATUS.READY,
       },
       weather: {
         provider: config.weather.provider,
-        status: health.getProviderStatus('weather')?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses.weather?.status || PROVIDER_STATUS.READY,
       },
       airQuality: {
         provider: config.airQuality.provider,
-        status: health.getProviderStatus('air-quality')?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses.airQuality?.status || PROVIDER_STATUS.READY,
       },
       seismic: {
         provider: config.seismic.provider,
-        status: health.getProviderStatus('seismic')?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses.seismic?.status || PROVIDER_STATUS.READY,
       },
       quantum: {
         provider: config.quantum.provider,
-        status: health.getProviderStatus('quantum')?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses.quantum?.status || PROVIDER_STATUS.READY,
         hardwareEnabled: ibmConfigured,
       },
       ai: {
         provider: config.ai.provider,
-        status: health.getProviderStatus('ai')?.status || PROVIDER_STATUS.FALLBACK,
+        status: healthStatuses.ai?.status || PROVIDER_STATUS.FALLBACK,
       },
       energy: {
         provider: 'local-microgrid-simulator',
-        status: PROVIDER_STATUS.READY,
+        status: healthStatuses.energy?.status || PROVIDER_STATUS.READY,
+      },
+      hazards: {
+        provider: 'nws-alerts',
+        status: healthStatuses.hazards?.status || PROVIDER_STATUS.READY,
       },
       transit: {
-        status: health.getProviderStatus('transit')?.status || PROVIDER_STATUS.UNCONFIGURED,
+        status: healthStatuses.transit?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
       hydrology: {
-        status: health.getProviderStatus('hydrology')?.status || PROVIDER_STATUS.UNCONFIGURED,
+        status: healthStatuses.hydrology?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
     });
   }
@@ -179,6 +329,7 @@ export function createProviderRegistry(options = {}) {
     cache,
     getBreaker,
     getRateLimiter,
+    executeProviderRequest,
     getProvidersByCapability,
     getSafePublicRuntimeMetadata,
   };

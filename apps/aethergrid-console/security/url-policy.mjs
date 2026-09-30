@@ -23,6 +23,11 @@ export function createUrlPolicy(allowedUrlsOrPrefixes = []) {
     'https://earthquake.usgs.gov',
     'https://quantum.cloud.ibm.com',
     'https://iam.cloud.ibm.com',
+    'https://api.tomorrow.io',
+    'https://api.weather.gov',
+    'https://api.eia.gov',
+    'https://api.water.noaa.gov',
+    'https://cloud.dwavesys.com',
   ];
 
   for (const d of defaults) {

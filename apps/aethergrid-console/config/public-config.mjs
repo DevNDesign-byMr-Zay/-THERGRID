@@ -6,9 +6,17 @@ export function createPublicConfig(rawConfigOrEnv = process.env) {
       ? rawConfigOrEnv
       : createProviderConfig(rawConfigOrEnv);
 
+  const cesiumToken = config.futureProviders?.cesium?.token || '';
+  const spatialProvider = cesiumToken ? 'cesium' : 'native-webgl';
+
   return Object.freeze({
     app: Object.freeze({
       port: config.app.port,
+    }),
+    spatial: Object.freeze({
+      provider: spatialProvider,
+      cesiumIonToken: cesiumToken,
+      realityEnabled: Boolean(cesiumToken),
     }),
     ai: Object.freeze({
       provider: config.ai.provider,
