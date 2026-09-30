@@ -580,9 +580,9 @@ button {
 }
 
 .layer-list label {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   padding: 8px 9px;
   border: 1px solid rgba(255,255,255,0.04);
@@ -595,6 +595,21 @@ button {
 
 .layer-list input {
   accent-color: var(--cyan);
+}
+
+.layer-list label > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layer-list label > em {
+  min-width: 22px;
+  text-align: right;
+  color: #566d81;
+  font-size: 7px;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
 }
 
 .world-stage {
