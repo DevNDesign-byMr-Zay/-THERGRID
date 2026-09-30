@@ -434,6 +434,13 @@ async function main() {
       /data-action="city-live-now"/u.test(exactAethergridHtml) &&
       /data-global-layer="infrastructure"/u.test(exactAethergridHtml) &&
       /data-global-layer="terrain"/u.test(exactAethergridHtml) &&
+      /data-global-layer="weather"/u.test(exactAethergridHtml) &&
+      /data-global-layer="air"/u.test(exactAethergridHtml) &&
+      /data-global-layer="seismic"/u.test(exactAethergridHtml) &&
+      /id="globalLiveStatus"/u.test(exactAethergridHtml) &&
+      /value="weather-readiness"/u.test(exactAethergridHtml) &&
+      /value="air-quality-exposure"/u.test(exactAethergridHtml) &&
+      /value="seismic-awareness"/u.test(exactAethergridHtml) &&
       /id="globalGridStats"/u.test(exactAethergridHtml) &&
       /id="cityTransitionOverlay"/u.test(exactAethergridHtml) &&
       /data-city-visual="solid"/u.test(exactAethergridHtml) &&
@@ -485,6 +492,13 @@ async function main() {
       /buildingFaces/u.test(exactAethergridJs) &&
       /roofFaces/u.test(exactAethergridJs) &&
       /roofLines/u.test(exactAethergridJs) &&
+      /weatherLines/u.test(exactAethergridJs) &&
+      /precipitationLines/u.test(exactAethergridJs) &&
+      /airParticles/u.test(exactAethergridJs) &&
+      /seismicLines/u.test(exactAethergridJs) &&
+      /setLiveActivity/u.test(exactAethergridJs) &&
+      /updateUtcSweep/u.test(exactAethergridJs) &&
+      /setOperationProfile/u.test(exactAethergridJs) &&
       /environmentHour/u.test(exactAethergridJs) &&
       /resolvedTheme/u.test(exactAethergridJs) &&
       /cityCameraTarget/u.test(exactAethergridJs) &&
@@ -506,7 +520,9 @@ async function main() {
       /\.city-transition-overlay/u.test(exactAethergridStyles) &&
       /\.city-operation-result/u.test(exactAethergridStyles) &&
       /\.thread-pill/u.test(exactAethergridStyles) &&
-      /html\[data-theme="light"\]/u.test(exactAethergridStyles),
+      /html\[data-theme="light"\]/u.test(exactAethergridStyles) &&
+      /\.operation-live-badge/u.test(exactAethergridStyles) &&
+      /live-layer-pulse/u.test(exactAethergridStyles),
     'ÆTHERGRID styles must target real runtime elements',
   );
   assert(
@@ -562,6 +578,18 @@ async function main() {
       exactAethergridApp.capabilities?.skylineDataQualityReadout === true &&
       exactAethergridApp.capabilities?.lightDarkSystemAppearance === true &&
       exactAethergridApp.capabilities?.citySpecificCameraFraming === true &&
+      exactAethergridApp.capabilities?.liveGlobalSeismicFeed === true &&
+      exactAethergridApp.capabilities?.liveCityAirQuality === true &&
+      exactAethergridApp.capabilities?.weatherVectorAnimation === true &&
+      exactAethergridApp.capabilities?.precipitationAnimation === true &&
+      exactAethergridApp.capabilities?.airQualityParticleAnimation === true &&
+      exactAethergridApp.capabilities?.seismicPulseAnimation === true &&
+      exactAethergridApp.capabilities?.globalAirQualityCityPulses === true &&
+      exactAethergridApp.capabilities?.globalUtcSweep === true &&
+      exactAethergridApp.capabilities?.sourceDrivenCityUseCaseAnimation === true &&
+      exactAethergridApp.capabilities?.weatherReadinessUseCase === true &&
+      exactAethergridApp.capabilities?.airQualityExposureUseCase === true &&
+      exactAethergridApp.capabilities?.seismicAwarenessUseCase === true &&
       exactAethergridApp.aiRuntime?.replaceableByConfiguration === true &&
       Array.isArray(exactAethergridApp.aiRuntime?.externalContext) &&
       exactAethergridApp.aiRuntime.externalContext.includes('geospatial-summary') &&
@@ -582,6 +610,12 @@ async function main() {
       exactAethergridApp.geospatialRuntime?.layers?.includes('terrain') &&
       exactAethergridApp.environmentRuntime?.module === 'city-environment-runtime.mjs' &&
       exactAethergridApp.environmentRuntime?.browserSecrets === false &&
+      exactAethergridApp.liveContextRuntime?.module === 'city-live-runtime.mjs' &&
+      exactAethergridApp.liveContextRuntime?.browserSecrets === false &&
+      exactAethergridApp.liveContextRuntime?.seismicFeed === 'M2.5+ past day GeoJSON' &&
+      exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('weather') &&
+      exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('air') &&
+      exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('seismic') &&
       Array.isArray(exactAethergridApp.settingsRuntime?.appearanceModes) &&
       exactAethergridApp.settingsRuntime.appearanceModes.includes('light') &&
       exactAethergridApp.settingsRuntime.appearanceModes.includes('dark') &&
@@ -609,6 +643,9 @@ async function main() {
     '/api/aethergrid/city-operations/analyze',
     '/api/aethergrid/environment',
     '/api/aethergrid/environment/runtime',
+    '/api/aethergrid/global-live',
+    '/api/aethergrid/city-live',
+    '/api/aethergrid/city-live/runtime',
     '/api/aethergrid/terrain',
     '/api/aethergrid/terrain/runtime',
     '/api/aethergrid/quantum/runtime',
@@ -649,6 +686,9 @@ async function main() {
   const aethergridGeoRuntime = await text('apps/aethergrid-console/geo-runtime.mjs');
   const aethergridEnvironmentRuntime = await text(
     'apps/aethergrid-console/city-environment-runtime.mjs',
+  );
+  const aethergridLiveRuntime = await text(
+    'apps/aethergrid-console/city-live-runtime.mjs',
   );
   const aethergridTerrainRuntime = await text('apps/aethergrid-console/terrain-runtime.mjs');
   const aethergridQuantumRuntime = await text('apps/aethergrid-console/quantum-runtime.mjs');
@@ -707,6 +747,22 @@ async function main() {
     'ÆTHERGRID city environment runtime must keep current open weather context with explicit fallback',
   );
   assert(
+    /air-quality-api\.open-meteo\.com\/v1\/air-quality/u.test(aethergridLiveRuntime) &&
+      /earthquake\.usgs\.gov\/earthquakes\/feed\/v1\.0\/summary\/2\.5_day\.geojson/u.test(
+        aethergridLiveRuntime,
+      ) &&
+      /us_aqi/u.test(aethergridLiveRuntime) &&
+      /pm2_5/u.test(aethergridLiveRuntime) &&
+      /haversineKm/u.test(aethergridLiveRuntime) &&
+      /localOffsetMeters/u.test(aethergridLiveRuntime) &&
+      /citySnapshot/u.test(aethergridLiveRuntime) &&
+      /globalSnapshot/u.test(aethergridLiveRuntime) &&
+      /local-air-quality-fallback/u.test(aethergridLiveRuntime) &&
+      /local-seismic-fallback/u.test(aethergridLiveRuntime) &&
+      /credentialsExposed: false/u.test(aethergridLiveRuntime),
+    'ÆTHERGRID live city runtime must keep attributed air-quality and USGS seismic adapters with explicit fallback',
+  );
+  assert(
     /api\.open-meteo\.com\/v1\/elevation/u.test(aethergridTerrainRuntime) &&
       /Copernicus DEM GLO-90/u.test(aethergridTerrainRuntime) &&
       /maxPointsPerRequest: provider === 'open-meteo' \? 100/u.test(aethergridTerrainRuntime) &&
@@ -744,6 +800,10 @@ async function main() {
       /agent-config\.mjs/u.test(exactAethergridPackager) &&
       /ai-runtime\.mjs/u.test(exactAethergridPackager) &&
       /city-environment-runtime\.mjs/u.test(exactAethergridPackager) &&
+      /city-live-runtime\.mjs/u.test(exactAethergridPackager) &&
+      /data-global-layer="weather"/u.test(exactAethergridPackager) &&
+      /data-global-layer="air"/u.test(exactAethergridPackager) &&
+      /data-global-layer="seismic"/u.test(exactAethergridPackager) &&
       /id="settingTheme"/u.test(exactAethergridPackager) &&
       /city-live-now/u.test(exactAethergridPackager),
     'ÆTHERGRID packager must generate standalone WebGL HTML and complete backend/launcher runtime without the reference screenshot',
@@ -764,6 +824,10 @@ async function main() {
       /AETHERGRID_OVERPASS_URL=/u.test(aethergridAppEnv) &&
       /AETHERGRID_ENVIRONMENT_PROVIDER=open-meteo/u.test(aethergridAppEnv) &&
       /AETHERGRID_OPEN_METEO_URL=/u.test(aethergridAppEnv) &&
+      /AETHERGRID_AIR_QUALITY_PROVIDER=open-meteo/u.test(aethergridAppEnv) &&
+      /AETHERGRID_AIR_QUALITY_URL=/u.test(aethergridAppEnv) &&
+      /AETHERGRID_SEISMIC_PROVIDER=usgs/u.test(aethergridAppEnv) &&
+      /AETHERGRID_USGS_EARTHQUAKE_URL=/u.test(aethergridAppEnv) &&
       /AETHERGRID_TERRAIN_PROVIDER=open-meteo/u.test(aethergridAppEnv) &&
       /AETHERGRID_ELEVATION_URL=/u.test(aethergridAppEnv) &&
       /AETHERGRID_QUANTUM_PROVIDER=local-simulator/u.test(aethergridAppEnv) &&
