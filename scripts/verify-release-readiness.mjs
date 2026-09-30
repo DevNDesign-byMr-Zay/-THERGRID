@@ -679,7 +679,8 @@ async function main() {
       exactAethergridApp.geospatialRuntime?.layers?.includes('waterways') &&
       exactAethergridApp.geospatialRuntime?.layers?.includes('coastline') &&
       exactAethergridApp.geospatialRuntime?.layers?.includes('green-areas') &&
-      exactAethergridApp.geospatialRuntime?.geographicIdentity?.fallbackInventsWaterOrGreen === false &&
+      exactAethergridApp.geospatialRuntime?.geographicIdentity?.fallbackInventsWaterOrGreen ===
+        false &&
       exactAethergridApp.geospatialRuntime?.cityOperations?.includes('flood-context') &&
       exactAethergridApp.geospatialRuntime?.cityOperations?.includes('green-infrastructure') &&
       exactAethergridApp.environmentRuntime?.module === 'city-environment-runtime.mjs' &&
