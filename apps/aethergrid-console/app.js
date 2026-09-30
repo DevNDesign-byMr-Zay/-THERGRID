@@ -3028,9 +3028,14 @@
     if (q('#geoSourceStatus')) {
       const airMode = result.liveContext?.airQuality?.source?.live ? 'AIR LIVE' : 'AIR FALLBACK';
       const seismicMode = result.liveContext?.seismic?.source?.live ? 'SEISMIC LIVE' : 'SEISMIC FALLBACK';
+      const waterCount =
+        (result.waterAreas || []).length +
+        (result.waterways || []).length +
+        (result.coastlines || []).length;
+      const greenCount = (result.greenAreas || []).length;
       q('#geoSourceStatus').textContent = result.source?.live
-        ? `LIVE OSM · ${airMode} · ${seismicMode}`
-        : `LOCAL GEOMETRY · ${airMode} · ${seismicMode}`;
+        ? `LIVE OSM · WATER ${waterCount} · GREEN ${greenCount} · ${airMode} · ${seismicMode}`
+        : `LOCAL GEOMETRY · WATER/GREEN NOT INVENTED · ${airMode} · ${seismicMode}`;
     }
     if (q('#geoAttribution')) {
       const attributions = [
@@ -3044,7 +3049,7 @@
         attributions.join(' · ') ||
         'Live city geometry unavailable; using local fallback geometry.';
       q('#geoAttribution').textContent =
-        `${sourceText} · City-light points are procedural visualization from mapped geometry + daylight state, not measured window occupancy. Snow/fog/rain/storm effects visualize current model context; storm pulses are not detected lightning strikes.`;
+        `${sourceText} · Water/green geography and material tint appear only when mapped source tags are present. City-light points are procedural visualization from mapped geometry + daylight state, not measured window occupancy. Snow/fog/rain/storm effects visualize current model context; storm pulses are not detected lightning strikes.`;
     }
     if (status) {
       const skyline = result.skylineProfile || {};
@@ -3065,7 +3070,7 @@
       const weatherAt = result.environment?.source?.modelTime || result.environment?.current?.time || 'unavailable';
       const airAt = result.liveContext?.airQuality?.source?.modelTime || 'unavailable';
       const quakeAt = result.liveContext?.seismic?.source?.generatedAt || result.liveContext?.seismic?.source?.fetchedAt || 'unavailable';
-      q('#geoProvenance').innerHTML = `<span><b>Geometry</b><em>${escapeHtml(result.source?.provider || 'local')}</em></span><span><b>OSM State</b><em>${escapeHtml(upstream)}</em></span><span><b>Weather</b><em>${escapeHtml(result.environment?.source?.provider || 'local')} · ${escapeHtml(weatherAt)}</em></span><span><b>Air</b><em>${escapeHtml(result.liveContext?.airQuality?.source?.provider || 'local')} · ${escapeHtml(airAt)}</em></span><span><b>Seismic</b><em>${escapeHtml(result.liveContext?.seismic?.source?.provider || 'local')} · ${escapeHtml(quakeAt)}</em></span><span><b>Height Coverage</b><em>${Number(result.skylineProfile?.sourceBackedHeightCoveragePercent || 0).toFixed(0)}%</em></span><span><b>Actuation</b><em>Disabled</em></span>`;
+      q('#geoProvenance').innerHTML = `<span><b>Geometry</b><em>${escapeHtml(result.source?.provider || 'local')}</em></span><span><b>OSM State</b><em>${escapeHtml(upstream)}</em></span><span><b>Water / Green</b><em>${(result.waterAreas || []).length + (result.waterways || []).length + (result.coastlines || []).length} / ${(result.greenAreas || []).length}</em></span><span><b>Weather</b><em>${escapeHtml(result.environment?.source?.provider || 'local')} · ${escapeHtml(weatherAt)}</em></span><span><b>Air</b><em>${escapeHtml(result.liveContext?.airQuality?.source?.provider || 'local')} · ${escapeHtml(airAt)}</em></span><span><b>Seismic</b><em>${escapeHtml(result.liveContext?.seismic?.source?.provider || 'local')} · ${escapeHtml(quakeAt)}</em></span><span><b>Height Coverage</b><em>${Number(result.skylineProfile?.sourceBackedHeightCoveragePercent || 0).toFixed(0)}%</em></span><span><b>Actuation</b><em>Disabled</em></span>`;
     }
     renderActivity();
     showToast(
