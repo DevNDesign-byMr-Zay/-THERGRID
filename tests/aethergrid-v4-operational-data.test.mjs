@@ -27,9 +27,7 @@ test('v4 operational temporal capability registry refuses to replay current-only
 });
 
 test('v4 operational client uses provider receipts and withholds fallback metrics', async () => {
-  const client = await text(
-    'apps/aethergrid-console/web/src/services/operational-data-client.ts',
-  );
+  const client = await text('apps/aethergrid-console/web/src/services/operational-data-client.ts');
 
   assert.match(client, /receiptFrom/u);
   assert.match(client, /state === 'live' \|\| state === 'stale' \? metrics : \[\]/u);
