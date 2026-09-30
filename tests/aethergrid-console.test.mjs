@@ -42,6 +42,9 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(html, /data-scenario="custom"/u);
     assert.match(html, /id="customLoad"/u);
     assert.match(html, /data-action="apply-custom-scenario"/u);
+    assert.match(html, /data-action="duplicate-scenario"/u);
+    assert.match(html, /id="auditTimeline"/u);
+    assert.match(html, /id="holoCompareEnabled"/u);
     assert.match(html, /href="\.\/styles\.css"/u);
     assert.match(html, /src="\.\/app\.js"/u);
     assert.doesNotMatch(html, /dashboard-reference/iu);
@@ -60,6 +63,10 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(appSource, /pickNode\(clientX, clientY\)/u);
     assert.match(appSource, /projectNode\(node\)/u);
     assert.match(appSource, /activateScenario\(name, parameters/u);
+    assert.match(appSource, /scenarioTemplateParameters/u);
+    assert.match(appSource, /function renderActivity/u);
+    assert.match(appSource, /setCompare\(enabled, hours/u);
+    assert.match(appSource, /function renderSavedViews/u);
     assert.match(appSource, /data-workspace/u);
 
     const logo = await fetch(`${baseUrl}/assets/brand/aethergrid-logo.webp`);
