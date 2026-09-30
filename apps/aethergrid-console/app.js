@@ -1425,6 +1425,28 @@
       });
       reply = result.reply || result.synthesis || reply;
       if (result.runtime) state.runtime = result.runtime;
+      if (result.evidence) {
+        state.evidence.unshift(result.evidence);
+        state.evidence = state.evidence.slice(0, 24);
+        renderEvidence();
+      }
+      const contributionMarkup = Array.isArray(result.contributions)
+        ? `<details class="agent-contributions"><summary>View ${result.contributions.length} specialist contributions</summary>${result.contributions
+            .map(
+              (item) =>
+                `<article><b>${escapeHtml(item.agent)}</b><small>${escapeHtml(item.runtime?.provider || 'local')} · ${escapeHtml(item.runtime?.model || 'fallback')}</small><p>${escapeHtml(item.reply)}</p></article>`,
+            )
+            .join('')}</details>`
+        : '';
+      const runtimeMarkup = result.runtime
+        ? `<div class="agent-runtime-line">${escapeHtml(result.runtime.provider || 'local')} · ${escapeHtml(result.runtime.model || 'fallback')}${result.runtime.fallbackUsed ? ' · fallback' : ''}</div>`
+        : '';
+      const pending = q(`#${pendingId}`);
+      pending.innerHTML = `<div>${escapeHtml(reply)}</div>${runtimeMarkup}${contributionMarkup}`;
+      if (result.runtime?.agent && result.runtime.agent !== 'TEAM') {
+        const badge = q(`[data-agent-runtime="${CSS.escape(result.runtime.agent)}"]`);
+        if (badge) badge.textContent = result.runtime.model || result.runtime.provider || 'READY';
+      }
     } catch {
       try {
         const result = await api('./api/aethergrid/chat', {
@@ -1433,8 +1455,8 @@
         });
         reply = result.reply || reply;
       } catch {}
+      q(`#${pendingId}`).textContent = reply;
     }
-    q(`#${pendingId}`).textContent = reply;
     log.scrollTop = log.scrollHeight;
   });
 
