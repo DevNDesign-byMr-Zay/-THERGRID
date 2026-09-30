@@ -178,6 +178,9 @@ assert(/id="globalPointLat"/u.test(sourceHtml), 'runtime index.html must expose 
 assert(/id="globalPointLon"/u.test(sourceHtml), 'runtime index.html must expose arbitrary longitude controls');
 assert(/data-global-layer="infrastructure"/u.test(sourceHtml), 'runtime index.html must expose the live power-grid layer toggle');
 assert(/data-global-layer="terrain"/u.test(sourceHtml), 'runtime index.html must expose the live terrain layer toggle');
+assert(/data-global-layer="water"/u.test(sourceHtml), 'runtime index.html must expose mapped water');
+assert(/data-global-layer="green"/u.test(sourceHtml), 'runtime index.html must expose mapped green space');
+assert(/data-global-layer="landmarks"/u.test(sourceHtml), 'runtime index.html must expose source-bound landmarks');
 assert(/id="globalTimeSlider"/u.test(sourceHtml), 'runtime index.html must expose the global 4D time index');
 assert(/data-action="city-live-now"/u.test(sourceHtml), 'runtime index.html must expose city live-time synchronization');
 assert(/data-global-layer="weather"/u.test(sourceHtml), 'runtime index.html must expose the live weather layer');
@@ -192,6 +195,8 @@ assert(/value="air-quality-exposure"/u.test(sourceHtml), 'runtime index.html mus
 assert(/value="seismic-awareness"/u.test(sourceHtml), 'runtime index.html must expose seismic awareness analysis');
 assert(/value="heat-stress"/u.test(sourceHtml), 'runtime index.html must expose heat-stress analysis');
 assert(/value="visibility-operations"/u.test(sourceHtml), 'runtime index.html must expose visibility analysis');
+assert(/value="flood-context"/u.test(sourceHtml), 'runtime index.html must expose flood-context analysis');
+assert(/value="green-infrastructure"/u.test(sourceHtml), 'runtime index.html must expose green-infrastructure analysis');
 assert(/id="globalSolarStatus"/u.test(sourceHtml), 'runtime index.html must expose solar-position status');
 assert(/id="settingTheme"/u.test(sourceHtml), 'runtime index.html must expose persistent appearance modes');
 assert(/id="profileForm"/u.test(sourceHtml), 'runtime index.html must expose the persistent operator profile form');
@@ -230,6 +235,14 @@ assert(/async function loadCoordinateCity/u.test(standaloneHtml), 'standalone HT
 assert(/loadTerrainFor/u.test(standaloneHtml), 'standalone HTML must retain live terrain request wiring');
 assert(/infrastructureLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL power-grid geometry');
 assert(/terrainLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL terrain geometry');
+assert(/waterLines/u.test(standaloneHtml), 'standalone HTML must retain mapped water geometry');
+assert(/waterFaces/u.test(standaloneHtml), 'standalone HTML must retain mapped water surfaces');
+assert(/greenLines/u.test(standaloneHtml), 'standalone HTML must retain mapped green geometry');
+assert(/greenFaces/u.test(standaloneHtml), 'standalone HTML must retain mapped green surfaces');
+assert(/landmarkLines/u.test(standaloneHtml), 'standalone HTML must retain source-bound landmark emphasis');
+assert(/materialGlassFaces/u.test(standaloneHtml), 'standalone HTML must retain source-tagged building material geometry');
+assert(/value="flood-context"/u.test(standaloneHtml), 'standalone HTML must retain flood-context operation');
+assert(/value="green-infrastructure"/u.test(standaloneHtml), 'standalone HTML must retain green-infrastructure operation');
 assert(/data-global-layer="terrain"/u.test(standaloneHtml), 'standalone HTML must retain terrain layer controls');
 assert(/terrainLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL terrain geometry');
 assert(/roofFaces/u.test(standaloneHtml), 'standalone HTML must retain source-shaped roof geometry');
@@ -307,7 +320,16 @@ payload.set(
           'semantic-weather-rendering',
           'modeled-snow-animation',
           'modeled-fog-animation',
-          'modeled-thunderstorm-animation'
+          'modeled-thunderstorm-animation',
+          'source-backed-water-areas',
+          'source-backed-waterways',
+          'source-backed-coastline',
+          'source-backed-green-areas',
+          'source-tagged-building-materials',
+          'source-bound-landmark-emphasis',
+          'flood-context-operation',
+          'green-infrastructure-operation',
+          'no-invented-environmental-geometry'
         ],
         files: inventory,
       },
