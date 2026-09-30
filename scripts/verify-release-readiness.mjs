@@ -425,6 +425,8 @@ async function main() {
       /data-workspace="settings"/u.test(exactAethergridHtml) &&
       /id="settingDefaultWorkspace"/u.test(exactAethergridHtml) &&
       /data-agent="TEAM"/u.test(exactAethergridHtml) &&
+      /data-scenario="custom"/u.test(exactAethergridHtml) &&
+      /id="customLoad"/u.test(exactAethergridHtml) &&
       /id="quantumCanvas"/u.test(exactAethergridHtml) &&
       /id="scenarioChart"/u.test(exactAethergridHtml),
     'ÆTHERGRID runtime HTML must expose real semantic controls and canvas surfaces',
@@ -444,7 +446,9 @@ async function main() {
       /wheel/u.test(exactAethergridJs) &&
       /loadGraph\(graph\)/u.test(exactAethergridJs) &&
       /function switchWorkspace/u.test(exactAethergridJs) &&
-      /localStorage\.setItem\(SETTINGS_KEY/u.test(exactAethergridJs),
+      /localStorage\.setItem\(SETTINGS_KEY/u.test(exactAethergridJs) &&
+      /pickNode\(clientX, clientY\)/u.test(exactAethergridJs) &&
+      /activateScenario\(name, parameters/u.test(exactAethergridJs),
     'ÆTHERGRID must keep native WebGL 4D geometry, interaction controls, and backend graph loading',
   );
   assert(
@@ -463,6 +467,9 @@ async function main() {
       exactAethergridApp.capabilities?.persistentOperatorSettings === true &&
       exactAethergridApp.capabilities?.individualAgentRuntime === true &&
       exactAethergridApp.capabilities?.teamAgentRuntime === true &&
+      exactAethergridApp.capabilities?.directWebGlNodePicking === true &&
+      exactAethergridApp.capabilities?.customScenarioBuilder === true &&
+      exactAethergridApp.capabilities?.weightedOptimizationControls === true &&
       exactAethergridApp.aiRuntime?.replaceableByConfiguration === true &&
       exactAethergridUi.workspaceRouting?.mode === 'exclusive-view' &&
       exactAethergridUi.spatialModel?.renderEngine === 'native-webgl' &&
