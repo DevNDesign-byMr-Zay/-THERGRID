@@ -8,6 +8,7 @@
   "surfaces": [
     "OVERVIEW",
     "GRID",
+    "GLOBAL",
     "HOLOGRAPHIC",
     "QUANTUM",
     "AI",
@@ -17,6 +18,7 @@
   ],
   "primaryTabs": [
     "GRID",
+    "GLOBAL",
     "HOLOGRAPHIC",
     "QUANTUM",
     "AI",
@@ -64,7 +66,17 @@
     "saved-camera-views",
     "scenario-duplication",
     "audit-timeline",
-    "classical-experimental-comparison"
+    "classical-experimental-comparison",
+    "global-webgl-globe",
+    "real-coordinate-world-nodes",
+    "live-osm-building-geometry",
+    "3d-city-wireframe-extrusion",
+    "persistent-operator-profile",
+    "profile-avatar",
+    "quantum-backend-discovery",
+    "quantum-sampler-job-submission",
+    "ibm-quantum-provider",
+    "local-quantum-simulator"
   ],
   "agents": [
     {
@@ -138,6 +150,7 @@
     "mode": "exclusive-view",
     "workspaces": [
       "grid",
+      "global",
       "holographic",
       "quantum",
       "ai",
@@ -238,6 +251,34 @@
       "bounded-experimental"
     ],
     "runHistory": true,
-    "receipts": true
+    "receipts": true,
+    "computeRuntime": {
+      "providers": [
+        "local-simulator",
+        "ibm-quantum"
+      ],
+      "backendDiscovery": true,
+      "openQasm3Editor": true,
+      "samplerSubmission": true,
+      "jobList": true,
+      "serverSideCredentials": true,
+      "ibmApiVersion": "2026-04-15"
+    }
+  },
+  "globalWorkspace": {
+    "renderEngine": "native-webgl",
+    "globe": "latitude-longitude wireframe sphere",
+    "cityNodes": "real geographic coordinates",
+    "cityDescent": true,
+    "liveProvider": "OpenStreetMap Overpass",
+    "liveBuildingGeometry": true,
+    "providerFallback": "local procedural city geometry",
+    "attribution": "© OpenStreetMap contributors"
+  },
+  "profile": {
+    "persistence": "backend local JSON with browser cache fallback",
+    "editable": true,
+    "avatar": true,
+    "avatarMaxEncodedBytes": 180000
   }
 }
