@@ -1386,6 +1386,10 @@
       this.selectedCity = null;
       this.currentMvp = null;
       this.selectedBuffer = null;
+      this.liveSnapshot = null;
+      this.liveBuffers = {};
+      this.utcSweepBuffer = null;
+      this.utcSweepMinute = -1;
       if (!this.gl) return;
       this.initProgram();
       this.buildGlobe();
@@ -1466,24 +1470,43 @@
 
     buildGlobe() {
       const lines = [];
+      const halo = [];
       for (let lat = -75; lat <= 75; lat += 15) {
         let previous = this.spherePoint(lat, -180);
+        let haloPrevious = this.spherePoint(lat, -180, 4.12);
         for (let lon = -175; lon <= 180; lon += 5) {
           const current = this.spherePoint(lat, lon);
+          const haloCurrent = this.spherePoint(lat, lon, 4.12);
           this.pushLine(lines, previous, current);
+          if (lat % 30 === 0) this.pushLine(halo, haloPrevious, haloCurrent);
           previous = current;
+          haloPrevious = haloCurrent;
         }
       }
       for (let lon = -180; lon < 180; lon += 15) {
         let previous = this.spherePoint(-90, lon);
+        let haloPrevious = this.spherePoint(-90, lon, 4.12);
         for (let lat = -85; lat <= 90; lat += 5) {
           const current = this.spherePoint(lat, lon);
+          const haloCurrent = this.spherePoint(lat, lon, 4.12);
           this.pushLine(lines, previous, current);
+          if (lon % 30 === 0) this.pushLine(halo, haloPrevious, haloCurrent);
           previous = current;
+          haloPrevious = haloCurrent;
         }
       }
       this.gridBuffer = this.makeBuffer(lines);
+      this.haloBuffer = this.makeBuffer(halo);
       this.cityBuffer = this.makeBuffer([]);
+      this.liveBuffers = {
+        airGood: this.makeBuffer([]),
+        airModerate: this.makeBuffer([]),
+        airElevated: this.makeBuffer([]),
+        quakeLow: this.makeBuffer([]),
+        quakeMedium: this.makeBuffer([]),
+        quakeHigh: this.makeBuffer([]),
+      };
+      this.updateUtcSweep(true);
     }
 
     setCities(cities = []) {
@@ -1494,6 +1517,68 @@
       if (this.cityBuffer?.buffer) this.gl.deleteBuffer(this.cityBuffer.buffer);
       this.cityBuffer = this.makeBuffer(this.cities.flatMap((city) => city.position));
     }
+    updateUtcSweep(force = false) {
+      const minute = Math.floor(Date.now() / 60000);
+      if (!force && minute === this.utcSweepMinute) return;
+      this.utcSweepMinute = minute;
+      const utc = new Date();
+      const dayFraction =
+        (utc.getUTCHours() * 3600 + utc.getUTCMinutes() * 60 + utc.getUTCSeconds()) / 86400;
+      const lon = dayFraction * 360 - 180;
+      const sweep = [];
+      let previous = this.spherePoint(-90, lon, 4.14);
+      for (let lat = -87; lat <= 90; lat += 3) {
+        const current = this.spherePoint(lat, lon, 4.14);
+        this.pushLine(sweep, previous, current);
+        previous = current;
+      }
+      if (this.utcSweepBuffer?.buffer) this.gl.deleteBuffer(this.utcSweepBuffer.buffer);
+      this.utcSweepBuffer = this.makeBuffer(sweep);
+    }
+
+    setLiveActivity(snapshot = null) {
+      this.liveSnapshot = snapshot;
+      const liveById = new Map((snapshot?.cities || []).map((city) => [city.id, city]));
+      this.cities = this.cities.map((city) => ({ ...city, live: liveById.get(city.id) || null }));
+
+      const airGood = [];
+      const airModerate = [];
+      const airElevated = [];
+      this.cities.forEach((city) => {
+        const target =
+          city.live?.airQuality?.usAqi == null
+            ? null
+            : Number(city.live.airQuality.usAqi) <= 50
+              ? airGood
+              : Number(city.live.airQuality.usAqi) <= 100
+                ? airModerate
+                : airElevated;
+        if (target) target.push(...city.position);
+      });
+
+      const quakeLow = [];
+      const quakeMedium = [];
+      const quakeHigh = [];
+      (snapshot?.seismic?.events || []).forEach((event) => {
+        const position = this.spherePoint(Number(event.lat), Number(event.lon), 4.13);
+        const magnitude = Number(event.magnitude || 0);
+        const target = magnitude >= 5 ? quakeHigh : magnitude >= 3.5 ? quakeMedium : quakeLow;
+        target.push(...position);
+      });
+
+      for (const item of Object.values(this.liveBuffers || {})) {
+        if (item?.buffer) this.gl.deleteBuffer(item.buffer);
+      }
+      this.liveBuffers = {
+        airGood: this.makeBuffer(airGood),
+        airModerate: this.makeBuffer(airModerate),
+        airElevated: this.makeBuffer(airElevated),
+        quakeLow: this.makeBuffer(quakeLow),
+        quakeMedium: this.makeBuffer(quakeMedium),
+        quakeHigh: this.makeBuffer(quakeHigh),
+      };
+    }
+
 
     resize() {
       if (!this.gl || !this.canvas) return;
@@ -1640,14 +1725,14 @@
       gl.drawArrays(primitive, 0, item.count);
     }
 
-    animate = () => {
+    animate = (now = performance.now()) => {
       if (!this.gl) return;
       const gl = this.gl;
       const rect = this.canvas.getBoundingClientRect();
       const aspect = Math.max(0.1, rect.width / Math.max(1, rect.height));
-      if (!this.drag && !state.settings.reducedMotion) {
-        this.yaw += 0.00018 * Math.max(0.1, state.settings.animationIntensity / 100);
-      }
+      const motion = state.settings.reducedMotion ? 0 : Math.max(0.1, state.settings.animationIntensity / 100);
+      if (!this.drag && motion > 0) this.yaw += 0.00018 * motion;
+      this.updateUtcSweep();
       const eye = [
         Math.sin(this.yaw) * Math.cos(this.pitch) * this.distance,
         Math.sin(this.pitch) * this.distance,
@@ -1661,13 +1746,50 @@
       gl.enable(gl.DEPTH_TEST);
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-      gl.clearColor(0.004, 0.015, 0.04, 1);
+      if (isLightTheme()) gl.clearColor(0.9, 0.94, 0.98, 1);
+      else gl.clearColor(0.004, 0.015, 0.04, 1);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.useProgram(this.program);
       gl.uniformMatrix4fv(this.loc.mvp, false, mvp);
-      this.draw(this.gridBuffer, gl.LINES, [0.08, 0.55, 0.95, 0.52], 0, 1);
-      this.draw(this.cityBuffer, gl.POINTS, [0.18, 1, 0.82, 1], 1, 9);
-      if (this.selectedBuffer) this.draw(this.selectedBuffer, gl.POINTS, [1, 0.7, 0.18, 1], 1, 16);
+
+      const pulse = state.settings.reducedMotion ? 0.5 : 0.5 + 0.5 * Math.sin(now * 0.0022);
+      this.draw(
+        this.haloBuffer,
+        gl.LINES,
+        isLightTheme()
+          ? [0.08, 0.42, 0.62, 0.12 + pulse * 0.08]
+          : [0.15, 0.72, 1, 0.13 + pulse * 0.11],
+        0,
+        1,
+      );
+      this.draw(
+        this.gridBuffer,
+        gl.LINES,
+        isLightTheme() ? [0.06, 0.36, 0.58, 0.48] : [0.08, 0.55, 0.95, 0.52],
+        0,
+        1,
+      );
+      this.draw(
+        this.utcSweepBuffer,
+        gl.LINES,
+        isLightTheme() ? [0.46, 0.31, 0.68, 0.38] : [0.65, 0.48, 1, 0.5],
+        0,
+        1,
+      );
+
+      this.draw(this.cityBuffer, gl.POINTS, [0.18, 1, 0.82, 0.62], 1, 7);
+      this.draw(this.liveBuffers?.airGood, gl.POINTS, [0.22, 0.94, 0.66, 0.95], 1, 9 + pulse * 2);
+      this.draw(this.liveBuffers?.airModerate, gl.POINTS, [1, 0.78, 0.22, 0.95], 1, 10 + pulse * 2);
+      this.draw(this.liveBuffers?.airElevated, gl.POINTS, [1, 0.38, 0.34, 0.95], 1, 11 + pulse * 3);
+
+      const quakePulse = state.settings.reducedMotion ? 0 : 0.5 + 0.5 * Math.sin(now * 0.0065);
+      this.draw(this.liveBuffers?.quakeLow, gl.POINTS, [0.8, 0.45, 1, 0.48], 1, 4 + quakePulse * 2);
+      this.draw(this.liveBuffers?.quakeMedium, gl.POINTS, [1, 0.52, 0.2, 0.72], 1, 6 + quakePulse * 4);
+      this.draw(this.liveBuffers?.quakeHigh, gl.POINTS, [1, 0.24, 0.32, 0.94], 1, 9 + quakePulse * 7);
+
+      if (this.selectedBuffer) {
+        this.draw(this.selectedBuffer, gl.POINTS, [1, 0.7, 0.18, 1], 1, 16 + pulse * 4);
+      }
       requestAnimationFrame(this.animate);
     };
   }
@@ -1889,10 +2011,22 @@
     const list = q('#globalCityList');
     const select = q('#globalCitySelect');
     try {
-      const result = await api('./api/aethergrid/geospatial/cities');
+      const [result, globalLive] = await Promise.all([
+        api('./api/aethergrid/geospatial/cities'),
+        api('./api/aethergrid/global-live').catch(() => null),
+      ]);
       state.geospatial.runtime = result.runtime;
       state.geospatial.cities = Array.isArray(result.cities) ? result.cities : [];
       globalGlobe?.setCities(state.geospatial.cities);
+      state.geospatial.globalLive = globalLive;
+      if (globalLive) globalGlobe?.setLiveActivity(globalLive);
+      if (q('#globalLiveStatus')) {
+        const quakeCount = Number(globalLive?.seismic?.eventCount || 0);
+        const liveAir = (globalLive?.cities || []).filter((city) => city.airQuality?.usAqi != null).length;
+        q('#globalLiveStatus').textContent = globalLive
+          ? `${liveAir}/${state.geospatial.cities.length} CITY AQ · ${quakeCount} M2.5+ EVENTS / 24H`
+          : 'LIVE CONTEXT UNAVAILABLE';
+      }
       if (select) {
         select.innerHTML = state.geospatial.cities
           .map(
@@ -2078,6 +2212,12 @@
         source: { provider: 'local-environment-fallback', live: false, attribution: null, fetchedAt: new Date().toISOString() },
         current: null,
       },
+      liveContext: {
+        schemaVersion: 1,
+        coordinate: { lat: city.lat, lon: city.lon },
+        airQuality: { source: { provider: 'local-air-quality-fallback', live: false, attribution: null }, current: null },
+        seismic: { source: { provider: 'local-seismic-fallback', live: false, attribution: null }, radiusKm: 1200, events: [], eventCount: 0, maxMagnitude: null, nearestDistanceKm: null },
+      },
       roads,
       powerLines,
       powerAssets,
@@ -2117,7 +2257,11 @@
     const weather = environment
       ? `${Number.isFinite(environment.temperatureC) ? `${Number(environment.temperatureC).toFixed(1)}°C` : 'current'} · ${Number.isFinite(environment.cloudCoverPercent) ? `${Number(environment.cloudCoverPercent).toFixed(0)}% cloud` : environment.isDay ? 'day' : 'night'}`
       : '—';
-    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Skyline Max</b><em>${skylineMax}</em></span><span><b>P95 Height</b><em>${p95}</em></span><span><b>Height Data</b><em>${heightCoverage}</em></span><span><b>Weather</b><em>${weather}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
+    const air = mesh.liveContext?.airQuality?.current || null;
+    const airQuality = air?.usAqi == null ? '—' : `AQI ${Number(air.usAqi).toFixed(0)} · ${titleCase(air.category || 'unknown')}`;
+    const seismic = mesh.liveContext?.seismic || null;
+    const seismicLabel = seismic ? `${Number(seismic.eventCount || 0)} nearby · M${Number(seismic.maxMagnitude || 0).toFixed(1)} max` : '—';
+    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Skyline Max</b><em>${skylineMax}</em></span><span><b>P95 Height</b><em>${p95}</em></span><span><b>Height Data</b><em>${heightCoverage}</em></span><span><b>Weather</b><em>${weather}</em></span><span><b>Air</b><em>${airQuality}</em></span><span><b>Seismic</b><em>${seismicLabel}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
   }
 
   function showCityTransition(city, stage = 'Aligning global coordinate…', progress = 8) {
@@ -2170,6 +2314,8 @@
         result.source?.attribution,
         result.terrain?.source?.attribution,
         result.environment?.source?.attribution,
+        result.liveContext?.airQuality?.source?.attribution,
+        result.liveContext?.seismic?.source?.attribution,
       ].filter(Boolean);
       q('#geoAttribution').textContent =
         attributions.join(' · ') ||
@@ -2187,7 +2333,9 @@
     if (q('#geoProvenance')) {
       const upstream = result.source?.upstreamTimestamp || result.source?.fetchedAt || 'unavailable';
       const weatherAt = result.environment?.source?.modelTime || result.environment?.current?.time || 'unavailable';
-      q('#geoProvenance').innerHTML = `<span><b>Geometry</b><em>${escapeHtml(result.source?.provider || 'local')}</em></span><span><b>OSM State</b><em>${escapeHtml(upstream)}</em></span><span><b>Environment</b><em>${escapeHtml(result.environment?.source?.provider || 'local')}</em></span><span><b>Observed</b><em>${escapeHtml(weatherAt)}</em></span><span><b>Height Coverage</b><em>${Number(result.skylineProfile?.sourceBackedHeightCoveragePercent || 0).toFixed(0)}%</em></span><span><b>Actuation</b><em>Disabled</em></span>`;
+      const airAt = result.liveContext?.airQuality?.source?.modelTime || 'unavailable';
+      const quakeAt = result.liveContext?.seismic?.source?.generatedAt || result.liveContext?.seismic?.source?.fetchedAt || 'unavailable';
+      q('#geoProvenance').innerHTML = `<span><b>Geometry</b><em>${escapeHtml(result.source?.provider || 'local')}</em></span><span><b>OSM State</b><em>${escapeHtml(upstream)}</em></span><span><b>Weather</b><em>${escapeHtml(result.environment?.source?.provider || 'local')} · ${escapeHtml(weatherAt)}</em></span><span><b>Air</b><em>${escapeHtml(result.liveContext?.airQuality?.source?.provider || 'local')} · ${escapeHtml(airAt)}</em></span><span><b>Seismic</b><em>${escapeHtml(result.liveContext?.seismic?.source?.provider || 'local')} · ${escapeHtml(quakeAt)}</em></span><span><b>Height Coverage</b><em>${Number(result.skylineProfile?.sourceBackedHeightCoveragePercent || 0).toFixed(0)}%</em></span><span><b>Actuation</b><em>Disabled</em></span>`;
     }
     renderActivity();
     showToast(
@@ -2367,7 +2515,12 @@
     const container = q('#cityUseCaseResult');
     if (!container || !analysis) return;
     const observations = (analysis.observations || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-    container.innerHTML = `<div class="operation-index"><b>${Number(analysis.planningIndex?.value || 0)}</b><span>${escapeHtml(analysis.planningIndex?.label || 'Planning index')}</span><small>${escapeHtml(analysis.planningIndex?.scale || '0–100')}</small></div><strong>${escapeHtml(analysis.useCase?.label || 'City operation')} · ${escapeHtml(analysis.city?.name || '')}</strong><ul>${observations}</ul><div class="operation-source">${escapeHtml(analysis.dataQuality?.geometryProvider || 'unknown source')} · ${analysis.dataQuality?.liveGeometry ? 'live mapped geometry' : 'local fallback geometry'} · advisory planning proxy</div>`;
+    const liveSources = [
+      analysis.dataQuality?.liveWeather ? 'weather live' : null,
+      analysis.dataQuality?.liveAirQuality ? 'air live' : null,
+      analysis.dataQuality?.liveSeismic ? 'seismic live' : null,
+    ].filter(Boolean).join(' · ');
+    container.innerHTML = `<div class="operation-index"><b>${Number(analysis.planningIndex?.value || 0)}</b><span>${escapeHtml(analysis.planningIndex?.label || 'Planning index')}</span><small>${escapeHtml(analysis.planningIndex?.scale || '0–100')}</small></div><strong>${escapeHtml(analysis.useCase?.label || 'City operation')} · ${escapeHtml(analysis.city?.name || '')}</strong><div class="operation-live-badge">${escapeHtml(titleCase(analysis.visualization?.animationProfile || 'source driven'))} · ${escapeHtml(liveSources || 'bounded source context')}</div><ul>${observations}</ul><div class="operation-source">${escapeHtml(analysis.dataQuality?.geometryProvider || 'unknown source')} · ${analysis.dataQuality?.liveGeometry ? 'live mapped geometry' : 'local fallback geometry'} · advisory planning proxy</div>`;
   }
 
   async function runCityUseCase() {
@@ -2394,7 +2547,8 @@
       }
       cityGrid?.setCityVisualMode('operations');
       qa('[data-city-visual]').forEach((button) => button.classList.toggle('active', button.dataset.cityVisual === 'operations'));
-      applyCityLayerProfile(result.analysis?.useCase?.recommendedLayers || ['buildings', 'routes', 'infrastructure', 'nodes']);
+      applyCityLayerProfile(result.analysis?.visualization?.recommendedLayers || result.analysis?.useCase?.recommendedLayers || ['buildings', 'routes', 'infrastructure', 'nodes']);
+      cityGrid?.setOperationProfile(result.analysis?.visualization?.animationProfile || null);
       renderCityUseCase(result.analysis);
       const teamButton = q('[data-action="ask-city-team"]');
       if (teamButton) teamButton.disabled = false;
@@ -2408,6 +2562,7 @@
   qa('[data-city-visual]').forEach((button) =>
     button.addEventListener('click', () => {
       cityGrid?.setCityVisualMode(button.dataset.cityVisual);
+      cityGrid?.setOperationProfile(null);
       qa('[data-city-visual]').forEach((item) => item.classList.toggle('active', item === button));
       showToast('CITY VISUAL', titleCase(button.dataset.cityVisual));
     }),
