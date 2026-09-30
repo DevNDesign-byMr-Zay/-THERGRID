@@ -202,7 +202,7 @@
         </section>
 
         <section class="workspace-view" data-workspace="scenarios" aria-labelledby="scenarioTitle">
-          <div class="workspace-head"><div><span class="eyebrow">SCENARIOS / SIMULATION</span><h1 id="scenarioTitle">Scenario Lab</h1><p>Switch operating assumptions and compare temporal outcomes without mutating the live twin.</p></div><div class="workspace-actions"><button class="secondary-button" data-action="reset-scenario">RESET</button></div></div>
+          <div class="workspace-head"><div><span class="eyebrow">SCENARIOS / SIMULATION</span><h1 id="scenarioTitle">Scenario Lab</h1><p>Switch operating assumptions and compare temporal outcomes without mutating the live twin.</p></div><div class="workspace-actions"><button class="secondary-button" data-action="duplicate-scenario">DUPLICATE AS CUSTOM</button><button class="secondary-button" data-action="reset-scenario">RESET</button></div></div>
           <div class="scenario-workspace">
             <section class="scenario-selector" id="scenarioCards">
               <button class="scenario-card active" data-scenario="peak-demand"><span>01</span><b>Peak Demand</b><small>High-load 24 hour stress test.</small></button>
@@ -221,6 +221,7 @@
           <section class="panel evidence-workspace">
             <div class="evidence-toolbar"><input id="evidenceSearch" placeholder="Filter evidence…" /><select id="evidenceStatus"><option value="all">All Statuses</option><option value="verified">Verified</option><option value="pending">Pending</option></select></div>
             <div class="evidence-table-wrap"><table class="evidence-table"><thead><tr><th>Record</th><th>Type</th><th>When</th><th>Status</th><th></th></tr></thead><tbody id="evidenceTableBody"></tbody></table></div>
+            <div class="audit-section"><div class="audit-head"><b>OPERATOR ACTIVITY</b><small>Runtime audit events</small></div><div id="auditTimeline" class="audit-timeline"></div></div>
           </section>
         </section>
 
