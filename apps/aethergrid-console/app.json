@@ -12,7 +12,10 @@
   },
   "visualContract": {
     "reference": "assets/dashboard-reference.webp",
-    "referenceViewport": [1536, 1024],
+    "referenceViewport": [
+      1536,
+      1024
+    ],
     "mode": "reference-identical-idle-canvas",
     "interactiveOverlay": true
   },
@@ -34,5 +37,13 @@
     "physicalActuation": false,
     "infrastructureDispatch": false,
     "humanReviewRequired": true
+  },
+  "standalone": {
+    "selfContained": true,
+    "externalAssetsRequired": false,
+    "embeddedCss": true,
+    "embeddedJavascript": true,
+    "embeddedDashboardReference": true,
+    "opensViaFileProtocol": true
   }
 }
