@@ -1522,6 +1522,11 @@
       this.liveBuffers = {};
       this.utcSweepBuffer = null;
       this.utcSweepMinute = -1;
+      this.solarMinute = -1;
+      this.solarState = null;
+      this.terminatorBuffer = null;
+      this.sunBuffer = null;
+      this.nightCityBuffer = null;
       if (!this.gl) return;
       this.initProgram();
       this.buildGlobe();
@@ -1639,6 +1644,7 @@
         quakeHigh: this.makeBuffer([]),
       };
       this.updateUtcSweep(true);
+      this.updateSolarGeometry(true);
     }
 
     setCities(cities = []) {
@@ -1648,7 +1654,92 @@
       }));
       if (this.cityBuffer?.buffer) this.gl.deleteBuffer(this.cityBuffer.buffer);
       this.cityBuffer = this.makeBuffer(this.cities.flatMap((city) => city.position));
+      this.updateSolarGeometry(true);
     }
+
+    solarPosition(date = new Date()) {
+      const year = date.getUTCFullYear();
+      const start = Date.UTC(year, 0, 0);
+      const today = Date.UTC(year, date.getUTCMonth(), date.getUTCDate());
+      const dayOfYear = Math.max(1, Math.round((today - start) / 86400000));
+      const utcHour =
+        date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
+      const gamma =
+        (2 * Math.PI / 365) * (dayOfYear - 1 + (utcHour - 12) / 24);
+      const declination =
+        0.006918 -
+        0.399912 * Math.cos(gamma) +
+        0.070257 * Math.sin(gamma) -
+        0.006758 * Math.cos(2 * gamma) +
+        0.000907 * Math.sin(2 * gamma) -
+        0.002697 * Math.cos(3 * gamma) +
+        0.00148 * Math.sin(3 * gamma);
+      const equationOfTime =
+        229.18 *
+        (0.000075 +
+          0.001868 * Math.cos(gamma) -
+          0.032077 * Math.sin(gamma) -
+          0.014615 * Math.cos(2 * gamma) -
+          0.040849 * Math.sin(2 * gamma));
+      let subsolarLon = (720 - utcHour * 60 - equationOfTime) / 4;
+      subsolarLon = ((subsolarLon + 540) % 360) - 180;
+      return {
+        subsolarLat: (declination * 180) / Math.PI,
+        subsolarLon,
+        equationOfTimeMinutes: equationOfTime,
+        generatedAt: date.toISOString(),
+      };
+    }
+
+    updateSolarGeometry(force = false) {
+      const minute = Math.floor(Date.now() / 60000);
+      if (!force && minute === this.solarMinute) return;
+      this.solarMinute = minute;
+      const solar = this.solarPosition(new Date());
+      const sun = this.spherePoint(solar.subsolarLat, solar.subsolarLon, 1);
+      const normalizeVector = (vector) => {
+        const length = Math.hypot(...vector) || 1;
+        return vector.map((value) => value / length);
+      };
+      const cross = (a, b) => [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+      ];
+      const reference = Math.abs(sun[1]) > 0.92 ? [1, 0, 0] : [0, 1, 0];
+      const axisA = normalizeVector(cross(sun, reference));
+      const axisB = normalizeVector(cross(sun, axisA));
+      const terminator = [];
+      let previous = null;
+      for (let step = 0; step <= 144; step += 1) {
+        const angle = (step / 144) * Math.PI * 2;
+        const point = [
+          (axisA[0] * Math.cos(angle) + axisB[0] * Math.sin(angle)) * 4.17,
+          (axisA[1] * Math.cos(angle) + axisB[1] * Math.sin(angle)) * 4.17,
+          (axisA[2] * Math.cos(angle) + axisB[2] * Math.sin(angle)) * 4.17,
+        ];
+        if (previous) this.pushLine(terminator, previous, point);
+        previous = point;
+      }
+      const nightCities = [];
+      for (const city of this.cities) {
+        const unit = this.spherePoint(Number(city.lat), Number(city.lon), 1);
+        const dot = unit[0] * sun[0] + unit[1] * sun[1] + unit[2] * sun[2];
+        city.solarDaylight = dot > 0;
+        if (dot <= 0) {
+          nightCities.push(...this.spherePoint(Number(city.lat), Number(city.lon), 4.115));
+        }
+      }
+      for (const item of [this.terminatorBuffer, this.sunBuffer, this.nightCityBuffer]) {
+        if (item?.buffer) this.gl.deleteBuffer(item.buffer);
+      }
+      this.terminatorBuffer = this.makeBuffer(terminator);
+      this.sunBuffer = this.makeBuffer(this.spherePoint(solar.subsolarLat, solar.subsolarLon, 4.34));
+      this.nightCityBuffer = this.makeBuffer(nightCities);
+      this.solarState = solar;
+      this.options.onSolarUpdate?.(solar);
+    }
+
     updateUtcSweep(force = false) {
       const minute = Math.floor(Date.now() / 60000);
       if (!force && minute === this.utcSweepMinute) return;
@@ -1865,6 +1956,7 @@
       const motion = state.settings.reducedMotion ? 0 : Math.max(0.1, state.settings.animationIntensity / 100);
       if (!this.drag && motion > 0) this.yaw += 0.00018 * motion;
       this.updateUtcSweep();
+      this.updateSolarGeometry();
       const eye = [
         Math.sin(this.yaw) * Math.cos(this.pitch) * this.distance,
         Math.sin(this.pitch) * this.distance,
@@ -1907,6 +1999,27 @@
         isLightTheme() ? [0.46, 0.31, 0.68, 0.38] : [0.65, 0.48, 1, 0.5],
         0,
         1,
+      );
+      this.draw(
+        this.terminatorBuffer,
+        gl.LINES,
+        isLightTheme() ? [0.86, 0.47, 0.16, 0.54] : [1, 0.62, 0.2, 0.64],
+        0,
+        1,
+      );
+      this.draw(
+        this.sunBuffer,
+        gl.POINTS,
+        [1, 0.76, 0.24, 0.96],
+        1,
+        12 + pulse * 5,
+      );
+      this.draw(
+        this.nightCityBuffer,
+        gl.POINTS,
+        [1, 0.66, 0.26, 0.58 + pulse * 0.22],
+        1,
+        8 + pulse * 3,
       );
 
       this.draw(this.cityBuffer, gl.POINTS, [0.18, 1, 0.82, 0.62], 1, 7);
