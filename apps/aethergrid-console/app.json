@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "aethergrid.operator-console",
   "name": "ÆTHERGRID Operator Console",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "format": "html+pwa+node-app",
   "entrypoints": {
     "standaloneHtml": "standalone.html",
@@ -44,6 +44,7 @@
       "GET /api/aethergrid/geospatial/point",
       "GET /api/aethergrid/geospatial/cities",
       "GET /api/aethergrid/geospatial/runtime",
+      "GET /api/aethergrid/terrain",
       "PUT /api/aethergrid/profile",
       "GET /api/aethergrid/profile",
       "POST /api/aethergrid/view",
@@ -125,7 +126,9 @@
     "liveOpenStreetMapPowerGrid": true,
     "independentPowerGridLayer": true,
     "globalTemporalCityScrubbing": true,
-    "liveAgentExternalContext": true
+    "liveAgentExternalContext": true,
+    "liveElevationTerrain": true,
+    "terrainWireframeLayer": true
   },
   "aiRuntime": {
     "providers": [
@@ -193,5 +196,18 @@
     "persistence": "local-json",
     "avatarResizeClientSide": true,
     "secrets": false
+  },
+  "terrainRuntime": {
+    "module": "terrain-runtime.mjs",
+    "providers": [
+      "open-meteo",
+      "flat-local"
+    ],
+    "liveElevation": true,
+    "dataset": "Copernicus DEM GLO-90 via Open-Meteo",
+    "resolutionMeters": 90,
+    "maxPointsPerRequest": 100,
+    "credentialsExposedToBrowser": false,
+    "fallback": "flat-local"
   }
 }
