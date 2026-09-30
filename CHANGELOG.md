@@ -10,6 +10,7 @@
 
 ### Added
 
+- Added an independent live terrain/elevation layer backed by a provider-neutral runtime, Open-Meteo Elevation / Copernicus DEM GLO-90 sampling, native WebGL terrain wireframes, explicit attribution, and flat local fallback.
 - Added live elevation terrain sampling with a separate native-WebGL TERRAIN layer, bounded real-coordinate requests, visible provenance, and an explicit flat local fallback.
 - Added arbitrary latitude/longitude exploration in the GLOBAL workspace, including animated coordinate descent, bounded radius controls, and custom-coordinate city sessions.
 - Added live OpenStreetMap power-grid ingestion for mapped lines/cables, substations, plants, generators, and transformers with voltage/circuit/operator metadata when available.
