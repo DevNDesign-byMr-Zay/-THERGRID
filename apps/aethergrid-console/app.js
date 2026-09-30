@@ -1793,12 +1793,41 @@
     stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
   }
 
-  function applyCityMeshResult(result, status = q('#cityMeshStatus')) {
+  function showCityTransition(city, stage = 'Aligning global coordinate…', progress = 8) {
+    const overlay = q('#cityTransitionOverlay');
+    if (!overlay) return;
+    if (q('#cityTransitionName')) q('#cityTransitionName').textContent = String(city?.name || 'CITY').toUpperCase();
+    if (q('#cityTransitionStage')) q('#cityTransitionStage').textContent = stage;
+    if (q('#cityTransitionProgress')) q('#cityTransitionProgress').style.width = `${clamp(Number(progress), 0, 100)}%`;
+    overlay.hidden = false;
+  }
+
+  function updateCityTransition(stage, progress) {
+    if (q('#cityTransitionStage')) q('#cityTransitionStage').textContent = stage;
+    if (q('#cityTransitionProgress')) q('#cityTransitionProgress').style.width = `${clamp(Number(progress), 0, 100)}%`;
+  }
+
+  function hideCityTransition() {
+    const overlay = q('#cityTransitionOverlay');
+    if (overlay) overlay.hidden = true;
+  }
+
+  async function applyCityMeshResult(result, status = q('#cityMeshStatus')) {
     state.geospatial.cityMesh = result;
     if (Array.isArray(result.activity)) state.activity = result.activity;
     cityGrid?.loadCityMesh(result);
     cityGrid?.setTime(q('#globalTimeSlider')?.value || state.settings.defaultHour);
+    cityGrid?.setCityVisualMode('solid');
+    qa('[data-city-visual]').forEach((button) => button.classList.toggle('active', button.dataset.cityVisual === 'solid'));
+    state.geospatial.activeUseCase = null;
+    const operationResult = q('#cityUseCaseResult');
+    if (operationResult) operationResult.innerHTML = '<div class="empty-state">City twin ready. Choose a use case to generate a bounded operational planning view.</div>';
+    const teamButton = q('[data-action="ask-city-team"]');
+    if (teamButton) teamButton.disabled = true;
+    updateCityTransition('Building local 3D city twin…', 82);
     setGlobalMode('city');
+    await cityGrid?.cinematicEntrance(1050);
+    updateCityTransition('City digital twin ready', 100);
     updateGlobalGridStats(result);
     if (q('#geoSourceStatus')) {
       q('#geoSourceStatus').textContent = result.source?.live
@@ -1822,6 +1851,8 @@
       result.source?.live ? 'LIVE CITY + GRID LOADED' : 'CITY FALLBACK LOADED',
       `${result.city.name} · ${result.buildings.length} buildings · ${(result.roads || []).length} roads · ${(result.powerLines || []).length} power lines · ${result.source?.provider}`,
     );
+    if (!state.settings.reducedMotion) await new Promise((resolve) => setTimeout(resolve, 260));
+    hideCityTransition();
   }
 
   async function loadTerrainFor(city) {
@@ -1842,6 +1873,10 @@
   async function loadLiveCity(cityId = state.geospatial.selectedCityId, { force = false } = {}) {
     const city = state.geospatial.cities.find((item) => item.id === cityId);
     if (city) handleGlobalCitySelection(city);
+    if (city) {
+      setGlobalMode('globe');
+      showCityTransition(city, 'Locking planetary coordinate…', 10);
+    }
     const status = q('#cityMeshStatus');
     if (status) status.innerHTML = `<b>Loading ${escapeHtml(city?.name || cityId)}…</b><p>Requesting building footprints and heights from the configured geospatial provider.</p>`;
     if (q('#geoSourceStatus')) q('#geoSourceStatus').textContent = 'LOADING CITY GEOMETRY';
@@ -1853,13 +1888,15 @@
       const descent =
         city && globalGlobe ? globalGlobe.descendToCity(city, 720) : Promise.resolve();
       const [result, terrain] = await Promise.all([meshRequest, terrainRequest, descent]);
+      updateCityTransition('Streaming mapped buildings, roads, terrain and grid assets…', 66);
       if (terrain) result.terrain = terrain;
-      applyCityMeshResult(result, status);
+      await applyCityMeshResult(result, status);
     } catch (error) {
       const fallbackCity =
         city || state.geospatial.cities.find((item) => item.id === cityId) || DEFAULT_GLOBAL_CITIES[0];
       const fallback = buildStandaloneCityMesh(fallbackCity);
-      applyCityMeshResult(fallback, status);
+      updateCityTransition('Live provider unavailable · building local fallback twin…', 64);
+      await applyCityMeshResult(fallback, status);
       if (q('#geoSourceStatus')) {
         q('#geoSourceStatus').textContent = 'STANDALONE FALLBACK · NOT LIVE MAP DATA';
       }
@@ -1896,6 +1933,8 @@
     ];
     globalGlobe?.setCities(state.geospatial.cities);
     handleGlobalCitySelection(city);
+    setGlobalMode('globe');
+    showCityTransition(city, 'Targeting custom coordinate…', 10);
     const list = q('#globalCityList');
     if (list) {
       const existing = list.querySelector('[data-global-city-custom]');
@@ -1921,11 +1960,13 @@
       const terrainRequest = loadTerrainFor(city);
       const descent = globalGlobe ? globalGlobe.descendToCity(city, 720) : Promise.resolve();
       const [result, terrain] = await Promise.all([meshRequest, terrainRequest, descent]);
+      updateCityTransition('Streaming coordinate geometry and elevation…', 66);
       if (terrain) result.terrain = terrain;
-      applyCityMeshResult(result, status);
+      await applyCityMeshResult(result, status);
     } catch (error) {
       const fallback = buildStandaloneCityMesh(city);
-      applyCityMeshResult(fallback, status);
+      updateCityTransition('Live provider unavailable · building coordinate fallback…', 64);
+      await applyCityMeshResult(fallback, status);
       if (q('#geoSourceStatus')) {
         q('#geoSourceStatus').textContent = 'STANDALONE FALLBACK · NOT LIVE MAP DATA';
       }
@@ -1966,6 +2007,80 @@
       showToast('CITY LAYER', `${titleCase(button.dataset.globalLayer)} updated.`);
     }),
   );
+  function syncCityLayerButtons() {
+    qa('[data-global-layer]').forEach((button) => {
+      const key = button.dataset.globalLayer;
+      button.classList.toggle('active', Boolean(cityGrid?.layers?.[key]));
+    });
+  }
+
+  function applyCityLayerProfile(layers = []) {
+    const normalized = layers.map((layer) => (layer === 'roads' ? 'routes' : layer));
+    cityGrid?.setLayerProfile(normalized);
+    syncCityLayerButtons();
+  }
+
+  function renderCityUseCase(analysis) {
+    const container = q('#cityUseCaseResult');
+    if (!container || !analysis) return;
+    const observations = (analysis.observations || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('');
+    container.innerHTML = `<div class="operation-index"><b>${Number(analysis.planningIndex?.value || 0)}</b><span>${escapeHtml(analysis.planningIndex?.label || 'Planning index')}</span><small>${escapeHtml(analysis.planningIndex?.scale || '0–100')}</small></div><strong>${escapeHtml(analysis.useCase?.label || 'City operation')} · ${escapeHtml(analysis.city?.name || '')}</strong><ul>${observations}</ul><div class="operation-source">${escapeHtml(analysis.dataQuality?.geometryProvider || 'unknown source')} · ${analysis.dataQuality?.liveGeometry ? 'live mapped geometry' : 'local fallback geometry'} · advisory planning proxy</div>`;
+  }
+
+  async function runCityUseCase() {
+    if (!state.geospatial.cityMesh) {
+      showToast('CITY REQUIRED', 'Descend into a city before running an operational use case.');
+      return;
+    }
+    const useCaseId = q('#cityUseCaseSelect')?.value || 'grid-resilience';
+    const container = q('#cityUseCaseResult');
+    if (container) container.innerHTML = '<div class="empty-state">Analyzing the active city twin…</div>';
+    try {
+      const result = await api('./api/aethergrid/city-operations/analyze', {
+        method: 'POST',
+        body: JSON.stringify({ useCaseId }),
+      });
+      state.geospatial.activeUseCase = result.analysis;
+      if (Array.isArray(result.activity)) state.activity = result.activity;
+      if (result.evidence) {
+        state.evidence.unshift(result.evidence);
+        state.evidence = state.evidence.slice(0, 24);
+        renderEvidence();
+      } else {
+        renderActivity();
+      }
+      cityGrid?.setCityVisualMode('operations');
+      qa('[data-city-visual]').forEach((button) => button.classList.toggle('active', button.dataset.cityVisual === 'operations'));
+      applyCityLayerProfile(result.analysis?.useCase?.recommendedLayers || ['buildings', 'routes', 'infrastructure', 'nodes']);
+      renderCityUseCase(result.analysis);
+      const teamButton = q('[data-action="ask-city-team"]');
+      if (teamButton) teamButton.disabled = false;
+      showToast('CITY OPERATION READY', `${result.analysis.city.name} · ${result.analysis.useCase.label}`);
+    } catch (error) {
+      if (container) container.innerHTML = `<div class="empty-state">${escapeHtml(error.message || 'City analysis requires the backend-connected app.')}</div>`;
+      showToast('CITY ANALYSIS UNAVAILABLE', error.message || 'Backend-connected city twin required.');
+    }
+  }
+
+  qa('[data-city-visual]').forEach((button) =>
+    button.addEventListener('click', () => {
+      cityGrid?.setCityVisualMode(button.dataset.cityVisual);
+      qa('[data-city-visual]').forEach((item) => item.classList.toggle('active', item === button));
+      showToast('CITY VISUAL', titleCase(button.dataset.cityVisual));
+    }),
+  );
+  q('[data-action="run-city-use-case"]')?.addEventListener('click', runCityUseCase);
+  q('[data-action="ask-city-team"]')?.addEventListener('click', () => {
+    const analysis = state.geospatial.activeUseCase;
+    if (!analysis) return;
+    setSelectedAgent('TEAM');
+    switchWorkspace('ai');
+    const input = q('#chatInput');
+    if (input) {
+      input.value = `Review the active ${analysis.useCase.label} city operation for ${analysis.city.name}. Explain the planning index, the strongest evidence in the loaded 3D twin, key limitations, and what VÆLON, AUREN, and SOLVÆR each recommend investigating next.`;
+      input.focus();
+    }
+  });
   q('#globalTimeSlider')?.addEventListener('input', (event) => {
     cityGrid?.setTime(event.target.value);
     if (q('#globalTimeValue')) {
