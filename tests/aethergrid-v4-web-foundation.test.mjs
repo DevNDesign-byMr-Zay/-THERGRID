@@ -217,3 +217,10 @@ test('v4 world search supports named cities and arbitrary real coordinates', asy
   assert.match(powerService, /loadCoordinatePowerOverlay/u);
   assert.match(powerService, /\/api\/aethergrid\/geospatial\/point/u);
 });
+
+test('v4 coordinate navigation remains available on mobile', async () => {
+  const styles = await text('apps/aethergrid-console/web/src/app/app.css');
+  const mobile = styles.slice(styles.indexOf('@media (max-width: 760px)'));
+  assert.match(mobile, /\.global-search \{\s*display: grid/u);
+  assert.doesNotMatch(mobile, /\.global-search \{\s*display: none/u);
+});
