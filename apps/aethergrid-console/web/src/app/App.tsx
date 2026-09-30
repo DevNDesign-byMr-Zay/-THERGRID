@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import { DataSourceBadge } from '../components/DataSourceBadge';
 import { SpatialViewport } from '../components/SpatialViewport';
 import { TemporalRail } from '../components/TemporalRail';
 import { useAppearance } from '../hooks/use-appearance';
@@ -20,6 +21,7 @@ import {
   loadCityPowerOverlay,
   loadCoordinatePowerOverlay
 } from '../services/city-power-overlay';
+import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
 
 interface CityTarget extends SpatialTarget {
   id: string;
@@ -343,24 +345,28 @@ export function App() {
             onSelection={setSelection}
           />
 
-          <div className="source-badge" data-source-state={
-            powerOverlayError ? 'unavailable' : powerOverlay?.live ? 'live' : powerOverlay ? 'fallback' : 'loading'
-          }>
-            <span>
-              {powerOverlayError
-                ? 'POWER DATA UNAVAILABLE'
+          <DataSourceBadge
+            label={
+              powerOverlayError
+                ? 'POWER DATA'
                 : powerOverlay?.live
-                  ? 'OSM POWER · LIVE SOURCE'
+                  ? 'OSM POWER'
+                  : 'POWER'
+            }
+            state={
+              powerOverlayError
+                ? 'unavailable'
+                : powerOverlay?.live
+                  ? 'live'
                   : powerOverlay
-                    ? 'POWER · FALLBACK'
-                    : 'POWER · LOADING'}
-            </span>
-            <small>
-              {powerOverlayError
-                ? powerOverlayError
-                : powerOverlay?.attribution ?? 'Source state pending'}
-            </small>
-          </div>
+                    ? 'fallback'
+                    : 'loading'
+            }
+            attribution={powerOverlay?.attribution}
+            sourceTime={powerOverlay?.sourceTime}
+            fetchedAt={powerOverlay?.fetchedAt}
+            error={powerOverlayError}
+          />
 
           <div className="scene-caption">
             <span>{city.name}</span>
@@ -405,6 +411,10 @@ export function App() {
                   ? 'Current weather visuals are hidden until a source supports the selected time.'
                   : atmosphere?.attribution ?? 'Weather source pending'}
             </p>
+            <div className="weather-source-meta">
+              <span>{formatSourceTime(atmosphere?.sourceTime, atmosphere?.timezone)}</span>
+              <span>FETCHED {formatDataAge(atmosphere?.fetchedAt)}</span>
+            </div>
           </section>
 
           <section className="intel-card">
