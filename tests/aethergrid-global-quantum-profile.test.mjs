@@ -55,6 +55,7 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
     assert.equal(String(url), 'https://example.test/overpass');
     assert.equal(options.method, 'POST');
     assert.match(String(options.headers['user-agent']), /AETHERGRID/u);
+    assert.match(options.body.get('data'), /way\["building:part"\]/u);
     return new Response(
       JSON.stringify({
         elements: [
@@ -67,6 +68,15 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
               lon: point.lon + index * 0.00012,
             })),
           })),
+          {
+            type: 'way',
+            id: 1500,
+            tags: { 'building:part': 'yes', height: '42', min_height: '6' },
+            geometry: geometry.map((point) => ({
+              lat: point.lat + 0.0011,
+              lon: point.lon + 0.0011,
+            })),
+          },
           {
             type: 'way',
             id: 2001,
@@ -120,6 +130,10 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
   assert.ok(first.buildings.length >= 5);
   assert.ok(first.buildings.every((building) => building.footprint.length >= 5));
   assert.ok(first.buildings.every((building) => building.heightM > 0));
+  const buildingPart = first.buildings.find((building) => building.buildingPart);
+  assert.ok(buildingPart);
+  assert.equal(buildingPart.heightM, 42);
+  assert.equal(buildingPart.minHeightM, 6);
   assert.equal(first.roads.length, 1);
   assert.equal(first.roads[0].name, 'Test Avenue');
   assert.equal(first.roads[0].highwayType, 'primary');
