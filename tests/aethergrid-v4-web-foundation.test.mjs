@@ -224,7 +224,6 @@ test('v4 coordinate navigation remains available on mobile', async () => {
   assert.doesNotMatch(mobile, /\.global-search \{\s*display: none/u);
 });
 
-
 test('v4 spatial selection visibly highlights real features and can be cleared', async () => {
   const [renderer, viewport, app] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
