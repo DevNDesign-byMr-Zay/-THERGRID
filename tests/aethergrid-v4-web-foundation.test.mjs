@@ -392,3 +392,22 @@ test('v4 evidence panel reviews receipts and exports a real JSON package', async
   assert.match(panel, /loadEvidenceRecord/u);
   assert.match(app, /<EvidencePanel/u);
 });
+
+test('v4 scenario controls synchronize bounded server scenarios with 4d time', async () => {
+  const [client, panel, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/services/scenario-client.ts'),
+    text('apps/aethergrid-console/web/src/components/ScenarioPanel.tsx'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(client, /\/api\/aethergrid\/scenario/u);
+  assert.match(client, /\/api\/aethergrid\/view/u);
+  assert.match(panel, /min="70"/u);
+  assert.match(panel, /max="150"/u);
+  assert.match(panel, /min="40"/u);
+  assert.match(panel, /max="160"/u);
+  assert.match(panel, /EVIDENCE RECEIPT/u);
+  assert.match(panel, /RETURN LIVE/u);
+  assert.match(app, /clock\.setMode\('scenario', scenarioId\)/u);
+  assert.match(app, /onReturnLive=\{\(\) => clock\.goLive\(\)\}/u);
+});
