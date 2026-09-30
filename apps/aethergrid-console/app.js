@@ -343,6 +343,8 @@
       this.projectionMode = 'perspective';
       this.temporalMode = 'pulse';
       this.intensity = 1;
+      this.compareEnabled = false;
+      this.compareTimeHours = 18;
       this.drag = null;
       this.timeStart = performance.now();
       this.geometry = {};
@@ -680,6 +682,11 @@
       this.intensity = clamp(Number(value), 0, 1);
     }
 
+    setCompare(enabled, hours = this.compareTimeHours) {
+      this.compareEnabled = Boolean(enabled);
+      this.compareTimeHours = clamp(Number(hours), 0, 24);
+    }
+
     toggle(layer) {
       if (layer === 'reset') return this.resetCamera();
       if (layer === 'layers') {
@@ -750,6 +757,18 @@
       if (this.layers.buildings) this.drawBuffer(this.geometry.buildings, gl.LINES, [0.14, 0.64, 1, 0.55], 0.07 * amplitude);
       if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [0.83, 0.36, 1, Math.min(1, 0.78 * trailBoost)], 0.11 * amplitude * trailBoost);
       if (this.layers.nodes) this.drawBuffer(this.geometry.nodes, gl.POINTS, [0.22, 1, 0.84, 1], 0.08 * amplitude, 1, 9);
+
+      if (this.compareEnabled) {
+        const compareTemporal =
+          (this.compareTimeHours / 24) * Math.PI * 2 +
+          (now - this.timeStart) * 0.00018 * temporalMotion;
+        gl.uniform1f(this.loc.time, compareTemporal);
+        if (this.layers.buildings) this.drawBuffer(this.geometry.buildings, gl.LINES, [1, 0.55, 0.18, 0.25], 0.055 * amplitude);
+        if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [1, 0.72, 0.24, 0.48], 0.085 * amplitude, 0, 1);
+        if (this.layers.nodes) this.drawBuffer(this.geometry.nodes, gl.POINTS, [1, 0.72, 0.24, 0.82], 0.05 * amplitude, 1, 7);
+        gl.uniform1f(this.loc.time, temporal);
+      }
+
       if (this.selectionBuffer) this.drawBuffer(this.selectionBuffer, gl.POINTS, [1, 0.72, 0.22, 1], 0, 1, 16);
       requestAnimationFrame(this.animate);
     };
@@ -1142,9 +1161,6 @@
       button.classList.toggle('active');
     }),
   );
-  qa('[data-camera-preset]').forEach((button) =>
-    button.addEventListener('click', () => holographic?.setPreset(button.dataset.cameraPreset)),
-  );
   q('#holoProjection')?.addEventListener('change', (event) => {
     const mode =
       event.target.value === 'top'
@@ -1162,6 +1178,59 @@
   q('#holoIntensity')?.addEventListener('input', (event) => {
     holographic?.setIntensity(Number(event.target.value) / 100);
   });
+  q('#holoCompareEnabled')?.addEventListener('change', (event) => {
+    holographic?.setCompare(event.target.checked, q('#holoCompareTime')?.value || 18);
+    showToast(
+      'TEMPORAL COMPARISON',
+      event.target.checked ? `Overlaying ${formatHour(q('#holoCompareTime')?.value || 18)} in amber.` : 'Comparison overlay disabled.',
+    );
+  });
+  q('#holoCompareTime')?.addEventListener('input', (event) => {
+    if (q('#holoCompareValue')) q('#holoCompareValue').textContent = formatHour(event.target.value);
+    holographic?.setCompare(q('#holoCompareEnabled')?.checked, event.target.value);
+  });
+  function renderSavedViews() {
+    const container = q('#savedViews');
+    if (!container) return;
+    let saved = [];
+    try {
+      saved = JSON.parse(localStorage.getItem('aethergrid.saved.cameras') || '[]');
+    } catch {}
+    const presets =
+      '<button data-camera-preset="overview">Metro Overview</button><button data-camera-preset="top">Top Grid</button><button data-camera-preset="flow">Transmission Flow</button>';
+    const custom = saved
+      .map(
+        (item, index) =>
+          `<button data-saved-camera="${item.id}">Saved View ${index + 1} · ${formatHour(item.time)}</button>`,
+      )
+      .join('');
+    container.innerHTML = presets + custom;
+  }
+
+  q('#savedViews')?.addEventListener('click', (event) => {
+    const preset = event.target.closest('[data-camera-preset]');
+    if (preset) {
+      holographic?.setPreset(preset.dataset.cameraPreset);
+      return;
+    }
+    const savedButton = event.target.closest('[data-saved-camera]');
+    if (!savedButton) return;
+    let saved = [];
+    try {
+      saved = JSON.parse(localStorage.getItem('aethergrid.saved.cameras') || '[]');
+    } catch {}
+    const item = saved.find((entry) => String(entry.id) === savedButton.dataset.savedCamera);
+    if (!item || !holographic) return;
+    holographic.yaw = Number(item.yaw);
+    holographic.pitch = Number(item.pitch);
+    holographic.distance = Number(item.distance);
+    holographic.setTime(item.time);
+    if (q('#holoTimeSlider')) q('#holoTimeSlider').value = String(item.time);
+    if (q('#holoTimeValue')) q('#holoTimeValue').textContent = formatHour(item.time);
+    holographic.updateReadout();
+    showToast('CAMERA RESTORED', 'Saved holographic view restored.');
+  });
+
   q('[data-holo-action="save-camera"]')?.addEventListener('click', () => {
     const saved = JSON.parse(localStorage.getItem('aethergrid.saved.cameras') || '[]');
     const item = {
@@ -1173,8 +1242,10 @@
     };
     saved.unshift(item);
     localStorage.setItem('aethergrid.saved.cameras', JSON.stringify(saved.slice(0, 8)));
+    renderSavedViews();
     showToast('CAMERA SAVED', 'Holographic camera state saved locally.');
   });
+  renderSavedViews();
 
   qa('[data-view]').forEach((button) =>
     button.addEventListener('click', async () => {
