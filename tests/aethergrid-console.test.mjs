@@ -28,6 +28,12 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(html, /id="globalGlobe"/u);
     assert.match(html, /id="cityGrid"/u);
     assert.match(html, /data-action="load-live-city"/u);
+    assert.match(html, /data-action="explore-coordinates"/u);
+    assert.match(html, /id="globalPointLat"/u);
+    assert.match(html, /id="globalPointLon"/u);
+    assert.match(html, /id="globalTimeSlider"/u);
+    assert.match(html, /data-global-layer="infrastructure"/u);
+    assert.match(html, /id="globalGridStats"/u);
     assert.match(html, /data-workspace="holographic"/u);
     assert.match(html, /data-workspace="quantum"/u);
     assert.match(html, /data-workspace="ai"/u);
@@ -78,6 +84,9 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(appSource, /setCompare\(enabled, hours/u);
     assert.match(appSource, /function renderSavedViews/u);
     assert.match(appSource, /async function loadLiveCity/u);
+    assert.match(appSource, /async function loadCoordinateCity/u);
+    assert.match(appSource, /infrastructureLines/u);
+    assert.match(appSource, /powerAssets/u);
     assert.match(appSource, /async function submitQuantumJob/u);
     assert.match(appSource, /async function saveProfile/u);
     assert.match(appSource, /data-workspace/u);
@@ -181,6 +190,13 @@ test('ÆTHERGRID backend exposes profile, world-city and quantum runtime surface
     assert.ok(cities.cities.length >= 8);
     assert.ok(cities.cities.every((city) => Number.isFinite(city.lat) && Number.isFinite(city.lon)));
     assert.equal(cities.runtime.attribution, '© OpenStreetMap contributors');
+    assert.equal(cities.runtime.supportsCustomCoordinates, true);
+    assert.deepEqual(cities.runtime.layers, [
+      'buildings',
+      'roads',
+      'power-lines',
+      'power-assets',
+    ]);
 
     const quantumRuntimeResponse = await fetch(`${baseUrl}/api/aethergrid/quantum/runtime`);
     assert.equal(quantumRuntimeResponse.status, 200);
@@ -211,6 +227,8 @@ test('ÆTHERGRID backend exposes profile, world-city and quantum runtime surface
     assert.equal(job.evidence.type, 'QUANTUM_JOB');
     assert.equal(job.evidence.details.hardwareExecuted, false);
     assert.match(job.job.receipt, /^[a-f0-9]{64}$/u);
+    assert.equal(state.externalContext.quantum.jobId, job.job.id);
+    assert.equal(state.externalContext.quantum.provider, 'local-simulator');
   });
 });
 
