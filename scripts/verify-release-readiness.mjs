@@ -463,7 +463,9 @@ async function main() {
       /pickNode\(clientX, clientY\)/u.test(exactAethergridJs) &&
       /activateScenario\(name, parameters/u.test(exactAethergridJs) &&
       /async function loadLiveCity/u.test(exactAethergridJs) &&
+      /descendToCity\(city, durationMs/u.test(exactAethergridJs) &&
       /async function submitQuantumJob/u.test(exactAethergridJs) &&
+      /async function loadQuantumJobDetail/u.test(exactAethergridJs) &&
       /async function saveProfile/u.test(exactAethergridJs),
     'ÆTHERGRID must keep native WebGL 4D geometry, interaction controls, and backend graph loading',
   );
@@ -498,6 +500,10 @@ async function main() {
       exactAethergridApp.capabilities?.liveOpenStreetMapCityMeshes === true &&
       exactAethergridApp.capabilities?.ibmQuantumComputeIntegration === true &&
       exactAethergridApp.capabilities?.quantumJobSubmission === true &&
+      exactAethergridApp.capabilities?.quantumJobResults === true &&
+      exactAethergridApp.capabilities?.quantumJobMetrics === true &&
+      exactAethergridApp.capabilities?.liveOpenStreetMapRoadTopology === true &&
+      exactAethergridApp.capabilities?.animatedGlobeCityDescent === true &&
       exactAethergridApp.aiRuntime?.replaceableByConfiguration === true &&
       exactAethergridApp.geospatialRuntime?.liveFetchOnExplicitOperatorAction === true &&
       exactAethergridApp.quantumRuntime?.ibmApiVersion === '2026-04-15' &&
@@ -571,6 +577,8 @@ async function main() {
     /OpenStreetMap Overpass/u.test(aethergridGeoRuntime) &&
       /© OpenStreetMap contributors/u.test(aethergridGeoRuntime) &&
       /way\["building"\]/u.test(aethergridGeoRuntime) &&
+      /way\["highway"\]/u.test(aethergridGeoRuntime) &&
+      /parseOverpassRoads/u.test(aethergridGeoRuntime) &&
       /cache/u.test(aethergridGeoRuntime),
     'ÆTHERGRID geospatial runtime must keep on-demand OpenStreetMap building geometry and attribution',
   );
@@ -579,6 +587,8 @@ async function main() {
       /iam\.cloud\.ibm\.com/u.test(aethergridQuantumRuntime) &&
       /program_id: 'sampler'/u.test(aethergridQuantumRuntime) &&
       /hardwareSubmitted/u.test(aethergridQuantumRuntime) &&
+      /jobs\/\$\{encodeURIComponent\(id\)\}\/results/u.test(aethergridQuantumRuntime) &&
+      /jobs\/\$\{encodeURIComponent\(id\)\}\/metrics/u.test(aethergridQuantumRuntime) &&
       /local-simulator/u.test(aethergridQuantumRuntime),
     'ÆTHERGRID quantum runtime must keep IBM Compute Service submission and local fallback',
   );
