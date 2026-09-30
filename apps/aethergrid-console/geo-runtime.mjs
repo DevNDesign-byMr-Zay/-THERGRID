@@ -80,6 +80,64 @@ function parseOverpassBuildings(payload, city) {
   return buildings;
 }
 
+function parseOverpassRoads(payload, city) {
+  const roads = [];
+  for (const element of payload?.elements || []) {
+    if (
+      element.type !== 'way' ||
+      !element.tags?.highway ||
+      !Array.isArray(element.geometry) ||
+      element.geometry.length < 2
+    ) {
+      continue;
+    }
+    const path = element.geometry
+      .map((point) => projectPoint(Number(point.lat), Number(point.lon), city))
+      .filter(([x, z]) => Number.isFinite(x) && Number.isFinite(z));
+    if (path.length < 2) continue;
+    roads.push({
+      id: `osm-road-${element.id}`,
+      osmId: element.id,
+      name: String(element.tags?.name || ''),
+      highwayType: String(element.tags.highway),
+      path,
+    });
+    if (roads.length >= 260) break;
+  }
+  return roads;
+}
+
+function fallbackRoads(city, count = 20) {
+  let seed = createHash('sha256').update(`${city.id}:roads`).digest().readUInt32LE(0);
+  const random = () => {
+    seed = (Math.imul(seed, 1103515245) + 12345) >>> 0;
+    return seed / 4294967296;
+  };
+  return Array.from({ length: count }, (_, index) => {
+    const horizontal = index % 2 === 0;
+    const offset = (random() - 0.5) * 1250;
+    const wobble = (random() - 0.5) * 90;
+    return {
+      id: `fallback-road-${index + 1}`,
+      name: '',
+      highwayType: index % 5 === 0 ? 'primary' : 'residential',
+      path: horizontal
+        ? [
+            [-720, offset],
+            [-260, offset + wobble],
+            [260, offset - wobble],
+            [720, offset],
+          ]
+        : [
+            [offset, -720],
+            [offset + wobble, -260],
+            [offset - wobble, 260],
+            [offset, 720],
+          ],
+    };
+  });
+}
+
 function validateEndpoint(value) {
   const url = new URL(value);
   if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Overpass URL must be HTTP(S)');
@@ -127,12 +185,13 @@ export function createGeoRuntime({
         city,
         source: { provider: 'local-fallback', live: false, attribution: null },
         buildings: seededFallback(city),
+        roads: fallbackRoads(city),
       };
     }
 
     try {
       const apiUrl = validateEndpoint(endpoint);
-      const query = `[out:json][timeout:25];way["building"](around:${city.radiusM},${city.lat},${city.lon});out tags geom;`;
+      const query = `[out:json][timeout:25];(way["building"](around:${city.radiusM},${city.lat},${city.lon});way["highway"](around:${city.radiusM},${city.lat},${city.lon}););out tags geom;`;
       const response = await fetchImpl(apiUrl, {
         method: 'POST',
         headers: {
@@ -146,6 +205,7 @@ export function createGeoRuntime({
       if (!response.ok) throw new Error(`Overpass HTTP ${response.status}`);
       const payload = await response.json();
       const buildings = parseOverpassBuildings(payload, city);
+      const roads = parseOverpassRoads(payload, city);
       if (buildings.length < 5) throw new Error('Overpass returned too few building footprints');
       const value = {
         schemaVersion: 1,
@@ -157,6 +217,7 @@ export function createGeoRuntime({
           fetchedAt: new Date().toISOString(),
         },
         buildings,
+        roads,
       };
       cache.set(cityId, { cachedAt: now(), value });
       return value;
@@ -171,6 +232,7 @@ export function createGeoRuntime({
           error: error instanceof Error ? error.message : String(error),
         },
         buildings: seededFallback(city),
+        roads: fallbackRoads(city),
       };
     }
   }
