@@ -650,3 +650,17 @@ test('v4 streamed 3d buildings defer until city or district detail', async () =>
   assert.match(renderer, /this\.#detailLevel === 'district'/u);
   assert.match(renderer, /this\.#buildings\.show = this\.#buildingsShouldShow\(\)/u);
 });
+
+test('v4 solid building presentation responds to solar phase without affecting synthetic modes', async () => {
+  const [visual, renderer] = await Promise.all([
+    text('apps/aethergrid-console/web/src/renderer/cesium/visual-mode-controller.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
+  ]);
+
+  assert.match(visual, /setSolarPhase/u);
+  assert.match(visual, /this\.#solarPhase === 'golden-hour'/u);
+  assert.match(visual, /this\.#solarPhase === 'twilight'/u);
+  assert.match(visual, /this\.#solarPhase === 'night'/u);
+  assert.match(visual, /#e4a35b/u);
+  assert.match(renderer, /setSolarPhase\(this\.#solar\.phase\)/u);
+});
