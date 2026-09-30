@@ -37,6 +37,10 @@ const REQUIRED_FILES = Object.freeze([
   'apps/aethergrid-console/manifest.webmanifest',
   'apps/aethergrid-console/sw.js',
   'apps/aethergrid-console/README.md',
+  'apps/aethergrid-console/.env.example',
+  'apps/aethergrid-console/START-AETHERGRID.ps1',
+  'apps/aethergrid-console/STOP-AETHERGRID.ps1',
+  'apps/aethergrid-console/START-AETHERGRID.cmd',
   'apps/aethergrid-console/assets/brand/aethergrid-logo.webp',
   'apps/aethergrid-console/assets/brand/vaelon.webp',
   'apps/aethergrid-console/assets/brand/auren.webp',
@@ -472,6 +476,11 @@ async function main() {
       exactAethergridApp.capabilities?.weightedOptimizationControls === true &&
       exactAethergridApp.capabilities?.evidenceDrillDown === true &&
       exactAethergridApp.capabilities?.agentEvidenceReceipts === true &&
+      exactAethergridApp.capabilities?.holographicTemporalCompare === true &&
+      exactAethergridApp.capabilities?.savedCameraViews === true &&
+      exactAethergridApp.capabilities?.scenarioDuplication === true &&
+      exactAethergridApp.capabilities?.auditTimeline === true &&
+      exactAethergridApp.capabilities?.classicalExperimentalComparison === true &&
       exactAethergridApp.aiRuntime?.replaceableByConfiguration === true &&
       exactAethergridUi.workspaceRouting?.mode === 'exclusive-view' &&
       exactAethergridUi.spatialModel?.renderEngine === 'native-webgl' &&
@@ -529,8 +538,27 @@ async function main() {
       /runtime must not use a dashboard reference image/u.test(exactAethergridPackager) &&
       /attribute vec4 a_position/u.test(exactAethergridPackager) &&
       !/^\s*'assets\/dashboard-reference\.webp',/mu.test(exactAethergridPackager) &&
-      /path === 'assets\/dashboard-reference\.webp'\) continue/u.test(exactAethergridPackager),
-    'ÆTHERGRID packager must generate standalone WebGL HTML without requiring the reference screenshot',
+      /path === 'assets\/dashboard-reference\.webp'\) continue/u.test(exactAethergridPackager) &&
+      /START-AETHERGRID\.ps1/u.test(exactAethergridPackager) &&
+      /STOP-AETHERGRID\.ps1/u.test(exactAethergridPackager) &&
+      /START-AETHERGRID\.cmd/u.test(exactAethergridPackager) &&
+      /agent-config\.mjs/u.test(exactAethergridPackager) &&
+      /ai-runtime\.mjs/u.test(exactAethergridPackager),
+    'ÆTHERGRID packager must generate standalone WebGL HTML and complete backend/launcher runtime without the reference screenshot',
+  );
+  const aethergridStartScript = await text('apps/aethergrid-console/START-AETHERGRID.ps1');
+  const aethergridAppEnv = await text('apps/aethergrid-console/.env.example');
+  assert(
+    /Node\.js 22\+/u.test(aethergridStartScript) &&
+      /--env-file=\.env/u.test(aethergridStartScript) &&
+      /server\.mjs/u.test(aethergridStartScript),
+    'ÆTHERGRID Windows launcher must verify Node 22 and launch the packaged backend',
+  );
+  assert(
+    /AETHERGRID_AI_PROVIDER=local/u.test(aethergridAppEnv) &&
+      /AETHERGRID_OPENAI_API_KEY=/u.test(aethergridAppEnv) &&
+      /AETHERGRID_OLLAMA_BASE_URL=/u.test(aethergridAppEnv),
+    'ÆTHERGRID package config must document replaceable providers without embedding credentials',
   );
 
   const operatorConsole = await text('apps/operator-console/index.html');
