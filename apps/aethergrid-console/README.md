@@ -197,6 +197,24 @@ Weather rendering is now semantic rather than generic:
 - modeled thunderstorm codes add a bounded lightning-style pulse while rain continues independently.
 
 The thunderstorm pulse is **not** a detected lightning strike. Rain, snow and fog effects visualize current provider model context and are not street-level weather instrumentation.
+## v2.9 mapped geography integration
+
+The current v2.9 integration keeps the source-backed CITY IDENTITY and semantic weather behavior while adding more of the physical city context that makes each location visually and operationally distinct.
+
+The same bounded OpenStreetMap request now also accepts:
+- mapped `natural=water` areas and their `water=*` classification when present;
+- river, canal, stream and tidal-channel centerlines;
+- `natural=coastline` geometry within the bounded sample;
+- parks, gardens, nature reserves, grass/recreation areas, meadow, wood and grassland geometry;
+- existing source building material/colour tags for restrained glass, masonry, metal and natural-material overlays.
+
+WATER and GREEN are independent WebGL layers. LANDMARKS continues to use the source-backed skyline-anchor implementation already present on main. Unnamed tall structures are emphasized as tall geometry only when their height is source-backed; they are not assigned invented names.
+
+Two additional evidence-bound workflows are available:
+- **Flood Context** — combines mapped water/coastline, terrain, current precipitation, roads and grid assets for situational screening. It is not a drainage, runoff, river-stage, surge or inundation model.
+- **Green Infrastructure** — compares mapped green space with built density and current heat/humidity/AQI context. It is not canopy measurement, ecological-quality scoring, public-health exposure analysis, ownership/feasibility analysis or a siting directive.
+
+Fallback behavior is deliberately conservative: local fallback buildings/roads/grid may render, but rivers, coastline, parks, source materials and named mapped environmental features remain empty when upstream map data was not obtained. The app does not manufacture them to make a city look more realistic.
 ## Windows ZIP workflow
 
 After extracting the package:
