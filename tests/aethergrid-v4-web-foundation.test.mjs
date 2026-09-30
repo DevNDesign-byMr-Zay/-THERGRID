@@ -676,3 +676,19 @@ test('v4 city descent uses a true heading pitch range orbit around the geographi
   assert.match(camera, /target\.heightMeters \?\? 0/u);
   assert.match(camera, /stage\.destinationHeightMeters/u);
 });
+
+test('v4 city arrival heading is derived from mapped building geometry and applied as a direct reframe', async () => {
+  const [service, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/services/city-power-overlay.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(service, /interface CityBuilding/u);
+  assert.match(service, /arrivalHeadingDegrees\(mesh/u);
+  assert.match(service, /Math\.atan2/u);
+  assert.match(service, /mesh\.buildings/u);
+  assert.match(app, /cityIdentity\?\.cityId === city\.id/u);
+  assert.match(app, /cityIdentity\.arrivalHeadingDegrees/u);
+  assert.match(app, /journey: identityMatches \? 'direct' : 'full'/u);
+  assert.match(app, /ARRIVAL HEADING/u);
+});
