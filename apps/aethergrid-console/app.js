@@ -42,8 +42,10 @@
     optimization: {
       currentCost: 12480,
       candidateCost: 10230,
+      classicalCandidateCost: 11790,
       emissionsReduction: 24.3,
       renewableUtilizationGain: 16.7,
+      reliabilityScore: 90.0,
       runCount: 0,
     },
     agents: {
@@ -953,8 +955,16 @@
     text('storageValue', Math.round(state.metrics.storageMw).toLocaleString());
     text('currentCost', Math.round(state.optimization.currentCost).toLocaleString());
     text('candidateCost', Math.round(state.optimization.candidateCost).toLocaleString());
+    text(
+      'classicalCost',
+      Math.round(
+        state.optimization.classicalCandidateCost ||
+          state.optimization.candidateCost * 1.08,
+      ).toLocaleString(),
+    );
     text('emissionsValue', Number(state.optimization.emissionsReduction).toFixed(1));
     text('renewableGain', Number(state.optimization.renewableUtilizationGain).toFixed(1));
+    text('reliabilityValue', Number(state.optimization.reliabilityScore || 90).toFixed(1));
     text('aiContextRegion', state.system.region);
     text('aiContextScenario', titleCase(state.system.scenario));
     text('aiContextView', titleCase(state.system.view));
@@ -1399,7 +1409,17 @@
         method: 'POST',
         body: JSON.stringify(request),
       });
-      mergeState({ optimization: result.optimization });
+      mergeState({
+        optimization: {
+          ...result.optimization,
+          classicalCandidateCost:
+            result.comparison?.classical?.candidateCost ??
+            result.optimization?.classicalCandidateCost,
+          reliabilityScore:
+            result.comparison?.experimental?.reliabilityScore ??
+            result.optimization?.reliabilityScore,
+        },
+      });
       receipt = result.receipt;
     } catch {
       state.optimization.runCount += 1;
@@ -1413,8 +1433,10 @@
       at: new Date().toISOString(),
       objective: request.objective,
       scenario: request.scenario,
+      classicalCandidateCost: state.optimization.classicalCandidateCost,
       candidateCost: state.optimization.candidateCost,
       emissionsReduction: state.optimization.emissionsReduction,
+      reliabilityScore: state.optimization.reliabilityScore,
     };
     state.optimizationHistory.unshift(history);
     renderOptimizationHistory();
@@ -1439,7 +1461,7 @@
     container.innerHTML = state.optimizationHistory.length
       ? state.optimizationHistory
           .map(
-            (item) => `<div class="history-row"><b>${escapeHtml(titleCase(item.objective))}</b><small>${escapeHtml(titleCase(item.scenario))} · $${Math.round(item.candidateCost).toLocaleString()}/hr · ↓ ${item.emissionsReduction}% · ${escapeHtml(item.id.slice(0, 18))}</small></div>`,
+            (item) => `<div class="history-row"><b>${escapeHtml(titleCase(item.objective))}</b><small>${escapeHtml(titleCase(item.scenario))} · classical ${Math.round(item.classicalCandidateCost || item.candidateCost * 1.08).toLocaleString()} · experimental ${Math.round(item.candidateCost).toLocaleString()}/hr · reliability ${Number(item.reliabilityScore || 90).toFixed(1)} · ↓ ${item.emissionsReduction}% · ${escapeHtml(item.id.slice(0, 18))}</small></div>`,
           )
           .join('')
       : '<div class="empty-state">No optimization run in this session yet.</div>';
