@@ -930,6 +930,7 @@
           landmarkNodes,
           ...landmark.position,
           landmarkIndex * 0.91 + landmark.heightM * 0.01,
+        );
         if (!existingNodeIds.has(landmark.id)) {
           this.graphNodes.push(landmark);
           existingNodeIds.add(landmark.id);
