@@ -1,6 +1,8 @@
 import {
+  BoundingSphere,
   Camera,
   Cartesian3,
+  HeadingPitchRange,
   Math as CesiumMath
 } from 'cesium';
 
@@ -73,20 +75,21 @@ export class CameraJourneyController {
     stage: CameraJourneyStage,
     journey: number
   ): Promise<void> {
-    const destination = Cartesian3.fromDegrees(
+    const focus = Cartesian3.fromDegrees(
       target.longitude,
       target.latitude,
+      target.heightMeters ?? 0
+    );
+    const sphere = new BoundingSphere(focus, 1);
+    const offset = new HeadingPitchRange(
+      CesiumMath.toRadians(target.headingDegrees ?? 0),
+      CesiumMath.toRadians(stage.pitchDegrees),
       stage.destinationHeightMeters
     );
 
     await new Promise<void>((resolve) => {
-      this.#camera.flyTo({
-        destination,
-        orientation: {
-          heading: CesiumMath.toRadians(target.headingDegrees ?? 0),
-          pitch: CesiumMath.toRadians(stage.pitchDegrees),
-          roll: 0
-        },
+      this.#camera.flyToBoundingSphere(sphere, {
+        offset,
         duration: stage.durationSeconds,
         complete: resolve,
         cancel: resolve
