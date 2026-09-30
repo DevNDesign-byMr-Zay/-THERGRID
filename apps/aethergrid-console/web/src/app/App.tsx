@@ -9,6 +9,7 @@ import { EvidencePanel } from '../components/EvidencePanel';
 import { QuantumPanel } from '../components/QuantumPanel';
 import { ProfileMenu } from '../components/ProfileMenu';
 import { ScenarioPanel } from '../components/ScenarioPanel';
+import { SpatialAnalysisPanel } from '../components/SpatialAnalysisPanel';
 import { RuntimeDiagnosticsPanel } from '../components/RuntimeDiagnosticsPanel';
 import { SpatialViewport } from '../components/SpatialViewport';
 import { TemporalRail } from '../components/TemporalRail';
@@ -24,7 +25,10 @@ import type { SpatialOverlaySnapshot } from '../renderer/overlays/spatial-overla
 import type {
   LayerState,
   SpatialFeatureSelection,
+  SpatialInteractionMode,
+  SpatialSurfacePoint,
   SpatialTarget,
+  TemporalInstant,
   VisualMode
 } from '../renderer/spatial-renderer';
 import { solarStateAt } from '../renderer/solar-position';
@@ -48,6 +52,11 @@ import {
   loadCoordinateSpatialBundle,
   type CityIdentitySummary
 } from '../services/city-power-overlay';
+import {
+  measureSpatialPoints,
+  measurementToOverlay,
+  type SpatialMeasurement
+} from '../services/spatial-analysis';
 import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
 import type { SpatialViewBookmark } from '../services/view-bookmarks';
 import {
@@ -175,6 +184,12 @@ export function App() {
   const [activeUseCase, setActiveUseCase] = useState<UseCaseId | null>(null);
   const [layers, setLayers] = useState<readonly LayerState[]>(INITIAL_LAYERS);
   const [selection, setSelection] = useState<SpatialFeatureSelection | null>(null);
+  const [interactionMode, setInteractionMode] =
+    useState<SpatialInteractionMode>('inspect');
+  const [measurementPoints, setMeasurementPoints] =
+    useState<readonly SpatialSurfacePoint[]>([]);
+  const [measurementFrame, setMeasurementFrame] =
+    useState<TemporalInstant | null>(null);
   const [powerOverlay, setPowerOverlay] = useState<SpatialOverlaySnapshot | null>(null);
   const [illuminationOverlay, setIlluminationOverlay] =
     useState<SpatialOverlaySnapshot | null>(null);
@@ -185,7 +200,7 @@ export function App() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [intelOpen, setIntelOpen] = useState(false);
   const [intelWorkspace, setIntelWorkspace] = useState<
-    'context' | 'ai' | 'scenario' | 'quantum' | 'evidence' | 'system'
+    'context' | 'analysis' | 'ai' | 'scenario' | 'quantum' | 'evidence' | 'system'
   >('context');
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [atmosphere, setAtmosphere] = useState<AtmosphericOverlaySnapshot | null>(null);
@@ -210,6 +225,22 @@ export function App() {
       scenarioVisual
     }),
     [temporal, scenarioVisual]
+  );
+
+  const measurement = useMemo<SpatialMeasurement | null>(
+    () =>
+      measurementPoints.length >= 2
+        ? measureSpatialPoints(measurementPoints[0], measurementPoints[1])
+        : null,
+    [measurementPoints]
+  );
+
+  const measurementOverlay = useMemo(
+    () =>
+      measurement && measurementFrame
+        ? measurementToOverlay(measurement, measurementFrame)
+        : null,
+    [measurement, measurementFrame]
   );
 
   useEffect(() => {
@@ -240,6 +271,8 @@ export function App() {
     setEnvironmentError(null);
     setLiveContext(null);
     setLiveContextError(null);
+    setMeasurementPoints([]);
+    setMeasurementFrame(null);
     setCityLoad({
       spatial: true,
       environment: true,
@@ -495,7 +528,8 @@ export function App() {
             activeIllumination,
             powerOverlay,
             windOverlay,
-            seismicOverlay
+            seismicOverlay,
+            measurementOverlay
           ]
       ).filter(
         (snapshot): snapshot is SpatialOverlaySnapshot => Boolean(snapshot)
@@ -507,7 +541,8 @@ export function App() {
       activeIllumination,
       powerOverlay,
       windOverlay,
-      seismicOverlay
+      seismicOverlay,
+      measurementOverlay
     ]
   );
 
@@ -526,6 +561,35 @@ export function App() {
 
     setCity(target);
     setScope('city');
+  };
+
+  const handleSurfacePoint = (point: SpatialSurfacePoint | null) => {
+    if (!point) return;
+
+    setSelection(null);
+    if (measurementPoints.length >= 2) {
+      setMeasurementPoints([point]);
+      setMeasurementFrame({ ...temporalInstant });
+      return;
+    }
+
+    if (measurementPoints.length === 0) {
+      setMeasurementFrame({ ...temporalInstant });
+    }
+    setMeasurementPoints([...measurementPoints, point]);
+  };
+
+  const clearMeasurement = () => {
+    setMeasurementPoints([]);
+    setMeasurementFrame(null);
+  };
+
+  const changeInteractionMode = (mode: SpatialInteractionMode) => {
+    setInteractionMode(mode);
+    if (mode === 'measure') {
+      setIntelWorkspace('analysis');
+      setIntelOpen(true);
+    }
   };
 
   const layerCounts = useMemo(() => {
@@ -827,6 +891,18 @@ export function App() {
                   CITY
                 </button>
               </div>
+              <div className="interaction-modes" role="group" aria-label="Spatial interaction">
+                {(['inspect', 'measure'] as const).map((mode) => (
+                  <button
+                    type="button"
+                    key={mode}
+                    className={interactionMode === mode ? 'active' : ''}
+                    onClick={() => changeInteractionMode(mode)}
+                  >
+                    {mode.toUpperCase()}
+                  </button>
+                ))}
+              </div>
               <div className="visual-modes" role="group" aria-label="Visual mode">
               {VISUAL_MODES.map((mode) => (
                 <button
@@ -855,7 +931,9 @@ export function App() {
               scope === 'city' && temporal.mode === 'live' ? atmosphere : null
             }
             airQuality={airQualityOverlay}
+            interactionMode={interactionMode}
             onSelection={handleSpatialSelection}
+            onSurfacePoint={handleSurfacePoint}
           />
 
           {scope === 'city' && Object.values(cityLoad).some(Boolean) ? (
@@ -951,7 +1029,11 @@ export function App() {
                 ? `${globalLive?.cityCount ?? CITY_TARGETS.length} CITIES · ${globalLive?.earthquakeCount ?? 0} SEISMIC EVENTS`
                 : `${city.latitude.toFixed(4)}°, ${city.longitude.toFixed(4)}°`}
             </strong>
-            <small>CLICK OR TAP A 3D FEATURE TO INSPECT</small>
+            <small>
+              {interactionMode === 'measure'
+                ? 'SELECT TWO GEOGRAPHIC POINTS TO MEASURE'
+                : 'CLICK OR TAP A 3D FEATURE TO INSPECT'}
+            </small>
           </div>
         </section>
 
@@ -969,6 +1051,7 @@ export function App() {
           <nav className="intel-workspace-tabs" aria-label="Intelligence workspace">
             {[
               ['context', 'CONTEXT'],
+              ['analysis', 'ANALYSIS'],
               ['ai', 'AI'],
               ['scenario', 'SCENARIO'],
               ['quantum', 'QUANTUM'],
@@ -982,7 +1065,14 @@ export function App() {
                 aria-pressed={intelWorkspace === id}
                 onClick={() =>
                   setIntelWorkspace(
-                    id as 'context' | 'ai' | 'scenario' | 'quantum' | 'evidence' | 'system'
+                    id as
+                      | 'context'
+                      | 'analysis'
+                      | 'ai'
+                      | 'scenario'
+                      | 'quantum'
+                      | 'evidence'
+                      | 'system'
                   )
                 }
               >
@@ -1155,6 +1245,15 @@ export function App() {
             </div>
           </section>
 
+          <div className="intel-workspace intel-analysis">
+            <SpatialAnalysisPanel
+              mode={interactionMode}
+              points={measurementPoints}
+              measurement={measurement}
+              onModeChange={changeInteractionMode}
+              onReset={clearMeasurement}
+            />
+          </div>
           <div className="intel-workspace intel-ai">
             <AgentDock context={agentContext} handoff={agentHandoff} />
           </div>
