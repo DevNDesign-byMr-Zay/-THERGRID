@@ -898,6 +898,35 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
       context.stroke();
     }
 
+    const weather = this.#weatherGeometry();
+    context.lineCap = 'round';
+    for (const line of weather.lines) {
+      context.strokeStyle = css(line.color);
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(
+        ((line.from[0] + 1) / 2) * width,
+        ((1 - line.from[1]) / 2) * height
+      );
+      context.lineTo(
+        ((line.to[0] + 1) / 2) * width,
+        ((1 - line.to[1]) / 2) * height
+      );
+      context.stroke();
+    }
+    for (const point of weather.points) {
+      context.fillStyle = css(point.color);
+      context.beginPath();
+      context.arc(
+        ((point.position[0] + 1) / 2) * width,
+        ((1 - point.position[1]) / 2) * height,
+        Math.max(1, point.size / 2),
+        0,
+        Math.PI * 2
+      );
+      context.fill();
+    }
+
     for (const snapshot of this.#overlays.values()) {
       if (!this.#layerVisible(snapshot.layerId, true)) continue;
       const base = this.#visualColor(layerColor(snapshot.layerId));
@@ -1013,35 +1042,6 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
           distance: number;
         }
       | null = null;
-
-    const weather = this.#weatherGeometry();
-    context.lineCap = 'round';
-    for (const line of weather.lines) {
-      context.strokeStyle = css(line.color);
-      context.lineWidth = 1;
-      context.beginPath();
-      context.moveTo(
-        ((line.from[0] + 1) / 2) * width,
-        ((1 - line.from[1]) / 2) * height
-      );
-      context.lineTo(
-        ((line.to[0] + 1) / 2) * width,
-        ((1 - line.to[1]) / 2) * height
-      );
-      context.stroke();
-    }
-    for (const point of weather.points) {
-      context.fillStyle = css(point.color);
-      context.beginPath();
-      context.arc(
-        ((point.position[0] + 1) / 2) * width,
-        ((1 - point.position[1]) / 2) * height,
-        Math.max(1, point.size / 2),
-        0,
-        Math.PI * 2
-      );
-      context.fill();
-    }
 
     for (const snapshot of this.#overlays.values()) {
       if (!this.#layerVisible(snapshot.layerId, true)) continue;
