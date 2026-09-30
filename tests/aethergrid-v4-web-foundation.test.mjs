@@ -957,3 +957,19 @@ test('v4 native failover preserves source-driven weather geometry and layer togg
   assert.match(nativeRenderer, /gl\.drawArrays/u);
   assert.match(nativeRenderer, /context\.arc/u);
 });
+
+test('v4 native failover preserves source-driven AQI particles with wind drift', async () => {
+  const nativeRenderer = await text(
+    'apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts',
+  );
+
+  assert.match(nativeRenderer, /#airGeometry/u);
+  assert.match(nativeRenderer, /current\.usAqi/u);
+  assert.match(nativeRenderer, /current\.pm25UgM3/u);
+  assert.match(nativeRenderer, /current\.category === 'good'/u);
+  assert.match(nativeRenderer, /current\.category === 'hazardous'/u);
+  assert.match(nativeRenderer, /current\.windDirectionDegrees/u);
+  assert.match(nativeRenderer, /current\.windSpeedKph/u);
+  assert.match(nativeRenderer, /this\.#layerVisible\('air', true\)/u);
+  assert.match(nativeRenderer, /const air = this\.#airGeometry\(\)/u);
+});
