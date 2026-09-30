@@ -76,7 +76,9 @@
     "quantum-backend-discovery",
     "quantum-sampler-job-submission",
     "ibm-quantum-provider",
-    "local-quantum-simulator"
+    "local-quantum-simulator",
+    "live-osm-road-topology",
+    "animated-globe-city-descent"
   ],
   "agents": [
     {
@@ -273,7 +275,9 @@
     "liveProvider": "OpenStreetMap Overpass",
     "liveBuildingGeometry": true,
     "providerFallback": "local procedural city geometry",
-    "attribution": "© OpenStreetMap contributors"
+    "attribution": "© OpenStreetMap contributors",
+    "liveRoadTopology": true,
+    "animatedCityDescent": true
   },
   "profile": {
     "persistence": "backend local JSON with browser cache fallback",
