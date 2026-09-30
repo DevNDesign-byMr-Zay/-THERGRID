@@ -26,11 +26,19 @@ export interface SpatialTarget {
   journey?: 'full' | 'global' | 'direct';
 }
 
+export interface SpatialScenarioVisual {
+  stressFactor: number;
+  renewableBias: number;
+  storageStress: number;
+  weatherRisk: number;
+}
+
 export interface TemporalInstant {
   iso: string;
   mode: TemporalMode;
   sourceTime?: string | null;
   scenarioId?: string | null;
+  scenarioVisual?: SpatialScenarioVisual | null;
 }
 
 export interface LayerState {
