@@ -578,7 +578,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
         this.#features.push({
           id: node.id,
           kind: node.kind,
-          source: snapshot.attribution,
+          source: snapshot.attribution ?? null,
           x: point[0],
           y: point[1],
           latitude: node.position.latitude,
@@ -749,7 +749,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
         this.#features.push({
           id: node.id,
           kind: node.kind,
-          source: snapshot.attribution,
+          source: snapshot.attribution ?? null,
           x: point[0],
           y: point[1],
           latitude: node.position.latitude,
@@ -810,7 +810,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     return {
       id: best.edge.id,
       kind: best.edge.kind,
-      source: best.snapshot.attribution,
+      source: best.snapshot.attribution ?? null,
       latitude: midpoint.latitude,
       longitude: midpoint.longitude,
       heightMeters: midpoint.heightMeters,
