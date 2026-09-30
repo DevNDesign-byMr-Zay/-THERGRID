@@ -570,6 +570,65 @@ button {
   font-size: 9px;
 }
 
+
+.use-case-presets {
+  margin-bottom: 20px;
+}
+
+.use-case-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.use-case-grid button {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.045);
+  border-radius: 7px;
+  text-align: left;
+  color: #7f92a4;
+  background: rgba(255, 255, 255, 0.014);
+  cursor: pointer;
+}
+
+.use-case-grid button:hover,
+.use-case-grid button.active {
+  border-color: rgba(112, 231, 255, 0.25);
+  background: rgba(112, 231, 255, 0.055);
+}
+
+.use-case-grid strong,
+.use-case-grid small {
+  display: block;
+}
+
+.use-case-grid strong {
+  overflow: hidden;
+  color: #aabac7;
+  font-size: 7px;
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.use-case-grid button.active strong {
+  color: #d8f7ff;
+}
+
+.use-case-grid small {
+  margin-top: 3px;
+  color: #566b7e;
+  font-size: 6px;
+}
+
+.use-case-presets p {
+  margin: 7px 0 0;
+  color: #5f7285;
+  font-size: 7px;
+  line-height: 1.4;
+}
+
 .layer-list {
   display: grid;
   gap: 4px;
