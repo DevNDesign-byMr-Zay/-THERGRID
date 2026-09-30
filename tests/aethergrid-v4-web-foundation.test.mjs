@@ -542,3 +542,13 @@ test('v4 AIR toggle renders a source-driven AQI field only for live city context
   assert.match(app, /scope === 'city' && liveContext && temporal\.mode === 'live'/u);
   assert.match(app, /airQuality=\{airQualityOverlay\}/u);
 });
+
+test('v4 layer controls expose only implemented layers with live feature counts', async () => {
+  const app = await text('apps/aethergrid-console/web/src/app/App.tsx');
+
+  assert.match(app, /const layerCounts = useMemo/u);
+  assert.match(app, /powerOverlay\.nodes\.length \+ powerOverlay\.edges\.length/u);
+  assert.match(app, /cityIdentity\?\.buildingCount/u);
+  assert.match(app, /layerCounts\[layer\.id\] \?\? 0/u);
+  assert.doesNotMatch(app, /id: 'transit'/u);
+});
