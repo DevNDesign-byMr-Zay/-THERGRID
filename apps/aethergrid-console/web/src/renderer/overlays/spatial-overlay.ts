@@ -7,7 +7,8 @@ export type OverlayNodeKind =
   | 'sensor'
   | 'city'
   | 'asset'
-  | 'event';
+  | 'event'
+  | 'analysis-point';
 
 export type OverlayEdgeKind =
   | 'transmission'
@@ -17,7 +18,8 @@ export type OverlayEdgeKind =
   | 'coastline'
   | 'flow'
   | 'dependency'
-  | 'impact';
+  | 'impact'
+  | 'analysis-line';
 
 export type OverlayAreaKind = 'water' | 'green';
 
