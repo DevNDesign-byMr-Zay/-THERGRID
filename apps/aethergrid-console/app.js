@@ -1951,7 +1951,7 @@
         ? jobs
             .map(
               (job) =>
-                `<div class="history-row"><b>${escapeHtml(job.id || 'job')}</b><small>${escapeHtml(job.backend || 'backend')} · ${escapeHtml(job.programId || 'program')} · ${escapeHtml(job.status || 'unknown')}${job.created ? ` · ${escapeHtml(job.created)}` : ''}</small></div>`,
+                `<div class="history-row quantum-job-row"><span><b>${escapeHtml(job.id || 'job')}</b><small>${escapeHtml(job.backend || 'backend')} · ${escapeHtml(job.programId || 'program')} · ${escapeHtml(job.status || 'unknown')}${job.created ? ` · ${escapeHtml(job.created)}` : ''}</small></span><button class="secondary-button" data-quantum-job="${escapeHtml(job.id || '')}">INSPECT</button></div>`,
             )
             .join('')
         : '<div class="empty-state">No remote jobs returned by the configured provider.</div>';
@@ -1960,9 +1960,54 @@
     }
   }
 
-  q('[data-action="refresh-quantum-backends"]')?.addEventListener('click', loadQuantumBackends);
+  async function loadQuantumJobDetail(jobId) {
+    const container = q('#quantumJobResult');
+    if (!container || !jobId) return;
+    container.innerHTML = '<div class="empty-state">Loading IBM Quantum job detail…</div>';
+    try {
+      const detail = await api(
+        `./api/aethergrid/quantum/jobs/${encodeURIComponent(jobId)}`,
+      );
+      const completed = String(detail.status || '').toLowerCase() === 'completed';
+      const [results, metrics] = await Promise.all([
+        completed
+          ? api(
+              `./api/aethergrid/quantum/jobs/${encodeURIComponent(jobId)}/results`,
+            ).catch(() => null)
+          : Promise.resolve(null),
+        completed
+          ? api(
+              `./api/aethergrid/quantum/jobs/${encodeURIComponent(jobId)}/metrics`,
+            ).catch(() => null)
+          : Promise.resolve(null),
+      ]);
+      const payload = {
+        job: detail,
+        results: results?.result || null,
+        metrics: metrics?.metrics || null,
+      };
+      container.innerHTML = `<div class="quantum-job-card"><b>${escapeHtml(jobId)}</b><code>${escapeHtml(detail.backend || 'backend')} · ${escapeHtml(detail.status || 'unknown')}</code><dl><dt>Primitive</dt><dd>${escapeHtml(detail.programId || 'unknown')}</dd><dt>QPU Completed</dt><dd>${detail.hardwareExecuted ? 'YES' : 'NO'}</dd></dl></div><pre class="evidence-json quantum-result-json">${escapeHtml(JSON.stringify(payload, null, 2).slice(0, 12000))}</pre>`;
+      showToast(
+        'QUANTUM JOB INSPECTED',
+        completed
+          ? 'Job detail, results and execution metrics loaded.'
+          : `Current status: ${detail.status || 'unknown'}`,
+      );
+    } catch (error) {
+      container.innerHTML = `<div class="empty-state">${escapeHtml(error.message || String(error))}</div>`;
+    }
+  }
+
+  q('[data-action="refresh-quantum-backends"]')?.addEventListener(
+    'click',
+    loadQuantumBackends,
+  );
   q('[data-action="submit-quantum-job"]')?.addEventListener('click', submitQuantumJob);
   q('[data-action="refresh-quantum-jobs"]')?.addEventListener('click', loadQuantumJobs);
+  q('#quantumJobs')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-quantum-job]');
+    if (button) loadQuantumJobDetail(button.dataset.quantumJob);
+  });
 
   qa('[data-map-tool]').forEach((button) =>
     button.addEventListener('click', () => {
