@@ -39,6 +39,7 @@ export function ScenarioPanel({
   const [parameters, setParameters] = useState<ScenarioParameters>(DEFAULT_CUSTOM);
   const [running, setRunning] = useState(false);
   const [receipt, setReceipt] = useState<string | null>(null);
+  const [activeVisual, setActiveVisual] = useState<ScenarioVisualState | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const apply = async () => {
@@ -53,10 +54,9 @@ export function ScenarioPanel({
       setReceipt(result.evidence?.receipt || result.evidence?.id || null);
       const serverParameters =
         result.state?.system?.scenarioParameters ?? parameters;
-      onScenarioApplied(
-        scenario,
-        scenarioVisualState(scenario, serverParameters)
-      );
+      const visual = scenarioVisualState(scenario, serverParameters);
+      setActiveVisual(visual);
+      onScenarioApplied(scenario, visual);
     } catch (applyError) {
       setError(applyError instanceof Error ? applyError.message : String(applyError));
     } finally {
@@ -71,6 +71,7 @@ export function ScenarioPanel({
     try {
       await returnToLiveView();
       setReceipt(null);
+      setActiveVisual(null);
       onReturnLive();
     } catch (liveError) {
       setError(liveError instanceof Error ? liveError.message : String(liveError));
@@ -167,6 +168,27 @@ export function ScenarioPanel({
           RETURN LIVE
         </button>
       </div>
+
+      {activeVisual ? (
+        <div className="scenario-visual-metrics">
+          <span>
+            <small>STRESS</small>
+            <strong>{activeVisual.stressFactor.toFixed(2)}×</strong>
+          </span>
+          <span>
+            <small>RENEWABLE</small>
+            <strong>{activeVisual.renewableBias.toFixed(2)}</strong>
+          </span>
+          <span>
+            <small>STORAGE</small>
+            <strong>{activeVisual.storageStress.toFixed(2)}</strong>
+          </span>
+          <span>
+            <small>WEATHER</small>
+            <strong>{activeVisual.weatherRisk.toFixed(2)}</strong>
+          </span>
+        </div>
+      ) : null}
 
       {receipt ? (
         <div className="scenario-receipt">
