@@ -5,10 +5,18 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { createAgentRuntime } from './ai-runtime.mjs';
+import { createGeoRuntime } from './geo-runtime.mjs';
+import { createProfileStore } from './profile-store.mjs';
+import { createQuantumRuntime } from './quantum-runtime.mjs';
 
 const root = fileURLToPath(new URL('./', import.meta.url));
 const port = Number(process.env.AETHERGRID_PORT || process.env.PORT || 8090);
 const agentRuntime = createAgentRuntime();
+const geoRuntime = createGeoRuntime();
+const quantumRuntime = createQuantumRuntime();
+const profileStore = createProfileStore({
+  dataDir: process.env.AETHERGRID_DATA_DIR || join(root, '.aethergrid-data'),
+});
 
 const regions = Object.freeze([
   'New York Metro',
@@ -226,6 +234,14 @@ const server = http.createServer(async (request, response) => {
           mode: runtime.mode,
           liveProviders: runtime.liveProviders,
         },
+        geospatialRuntime: {
+          provider: geoRuntime.summary().provider,
+          liveProviderConfigured: geoRuntime.summary().liveProviderConfigured,
+        },
+        quantumRuntime: {
+          provider: quantumRuntime.summary().provider,
+          configured: quantumRuntime.summary().configured,
+        },
       });
     }
 
@@ -277,7 +293,117 @@ const server = http.createServer(async (request, response) => {
     }
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
-      return json(response, 200, agentRuntime.summary());
+      return json(response, 200, {
+        ai: agentRuntime.summary(),
+        geospatial: geoRuntime.summary(),
+        quantum: quantumRuntime.summary(),
+        profile: profileStore.safeSummary(),
+      });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/profile') {
+      return json(response, 200, { profile: await profileStore.load() });
+    }
+
+    if (request.method === 'PUT' && url.pathname === '/api/aethergrid/profile') {
+      const input = await body(request);
+      const profile = await profileStore.save(input.profile || input);
+      activity(`Operator profile updated for ${profile.displayName}.`, 'profile');
+      return json(response, 200, { profile, activity: state.activity });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/geospatial/runtime') {
+      return json(response, 200, geoRuntime.summary());
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/geospatial/cities') {
+      return json(response, 200, {
+        cities: geoRuntime.cities,
+        runtime: geoRuntime.summary(),
+      });
+    }
+
+    if (
+      request.method === 'GET' &&
+      url.pathname.startsWith('/api/aethergrid/geospatial/city/')
+    ) {
+      const cityId = decodeURIComponent(
+        url.pathname.slice('/api/aethergrid/geospatial/city/'.length),
+      );
+      const mesh = await geoRuntime.cityMesh(cityId, {
+        force: url.searchParams.get('force') === '1',
+      });
+      activity(
+        `Geospatial city mesh loaded: ${mesh.city.name} via ${mesh.source.provider} (${mesh.buildings.length} buildings).`,
+        'geospatial',
+      );
+      return json(response, 200, {
+        ...mesh,
+        activity: state.activity,
+      });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/quantum/runtime') {
+      return json(response, 200, quantumRuntime.summary());
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/quantum/backends') {
+      return json(response, 200, await quantumRuntime.listBackends());
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/quantum/jobs') {
+      return json(response, 200, await quantumRuntime.listJobs({
+        limit: url.searchParams.get('limit') || 20,
+      }));
+    }
+
+    if (
+      request.method === 'GET' &&
+      url.pathname.startsWith('/api/aethergrid/quantum/jobs/')
+    ) {
+      const jobId = decodeURIComponent(
+        url.pathname.slice('/api/aethergrid/quantum/jobs/'.length),
+      );
+      return json(response, 200, await quantumRuntime.job(jobId));
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/aethergrid/quantum/jobs') {
+      const input = await body(request);
+      const result = await quantumRuntime.submitSampler({
+        circuit: input.circuit,
+        backend: input.backend,
+        shots: input.shots,
+      });
+      const record = {
+        id: result.receipt.slice(0, 16),
+        title: `Quantum Job: ${result.backend}`,
+        type: 'QUANTUM_JOB',
+        age: 'just now',
+        status: result.status === 'COMPLETED' ? 'VERIFIED' : 'PENDING',
+        receipt: result.receipt,
+        details: {
+          provider: result.provider,
+          backend: result.backend,
+          programId: result.programId,
+          status: result.status,
+          hardwareSubmitted: Boolean(result.hardwareSubmitted),
+          hardwareExecuted: Boolean(result.hardwareExecuted),
+          jobId: result.id,
+          advisoryOnly: true,
+        },
+      };
+      state.evidence.unshift(record);
+      state.evidence = state.evidence.slice(0, 24);
+      activity(
+        `Quantum sampler job ${result.id} submitted through ${result.provider}/${result.backend}; status ${result.status}.`,
+        'quantum',
+      );
+      return json(response, 200, {
+        job: result,
+        evidence: record,
+        activity: state.activity,
+        advisoryOnly: true,
+      });
     }
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/spatial') {
