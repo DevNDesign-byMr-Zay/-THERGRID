@@ -498,6 +498,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
 
     if (
       this.#time.mode === 'live' &&
+      this.#layerVisible('air', true) &&
       this.#airQuality?.current?.usAqi != null
     ) {
       const haze = clamp(this.#airQuality.current.usAqi / 300, 0, 0.38);
@@ -506,6 +507,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
 
     if (
       this.#time.mode === 'live' &&
+      this.#layerVisible('weather', true) &&
       (this.#atmosphere?.current?.cloudCoverPercent ?? 0) > 75
     ) {
       color = mix(color, rgba('#26313b'), 0.18);
