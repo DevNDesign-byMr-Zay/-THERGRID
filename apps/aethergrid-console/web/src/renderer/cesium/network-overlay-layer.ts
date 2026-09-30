@@ -137,6 +137,9 @@ function nodeEntity(
 }
 
 function edgeColor(edge: SpatialOverlayEdge, intensity: number): Color {
+  if (edge.kind === 'flow' && edge.properties?.vectorType === 'wind') {
+    return Color.fromCssColorString('#7de9ff').withAlpha(0.42 + intensity * 0.42);
+  }
   if (edge.kind === 'waterway' || edge.kind === 'coastline') {
     return Color.fromCssColorString('#48cfff').withAlpha(0.42 + intensity * 0.4);
   }
@@ -147,6 +150,9 @@ function edgeColor(edge: SpatialOverlayEdge, intensity: number): Color {
 }
 
 function edgeWidth(edge: SpatialOverlayEdge, intensity: number): number {
+  if (edge.kind === 'flow' && edge.properties?.vectorType === 'wind') {
+    return 1.1 + intensity * 1.8;
+  }
   return edge.kind === 'coastline'
     ? 2.6
     : edge.kind === 'waterway'
@@ -381,6 +387,8 @@ export class NetworkOverlayLayer {
       const intensity = overlayIntensity(edge.intensity);
       const powerEdge =
         edge.kind === 'transmission' || edge.kind === 'distribution';
+      const windEdge =
+        edge.kind === 'flow' && edge.properties?.vectorType === 'wind';
 
       const ghost = this.#scenarioGhostEntities.get(edge.id);
       if (ghost) {
@@ -390,7 +398,15 @@ export class NetworkOverlayLayer {
           isActiveAt(edge, time.iso);
       }
 
-      if (scenario && powerEdge) {
+      if (windEdge && time.mode === 'live') {
+        const pulse = 0.5 + 0.5 * Math.sin(temporalPhase * 0.72 + intensity * 4.7);
+        polyline.width = new ConstantProperty(
+          edgeWidth(edge, intensity) * (0.88 + pulse * 0.34)
+        );
+        polyline.material = new ColorMaterialProperty(
+          Color.fromCssColorString('#7de9ff').withAlpha(0.34 + pulse * 0.48)
+        );
+      } else if (scenario && powerEdge) {
         const pulse = 0.5 + 0.5 * Math.sin(temporalPhase * 0.38 + intensity * 6.3);
         const stressBoost = Math.max(0, scenario.stressFactor - 1);
         polyline.width = new ConstantProperty(
