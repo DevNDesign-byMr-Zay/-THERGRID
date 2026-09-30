@@ -24,7 +24,8 @@ import {
 } from '../services/city-live-context';
 import {
   loadCitySpatialBundle,
-  loadCoordinateSpatialBundle
+  loadCoordinateSpatialBundle,
+  type CityIdentitySummary
 } from '../services/city-power-overlay';
 import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
 
@@ -141,6 +142,7 @@ export function App() {
   const [selection, setSelection] = useState<SpatialFeatureSelection | null>(null);
   const [powerOverlay, setPowerOverlay] = useState<SpatialOverlaySnapshot | null>(null);
   const [semanticOverlays, setSemanticOverlays] = useState<readonly SpatialOverlaySnapshot[]>([]);
+  const [cityIdentity, setCityIdentity] = useState<CityIdentitySummary | null>(null);
   const [powerOverlayError, setPowerOverlayError] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState('');
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -163,6 +165,7 @@ export function App() {
     const controller = new AbortController();
     setPowerOverlay(null);
     setSemanticOverlays([]);
+    setCityIdentity(null);
     setPowerOverlayError(null);
     setAtmosphere(null);
     setEnvironmentError(null);
@@ -182,6 +185,7 @@ export function App() {
       .then((bundle) => {
         setPowerOverlay(bundle.power);
         setSemanticOverlays(bundle.semantics);
+        setCityIdentity(bundle.identity);
       })
       .catch((error) => {
         if (controller.signal.aborted) return;
@@ -415,6 +419,51 @@ export function App() {
         </section>
 
         <aside className="intel-rail">
+          <section className="identity-card">
+            <div className="identity-head">
+              <span>
+                <small>CITY IDENTITY</small>
+                <strong>{city.name}</strong>
+              </span>
+              <span className={cityIdentity?.live ? 'status-dot live' : 'status-dot'} />
+            </div>
+            <div className="identity-metrics">
+              <span>
+                <small>BUILDINGS</small>
+                <strong>{cityIdentity?.buildingCount?.toLocaleString() ?? '—'}</strong>
+              </span>
+              <span>
+                <small>SKYLINE MAX</small>
+                <strong>
+                  {cityIdentity?.maxHeightM ? `${cityIdentity.maxHeightM.toFixed(0)}m` : '—'}
+                </strong>
+              </span>
+              <span>
+                <small>P95</small>
+                <strong>
+                  {cityIdentity?.p95HeightM ? `${cityIdentity.p95HeightM.toFixed(0)}m` : '—'}
+                </strong>
+              </span>
+            </div>
+            <div className="identity-quality">
+              <span>HEIGHT COVERAGE</span>
+              <strong>
+                {cityIdentity
+                  ? `${cityIdentity.sourceBackedHeightCoveragePercent.toFixed(1)}%`
+                  : '—'}
+              </strong>
+            </div>
+            <div className="identity-landmarks">
+              {(cityIdentity?.namedStructures ?? []).slice(0, 4).map((structure) => (
+                <div key={structure.id}>
+                  <span>{structure.name}</span>
+                  <small>{structure.heightM ? `${structure.heightM.toFixed(0)}m` : 'MAPPED'}</small>
+                </div>
+              ))}
+              {!cityIdentity?.namedStructures?.length ? <p>Mapped identity anchors pending.</p> : null}
+            </div>
+          </section>
+
           <section className="weather-card" data-source-state={
             environmentError ? 'unavailable' : atmosphere?.live ? 'live' : atmosphere ? 'fallback' : 'loading'
           }>
