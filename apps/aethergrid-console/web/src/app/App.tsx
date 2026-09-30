@@ -1008,9 +1008,41 @@ export function App() {
                 <small className="selection-hint">ESC TO CLEAR</small>
                 <dl>
                   <div><dt>SOURCE</dt><dd>{selection.source ?? 'UNKNOWN'}</dd></div>
+                  <div>
+                    <dt>LAYER</dt>
+                    <dd>{String(selection.properties?.layerId ?? '—')}</dd>
+                  </div>
+                  <div>
+                    <dt>STATE</dt>
+                    <dd>
+                      {selection.properties?.live === true
+                        ? 'LIVE'
+                        : selection.properties?.fallback === true
+                          ? 'FALLBACK'
+                          : 'RECORDED'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>SOURCE TIME</dt>
+                    <dd>{String(selection.properties?.sourceTime ?? '—')}</dd>
+                  </div>
+                  <div>
+                    <dt>FETCHED</dt>
+                    <dd>{String(selection.properties?.fetchedAt ?? '—')}</dd>
+                  </div>
                   <div><dt>LAT</dt><dd>{selection.latitude?.toFixed(5) ?? '—'}</dd></div>
                   <div><dt>LON</dt><dd>{selection.longitude?.toFixed(5) ?? '—'}</dd></div>
                 </dl>
+                <button
+                  className="selection-ai-action"
+                  type="button"
+                  onClick={() => {
+                    setIntelWorkspace('ai');
+                    setIntelOpen(true);
+                  }}
+                >
+                  ANALYZE WITH AI
+                </button>
               </>
             ) : (
               <p>No feature selected.</p>
