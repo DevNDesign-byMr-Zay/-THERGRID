@@ -1,3 +1,5 @@
+import type { SpatialOverlaySnapshot } from './overlays/spatial-overlay';
+
 import type {
   LayerState,
   SpatialFeatureSelection,
@@ -19,6 +21,7 @@ export class RendererManager {
   #layers: readonly LayerState[] = [];
   #time: TemporalInstant | null = null;
   #mode: VisualMode = 'solid';
+  #overlays = new Map<string, SpatialOverlaySnapshot>();
 
   constructor(primary: SpatialRenderer, fallback: SpatialRenderer) {
     this.#primary = primary;
@@ -80,6 +83,16 @@ export class RendererManager {
     this.#current.setVisualMode(mode);
   }
 
+  applyOverlay(snapshot: SpatialOverlaySnapshot): void {
+    this.#overlays.set(snapshot.layerId, snapshot);
+    this.#current.applyOverlay(snapshot);
+  }
+
+  clearOverlay(layerId: string): void {
+    this.#overlays.delete(layerId);
+    this.#current.clearOverlay(layerId);
+  }
+
   async pick(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null> {
     return this.#current.pick(point);
   }
@@ -102,6 +115,7 @@ export class RendererManager {
     await renderer.initialize(this.#config);
     renderer.setLayers(this.#layers);
     renderer.setVisualMode(this.#mode);
+    for (const snapshot of this.#overlays.values()) renderer.applyOverlay(snapshot);
     if (this.#time) renderer.setTime(this.#time);
     this.#current = renderer;
   }
