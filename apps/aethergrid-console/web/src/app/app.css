@@ -17,6 +17,25 @@
     linear-gradient(180deg, #070a11 0%, #04060a 100%);
 }
 
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  background: #eef3f8;
+  color: #152434;
+  --panel: rgba(244, 248, 252, 0.91);
+  --panel-strong: rgba(239, 245, 250, 0.97);
+  --line: rgba(38, 90, 126, 0.13);
+  --line-strong: rgba(15, 139, 190, 0.4);
+  --cyan: #058eb4;
+  --blue: #436fc4;
+  --violet: #7657cc;
+  --muted: #607486;
+  --success: #0d956e;
+  background-image:
+    radial-gradient(circle at 50% -20%, rgba(84, 144, 214, 0.17), transparent 38%),
+    linear-gradient(180deg, #f3f7fb 0%, #e9eff5 100%);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -132,6 +151,31 @@ button {
   border-radius: 5px;
   color: #76899d;
   font-size: 9px;
+}
+
+.topbar-actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.appearance-button {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: #8496a7;
+  background: rgba(8, 13, 22, 0.66);
+  cursor: pointer;
+}
+
+.appearance-button strong {
+  font-size: 8px;
+  letter-spacing: 0.09em;
 }
 
 .live-cluster {
@@ -734,6 +778,42 @@ button {
   z-index: 2;
 }
 
+
+:root[data-theme='light'] .aethergrid-app {
+  background:
+    linear-gradient(rgba(20, 65, 100, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 65, 100, 0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+:root[data-theme='light'] .topbar {
+  background: rgba(246, 250, 253, 0.94);
+}
+
+:root[data-theme='light'] .global-search,
+:root[data-theme='light'] .appearance-button,
+:root[data-theme='light'] .visual-modes,
+:root[data-theme='light'] .viewport-status,
+:root[data-theme='light'] .source-badge {
+  background: rgba(247, 251, 254, 0.86);
+}
+
+:root[data-theme='light'] .global-search input,
+:root[data-theme='light'] .brand-lockup strong,
+:root[data-theme='light'] .rail-section h2,
+:root[data-theme='light'] .stage-toolbar strong,
+:root[data-theme='light'] .scene-caption span,
+:root[data-theme='light'] .intel-head strong,
+:root[data-theme='light'] .weather-card-head strong {
+  color: #142536;
+}
+
+:root[data-theme='light'] .intel-card,
+:root[data-theme='light'] .selection-card,
+:root[data-theme='light'] .weather-card {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.8), rgba(234, 241, 247, 0.8));
+}
+
 @media (max-width: 1100px) {
   .operator-layout {
     grid-template-columns: 190px minmax(0, 1fr);
@@ -749,6 +829,10 @@ button {
 
   .live-cluster {
     display: none;
+  }
+
+  .topbar-actions {
+    justify-self: end;
   }
 
   .temporal-rail {
