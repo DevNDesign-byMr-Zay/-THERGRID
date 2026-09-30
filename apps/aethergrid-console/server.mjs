@@ -238,7 +238,7 @@ const server = http.createServer(async (request, response) => {
       const sendEvent = () => {
         telemetryTick();
         response.write(
-          `data: ${JSON.stringify({ state: snapshot(), at: new Date().toISOString() })}\n\n`,
+          `event: telemetry\ndata: ${JSON.stringify({ state: snapshot(), at: new Date().toISOString() })}\n\n`,
         );
       };
       sendEvent();
