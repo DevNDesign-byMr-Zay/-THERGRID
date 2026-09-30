@@ -2612,6 +2612,13 @@ button {
   border-color: var(--line);
 }
 
+.transport-button:disabled {
+  color: var(--success);
+  border-color: rgba(99, 255, 197, 0.12);
+  background: rgba(99, 255, 197, 0.025);
+  cursor: default;
+}
+
 .time-slider {
   width: 100%;
   accent-color: var(--cyan);
