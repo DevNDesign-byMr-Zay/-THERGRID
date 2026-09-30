@@ -1,3 +1,5 @@
+import type { VisualMode } from '../spatial-renderer';
+
 import {
   Cartesian3,
   Color,
@@ -29,6 +31,8 @@ export class GeodeticGridLayer {
   #collection: PolylineCollection;
   #lines: Polyline[] = [];
   #visible = true;
+  #mode: VisualMode = 'solid';
+  #lastTime = new Date().toISOString();
 
   constructor(scene: Scene) {
     this.#scene = scene;
@@ -43,13 +47,29 @@ export class GeodeticGridLayer {
     this.#scene.requestRender();
   }
 
+  setVisualMode(mode: VisualMode): void {
+    this.#mode = mode;
+    this.setTime(this.#lastTime);
+  }
+
   setTime(isoTime: string): void {
+    this.#lastTime = isoTime;
     const timestamp = Date.parse(isoTime);
     if (!Number.isFinite(timestamp)) return;
 
     const phase = ((timestamp / 1000) % 86_400) / 86_400;
     const pulse = 0.5 + 0.5 * Math.sin(phase * Math.PI * 2);
-    const alpha = 0.11 + pulse * 0.13;
+    const modeStrength =
+      this.#mode === 'holographic'
+        ? 1.8
+        : this.#mode === 'xray'
+          ? 1.35
+          : this.#mode === 'operations'
+            ? 1.18
+            : this.#mode === 'reality'
+              ? 0.45
+              : 0.78;
+    const alpha = Math.min(0.46, (0.11 + pulse * 0.13) * modeStrength);
 
     for (let index = 0; index < this.#lines.length; index += 1) {
       const linePhase = (index % 12) / 12;
