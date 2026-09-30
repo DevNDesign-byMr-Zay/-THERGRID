@@ -9,6 +9,17 @@
 - Added scheduled dependency-freshness evidence without automatic dependency mutation.
 
 ### Added
+- Added the typed ÆTHERGRID v4 React/Cesium spatial operator surface under `apps/aethergrid-console/web/` while preserving the maintained Node backend and renderer-neutral contracts.
+- Added a functional native WebGL spatial failover that consumes the same normalized overlays, 4D time, layers, selections, weather context and scenario state as Cesium, with Canvas2D only as a final local rendering fallback.
+- Added reversible CESIUM / NATIVE renderer switching, preserved failover diagnostics, and safe retry behavior that returns to native instead of blanking the scene when Cesium cannot initialize.
+- Added a continuously advancing LIVE 4D clock, independent non-live cursors, and explicit temporal eligibility rules that hide current-only weather/AQI/seismic context outside LIVE mode.
+- Added computed solar-state lighting, centered globe-to-city orbit descent, adaptive terrain/building detail, city-load readiness telemetry and skyline-derived city arrival headings.
+- Added source-backed geographic wind-vector overlays shared by Cesium and native failover, using current wind speed/direction/gust provenance rather than decorative motion.
+- Added renderer-neutral thunderstorm presentation driven only by provider thunderstorm codes and current precipitation/gust context, with synthetic flash timing explicitly disclosed.
+- Added mapped-building nighttime illumination derived from actual footprint centroids/heights, capped for performance and explicitly separated from measured occupancy/window-light telemetry.
+- Added backend-aligned scenario network stress visualization with source-baseline ghost routes, modeled-vs-source disclosure and source data left unchanged.
+- Added implemented-layer operational presets, persistent local spatial/4D view bookmarks, selected-entity provenance and operator-controlled AUREN handoff.
+
 - Added bilinear terrain interpolation for city placement using the bounded local-meter elevation grid.
 - Added terrain-anchored building foundations plus per-vertex DEM draping for roads, mapped waterways, green space, power lines and grid-asset markers.
 - Added level mapped-water presentation planes and bounded-datum coastline placement so water does not visibly warp over terrain.
