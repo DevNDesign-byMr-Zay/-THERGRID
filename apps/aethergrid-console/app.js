@@ -2917,7 +2917,76 @@
       : '<div class="empty-state">No optimization run in this session yet.</div>';
   }
 
+  const AGENT_CHAT_STORAGE_KEY = 'aethergrid.agent.chats.v2';
+  const AGENT_CHAT_IDS = ['TEAM', 'VÆLON', 'AUREN', 'SOLVÆR'];
+
+  function loadAgentChats() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(AGENT_CHAT_STORAGE_KEY) || '{}');
+      for (const id of AGENT_CHAT_IDS) {
+        state.agentChats[id] = Array.isArray(stored[id]) ? stored[id].slice(-50) : [];
+      }
+    } catch {
+      for (const id of AGENT_CHAT_IDS) state.agentChats[id] = [];
+    }
+  }
+
+  function persistAgentChats() {
+    try {
+      localStorage.setItem(AGENT_CHAT_STORAGE_KEY, JSON.stringify(state.agentChats));
+    } catch {}
+  }
+
+  function agentWelcome(name) {
+    if (name === 'TEAM') return 'Team thread ready. VÆLON, AUREN and SOLVÆR share the active operator, city, scenario and evidence context for coordinated synthesis.';
+    if (name === 'VÆLON') return 'VÆLON thread ready. Focus: bounded optimization, scenario tradeoffs, constraints and candidate comparison.';
+    if (name === 'AUREN') return 'AUREN thread ready. Focus: semantic meaning, spatial relationships, operator context and city intelligence.';
+    return 'SOLVÆR thread ready. Focus: simulation, evidence generation, validation and reproducible comparison.';
+  }
+
+  function renderSelectedAgentChat() {
+    const log = q('#chatLog');
+    if (!log) return;
+    const name = state.selectedAgent;
+    const messages = state.agentChats[name] || [];
+    if (!messages.length) {
+      log.innerHTML = `<div class="chat-bubble system">${escapeHtml(agentWelcome(name))}</div>`;
+    } else {
+      log.innerHTML = messages.map((item) => {
+        const roleClass = item.role === 'user' ? 'user' : 'system';
+        const runtime = item.runtime ? `<div class="agent-runtime-line">${escapeHtml(item.runtime.provider || 'local')} · ${escapeHtml(item.runtime.model || 'fallback')}${item.runtime.fallbackUsed ? ' · fallback' : ''}</div>` : '';
+        const contributions = Array.isArray(item.contributions) && item.contributions.length
+          ? `<details class="agent-contributions"><summary>View ${item.contributions.length} specialist contributions</summary>${item.contributions.map((entry) => `<article><b>${escapeHtml(entry.agent)}</b><small>${escapeHtml(entry.runtime?.provider || 'local')} · ${escapeHtml(entry.runtime?.model || 'fallback')}</small><p>${escapeHtml(entry.reply || '')}</p></article>`).join('')}</details>`
+          : '';
+        return `<div class="chat-bubble ${roleClass}"><div>${escapeHtml(item.content || '')}</div>${runtime}${contributions}</div>`;
+      }).join('');
+    }
+    const threadBadge = q('#agentThreadBadge');
+    if (threadBadge) threadBadge.textContent = `${name} THREAD · ${messages.length} MSG${messages.length === 1 ? '' : 'S'}`;
+    qa('[data-agent]').forEach((button) => {
+      const hasHistory = Boolean((state.agentChats[button.dataset.agent] || []).length);
+      button.dataset.hasHistory = hasHistory ? 'true' : 'false';
+    });
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function agentHistory(name) {
+    return (state.agentChats[name] || [])
+      .filter((item) => item.role === 'user' || item.role === 'assistant')
+      .slice(-16)
+      .map((item) => ({ role: item.role, content: item.content }));
+  }
+
+  function appendAgentMessage(name, entry) {
+    if (!state.agentChats[name]) state.agentChats[name] = [];
+    state.agentChats[name].push({ ...entry, at: entry.at || new Date().toISOString() });
+    state.agentChats[name] = state.agentChats[name].slice(-50);
+    persistAgentChats();
+    if (state.selectedAgent === name) renderSelectedAgentChat();
+  }
+
   function setSelectedAgent(name) {
+    if (!AGENT_CHAT_IDS.includes(name)) name = 'TEAM';
     state.selectedAgent = name;
     qa('[data-agent]').forEach((button) => button.classList.toggle('active', button.dataset.agent === name));
     if (q('#activeAgentTitle')) q('#activeAgentTitle').textContent = name === 'TEAM' ? 'TEAM MODE' : name;
@@ -2925,6 +2994,7 @@
       q('#activeAgentSubtitle').textContent =
         name === 'TEAM' ? 'VÆLON + AUREN + SOLVÆR' : state.agents[name]?.role || 'Specialized Agent';
     }
+    renderSelectedAgentChat();
   }
 
   qa('[data-agent]').forEach((button) =>
@@ -2932,41 +3002,54 @@
   );
 
   q('[data-action="clear-chat"]')?.addEventListener('click', () => {
-    const log = q('#chatLog');
-    if (log) log.innerHTML = '<div class="chat-bubble system">Conversation cleared. Agent context remains connected to the active operator state.</div>';
+    state.agentChats[state.selectedAgent] = [];
+    persistAgentChats();
+    renderSelectedAgentChat();
+    showToast('THREAD CLEARED', `${state.selectedAgent} conversation cleared. Live system context remains connected.`);
   });
 
   q('#chatForm')?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const input = q('#chatInput');
-    const log = q('#chatLog');
     const message = input.value.trim();
     if (!message) return;
-    log.insertAdjacentHTML('beforeend', `<div class="chat-bubble user">${escapeHtml(message)}</div>`);
+    const agent = state.selectedAgent;
+    const history = agentHistory(agent);
+    appendAgentMessage(agent, { role: 'user', content: message });
     input.value = '';
+    const log = q('#chatLog');
     const pendingId = `pending-${Date.now()}`;
-    log.insertAdjacentHTML('beforeend', `<div class="chat-bubble system" id="${pendingId}">Working…</div>`);
-    log.scrollTop = log.scrollHeight;
-    let reply =
-      'Local fallback active. Start the Node backend and configure a provider to enable model-backed agent reasoning.';
+    log?.insertAdjacentHTML('beforeend', `<div class="chat-bubble system" id="${pendingId}">Working in ${escapeHtml(agent)} thread…</div>`);
+    if (log) log.scrollTop = log.scrollHeight;
+    let reply = 'Local fallback active. Start the Node backend and configure a provider to enable model-backed agent reasoning.';
+    let runtime = null;
+    let contributions = [];
     try {
-      const endpoint =
-        state.selectedAgent === 'TEAM'
-          ? './api/aethergrid/team'
-          : `./api/aethergrid/agents/${encodeURIComponent(state.selectedAgent)}`;
+      const endpoint = agent === 'TEAM' ? './api/aethergrid/team' : `./api/aethergrid/agents/${encodeURIComponent(agent)}`;
+      const activeCity = state.geospatial.cityMesh?.city || null;
+      const activeUseCase = state.geospatial.activeUseCase || null;
       const result = await api(endpoint, {
         method: 'POST',
         body: JSON.stringify({
           message,
+          history,
           context: {
             region: state.system.region,
             scenario: state.system.scenario,
             view: state.system.view,
             metrics: state.metrics,
+            city: activeCity ? { id: activeCity.id, name: activeCity.name, lat: activeCity.lat, lon: activeCity.lon } : null,
+            cityOperation: activeUseCase ? { id: activeUseCase.useCase?.id, label: activeUseCase.useCase?.label, planningIndex: activeUseCase.planningIndex, observations: activeUseCase.observations } : null,
           },
         }),
       });
       reply = result.reply || result.synthesis || reply;
+      runtime = result.runtime || null;
+      contributions = Array.isArray(result.contributions) ? result.contributions.map((item) => ({
+        agent: item.agent,
+        reply: item.reply,
+        runtime: item.runtime ? { provider: item.runtime.provider, model: item.runtime.model, fallbackUsed: item.runtime.fallbackUsed } : null,
+      })) : [];
       if (result.runtime) state.runtime = result.runtime;
       if (Array.isArray(result.activity)) state.activity = result.activity;
       if (result.evidence) {
@@ -2976,19 +3059,6 @@
       } else {
         renderActivity();
       }
-      const contributionMarkup = Array.isArray(result.contributions)
-        ? `<details class="agent-contributions"><summary>View ${result.contributions.length} specialist contributions</summary>${result.contributions
-            .map(
-              (item) =>
-                `<article><b>${escapeHtml(item.agent)}</b><small>${escapeHtml(item.runtime?.provider || 'local')} · ${escapeHtml(item.runtime?.model || 'fallback')}</small><p>${escapeHtml(item.reply)}</p></article>`,
-            )
-            .join('')}</details>`
-        : '';
-      const runtimeMarkup = result.runtime
-        ? `<div class="agent-runtime-line">${escapeHtml(result.runtime.provider || 'local')} · ${escapeHtml(result.runtime.model || 'fallback')}${result.runtime.fallbackUsed ? ' · fallback' : ''}</div>`
-        : '';
-      const pending = q(`#${pendingId}`);
-      pending.innerHTML = `<div>${escapeHtml(reply)}</div>${runtimeMarkup}${contributionMarkup}`;
       if (result.runtime?.agent && result.runtime.agent !== 'TEAM') {
         const badge = q(`[data-agent-runtime="${CSS.escape(result.runtime.agent)}"]`);
         if (badge) badge.textContent = result.runtime.model || result.runtime.provider || 'READY';
@@ -2997,15 +3067,19 @@
       try {
         const result = await api('./api/aethergrid/chat', {
           method: 'POST',
-          body: JSON.stringify({ message, agent: state.selectedAgent }),
+          body: JSON.stringify({ message, agent, history }),
         });
         reply = result.reply || reply;
       } catch {}
-      q(`#${pendingId}`).textContent = reply;
     }
-    log.scrollTop = log.scrollHeight;
+    q(`#${pendingId}`)?.remove();
+    appendAgentMessage(agent, {
+      role: 'assistant',
+      content: reply,
+      runtime: runtime ? { provider: runtime.provider, model: runtime.model, fallbackUsed: runtime.fallbackUsed } : null,
+      contributions,
+    });
   });
-
   async function exportPackage(kind) {
     const payload = {
       kind,
@@ -3215,6 +3289,8 @@
     profileDialog?.close();
   });
 
+  loadAgentChats();
+  setSelectedAgent(state.selectedAgent);
   loadSettings();
   bindSettings();
   switchWorkspace(initialWorkspace(), { persist: false });
