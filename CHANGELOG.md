@@ -9,6 +9,11 @@
 - Added scheduled dependency-freshness evidence without automatic dependency mutation.
 
 ### Added
+- Added bounded OpenStreetMap water-area, waterway, coastline and green-space geometry to the existing v2.9 city-identity/semantic-weather runtime.
+- Added independent WATER and GREEN renderer controls and source-tagged glass/masonry/metal/natural façade overlay buffers without inventing materials for untagged buildings.
+- Tightened unnamed tall-structure landmark emphasis so height-based anchors require source-backed height metadata while preserving named source anchors.
+- Added Flood Context and Green Infrastructure as evidence-bound advisory city workflows, expanding the maintained city-operation catalog from ten to twelve.
+- Added an explicit no-invented-environmental-geometry contract for local fallback: mapped water, coastline and green-space arrays remain empty when upstream data is unavailable.
 - Added source-backed CITY IDENTITY and LANDMARKS surfaces using named/tall structures from each bounded OpenStreetMap city sample.
 - Added skyline identity metadata for named structures and tall-structure counts, with interactive selection of source-backed anchors.
 - Added semantic weather rendering that distinguishes modeled rain, snow, fog and thunderstorm states instead of using one generic precipitation effect.
