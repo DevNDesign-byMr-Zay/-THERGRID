@@ -52,6 +52,8 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(html, /id="settingLiveStream"/u);
     assert.match(html, /id="profileForm"/u);
     assert.match(html, /id="profileAvatarInput"/u);
+    assert.match(html, /id="quantumPrimitive"/u);
+    assert.match(html, /id="quantumObservable"/u);
     assert.match(html, /id="quantumCircuit"/u);
     assert.match(html, /data-action="submit-quantum-job"/u);
     assert.match(html, /data-scenario="custom"/u);
@@ -90,6 +92,7 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(appSource, /terrainLines/u);
     assert.match(appSource, /loadTerrainFor/u);
     assert.match(appSource, /powerAssets/u);
+    assert.match(appSource, /syncQuantumPrimitiveControls/u);
     assert.match(appSource, /async function submitQuantumJob/u);
     assert.match(appSource, /async function saveProfile/u);
     assert.match(appSource, /data-workspace/u);
@@ -214,6 +217,7 @@ test('ÆTHERGRID backend exposes profile, world-city and quantum runtime surface
     const quantumRuntime = await quantumRuntimeResponse.json();
     assert.equal(quantumRuntime.provider, 'local-simulator');
     assert.equal(quantumRuntime.hardwareExecution, false);
+    assert.deepEqual(quantumRuntime.primitives, ['sampler', 'estimator']);
 
     const backendsResponse = await fetch(`${baseUrl}/api/aethergrid/quantum/backends`);
     assert.equal(backendsResponse.status, 200);
@@ -240,6 +244,28 @@ test('ÆTHERGRID backend exposes profile, world-city and quantum runtime surface
     assert.match(job.job.receipt, /^[a-f0-9]{64}$/u);
     assert.equal(state.externalContext.quantum.jobId, job.job.id);
     assert.equal(state.externalContext.quantum.provider, 'local-simulator');
+
+    const estimatorResponse = await fetch(`${baseUrl}/api/aethergrid/quantum/jobs`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        primitive: 'estimator',
+        backend: 'aethergrid-local-sampler',
+        circuit:
+          'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; h q[0]; cx q[0], q[1];',
+        observable: 'ZZ',
+      }),
+    });
+    assert.equal(estimatorResponse.status, 200);
+    const estimator = await estimatorResponse.json();
+    assert.equal(estimator.job.programId, 'estimator');
+    assert.equal(estimator.job.expectationValue, 1);
+    assert.equal(estimator.job.approximation, 'bounded-local-analytic-demo');
+    assert.equal(estimator.evidence.details.observable, 'ZZ');
+    assert.equal(estimator.evidence.details.expectationValue, 1);
+    assert.equal(state.externalContext.quantum.programId, 'estimator');
+    assert.equal(state.externalContext.quantum.observable, 'ZZ');
+    assert.equal(state.externalContext.quantum.expectationValue, 1);
   });
 });
 
