@@ -203,6 +203,12 @@ test('ÆTHERGRID backend exposes profile, world-city and quantum runtime surface
       'power-assets',
     ]);
 
+    const terrainRuntimeResponse = await fetch(`${baseUrl}/api/aethergrid/terrain/runtime`);
+    assert.equal(terrainRuntimeResponse.status, 200);
+    const terrainRuntime = await terrainRuntimeResponse.json();
+    assert.equal(terrainRuntime.provider, 'open-meteo');
+    assert.equal(terrainRuntime.credentialsExposed, false);
+
     const quantumRuntimeResponse = await fetch(`${baseUrl}/api/aethergrid/quantum/runtime`);
     assert.equal(quantumRuntimeResponse.status, 200);
     const quantumRuntime = await quantumRuntimeResponse.json();
