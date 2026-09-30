@@ -243,6 +243,33 @@ const CITY_USE_CASES = Object.freeze({
     recommendedLayers: ['roads', 'buildings', 'illumination', 'clouds', 'weather', 'air', 'nodes'],
     animationProfile: 'visibility',
   }),
+  'flood-context': Object.freeze({
+    id: 'flood-context',
+    label: 'Flood Context',
+    purpose: 'Combine mapped water/coastline geometry, terrain relief and current precipitation for bounded flood-context review.',
+    indexLabel: 'Flood context index',
+    agentLead: 'SOLVÆR',
+    recommendedLayers: ['water', 'terrain', 'roads', 'buildings', 'weather', 'nodes'],
+    animationProfile: 'flood-context',
+  }),
+  'transit-access': Object.freeze({
+    id: 'transit-access',
+    label: 'Transit Access',
+    purpose: 'Inspect mapped rail corridors, transit nodes and road coverage around the active city sample.',
+    indexLabel: 'Transit context index',
+    agentLead: 'VÆLON',
+    recommendedLayers: ['rail', 'transit', 'roads', 'buildings', 'landmarks'],
+    animationProfile: 'transit-flow',
+  }),
+  'urban-cooling': Object.freeze({
+    id: 'urban-cooling',
+    label: 'Urban Cooling',
+    purpose: 'Combine mapped green-space context with current heat, humidity and built-form density for urban cooling review.',
+    indexLabel: 'Cooling context index',
+    agentLead: 'AUREN',
+    recommendedLayers: ['green', 'buildings', 'weather', 'air', 'clouds', 'water'],
+    animationProfile: 'urban-cooling',
+  }),
 });
 
 function planarLength(path = []) {
@@ -276,6 +303,10 @@ function cityMeshMetrics(mesh) {
   const roads = Array.isArray(mesh?.roads) ? mesh.roads : [];
   const powerLines = Array.isArray(mesh?.powerLines) ? mesh.powerLines : [];
   const powerAssets = Array.isArray(mesh?.powerAssets) ? mesh.powerAssets : [];
+  const waterLines = Array.isArray(mesh?.waterLines) ? mesh.waterLines : [];
+  const railLines = Array.isArray(mesh?.railLines) ? mesh.railLines : [];
+  const transitAssets = Array.isArray(mesh?.transitAssets) ? mesh.transitAssets : [];
+  const greenSpaces = Array.isArray(mesh?.greenSpaces) ? mesh.greenSpaces : [];
   const radiusM = Math.max(250, Number(mesh?.city?.radiusM || 900));
   let footprintAreaM2 = 0;
   let estimatedFloorAreaM2 = 0;
@@ -293,6 +324,9 @@ function cityMeshMetrics(mesh) {
   const primaryRoadKm = roads
     .filter((road) => /^(motorway|trunk|primary|secondary)$/u.test(String(road.highwayType || '')))
     .reduce((sum, road) => sum + planarLength(road.path || []), 0) / 1000;
+  const waterLengthKm = waterLines.reduce((sum, line) => sum + planarLength(line.path || []), 0) / 1000;
+  const railLengthKm = railLines.reduce((sum, line) => sum + planarLength(line.path || []), 0) / 1000;
+  const greenSpaceAreaM2 = greenSpaces.reduce((sum, green) => sum + polygonArea(green.path || []), 0);
   const powerLineKm = powerLines.reduce((sum, line) => sum + planarLength(line.path || []), 0) / 1000;
   const highVoltageKm = powerLines
     .filter((line) => Number(line.voltage || 0) >= 100000)
@@ -308,6 +342,13 @@ function cityMeshMetrics(mesh) {
     averageBuildingHeightM: buildings.length ? Number((heightTotalM / buildings.length).toFixed(1)) : 0,
     roadLengthKm: Number(roadLengthKm.toFixed(2)),
     primaryRoadKm: Number(primaryRoadKm.toFixed(2)),
+    waterLengthKm: Number(waterLengthKm.toFixed(2)),
+    waterFeatureCount: waterLines.length,
+    railLengthKm: Number(railLengthKm.toFixed(2)),
+    railFeatureCount: railLines.length,
+    transitAssetCount: transitAssets.length,
+    greenSpaceCount: greenSpaces.length,
+    greenSpaceAreaM2: Math.round(greenSpaceAreaM2),
     powerLineKm: Number(powerLineKm.toFixed(2)),
     highVoltageKm: Number(highVoltageKm.toFixed(2)),
     powerAssetCount: powerAssets.length,
