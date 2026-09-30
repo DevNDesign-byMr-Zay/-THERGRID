@@ -5,6 +5,7 @@ import { DataSourceBadge } from '../components/DataSourceBadge';
 import { EvidencePanel } from '../components/EvidencePanel';
 import { QuantumPanel } from '../components/QuantumPanel';
 import { ScenarioPanel } from '../components/ScenarioPanel';
+import { RuntimeDiagnosticsPanel } from '../components/RuntimeDiagnosticsPanel';
 import { SpatialViewport } from '../components/SpatialViewport';
 import { TemporalRail } from '../components/TemporalRail';
 import { useAppearance } from '../hooks/use-appearance';
@@ -660,6 +661,7 @@ export function App() {
           />
           <QuantumPanel />
           <EvidencePanel />
+          <RuntimeDiagnosticsPanel />
 
           <section className="intel-card">
             <div className="intel-head">
