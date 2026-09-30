@@ -701,6 +701,34 @@ export function App() {
             ))}
           </nav>
 
+          <section className="use-case-presets">
+            <span className="rail-kicker">OPERATION MODE</span>
+            <div className="use-case-grid">
+              {USE_CASE_PRESETS.map((preset) => (
+                <button
+                  type="button"
+                  key={preset.id}
+                  className={activeUseCase === preset.id ? 'active' : ''}
+                  onClick={() => applyUseCase(preset)}
+                  title={preset.description}
+                >
+                  <strong>{preset.label}</strong>
+                  <small>{preset.visualMode.toUpperCase()}</small>
+                </button>
+              ))}
+            </div>
+            <p>
+              {activeUseCase
+                ? USE_CASE_PRESETS.find((preset) => preset.id === activeUseCase)?.description
+                : 'CUSTOM · manually controlled layers and view'}
+            </p>
+          </section>
+
+          <ViewBookmarksPanel
+            current={currentBookmark}
+            onRestore={restoreBookmark}
+          />
+
           <div className="rail-section layer-list">
             <span className="rail-kicker">LAYERS</span>
             {layers.map((layer) => (
