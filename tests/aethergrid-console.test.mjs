@@ -33,6 +33,7 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(html, /id="globalPointLon"/u);
     assert.match(html, /id="globalTimeSlider"/u);
     assert.match(html, /data-global-layer="infrastructure"/u);
+    assert.match(html, /data-global-layer="terrain"/u);
     assert.match(html, /id="globalGridStats"/u);
     assert.match(html, /data-workspace="holographic"/u);
     assert.match(html, /data-workspace="quantum"/u);
@@ -86,6 +87,8 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(appSource, /async function loadLiveCity/u);
     assert.match(appSource, /async function loadCoordinateCity/u);
     assert.match(appSource, /infrastructureLines/u);
+    assert.match(appSource, /terrainLines/u);
+    assert.match(appSource, /loadTerrainFor/u);
     assert.match(appSource, /powerAssets/u);
     assert.match(appSource, /async function submitQuantumJob/u);
     assert.match(appSource, /async function saveProfile/u);
@@ -131,6 +134,8 @@ test('ÆTHERGRID exposes replaceable agent runtime without leaking provider secr
     assert.equal(runtime.agents['VÆLON'].provider, 'local');
     assert.equal(runtime.agents['VÆLON'].status, 'local-fallback');
     assert.equal(runtime.geospatial.provider, 'osm-overpass');
+    assert.equal(runtime.terrain.provider, 'open-meteo');
+    assert.equal(runtime.terrain.credentialsExposed, false);
     assert.equal(runtime.quantum.provider, 'local-simulator');
     assert.equal(runtime.quantum.credentialsExposed, false);
     assert.equal(runtime.profile.persistence, 'local-json');
