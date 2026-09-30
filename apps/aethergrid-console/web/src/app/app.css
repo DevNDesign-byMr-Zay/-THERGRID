@@ -832,6 +832,23 @@ button {
   background: rgba(112, 231, 255, 0.09);
 }
 
+.interaction-modes,
+
+.interaction-modes {
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(5, 9, 15, 0.78);
+  backdrop-filter: blur(10px);
+}
+
+.interaction-modes button {
+  color: #75889a;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+}
+
 .visual-modes {
   display: flex;
   gap: 4px;
@@ -842,6 +859,7 @@ button {
   backdrop-filter: blur(10px);
 }
 
+.interaction-modes button,
 .visual-modes button,
 .temporal-modes button,
 .transport-button,
@@ -852,6 +870,7 @@ button {
   cursor: pointer;
 }
 
+.interaction-modes button,
 .visual-modes button {
   padding: 7px 9px;
   color: #75889a;
@@ -859,6 +878,7 @@ button {
   letter-spacing: 0.08em;
 }
 
+.interaction-modes button.active,
 .visual-modes button.active {
   border-color: rgba(112, 231, 255, 0.4);
   color: #e7fbff;
@@ -2545,12 +2565,180 @@ button {
   display: block;
 }
 
+.intel-rail[data-workspace='analysis'] .intel-analysis,
 .intel-rail[data-workspace='ai'] .intel-ai,
 .intel-rail[data-workspace='scenario'] .intel-scenario,
 .intel-rail[data-workspace='quantum'] .intel-quantum,
 .intel-rail[data-workspace='evidence'] .intel-evidence,
 .intel-rail[data-workspace='system'] .intel-system {
   display: block;
+}
+
+
+.spatial-analysis-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.analysis-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.analysis-head > span small,
+.analysis-head > span strong {
+  display: block;
+}
+
+.analysis-head > span small {
+  color: #5e7184;
+  font-size: 7px;
+  letter-spacing: 0.11em;
+}
+
+.analysis-head > span strong {
+  margin-top: 2px;
+  color: #d7f7ff;
+  font-size: 11px;
+  letter-spacing: 0.09em;
+}
+
+.analysis-head > div {
+  display: flex;
+  gap: 3px;
+}
+
+.analysis-head button,
+.analysis-reset {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  color: #70879a;
+  background: rgba(255, 255, 255, 0.015);
+  font-size: 6px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  cursor: pointer;
+}
+
+.analysis-head button {
+  min-height: 27px;
+  padding: 0 7px;
+}
+
+.analysis-head button.active {
+  border-color: rgba(112, 231, 255, 0.28);
+  color: #ccefff;
+  background: rgba(112, 231, 255, 0.06);
+}
+
+.analysis-instruction,
+.analysis-boundary span {
+  margin: 0;
+  color: #667b8e;
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.analysis-points {
+  display: grid;
+  gap: 5px;
+}
+
+.analysis-points > div {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 2px 7px;
+  align-items: center;
+  padding: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.045);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.analysis-points span {
+  grid-row: 1 / 3;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(112, 231, 255, 0.24);
+  border-radius: 50%;
+  color: #bff4ff;
+  font-size: 7px;
+}
+
+.analysis-points strong {
+  overflow: hidden;
+  color: #b7c8d4;
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analysis-points small {
+  color: #526a7d;
+  font-size: 5px;
+  letter-spacing: 0.06em;
+}
+
+.analysis-results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  margin: 0;
+}
+
+.analysis-results div {
+  padding: 7px;
+  border: 1px solid rgba(112, 231, 255, 0.07);
+  border-radius: 7px;
+  background: rgba(112, 231, 255, 0.018);
+}
+
+.analysis-results dt,
+.analysis-results dd {
+  margin: 0;
+}
+
+.analysis-results dt {
+  color: #5e7386;
+  font-size: 5px;
+  letter-spacing: 0.08em;
+}
+
+.analysis-results dd {
+  margin-top: 3px;
+  color: #d1eef6;
+  font-size: 9px;
+}
+
+.analysis-boundary {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border-left: 2px solid rgba(112, 231, 255, 0.18);
+  background: rgba(112, 231, 255, 0.018);
+}
+
+.analysis-boundary strong {
+  color: #829bad;
+  font-size: 6px;
+  letter-spacing: 0.07em;
+}
+
+.analysis-reset {
+  min-height: 30px;
+}
+
+.analysis-reset:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.spatial-shell[data-interaction-mode='measure'] .spatial-canvas {
+  cursor: crosshair;
 }
 
 .intel-card,
