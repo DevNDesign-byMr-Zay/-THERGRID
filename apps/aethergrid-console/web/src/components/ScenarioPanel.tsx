@@ -3,8 +3,10 @@ import { useState } from 'react';
 import {
   applyScenario,
   returnToLiveView,
+  scenarioVisualState,
   type ScenarioId,
-  type ScenarioParameters
+  type ScenarioParameters,
+  type ScenarioVisualState
 } from '../services/scenario-client';
 
 const TEMPLATES: readonly { id: ScenarioId; label: string }[] = [
@@ -24,7 +26,7 @@ const DEFAULT_CUSTOM: ScenarioParameters = {
 
 interface ScenarioPanelProps {
   activeTemporalMode: string;
-  onScenarioApplied(scenario: ScenarioId): void;
+  onScenarioApplied(scenario: ScenarioId, visual: ScenarioVisualState): void;
   onReturnLive(): void;
 }
 
@@ -49,7 +51,12 @@ export function ScenarioPanel({
         scenario === 'custom' ? parameters : undefined
       );
       setReceipt(result.evidence?.receipt || result.evidence?.id || null);
-      onScenarioApplied(scenario);
+      const serverParameters =
+        result.state?.system?.scenarioParameters ?? parameters;
+      onScenarioApplied(
+        scenario,
+        scenarioVisualState(scenario, serverParameters)
+      );
     } catch (applyError) {
       setError(applyError instanceof Error ? applyError.message : String(applyError));
     } finally {
