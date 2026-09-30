@@ -153,7 +153,7 @@ A fresh ZIP is considered functional when:
 
 ## Current verified state
 
-Batches 1–13 are verified on `main`; Batch 14 is implemented on the feature branch and must pass the maintained gates before entering `main`.
+Batches 1–16 are verified on `main`; Batch 17 is implemented on the feature branch and must pass the maintained gates before entering `main`.
 
 - Grid, Global, Holographic, Quantum, AI, Scenarios, Evidence and Settings are distinct routed workspaces.
 - WebGL node picking, scenario editing/duplication, evidence drill-down, agent receipts, persistent settings/profile, global coordinate exploration, mapped grid infrastructure, terrain and quantum provider workflows are all present.
@@ -505,7 +505,7 @@ Status: COMPLETE
 
 ## Batch 16 — Geographic city identity reconciliation
 
-Status: IMPLEMENTED / VERIFYING
+Status: COMPLETE
 
 ### Reconciled identity stack
 - preserve Batch 15 named/tall source-backed skyline anchors and semantic weather modes;
@@ -534,3 +534,34 @@ Status: IMPLEMENTED / VERIFYING
 
 ### Fidelity boundary
 Geographic layers improve recognizability but remain bounded to the selected OpenStreetMap sample and its completeness. A missing feature is unknown, not evidence of real-world absence. Flood/green outputs remain advisory planning context rather than physical forecasts, measurements or directives.
+
+## Batch 17 — Terrain-conforming 3D city geometry
+
+Status: IMPLEMENTED / VERIFYING
+
+### Vertical city fidelity
+- use bilinear interpolation across the bounded local-meter elevation grid;
+- anchor each building foundation to interpolated terrain at its footprint center while keeping the foundation plane structurally flat;
+- drape mapped roads and waterways per source vertex;
+- drape mapped green-space polygons per vertex;
+- drape mapped power lines and power-asset markers using local terrain elevation plus presentation clearance;
+- keep mapped water areas level using the lowest interpolated polygon-edge elevation;
+- keep coastline on the bounded terrain datum instead of warping it over inland relief.
+
+### Runtime transparency
+- GLOBAL stats expose DEM DRAPED versus FLAT FALLBACK;
+- CITY IDENTITY exposes the same terrain-fit state;
+- provenance explains that vertical fitting is interpolation over bounded DEM samples rather than survey/LiDAR precision;
+- the server terrain contract declares `bilinear-local-grid` interpolation metadata;
+- standalone fallback continues to work without claiming live elevation.
+
+### Fidelity boundary
+Copernicus DEM GLO-90 / Open-Meteo elevation is used as visualization context, not engineering-grade vertical truth. Terrain fitting does not establish legal elevation, foundation design, road grade, drainage, flood depth, water level, clearance or infrastructure safety.
+
+### Verification requirements
+- unit tests must verify bilinear interpolation at grid corners, center and an intermediate coordinate;
+- WebGL source tests must require terrain-surface interpolation and terrain-conformance state;
+- standalone packaging must preserve interpolation, terrain-fitting logic and Terrain Fit readouts;
+- release-readiness must require the v3 terrain capabilities and non-survey-grade boundary;
+- all existing city identity, semantic weather, mapped geography, agent, quantum and safety gates remain mandatory;
+- test, lint, typecheck, coverage, fresh-clone smoke, container smoke, quality/release-readiness, package verification and CodeQL must pass on the exact merge head.
