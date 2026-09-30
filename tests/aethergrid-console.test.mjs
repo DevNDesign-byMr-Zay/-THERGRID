@@ -61,6 +61,7 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(html, /value="flood-context"/u);
     assert.match(html, /value="green-infrastructure"/u);
     assert.match(html, /id="globalGridStats"/u);
+    assert.match(html, /Terrain Fit/u);
     assert.match(html, /id="cityTransitionOverlay"/u);
     assert.match(html, /data-city-visual="solid"/u);
     assert.match(html, /id="cityUseCaseSelect"/u);
@@ -122,6 +123,10 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(appSource, /async function loadCoordinateCity/u);
     assert.match(appSource, /infrastructureLines/u);
     assert.match(appSource, /terrainLines/u);
+    assert.match(appSource, /function bilinearTerrainElevation/u);
+    assert.match(appSource, /terrainSurfaceYAtSource/u);
+    assert.match(appSource, /terrainConformance/u);
+    assert.match(appSource, /sourceBackedHeight/u);
     assert.match(appSource, /waterLines/u);
     assert.match(appSource, /waterFaces/u);
     assert.match(appSource, /greenLines/u);
