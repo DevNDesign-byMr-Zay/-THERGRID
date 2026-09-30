@@ -318,7 +318,7 @@ test('v4 city inspector surfaces source-backed skyline identity and coverage', a
   assert.match(app, /CITY IDENTITY/u);
   assert.match(app, /SKYLINE MAX/u);
   assert.match(app, /HEIGHT COVERAGE/u);
-  assert.match(app, /cityIdentity\.namedStructures/u);
+  assert.match(app, /cityIdentity\?\.namedStructures/u);
 });
 
 test('v4 spatial AI dock calls real agent endpoints with scene context and receipts', async () => {
