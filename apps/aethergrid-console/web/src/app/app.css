@@ -2601,6 +2601,7 @@ button {
   display: block;
 }
 
+.intel-rail[data-workspace='operations'] .intel-operations,
 .intel-rail[data-workspace='analysis'] .intel-analysis,
 .intel-rail[data-workspace='ai'] .intel-ai,
 .intel-rail[data-workspace='scenario'] .intel-scenario,
@@ -3495,4 +3496,107 @@ button {
   .storm-illumination {
     display: none;
   }
+}
+
+
+.operational-data-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.operational-data-panel .provider-list {
+  display: grid;
+  gap: 7px;
+}
+
+.operational-data-panel .provider-card {
+  padding: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.operational-data-panel .provider-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.operational-data-panel .provider-card header span,
+.operational-data-panel .provider-card header strong {
+  font-size: 7px;
+  letter-spacing: 0.08em;
+}
+
+.operational-data-panel .provider-card header span {
+  color: #8096aa;
+}
+
+.operational-data-panel .provider-card header strong {
+  color: #9eb0c0;
+}
+
+.operational-data-panel .provider-card[data-provider-state='live'] header strong {
+  color: #8fffc8;
+}
+
+.operational-data-panel .provider-card[data-provider-state='fallback'] header strong,
+.operational-data-panel .provider-card[data-provider-state='stale'] header strong {
+  color: #ffd37d;
+}
+
+.operational-data-panel .provider-card[data-provider-state='unavailable'] header strong,
+.operational-data-panel .provider-card[data-provider-state='unconfigured'] header strong,
+.operational-data-panel .provider-card[data-provider-state='pending-provider'] header strong,
+.operational-data-panel .provider-card[data-provider-state='current-only'] header strong {
+  color: #788b9d;
+}
+
+.operational-data-panel .provider-card dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  margin: 8px 0 0;
+}
+
+.operational-data-panel .provider-card dl div {
+  min-width: 0;
+  padding: 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.operational-data-panel .provider-card dt,
+.operational-data-panel .provider-card dd,
+.operational-data-panel .provider-card p,
+.operational-data-panel .provider-card small {
+  margin: 0;
+}
+
+.operational-data-panel .provider-card dt {
+  color: #526a7e;
+  font-size: 6px;
+  letter-spacing: 0.08em;
+}
+
+.operational-data-panel .provider-card dd {
+  margin-top: 3px;
+  color: #d6e4ee;
+  font-size: 8px;
+}
+
+.operational-data-panel .provider-card p {
+  margin-top: 7px;
+  color: #71879a;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.operational-data-panel .provider-card small {
+  display: block;
+  margin-top: 5px;
+  color: #526a7e;
+  font-size: 6px;
+  line-height: 1.35;
 }
