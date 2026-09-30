@@ -160,6 +160,9 @@ export function App() {
   const [searchValue, setSearchValue] = useState('');
   const [searchError, setSearchError] = useState<string | null>(null);
   const [intelOpen, setIntelOpen] = useState(false);
+  const [intelWorkspace, setIntelWorkspace] = useState<
+    'context' | 'ai' | 'scenario' | 'quantum' | 'evidence' | 'system'
+  >('context');
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [atmosphere, setAtmosphere] = useState<AtmosphericOverlaySnapshot | null>(null);
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
@@ -682,6 +685,7 @@ export function App() {
         <aside
           id="aethergrid-intelligence-rail"
           className={intelOpen ? 'intel-rail open' : 'intel-rail'}
+          data-workspace={intelWorkspace}
         >
           <div className="intel-mobile-head">
             <span>INTELLIGENCE</span>
@@ -689,7 +693,31 @@ export function App() {
               ×
             </button>
           </div>
-          <section className="identity-card">
+          <nav className="intel-workspace-tabs" aria-label="Intelligence workspace">
+            {[
+              ['context', 'CONTEXT'],
+              ['ai', 'AI'],
+              ['scenario', 'SCENARIO'],
+              ['quantum', 'QUANTUM'],
+              ['evidence', 'EVIDENCE'],
+              ['system', 'SYSTEM']
+            ].map(([id, label]) => (
+              <button
+                type="button"
+                key={id}
+                className={intelWorkspace === id ? 'active' : ''}
+                aria-pressed={intelWorkspace === id}
+                onClick={() =>
+                  setIntelWorkspace(
+                    id as 'context' | 'ai' | 'scenario' | 'quantum' | 'evidence' | 'system'
+                  )
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+          <section className="identity-card intel-context-panel">
             <div className="identity-head">
               <span>
                 <small>CITY IDENTITY</small>
@@ -734,7 +762,7 @@ export function App() {
             </div>
           </section>
 
-          <section className="weather-card" data-source-state={
+          <section className="weather-card intel-context-panel" data-source-state={
             environmentError ? 'unavailable' : atmosphere?.live ? 'live' : atmosphere ? 'fallback' : 'loading'
           }>
             <div className="weather-card-head">
@@ -775,7 +803,7 @@ export function App() {
             </div>
           </section>
 
-          <section className="live-context-card">
+          <section className="live-context-card intel-context-panel">
             <div className="live-context-head">
               <span>
                 <small>AIR QUALITY</small>
@@ -846,17 +874,27 @@ export function App() {
             </div>
           </section>
 
-          <AgentDock context={agentContext} />
-          <ScenarioPanel
+          <div className="intel-workspace intel-ai">
+            <AgentDock context={agentContext} />
+          </div>
+          <div className="intel-workspace intel-scenario">
+            <ScenarioPanel
             activeTemporalMode={temporal.mode}
             onScenarioApplied={(scenarioId) => clock.setMode('scenario', scenarioId)}
-            onReturnLive={() => clock.goLive()}
-          />
-          <QuantumPanel />
-          <EvidencePanel />
-          <RuntimeDiagnosticsPanel />
+              onReturnLive={() => clock.goLive()}
+            />
+          </div>
+          <div className="intel-workspace intel-quantum">
+            <QuantumPanel />
+          </div>
+          <div className="intel-workspace intel-evidence">
+            <EvidencePanel />
+          </div>
+          <div className="intel-workspace intel-system">
+            <RuntimeDiagnosticsPanel />
+          </div>
 
-          <section className="intel-card">
+          <section className="intel-card intel-context-panel">
             <div className="intel-head">
               <span className="status-dot live" />
               <span>
@@ -867,7 +905,7 @@ export function App() {
             <p>Infrastructure, topology, terrain and live spatial context.</p>
           </section>
 
-          <section className="intel-card">
+          <section className="intel-card intel-context-panel">
             <div className="intel-head">
               <span className="status-dot quantum" />
               <span>
@@ -878,7 +916,7 @@ export function App() {
             <p>Scenario exploration, classical baselines and quantum-ready workloads.</p>
           </section>
 
-          <section className="intel-card">
+          <section className="intel-card intel-context-panel">
             <div className="intel-head">
               <span className="status-dot evidence" />
               <span>
@@ -889,7 +927,7 @@ export function App() {
             <p>Simulation, provenance, uncertainty and reproducible validation.</p>
           </section>
 
-          <section className="selection-card">
+          <section className="selection-card intel-context-panel">
             <span className="rail-kicker">SELECTED ENTITY</span>
             {selection ? (
               <>
