@@ -1,3 +1,4 @@
+import type { TemporalInstant } from '../spatial-renderer';
 import {
   BoxEmitter,
   Cartesian2,
@@ -76,6 +77,7 @@ export class WeatherAtmosphereLayer {
   #viewer: Viewer;
   #clouds: CloudCollection;
   #snapshot: AtmosphericOverlaySnapshot | null = null;
+  #temporalMode: TemporalInstant['mode'] = 'live';
   #precipitation: ParticleSystem | null = null;
   #visible = true;
   #baselineFog: FogBaseline;
@@ -98,22 +100,21 @@ export class WeatherAtmosphereLayer {
     this.#snapshot = snapshot;
     this.#rebuildClouds();
     this.#rebuildPrecipitation();
-    this.#applyFog();
+    this.#applyTemporalVisibility();
     this.#viewer.scene.requestRender();
   }
 
   setVisible(visible: boolean): void {
     this.#visible = visible;
-    this.#clouds.show = visible;
-    if (this.#precipitation) this.#precipitation.show = visible;
-    if (visible) this.#applyFog();
-    else this.#restoreFog();
+    this.#applyTemporalVisibility();
     this.#viewer.scene.requestRender();
   }
 
-  setTime(isoTime: string): void {
-    if (!this.#snapshot?.current || !this.#visible) return;
-    const timestamp = Date.parse(isoTime);
+  setTime(time: TemporalInstant): void {
+    this.#temporalMode = time.mode;
+    this.#applyTemporalVisibility();
+    if (!this.#snapshot?.current || !this.#visible || time.mode !== 'live') return;
+    const timestamp = Date.parse(time.iso);
     if (!Number.isFinite(timestamp)) return;
 
     const current = this.#snapshot.current;
@@ -178,6 +179,15 @@ export class WeatherAtmosphereLayer {
     }
 
     this.#clouds.show = this.#visible;
+  }
+
+  #applyTemporalVisibility(): void {
+    const renderLiveWeather = this.#visible && this.#temporalMode === 'live';
+    this.#clouds.show = renderLiveWeather;
+    if (this.#precipitation) this.#precipitation.show = renderLiveWeather;
+    if (renderLiveWeather) this.#applyFog();
+    else this.#restoreFog();
+    this.#viewer.scene.requestRender();
   }
 
   #rebuildPrecipitation(): void {
