@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { AgentDock } from '../components/AgentDock';
 import { DataSourceBadge } from '../components/DataSourceBadge';
+import { EvidencePanel } from '../components/EvidencePanel';
 import { QuantumPanel } from '../components/QuantumPanel';
 import { SpatialViewport } from '../components/SpatialViewport';
 import { TemporalRail } from '../components/TemporalRail';
@@ -652,6 +653,7 @@ export function App() {
 
           <AgentDock context={agentContext} />
           <QuantumPanel />
+          <EvidencePanel />
 
           <section className="intel-card">
             <div className="intel-head">
