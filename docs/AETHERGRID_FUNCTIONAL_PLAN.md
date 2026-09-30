@@ -426,7 +426,7 @@ The animated layers visualize the freshest bounded feed/model data received by �
 
 ## Batch 14 — Solar city identity, atmospheric motion, and environmental operations
 
-Status: IMPLEMENTED / VERIFYING
+Status: COMPLETE
 
 ### Real-time solar globe
 - current subsolar latitude/longitude is calculated from UTC solar declination and equation of time;
@@ -473,7 +473,7 @@ Heat Stress combines apparent temperature, modeled relative humidity, UV, and ma
 
 ## Batch 15 — Source-backed city identity and semantic weather
 
-Status: IMPLEMENTED / VERIFYING
+Status: COMPLETE
 
 ### City identity
 - extend skyline profiles with source-backed named structures and tall-structure counts;
@@ -502,3 +502,35 @@ Status: IMPLEMENTED / VERIFYING
 - standalone packaging must retain landmark extraction, identity inspector, snow, fog and storm rendering;
 - release-readiness must enforce the no-fake-landmark and no-detected-lightning claims;
 - the full engineering and CodeQL gates remain mandatory before merge.
+
+## Batch 16 — Geographic city identity reconciliation
+
+Status: IMPLEMENTED / VERIFYING
+
+### Reconciled identity stack
+- preserve Batch 15 named/tall source-backed skyline anchors and semantic weather modes;
+- add source-backed OSM water areas, linear waterways and coastline;
+- add source-backed OSM parks and green-space polygons;
+- add source-tagged building-material tint groups without replacing authoritative building geometry;
+- expose WATER and GREEN as independent city layers while retaining LANDMARKS.
+
+### New operations
+- Flood Context;
+- Green Infrastructure;
+- maintained city-operation total: 12.
+
+### Strict fallback
+- standalone/local fallback may continue to generate clearly labeled local building/road/grid demonstration geometry;
+- it must return empty water, waterway, coastline and green-space collections rather than fabricate local geography;
+- material styling appears only when mapped material/colour metadata exists.
+
+### Verification
+- live OSM fixtures include a named glass tower, water polygon, river, coastline and park;
+- fallback tests require zero invented water/green features;
+- renderer tests retain landmark/weather identity plus water/green/material buffers;
+- city-operation tests exercise all 12 workflows with mapped feature counts;
+- standalone packaging and release-readiness require both the Batch 15 and Batch 16 identity contracts;
+- engineering CI and CodeQL remain mandatory before merge.
+
+### Fidelity boundary
+Geographic layers improve recognizability but remain bounded to the selected OpenStreetMap sample and its completeness. A missing feature is unknown, not evidence of real-world absence. Flood/green outputs remain advisory planning context rather than physical forecasts, measurements or directives.
