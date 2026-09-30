@@ -72,6 +72,30 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
             tags: { highway: 'primary', name: 'Test Avenue' },
             geometry: geometry.slice(0, 3),
           },
+          {
+            type: 'way',
+            id: 3001,
+            tags: {
+              power: 'line',
+              name: 'Test Transmission',
+              voltage: '138000',
+              operator: 'Grid Test',
+              circuits: '2',
+            },
+            geometry: geometry.slice(0, 3),
+          },
+          {
+            type: 'node',
+            id: 4001,
+            lat: 40.71282,
+            lon: -74.00598,
+            tags: {
+              power: 'substation',
+              name: 'Test Substation',
+              voltage: '138000;33000',
+              operator: 'Grid Test',
+            },
+          },
         ],
       }),
       { status: 200, headers: { 'content-type': 'application/json' } },
@@ -99,6 +123,15 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
   assert.equal(first.roads[0].name, 'Test Avenue');
   assert.equal(first.roads[0].highwayType, 'primary');
   assert.ok(first.roads[0].path.length >= 2);
+  assert.equal(first.powerLines.length, 1);
+  assert.equal(first.powerLines[0].name, 'Test Transmission');
+  assert.equal(first.powerLines[0].voltage, 138000);
+  assert.equal(first.powerLines[0].circuits, 2);
+  assert.equal(first.powerAssets.length, 1);
+  assert.equal(first.powerAssets[0].name, 'Test Substation');
+  assert.equal(first.powerAssets[0].powerType, 'substation');
+  assert.equal(first.powerAssets[0].voltage, 138000);
+  assert.ok(first.powerAssets[0].position.every(Number.isFinite));
   assert.equal(first.source.attribution, '© OpenStreetMap contributors');
 
   const second = await runtime.cityMesh('new-york');
@@ -119,6 +152,40 @@ test('geospatial provider failure degrades explicitly to local fallback geometry
   assert.equal(mesh.source.provider, 'local-fallback');
   assert.ok(mesh.buildings.length >= 100);
   assert.ok(mesh.roads.length >= 10);
+  assert.ok(mesh.powerLines.length >= 5);
+  assert.ok(mesh.powerAssets.length >= 5);
+});
+
+test('geospatial coordinate explorer supports arbitrary valid world coordinates', async () => {
+  const runtime = createGeoRuntime({
+    env: { AETHERGRID_GEO_PROVIDER: 'local-fallback' },
+  });
+  const mesh = await runtime.pointMesh({
+    lat: 48.8566,
+    lon: 2.3522,
+    name: 'Paris Coordinate',
+    radiusM: 1500,
+  });
+  assert.equal(mesh.city.custom, true);
+  assert.equal(mesh.city.name, 'Paris Coordinate');
+  assert.equal(mesh.city.lat, 48.8566);
+  assert.equal(mesh.city.lon, 2.3522);
+  assert.equal(mesh.city.radiusM, 1500);
+  assert.ok(mesh.buildings.length >= 100);
+  assert.ok(mesh.powerLines.length >= 5);
+  assert.ok(mesh.powerAssets.length >= 5);
+  assert.equal(runtime.summary().supportsCustomCoordinates, true);
+  assert.deepEqual(runtime.summary().layers, [
+    'buildings',
+    'roads',
+    'power-lines',
+    'power-assets',
+  ]);
+
+  await assert.rejects(
+    runtime.pointMesh({ lat: 120, lon: 2.3522 }),
+    /latitude must be between -90 and 90/u,
+  );
 });
 
 test('IBM Quantum adapter submits jobs while keeping credentials private', async () => {
