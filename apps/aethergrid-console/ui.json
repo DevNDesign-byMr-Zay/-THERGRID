@@ -54,7 +54,10 @@
     "individual-agent-runtime",
     "team-agent-runtime",
     "replaceable-model-providers",
-    "runtime-provider-status"
+    "runtime-provider-status",
+    "direct-node-picking",
+    "custom-scenario-builder",
+    "weighted-optimization-controls"
   ],
   "agents": [
     {
@@ -116,7 +119,8 @@
       "wheel-zoom",
       "double-click-reset",
       "time-slider",
-      "layer-toggle"
+      "layer-toggle",
+      "direct-node-picking"
     ],
     "backendEndpoint": "GET /api/aethergrid/spatial",
     "backgroundImageRequired": false
@@ -168,5 +172,20 @@
     "individualEndpoint": "POST /api/aethergrid/agents/:id",
     "teamEndpoint": "POST /api/aethergrid/team",
     "providerSecretsClientVisible": false
+  },
+  "scenarioModel": {
+    "templates": [
+      "peak-demand",
+      "renewable-surge",
+      "storage-stress",
+      "weather-event"
+    ],
+    "custom": true,
+    "editableParameters": [
+      "load-multiplier",
+      "renewable-availability",
+      "storage-reserve",
+      "weather-risk"
+    ]
   }
 }
