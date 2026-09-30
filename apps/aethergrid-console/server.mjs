@@ -509,14 +509,25 @@ const server = http.createServer(async (request, response) => {
 
     if (request.method === 'POST' && url.pathname === '/api/aethergrid/quantum/jobs') {
       const input = await body(request);
-      const result = await quantumRuntime.submitSampler({
-        circuit: input.circuit,
-        backend: input.backend,
-        shots: input.shots,
-      });
+      const primitive = String(input.primitive || 'sampler').toLowerCase();
+      if (!['sampler', 'estimator'].includes(primitive)) {
+        return json(response, 400, { error: 'unsupported_quantum_primitive' });
+      }
+      const result =
+        primitive === 'estimator'
+          ? await quantumRuntime.submitEstimator({
+              circuit: input.circuit,
+              backend: input.backend,
+              observable: input.observable,
+            })
+          : await quantumRuntime.submitSampler({
+              circuit: input.circuit,
+              backend: input.backend,
+              shots: input.shots,
+            });
       const record = {
         id: result.receipt.slice(0, 16),
-        title: `Quantum Job: ${result.backend}`,
+        title: `Quantum ${String(result.programId || primitive).toUpperCase()}: ${result.backend}`,
         type: 'QUANTUM_JOB',
         age: 'just now',
         status: result.status === 'COMPLETED' ? 'VERIFIED' : 'PENDING',
@@ -525,6 +536,12 @@ const server = http.createServer(async (request, response) => {
           provider: result.provider,
           backend: result.backend,
           programId: result.programId,
+          observable: result.observable || null,
+          expectationValue:
+            Number.isFinite(Number(result.expectationValue))
+              ? Number(result.expectationValue)
+              : null,
+          approximation: result.approximation || null,
           status: result.status,
           hardwareSubmitted: Boolean(result.hardwareSubmitted),
           hardwareExecuted: Boolean(result.hardwareExecuted),
@@ -539,13 +556,18 @@ const server = http.createServer(async (request, response) => {
         provider: result.provider,
         backend: result.backend,
         programId: result.programId,
+        observable: result.observable || null,
+        expectationValue:
+          Number.isFinite(Number(result.expectationValue))
+            ? Number(result.expectationValue)
+            : null,
         status: result.status,
         hardwareSubmitted: Boolean(result.hardwareSubmitted),
         hardwareExecuted: Boolean(result.hardwareExecuted),
         receipt: result.receipt,
       };
       activity(
-        `Quantum sampler job ${result.id} submitted through ${result.provider}/${result.backend}; status ${result.status}.`,
+        `Quantum ${result.programId || primitive} job ${result.id} submitted through ${result.provider}/${result.backend}; status ${result.status}.`,
         'quantum',
       );
       return json(response, 200, {
