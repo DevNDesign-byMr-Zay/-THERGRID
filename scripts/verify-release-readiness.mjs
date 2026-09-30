@@ -32,6 +32,9 @@ const REQUIRED_FILES = Object.freeze([
   'apps/aethergrid-console/server.mjs',
   'apps/aethergrid-console/agent-config.mjs',
   'apps/aethergrid-console/ai-runtime.mjs',
+  'apps/aethergrid-console/profile-store.mjs',
+  'apps/aethergrid-console/geo-runtime.mjs',
+  'apps/aethergrid-console/quantum-runtime.mjs',
   'apps/aethergrid-console/app.json',
   'apps/aethergrid-console/ui.json',
   'apps/aethergrid-console/manifest.webmanifest',
@@ -421,6 +424,9 @@ async function main() {
       /id="timeSlider"/u.test(exactAethergridHtml) &&
       /data-map-tool="buildings"/u.test(exactAethergridHtml) &&
       /data-workspace="grid"/u.test(exactAethergridHtml) &&
+      /data-workspace="global"/u.test(exactAethergridHtml) &&
+      /id="globalGlobe"/u.test(exactAethergridHtml) &&
+      /id="cityGrid"/u.test(exactAethergridHtml) &&
       /data-workspace="holographic"/u.test(exactAethergridHtml) &&
       /data-workspace="quantum"/u.test(exactAethergridHtml) &&
       /data-workspace="ai"/u.test(exactAethergridHtml) &&
@@ -428,6 +434,9 @@ async function main() {
       /data-workspace="evidence"/u.test(exactAethergridHtml) &&
       /data-workspace="settings"/u.test(exactAethergridHtml) &&
       /id="settingDefaultWorkspace"/u.test(exactAethergridHtml) &&
+      /id="profileForm"/u.test(exactAethergridHtml) &&
+      /id="quantumCircuit"/u.test(exactAethergridHtml) &&
+      /data-action="submit-quantum-job"/u.test(exactAethergridHtml) &&
       /data-agent="TEAM"/u.test(exactAethergridHtml) &&
       /data-scenario="custom"/u.test(exactAethergridHtml) &&
       /id="customLoad"/u.test(exactAethergridHtml) &&
@@ -452,7 +461,10 @@ async function main() {
       /function switchWorkspace/u.test(exactAethergridJs) &&
       /localStorage\.setItem\(SETTINGS_KEY/u.test(exactAethergridJs) &&
       /pickNode\(clientX, clientY\)/u.test(exactAethergridJs) &&
-      /activateScenario\(name, parameters/u.test(exactAethergridJs),
+      /activateScenario\(name, parameters/u.test(exactAethergridJs) &&
+      /async function loadLiveCity/u.test(exactAethergridJs) &&
+      /async function submitQuantumJob/u.test(exactAethergridJs) &&
+      /async function saveProfile/u.test(exactAethergridJs),
     'ÆTHERGRID must keep native WebGL 4D geometry, interaction controls, and backend graph loading',
   );
   assert(
@@ -481,7 +493,14 @@ async function main() {
       exactAethergridApp.capabilities?.scenarioDuplication === true &&
       exactAethergridApp.capabilities?.auditTimeline === true &&
       exactAethergridApp.capabilities?.classicalExperimentalComparison === true &&
+      exactAethergridApp.capabilities?.persistentOperatorProfile === true &&
+      exactAethergridApp.capabilities?.globalWebGlGlobe === true &&
+      exactAethergridApp.capabilities?.liveOpenStreetMapCityMeshes === true &&
+      exactAethergridApp.capabilities?.ibmQuantumComputeIntegration === true &&
+      exactAethergridApp.capabilities?.quantumJobSubmission === true &&
       exactAethergridApp.aiRuntime?.replaceableByConfiguration === true &&
+      exactAethergridApp.geospatialRuntime?.liveFetchOnExplicitOperatorAction === true &&
+      exactAethergridApp.quantumRuntime?.ibmApiVersion === '2026-04-15' &&
       exactAethergridUi.workspaceRouting?.mode === 'exclusive-view' &&
       exactAethergridUi.spatialModel?.renderEngine === 'native-webgl' &&
       JSON.stringify(exactAethergridUi.spatialModel?.dimensions) ===
@@ -494,6 +513,12 @@ async function main() {
     '/api/aethergrid/spatial',
     '/api/aethergrid/evidence/',
     '/api/aethergrid/runtime',
+    '/api/aethergrid/profile',
+    '/api/aethergrid/geospatial/cities',
+    '/api/aethergrid/geospatial/city/',
+    '/api/aethergrid/quantum/runtime',
+    '/api/aethergrid/quantum/backends',
+    '/api/aethergrid/quantum/jobs',
     '/api/aethergrid/agents/',
     '/api/aethergrid/team',
     '/api/aethergrid/view',
@@ -516,6 +541,9 @@ async function main() {
   );
   const aethergridAgentConfig = await text('apps/aethergrid-console/agent-config.mjs');
   const aethergridAiRuntime = await text('apps/aethergrid-console/ai-runtime.mjs');
+  const aethergridProfileStore = await text('apps/aethergrid-console/profile-store.mjs');
+  const aethergridGeoRuntime = await text('apps/aethergrid-console/geo-runtime.mjs');
+  const aethergridQuantumRuntime = await text('apps/aethergrid-console/quantum-runtime.mjs');
   assert(
     /openai-compatible/u.test(aethergridAgentConfig) &&
       /ollama/u.test(aethergridAgentConfig) &&
@@ -532,6 +560,27 @@ async function main() {
       /Promise\.all/u.test(aethergridAiRuntime) &&
       /fallbackUsed/u.test(aethergridAiRuntime),
     'ÆTHERGRID AI runtime must keep real provider adapters, team orchestration, and fallback evidence',
+  );
+  assert(
+    /operator-profile\.json/u.test(aethergridProfileStore) &&
+      /avatarDataUrl/u.test(aethergridProfileStore) &&
+      /mode: 0o600/u.test(aethergridProfileStore),
+    'ÆTHERGRID profile store must persist bounded local profile data with private file mode',
+  );
+  assert(
+    /OpenStreetMap Overpass/u.test(aethergridGeoRuntime) &&
+      /© OpenStreetMap contributors/u.test(aethergridGeoRuntime) &&
+      /way\["building"\]/u.test(aethergridGeoRuntime) &&
+      /cache/u.test(aethergridGeoRuntime),
+    'ÆTHERGRID geospatial runtime must keep on-demand OpenStreetMap building geometry and attribution',
+  );
+  assert(
+    /2026-04-15/u.test(aethergridQuantumRuntime) &&
+      /iam\.cloud\.ibm\.com/u.test(aethergridQuantumRuntime) &&
+      /program_id: 'sampler'/u.test(aethergridQuantumRuntime) &&
+      /hardwareSubmitted/u.test(aethergridQuantumRuntime) &&
+      /local-simulator/u.test(aethergridQuantumRuntime),
+    'ÆTHERGRID quantum runtime must keep IBM Compute Service submission and local fallback',
   );
   assert(
     /standalone\.html/u.test(exactAethergridPackager) &&
@@ -557,8 +606,13 @@ async function main() {
   assert(
     /AETHERGRID_AI_PROVIDER=local/u.test(aethergridAppEnv) &&
       /AETHERGRID_OPENAI_API_KEY=/u.test(aethergridAppEnv) &&
-      /AETHERGRID_OLLAMA_BASE_URL=/u.test(aethergridAppEnv),
-    'ÆTHERGRID package config must document replaceable providers without embedding credentials',
+      /AETHERGRID_OLLAMA_BASE_URL=/u.test(aethergridAppEnv) &&
+      /AETHERGRID_GEO_PROVIDER=osm-overpass/u.test(aethergridAppEnv) &&
+      /AETHERGRID_OVERPASS_URL=/u.test(aethergridAppEnv) &&
+      /AETHERGRID_QUANTUM_PROVIDER=local-simulator/u.test(aethergridAppEnv) &&
+      /AETHERGRID_IBM_QUANTUM_API_KEY=/u.test(aethergridAppEnv) &&
+      /AETHERGRID_IBM_QUANTUM_SERVICE_CRN=/u.test(aethergridAppEnv),
+    'ÆTHERGRID package config must document AI, geospatial and quantum providers without embedding credentials',
   );
 
   const operatorConsole = await text('apps/operator-console/index.html');
