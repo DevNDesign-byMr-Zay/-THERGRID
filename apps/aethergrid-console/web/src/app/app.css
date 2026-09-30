@@ -179,6 +179,24 @@ button {
   gap: 12px;
 }
 
+.intel-toggle {
+  display: none;
+  height: 34px;
+  padding: 0 9px;
+  border: 1px solid rgba(155, 124, 255, 0.24);
+  border-radius: 8px;
+  color: #c7bdff;
+  background: rgba(155, 124, 255, 0.06);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+
+.intel-mobile-head {
+  display: none;
+}
+
 .appearance-button {
   height: 34px;
   display: flex;
@@ -1259,7 +1277,54 @@ button {
   }
 
   .intel-rail {
-    display: none;
+    position: fixed;
+    z-index: 30;
+    top: 68px;
+    right: 0;
+    bottom: 78px;
+    width: min(390px, 92vw);
+    display: grid;
+    transform: translateX(105%);
+    transition: transform 220ms ease;
+    box-shadow: -24px 0 60px rgba(0, 0, 0, 0.34);
+  }
+
+  .intel-rail.open {
+    transform: translateX(0);
+  }
+
+  .intel-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .intel-mobile-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: -18px;
+    z-index: 3;
+    margin: -18px -14px 6px;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-strong);
+    color: #74899c;
+    font-size: 8px;
+    letter-spacing: 0.12em;
+  }
+
+  .intel-mobile-head button {
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    color: #9fb2c1;
+    background: transparent;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
   }
 
   .topbar {
@@ -1297,6 +1362,18 @@ button {
     grid-template-columns: 1fr;
     gap: 10px;
     padding: 12px;
+  }
+
+  .intel-rail {
+    top: 126px;
+    bottom: 74px;
+    width: 100%;
+    max-width: none;
+    transform: translateY(105%);
+  }
+
+  .intel-rail.open {
+    transform: translateY(0);
   }
 
   .global-search {
