@@ -72,10 +72,17 @@ export function TemporalRail({ clock, state }: TemporalRailProps) {
       <button
         className="transport-button"
         type="button"
-        aria-label={state.playing ? 'Pause time' : 'Play time'}
+        disabled={state.mode === 'live'}
+        aria-label={
+          state.mode === 'live'
+            ? 'Live time advances automatically'
+            : state.playing
+              ? 'Pause time'
+              : 'Play time'
+        }
         onClick={() => (state.playing ? clock.pause() : clock.play())}
       >
-        {state.playing ? 'Ⅱ' : '▶'}
+        {state.mode === 'live' ? '●' : state.playing ? 'Ⅱ' : '▶'}
       </button>
 
       <span className="time-edge">−6H</span>
