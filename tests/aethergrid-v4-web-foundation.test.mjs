@@ -100,7 +100,7 @@ test('v4 operator shell keeps the spatial viewport dominant and responsive', asy
   assert.match(app, /VÆLON/u);
   assert.match(app, /SOLVÆR/u);
   assert.match(viewport, /new CesiumSpatialRenderer\(\)/u);
-  assert.match(viewport, /new NativeSpatialRendererAdapter\(\)/u);
+  assert.match(viewport, /new NativeWebglSpatialRenderer\(\)/u);
   assert.match(viewport, /loadPublicRuntimeConfig/u);
   assert.match(styles, /grid-template-columns: 220px minmax\(0, 1fr\) 250px/u);
   assert.match(styles, /prefers-reduced-motion/u);
