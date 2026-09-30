@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#030813" />
+  <meta name="description" content="ÆTHERGRID operator intelligence console for digital twin, holographic, quantum, AI collaboration, and evidence review." />
+  <title>ÆTHERGRID Operator Console</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="app-shell" id="appShell" aria-label="ÆTHERGRID operator console">
+    <section class="dashboard-stage" id="dashboardStage" aria-label="ÆTHERGRID New York Metro dashboard">
+      <img class="dashboard-reference" src="./assets/dashboard-reference.webp" alt="ÆTHERGRID operator console dashboard" draggable="false" />
+
+      <div class="hotspot-layer" aria-label="Interactive dashboard controls">
+        <button class="hotspot" data-action="overview" style="--x:0.6;--y:11.2;--w:11.7;--h:6.0" aria-label="Overview"></button>
+        <button class="hotspot" data-action="grid" style="--x:0.6;--y:17.3;--w:11.7;--h:5.9" aria-label="Grid"></button>
+        <button class="hotspot" data-action="holographic" style="--x:0.6;--y:23.2;--w:11.7;--h:5.9" aria-label="Holographic"></button>
+        <button class="hotspot" data-action="quantum" style="--x:0.6;--y:29.1;--w:11.7;--h:5.9" aria-label="Quantum"></button>
+        <button class="hotspot" data-action="ai" style="--x:0.6;--y:35.0;--w:11.7;--h:5.9" aria-label="AI"></button>
+        <button class="hotspot" data-action="scenarios" style="--x:0.6;--y:40.9;--w:11.7;--h:5.9" aria-label="Scenarios"></button>
+        <button class="hotspot" data-action="evidence" style="--x:0.6;--y:46.8;--w:11.7;--h:5.9" aria-label="Evidence"></button>
+        <button class="hotspot" data-action="settings" style="--x:0.6;--y:52.7;--w:11.7;--h:5.9" aria-label="Settings"></button>
+
+        <button class="hotspot" data-action="grid" style="--x:31.0;--y:3.6;--w:13.2;--h:6.5" aria-label="Grid live system view"></button>
+        <button class="hotspot" data-action="holographic" style="--x:44.5;--y:3.6;--w:13.4;--h:6.5" aria-label="Holographic 3D spatial analysis"></button>
+        <button class="hotspot" data-action="quantum" style="--x:58.0;--y:3.6;--w:13.5;--h:6.5" aria-label="Quantum optimization"></button>
+        <button class="hotspot" data-action="ai" style="--x:71.5;--y:3.6;--w:13.8;--h:6.5" aria-label="AI collaborate"></button>
+        <button class="hotspot" data-action="evidence" style="--x:85.4;--y:3.6;--w:13.7;--h:6.5" aria-label="Evidence verify and export"></button>
+
+        <button class="hotspot" data-action="live" style="--x:57.8;--y:13.0;--w:4.2;--h:3.3" aria-label="Live grid view"></button>
+        <button class="hotspot" data-action="forecast" style="--x:62.0;--y:13.0;--w:4.5;--h:3.3" aria-label="Forecast grid view"></button>
+        <button class="hotspot" data-action="scenario-view" style="--x:66.5;--y:13.0;--w:5.0;--h:3.3" aria-label="Scenario grid view"></button>
+
+        <button class="hotspot" data-action="run-optimization" style="--x:42.6;--y:77.8;--w:15.2;--h:3.4" aria-label="Run new optimization"></button>
+        <button class="hotspot" data-action="compare-classical" style="--x:59.1;--y:78.4;--w:11.7;--h:2.8" aria-label="Compare with classical"></button>
+        <button class="hotspot" data-action="holographic" style="--x:43.8;--y:82.6;--w:7.3;--h:3.0" aria-label="Open full 3D view"></button>
+        <button class="hotspot" data-action="evidence" style="--x:73.0;--y:82.7;--w:5.1;--h:3.0" aria-label="View all evidence"></button>
+
+        <button class="hotspot" data-action="export-operator" style="--x:80.0;--y:87.3;--w:8.5;--h:5.6" aria-label="Export operator report"></button>
+        <button class="hotspot" data-action="export-simulation" style="--x:89.0;--y:87.3;--w:9.0;--h:5.6" aria-label="Export simulation package"></button>
+        <button class="hotspot" data-action="export-3d" style="--x:80.0;--y:93.2;--w:8.5;--h:5.6" aria-label="Export 3D visualization"></button>
+        <button class="hotspot" data-action="export-technical" style="--x:89.0;--y:93.2;--w:9.0;--h:5.6" aria-label="Export technical evidence"></button>
+
+        <button class="hotspot" data-action="agent-vaelon" style="--x:77.4;--y:18.0;--w:21.4;--h:9.5" aria-label="VÆLON agent"></button>
+        <button class="hotspot" data-action="agent-auren" style="--x:77.4;--y:28.2;--w:21.4;--h:9.5" aria-label="AUREN agent"></button>
+        <button class="hotspot" data-action="agent-solvaer" style="--x:77.4;--y:38.5;--w:21.4;--h:9.5" aria-label="SOLVÆR agent"></button>
+        <button class="hotspot" data-action="ai-chat" style="--x:77.2;--y:50.6;--w:21.7;--h:4.3" aria-label="Ask the AI team"></button>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <dialog class="glass-dialog" id="panelDialog">
+    <button class="dialog-close" data-dialog-close aria-label="Close">×</button>
+    <div class="dialog-kicker" id="dialogKicker">ÆTHERGRID</div>
+    <h2 id="dialogTitle">Operator Console</h2>
+    <div class="dialog-body" id="dialogBody"></div>
+  </dialog>
+
+  <dialog class="glass-dialog chat-dialog" id="chatDialog">
+    <button class="dialog-close" data-dialog-close aria-label="Close">×</button>
+    <div class="dialog-kicker">AI COLLABORATION</div>
+    <h2>Ask VÆLON · AUREN · SOLVÆR</h2>
+    <div class="chat-log" id="chatLog">
+      <div class="chat-bubble system">AI team online. Ask about the grid, scenario optimization, resilience, evidence, or simulation results.</div>
+    </div>
+    <form class="chat-form" id="chatForm">
+      <input id="chatInput" autocomplete="off" placeholder="Ask the AI team a question…" />
+      <button>Send</button>
+    </form>
+  </dialog>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>
