@@ -541,7 +541,14 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
 
       for (const edge of snapshot.edges) {
         let color = base;
-        if (
+        const windEdge =
+          edge.kind === 'flow' && edge.properties?.vectorType === 'wind';
+        if (windEdge && this.#time.mode === 'live') {
+          const timestamp = Date.parse(this.#time.iso);
+          const phase = Number.isFinite(timestamp) ? timestamp / 1000 : 0;
+          const pulse = 0.5 + 0.5 * Math.sin(phase * 0.72 + (edge.intensity ?? 0.5) * 4.7);
+          color = rgba('#7de9ff', 0.34 + pulse * 0.48);
+        } else if (
           scenario &&
           snapshot.layerId === 'energy' &&
           (edge.kind === 'transmission' || edge.kind === 'distribution')
@@ -713,8 +720,22 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
       for (const edge of snapshot.edges) {
         const a = toScreen(edge.from);
         const b = toScreen(edge.to);
-        context.strokeStyle = css(base);
-        context.lineWidth = snapshot.layerId === 'energy' ? 1.8 : 1;
+        const windEdge =
+          edge.kind === 'flow' && edge.properties?.vectorType === 'wind';
+        const timestamp = Date.parse(this.#time.iso);
+        const phase = Number.isFinite(timestamp) ? timestamp / 1000 : 0;
+        const pulse = 0.5 + 0.5 * Math.sin(phase * 0.72 + (edge.intensity ?? 0.5) * 4.7);
+        context.strokeStyle = css(
+          windEdge && this.#time.mode === 'live'
+            ? rgba('#7de9ff', 0.34 + pulse * 0.48)
+            : base
+        );
+        context.lineWidth =
+          snapshot.layerId === 'energy'
+            ? 1.8
+            : windEdge
+              ? 1.2 + (edge.intensity ?? 0.5) * 1.2
+              : 1;
         context.beginPath();
         context.moveTo(a[0], a[1]);
         context.lineTo(b[0], b[1]);
