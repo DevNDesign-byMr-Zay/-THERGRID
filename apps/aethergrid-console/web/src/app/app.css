@@ -1969,6 +1969,56 @@ button {
   letter-spacing: 0.05em;
 }
 
+
+.intel-workspace-tabs {
+  position: sticky;
+  top: -18px;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+  margin: -18px -14px 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-strong);
+}
+
+.intel-workspace-tabs button {
+  min-width: 0;
+  padding: 7px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  color: #63788b;
+  background: rgba(255, 255, 255, 0.012);
+  font-size: 6px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.intel-workspace-tabs button.active {
+  border-color: rgba(112, 231, 255, 0.24);
+  color: #b6efff;
+  background: rgba(112, 231, 255, 0.06);
+}
+
+.intel-workspace,
+.intel-context-panel {
+  display: none;
+}
+
+.intel-rail[data-workspace='context'] .intel-context-panel {
+  display: block;
+}
+
+.intel-rail[data-workspace='ai'] .intel-ai,
+.intel-rail[data-workspace='scenario'] .intel-scenario,
+.intel-rail[data-workspace='quantum'] .intel-quantum,
+.intel-rail[data-workspace='evidence'] .intel-evidence,
+.intel-rail[data-workspace='system'] .intel-system {
+  display: block;
+}
+
 .intel-card,
 .selection-card {
   padding: 13px;
@@ -2387,5 +2437,20 @@ button {
 
   .profile-fields label {
     grid-column: 1 / -1;
+  }
+}
+
+
+@media (max-width: 1100px) {
+  .intel-workspace-tabs {
+    top: 33px;
+    margin-top: -6px;
+  }
+}
+
+@media (max-width: 760px) {
+  .intel-workspace-tabs {
+    top: 33px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
