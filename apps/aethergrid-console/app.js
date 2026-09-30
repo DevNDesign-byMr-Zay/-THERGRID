@@ -419,6 +419,9 @@
         buildings: true,
         infrastructure: true,
         terrain: true,
+        water: true,
+        green: true,
+        landmarks: true,
         weather: true,
         clouds: true,
         illumination: true,
@@ -621,6 +624,15 @@
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
       this.geometry.terrain = this.makeBuffer(terrainLines);
+      this.geometry.waterLines = this.makeBuffer([]);
+      this.geometry.waterFaces = this.makeBuffer([]);
+      this.geometry.greenLines = this.makeBuffer([]);
+      this.geometry.greenFaces = this.makeBuffer([]);
+      this.geometry.landmarkLines = this.makeBuffer([]);
+      this.geometry.materialGlassFaces = this.makeBuffer([]);
+      this.geometry.materialMasonryFaces = this.makeBuffer([]);
+      this.geometry.materialMetalFaces = this.makeBuffer([]);
+      this.geometry.materialNaturalFaces = this.makeBuffer([]);
       this.geometry.weather = this.makeBuffer([]);
       this.geometry.clouds = this.makeBuffer([]);
       this.geometry.illumination = this.makeBuffer([]);
@@ -701,6 +713,15 @@
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
       this.geometry.terrain = this.makeBuffer(terrainLines);
+      this.geometry.waterLines = this.makeBuffer([]);
+      this.geometry.waterFaces = this.makeBuffer([]);
+      this.geometry.greenLines = this.makeBuffer([]);
+      this.geometry.greenFaces = this.makeBuffer([]);
+      this.geometry.landmarkLines = this.makeBuffer([]);
+      this.geometry.materialGlassFaces = this.makeBuffer([]);
+      this.geometry.materialMasonryFaces = this.makeBuffer([]);
+      this.geometry.materialMetalFaces = this.makeBuffer([]);
+      this.geometry.materialNaturalFaces = this.makeBuffer([]);
       this.geometry.weather = this.makeBuffer([]);
       this.geometry.clouds = this.makeBuffer([]);
       this.geometry.illumination = this.makeBuffer([]);
@@ -733,6 +754,15 @@
       const infrastructureLines = [];
       const infrastructureNodes = [];
       const terrainLines = [];
+      const waterLines = [];
+      const waterFaces = [];
+      const greenLines = [];
+      const greenFaces = [];
+      const landmarkLines = [];
+      const materialGlassFaces = [];
+      const materialMasonryFaces = [];
+      const materialMetalFaces = [];
+      const materialNaturalFaces = [];
       const weatherLines = [];
       const cloudParticles = [];
       const cityLights = [];
@@ -755,6 +785,18 @@
       }
 
       this.graphNodes = [];
+      const landmarkHeightThresholdM = Math.max(
+        70,
+        Number(mesh.skylineProfile?.p95HeightM || 0),
+      );
+      const materialTargetFor = (building) => {
+        const descriptor = `${building.buildingMaterial || ''} ${building.buildingColor || ''}`.toLowerCase();
+        if (/glass|mirror|glazed|blue|cyan/u.test(descriptor)) return materialGlassFaces;
+        if (/brick|stone|sandstone|terracotta|brown|red|beige/u.test(descriptor)) return materialMasonryFaces;
+        if (/metal|steel|aluminium|aluminum|silver|zinc/u.test(descriptor)) return materialMetalFaces;
+        if (/wood|timber|green|earth|clay/u.test(descriptor)) return materialNaturalFaces;
+        return null;
+      };
       mesh.buildings.forEach((building, buildingIndex) => {
         const footprint = (building.footprint || []).map(([x, z]) => [x * scale, z * scale]);
         if (footprint.length < 3) return;
@@ -777,6 +819,14 @@
         const supportedApexRoof = /^(pyramidal|hipped|conical|dome|onion)$/u.test(String(building.roofShape || ''));
         const wallTop = supportedApexRoof && roofHeight > 0 ? Math.max(baseHeight + 0.02, height - roofHeight) : height;
         const phase = buildingIndex * 0.13;
+        const materialTarget = materialTargetFor(building);
+        const sourceBackedHeight = !['inferred', 'synthetic-fallback'].includes(
+          String(building.heightSource || ''),
+        );
+        const isLandmark =
+          Boolean(String(building.name || '').trim()) &&
+          sourceBackedHeight &&
+          Number(building.heightM || 0) >= landmarkHeightThresholdM;
         for (let index = 0; index < openFootprint.length; index += 1) {
           const [ax, az] = openFootprint[index];
           const [bx, bz] = openFootprint[(index + 1) % openFootprint.length];
@@ -789,6 +839,14 @@
           this.line(buildings, aBase, aTop, phase + 0.4);
           this.triangle(buildingFaces, aBase, bBase, bTop, phase + 0.08);
           this.triangle(buildingFaces, aBase, bTop, aTop, phase + 0.16);
+          if (materialTarget) {
+            this.triangle(materialTarget, aBase, bBase, bTop, phase + 0.11);
+            this.triangle(materialTarget, aBase, bTop, aTop, phase + 0.19);
+          }
+          if (isLandmark) {
+            this.line(landmarkLines, aTop, bTop, phase + 0.52);
+            if (index % 2 === 0) this.line(landmarkLines, aBase, aTop, phase + 0.61);
+          }
 
           if (supportedApexRoof && roofHeight > 0) {
             const apex = [center[0], height, center[1]];
@@ -872,7 +930,6 @@
           landmarkNodes,
           ...landmark.position,
           landmarkIndex * 0.91 + landmark.heightM * 0.01,
-        );
         if (!existingNodeIds.has(landmark.id)) {
           this.graphNodes.push(landmark);
           existingNodeIds.add(landmark.id);
@@ -880,6 +937,44 @@
       });
       this.landmarkNodes = landmarkSelection;
 
+      const addAreaGeometry = (feature, lineTarget, faceTarget, y, phaseBase) => {
+        const footprint = (feature.footprint || []).map(([x, z]) => [Number(x) * scale, Number(z) * scale]);
+        if (footprint.length < 3) return;
+        const open =
+          footprint.length > 3 &&
+          Math.hypot(
+            footprint[0][0] - footprint.at(-1)[0],
+            footprint[0][1] - footprint.at(-1)[1],
+          ) < 0.001
+            ? footprint.slice(0, -1)
+            : footprint;
+        if (open.length < 3) return;
+        const center = open
+          .reduce((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0])
+          .map((value) => value / open.length);
+        const center3 = [center[0], y, center[1]];
+        for (let index = 0; index < open.length; index += 1) {
+          const a = [open[index][0], y, open[index][1]];
+          const b = [open[(index + 1) % open.length][0], y, open[(index + 1) % open.length][1]];
+          this.line(lineTarget, a, b, phaseBase + index * 0.03);
+          this.triangle(faceTarget, a, b, center3, phaseBase + index * 0.02);
+      };
+      (mesh.waterAreas || []).forEach((feature, index) =>
+        addAreaGeometry(feature, waterLines, waterFaces, 0.012, index * 0.19),
+      );
+      (mesh.greenAreas || []).forEach((feature, index) =>
+        addAreaGeometry(feature, greenLines, greenFaces, 0.016, index * 0.23),
+      [...(mesh.waterways || []), ...(mesh.coastlines || [])].forEach((feature, lineIndex) => {
+        const path = (feature.path || []).map(([x, z]) => [Number(x) * scale, Number(z) * scale]);
+        for (let index = 1; index < path.length; index += 1) {
+          const [ax, az] = path[index - 1];
+          const [bx, bz] = path[index];
+          this.line(
+            waterLines,
+            [ax, 0.022, az],
+            [bx, 0.022, bz],
+            lineIndex * 0.17 + index * 0.025,
+          );
       (mesh.roads || []).forEach((road, roadIndex) => {
         const path = (road.path || []).map(([x, z]) => [x * scale, z * scale]);
         for (let index = 1; index < path.length; index += 1) {
@@ -1130,6 +1225,15 @@
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
       this.geometry.terrain = this.makeBuffer(terrainLines);
+      this.geometry.waterLines = this.makeBuffer(waterLines);
+      this.geometry.waterFaces = this.makeBuffer(waterFaces);
+      this.geometry.greenLines = this.makeBuffer(greenLines);
+      this.geometry.greenFaces = this.makeBuffer(greenFaces);
+      this.geometry.landmarkLines = this.makeBuffer(landmarkLines);
+      this.geometry.materialGlassFaces = this.makeBuffer(materialGlassFaces);
+      this.geometry.materialMasonryFaces = this.makeBuffer(materialMasonryFaces);
+      this.geometry.materialMetalFaces = this.makeBuffer(materialMetalFaces);
+      this.geometry.materialNaturalFaces = this.makeBuffer(materialNaturalFaces);
       this.geometry.weather = this.makeBuffer(weatherLines);
       this.geometry.clouds = this.makeBuffer(cloudParticles);
       this.geometry.illumination = this.makeBuffer(cityLights);
@@ -1449,11 +1553,65 @@
           0.025 * amplitude,
         );
       }
+      if (this.layers.water) {
+        const waterBoost = this.operationProfile === 'flood-context' ? 1.55 : 1;
+        this.drawBuffer(
+          this.geometry.waterFaces,
+          gl.TRIANGLES,
+          isLightTheme() ? [0.18, 0.62, 0.82, 0.18 * waterBoost] : [0.04, 0.38, 0.68, 0.24 * waterBoost],
+          0.012 * amplitude * waterBoost,
+        );
+        this.drawBuffer(
+          this.geometry.waterLines,
+          gl.LINES,
+          isLightTheme() ? [0.08, 0.46, 0.68, 0.62 * waterBoost] : [0.12, 0.72, 1, 0.7 * waterBoost],
+          0.026 * amplitude * waterBoost,
+        );
+      }
+      if (this.layers.green) {
+        const greenBoost = this.operationProfile === 'green-infrastructure' ? 1.6 : 1;
+        this.drawBuffer(
+          this.geometry.greenFaces,
+          gl.TRIANGLES,
+          isLightTheme() ? [0.2, 0.58, 0.28, 0.14 * greenBoost] : [0.08, 0.48, 0.24, 0.18 * greenBoost],
+          0.01 * amplitude * greenBoost,
+        );
+        this.drawBuffer(
+          this.geometry.greenLines,
+          gl.LINES,
+          isLightTheme() ? [0.12, 0.48, 0.22, 0.44 * greenBoost] : [0.22, 0.8, 0.42, 0.46 * greenBoost],
+          0.022 * amplitude * greenBoost,
+        );
+      }
       if (this.layers.grid) this.drawBuffer(this.geometry.grid, gl.LINES, [0.09, 0.42, 0.75, this.cityVisualMode === 'operations' ? 0.18 : 0.42], 0.045 * amplitude);
       if (this.layers.buildings && this.cityVisualMode !== 'xray') {
         const faceAlpha = this.cityVisualMode === 'operations' ? 0.13 : 0.28;
         const faceColor = isLightTheme() ? [0.15, 0.42, 0.62, faceAlpha] : [0.035, 0.31, 0.58, faceAlpha];
         this.drawBuffer(this.geometry.buildingFaces, gl.TRIANGLES, faceColor, 0.025 * amplitude);
+        this.drawBuffer(
+          this.geometry.materialGlassFaces,
+          gl.TRIANGLES,
+          isLightTheme() ? [0.14, 0.56, 0.82, 0.12] : [0.14, 0.68, 1, 0.16],
+          0.018 * amplitude,
+        );
+        this.drawBuffer(
+          this.geometry.materialMasonryFaces,
+          gl.TRIANGLES,
+          isLightTheme() ? [0.62, 0.3, 0.18, 0.1] : [0.78, 0.34, 0.2, 0.12],
+          0.016 * amplitude,
+        );
+        this.drawBuffer(
+          this.geometry.materialMetalFaces,
+          gl.TRIANGLES,
+          isLightTheme() ? [0.38, 0.45, 0.55, 0.1] : [0.62, 0.72, 0.84, 0.12],
+          0.014 * amplitude,
+        );
+        this.drawBuffer(
+          this.geometry.materialNaturalFaces,
+          gl.TRIANGLES,
+          isLightTheme() ? [0.42, 0.3, 0.18, 0.08] : [0.54, 0.42, 0.24, 0.1],
+          0.012 * amplitude,
+        );
         this.drawBuffer(this.geometry.roofFaces, gl.TRIANGLES, isLightTheme() ? [0.23, 0.49, 0.7, Math.min(0.48, faceAlpha + 0.12)] : [0.08, 0.46, 0.78, Math.min(0.52, faceAlpha + 0.12)], 0.018 * amplitude);
       }
       if (this.layers.buildings) {
@@ -1461,6 +1619,14 @@
         const edgeColor = isLightTheme() ? [0.03, 0.31, 0.52, edgeAlpha] : [0.14, 0.64, 1, edgeAlpha];
         this.drawBuffer(this.geometry.buildings, gl.LINES, edgeColor, 0.07 * amplitude);
         this.drawBuffer(this.geometry.roofLines, gl.LINES, isLightTheme() ? [0.21, 0.19, 0.55, edgeAlpha] : [0.55, 0.64, 1, edgeAlpha], 0.05 * amplitude);
+      }
+      if (this.layers.landmarks) {
+        this.drawBuffer(
+          this.geometry.landmarkLines,
+          gl.LINES,
+          isLightTheme() ? [0.68, 0.42, 0.08, 0.78] : [1, 0.72, 0.22, 0.9],
+          0.03 * amplitude,
+        );
       }
       if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [0.67, 0.48, 0.98, Math.min(1, 0.64 * trailBoost)], 0.075 * amplitude * trailBoost);
       if (this.layers.infrastructure) {
@@ -1562,7 +1728,8 @@
           focus === 'weather' ||
           focus === 'resource-flow' ||
           focus === 'grid-flow' ||
-          focus === 'visibility'
+          focus === 'visibility' ||
+          focus === 'flood-context'
             ? 1
             : 0.58;
         gl.uniform1f(this.loc.time, temporal * (1 + Math.min(2.4, windSpeed / 30)));
@@ -1645,7 +1812,12 @@
       if (this.layers.air) {
         const aqi = clamp(Number(this.liveContext?.airQuality?.current?.usAqi || 0), 0, 500);
         const airBoost =
-          focus === 'air-quality' || focus === 'visibility' || focus === 'heat' ? 1 : 0.42;
+          focus === 'air-quality' ||
+          focus === 'visibility' ||
+          focus === 'heat' ||
+          focus === 'green-infrastructure'
+            ? 1
+            : 0.42;
         const airColor =
           aqi >= 151
             ? [1, 0.34, 0.4, 0.74 * airBoost]
@@ -2689,6 +2861,10 @@
       roads,
       powerLines,
       powerAssets,
+      waterAreas: [],
+      waterways: [],
+      coastlines: [],
+      greenAreas: [],
       terrain: {
         source: {
           provider: 'flat-local-fallback',
@@ -2739,9 +2915,19 @@
     const sunriseSunset = mesh.environment?.solar
       ? `${compactSolarTime(mesh.environment.solar.sunrise)} / ${compactSolarTime(mesh.environment.solar.sunset)}`
       : '—';
+    const waterFeatureCount =
+      (mesh.waterAreas || []).length + (mesh.waterways || []).length + (mesh.coastlines || []).length;
+    const greenFeatureCount = (mesh.greenAreas || []).length;
+    const landmarkThreshold = Math.max(70, Number(skyline.p95HeightM || 0));
+    const landmarkCount = (mesh.buildings || []).filter(
+      (building) =>
+        String(building.name || '').trim() &&
+        !['inferred', 'synthetic-fallback'].includes(String(building.heightSource || '')) &&
+        Number(building.heightM || 0) >= landmarkThreshold,
+    ).length;
     const seismic = mesh.liveContext?.seismic || null;
     const seismicLabel = seismic ? `${Number(seismic.eventCount || 0)} nearby · M${Number(seismic.maxMagnitude || 0).toFixed(1)} max` : '—';
-    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Skyline Max</b><em>${skylineMax}</em></span><span><b>P95 Height</b><em>${p95}</em></span><span><b>Height Data</b><em>${heightCoverage}</em></span><span><b>Weather</b><em>${weather}</em></span><span><b>Air</b><em>${airQuality}</em></span><span><b>Humidity</b><em>${humidity}</em></span><span><b>Sunrise / Sunset</b><em>${sunriseSunset}</em></span><span><b>Seismic</b><em>${seismicLabel}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
+    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Skyline Max</b><em>${skylineMax}</em></span><span><b>P95 Height</b><em>${p95}</em></span><span><b>Height Data</b><em>${heightCoverage}</em></span><span><b>Weather</b><em>${weather}</em></span><span><b>Air</b><em>${airQuality}</em></span><span><b>Humidity</b><em>${humidity}</em></span><span><b>Sunrise / Sunset</b><em>${sunriseSunset}</em></span><span><b>Water Features</b><em>${waterFeatureCount}</em></span><span><b>Green Areas</b><em>${greenFeatureCount}</em></span><span><b>Landmarks</b><em>${landmarkCount}</em></span><span><b>Seismic</b><em>${seismicLabel}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
   }
 
   function updateCityIdentity(mesh) {
@@ -2829,9 +3015,14 @@
     if (q('#geoSourceStatus')) {
       const airMode = result.liveContext?.airQuality?.source?.live ? 'AIR LIVE' : 'AIR FALLBACK';
       const seismicMode = result.liveContext?.seismic?.source?.live ? 'SEISMIC LIVE' : 'SEISMIC FALLBACK';
+      const waterCount =
+        (result.waterAreas || []).length +
+        (result.waterways || []).length +
+        (result.coastlines || []).length;
+      const greenCount = (result.greenAreas || []).length;
       q('#geoSourceStatus').textContent = result.source?.live
-        ? `LIVE OSM · ${airMode} · ${seismicMode}`
-        : `LOCAL GEOMETRY · ${airMode} · ${seismicMode}`;
+        ? `LIVE OSM · WATER ${waterCount} · GREEN ${greenCount} · ${airMode} · ${seismicMode}`
+        : `LOCAL GEOMETRY · WATER/GREEN NOT INVENTED · ${airMode} · ${seismicMode}`;
     }
     if (q('#geoAttribution')) {
       const attributions = [
@@ -2845,7 +3036,8 @@
         attributions.join(' · ') ||
         'Live city geometry unavailable; using local fallback geometry.';
       q('#geoAttribution').textContent =
-        `${sourceText} · City-light points are procedural visualization from mapped geometry + daylight state, not measured window occupancy. Snow/fog/rain/storm effects visualize current model context; storm pulses are not detected lightning strikes.`;
+      q('#geoAttribution').textContent =
+        `${sourceText} · Water/green/landmark geometry appears only when present in the mapped source. Material tint uses mapped building material/colour tags when available. City-light points are procedural visualization from mapped geometry + daylight state, not measured window occupancy. Snow/fog/rain/storm effects visualize current model context; storm pulses are not detected lightning strikes.`;
     }
     if (status) {
       const skyline = result.skylineProfile || {};
@@ -2866,7 +3058,7 @@
       const weatherAt = result.environment?.source?.modelTime || result.environment?.current?.time || 'unavailable';
       const airAt = result.liveContext?.airQuality?.source?.modelTime || 'unavailable';
       const quakeAt = result.liveContext?.seismic?.source?.generatedAt || result.liveContext?.seismic?.source?.fetchedAt || 'unavailable';
-      q('#geoProvenance').innerHTML = `<span><b>Geometry</b><em>${escapeHtml(result.source?.provider || 'local')}</em></span><span><b>OSM State</b><em>${escapeHtml(upstream)}</em></span><span><b>Weather</b><em>${escapeHtml(result.environment?.source?.provider || 'local')} · ${escapeHtml(weatherAt)}</em></span><span><b>Air</b><em>${escapeHtml(result.liveContext?.airQuality?.source?.provider || 'local')} · ${escapeHtml(airAt)}</em></span><span><b>Seismic</b><em>${escapeHtml(result.liveContext?.seismic?.source?.provider || 'local')} · ${escapeHtml(quakeAt)}</em></span><span><b>Height Coverage</b><em>${Number(result.skylineProfile?.sourceBackedHeightCoveragePercent || 0).toFixed(0)}%</em></span><span><b>Actuation</b><em>Disabled</em></span>`;
+      q('#geoProvenance').innerHTML = `<span><b>Geometry</b><em>${escapeHtml(result.source?.provider || 'local')}</em></span><span><b>OSM State</b><em>${escapeHtml(upstream)}</em></span><span><b>Water / Green</b><em>${(result.waterAreas || []).length + (result.waterways || []).length + (result.coastlines || []).length} / ${(result.greenAreas || []).length}</em></span><span><b>Weather</b><em>${escapeHtml(result.environment?.source?.provider || 'local')} · ${escapeHtml(weatherAt)}</em></span><span><b>Air</b><em>${escapeHtml(result.liveContext?.airQuality?.source?.provider || 'local')} · ${escapeHtml(airAt)}</em></span><span><b>Seismic</b><em>${escapeHtml(result.liveContext?.seismic?.source?.provider || 'local')} · ${escapeHtml(quakeAt)}</em></span><span><b>Height Coverage</b><em>${Number(result.skylineProfile?.sourceBackedHeightCoveragePercent || 0).toFixed(0)}%</em></span><span><b>Actuation</b><em>Disabled</em></span>`;
     }
     renderActivity();
     showToast(
