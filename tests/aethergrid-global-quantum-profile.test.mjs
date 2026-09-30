@@ -43,7 +43,7 @@ test('operator profile persists sanitized local identity data without secrets', 
   }
 });
 
-test('live geospatial runtime converts Overpass building geometry into 3D-ready footprints and caches it', async () => {
+test('live geospatial runtime converts and caches Overpass city geometry', async () => {
   let calls = 0;
   const geometry = [
     { lat: 40.7127, lon: -74.0061 },
@@ -124,7 +124,7 @@ test('geospatial provider failure degrades explicitly to local fallback geometry
   assert.ok(mesh.roads.length >= 10);
 });
 
-test('IBM Quantum adapter authenticates, discovers backends, submits sampler jobs and keeps credentials private', async () => {
+test('IBM Quantum adapter submits jobs while keeping credentials private', async () => {
   const requests = [];
   const fetchImpl = async (url, options = {}) => {
     const href = String(url);
