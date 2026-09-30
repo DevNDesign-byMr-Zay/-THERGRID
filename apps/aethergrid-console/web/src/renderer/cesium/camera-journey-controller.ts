@@ -35,7 +35,10 @@ export class CameraJourneyController {
     this.#camera.cancelFlight();
   }
 
-  async flyTo(target: SpatialTarget): Promise<void> {
+  async flyTo(
+    target: SpatialTarget,
+    onPhase?: (phase: CameraJourneyPhase) => void
+  ): Promise<void> {
     const journey = ++this.#activeJourney;
     const finalHeight = Math.max(
       target.heightMeters ?? 0,
@@ -60,6 +63,7 @@ export class CameraJourneyController {
 
     for (const stage of stages) {
       if (journey !== this.#activeJourney) return;
+      onPhase?.(stage.phase);
       await this.#flyStage(target, stage, journey);
     }
   }
