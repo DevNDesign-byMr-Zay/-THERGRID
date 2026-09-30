@@ -4,17 +4,18 @@
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const SETTINGS_KEY = 'aethergrid.operator.settings.v2';
   const DEFAULT_GLOBAL_CITIES = Object.freeze([
-    { id: 'new-york', name: 'New York', country: 'United States', lat: 40.7128, lon: -74.006, radiusM: 900 },
-    { id: 'london', name: 'London', country: 'United Kingdom', lat: 51.5074, lon: -0.1278, radiusM: 900 },
-    { id: 'tokyo', name: 'Tokyo', country: 'Japan', lat: 35.6762, lon: 139.6503, radiusM: 900 },
-    { id: 'dubai', name: 'Dubai', country: 'United Arab Emirates', lat: 25.2048, lon: 55.2708, radiusM: 900 },
-    { id: 'singapore', name: 'Singapore', country: 'Singapore', lat: 1.3521, lon: 103.8198, radiusM: 900 },
-    { id: 'sao-paulo', name: 'São Paulo', country: 'Brazil', lat: -23.5505, lon: -46.6333, radiusM: 900 },
-    { id: 'lagos', name: 'Lagos', country: 'Nigeria', lat: 6.5244, lon: 3.3792, radiusM: 900 },
-    { id: 'sydney', name: 'Sydney', country: 'Australia', lat: -33.8688, lon: 151.2093, radiusM: 900 },
+    { id: 'new-york', name: 'New York', country: 'United States', district: 'Midtown Manhattan', lat: 40.7549, lon: -73.984, radiusM: 1600 },
+    { id: 'london', name: 'London', country: 'United Kingdom', district: 'City of London / South Bank', lat: 51.5136, lon: -0.0917, radiusM: 1700 },
+    { id: 'tokyo', name: 'Tokyo', country: 'Japan', district: 'Shinjuku', lat: 35.6896, lon: 139.6917, radiusM: 1700 },
+    { id: 'dubai', name: 'Dubai', country: 'United Arab Emirates', district: 'Downtown Dubai', lat: 25.1972, lon: 55.2744, radiusM: 1800 },
+    { id: 'singapore', name: 'Singapore', country: 'Singapore', district: 'Marina Bay / Downtown Core', lat: 1.2838, lon: 103.8515, radiusM: 1700 },
+    { id: 'sao-paulo', name: 'São Paulo', country: 'Brazil', district: 'Paulista / Bela Vista', lat: -23.5614, lon: -46.6559, radiusM: 1700 },
+    { id: 'lagos', name: 'Lagos', country: 'Nigeria', district: 'Victoria Island / Eko Atlantic', lat: 6.4281, lon: 3.4219, radiusM: 1800 },
+    { id: 'sydney', name: 'Sydney', country: 'Australia', district: 'CBD / Circular Quay', lat: -33.8651, lon: 151.2099, radiusM: 1700 },
   ]);
 
   const defaultSettings = Object.freeze({
+    theme: 'dark',
     defaultWorkspace: 'grid',
     density: 'comfortable',
     animationIntensity: 100,
@@ -113,6 +114,24 @@
       .replace(/\b\w/g, (letter) => letter.toUpperCase());
   }
 
+  function resolvedTheme(theme = state.settings.theme) {
+    if (theme === 'system') {
+      return globalThis.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    return theme === 'light' ? 'light' : 'dark';
+  }
+
+  function isLightTheme() {
+    return resolvedTheme() === 'light';
+  }
+
+  function environmentHour(environment) {
+    const value = String(environment?.current?.time || '');
+    const match = value.match(/T(\d{2}):(\d{2})/u);
+    if (!match) return null;
+    return Number(match[1]) + Number(match[2]) / 60;
+  }
+
   function showToast(title, copy) {
     if (!toast) return;
     toast.innerHTML = `<b>${escapeHtml(title)}</b><small>${escapeHtml(copy)}</small>`;
@@ -179,6 +198,9 @@
   }
 
   function applySettings() {
+    const theme = resolvedTheme(state.settings.theme);
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
     document.body.dataset.density = state.settings.density;
     document.body.dataset.spatialLabels = state.settings.spatialLabels ? 'on' : 'off';
     document.body.dataset.motion =
@@ -189,6 +211,7 @@
     );
 
     const bindings = {
+      settingTheme: state.settings.theme,
       settingDefaultWorkspace: state.settings.defaultWorkspace,
       settingDensity: state.settings.density,
       settingAnimation: state.settings.animationIntensity,
@@ -223,6 +246,7 @@
 
   function bindSettings() {
     const binding = [
+      ['settingTheme', 'theme', 'value'],
       ['settingDefaultWorkspace', 'defaultWorkspace', 'value'],
       ['settingDensity', 'density', 'value'],
       ['settingAnimation', 'animationIntensity', 'number'],
@@ -257,6 +281,9 @@
       showToast('SETTINGS RESET', 'Operator preferences restored to defaults.');
     });
     q('[data-action="health-check"]')?.addEventListener('click', healthCheck);
+    globalThis.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change', () => {
+      if (state.settings.theme === 'system') applySettings();
+    });
   }
 
   function switchWorkspace(name, { persist = true } = {}) {
