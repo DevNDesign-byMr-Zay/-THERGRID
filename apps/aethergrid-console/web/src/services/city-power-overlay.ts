@@ -13,6 +13,13 @@ interface CityDescriptor {
   lon: number;
 }
 
+interface CityBuilding {
+  id: string;
+  name?: string;
+  heightM?: number | null;
+  footprint?: readonly (readonly [number, number])[];
+}
+
 interface CityPowerAsset {
   id: string;
   name?: string;
@@ -54,6 +61,7 @@ interface CityAreaFeature {
 }
 
 export interface CityIdentitySummary {
+  cityId: string;
   district: string | null;
   buildingCount: number;
   maxHeightM: number;
@@ -64,6 +72,7 @@ export interface CityIdentitySummary {
   roofTaggedCount: number;
   namedStructureCount: number;
   tallStructureCount: number;
+  arrivalHeadingDegrees: number;
   namedStructures: readonly {
     id: string;
     name: string;
@@ -84,6 +93,7 @@ interface CityMeshResponse {
     fetchedAt?: string | null;
     upstreamTimestamp?: string | null;
   };
+  buildings?: readonly CityBuilding[];
   powerAssets?: readonly CityPowerAsset[];
   powerLines?: readonly CityPowerLine[];
   roads?: readonly CityRoad[];
@@ -269,9 +279,90 @@ export interface CitySpatialBundle {
   identity: CityIdentitySummary;
 }
 
+
+function centroid(
+  footprint: readonly (readonly [number, number])[] | undefined
+): readonly [number, number] | null {
+  if (!footprint?.length) return null;
+  const points =
+    footprint.length > 1 &&
+    footprint[0][0] === footprint.at(-1)?.[0] &&
+    footprint[0][1] === footprint.at(-1)?.[1]
+      ? footprint.slice(0, -1)
+      : footprint;
+  if (!points.length) return null;
+
+  const sum = points.reduce(
+    (accumulator, point) => [
+      accumulator[0] + Number(point[0] || 0),
+      accumulator[1] + Number(point[1] || 0)
+    ] as [number, number],
+    [0, 0] as [number, number]
+  );
+  return [sum[0] / points.length, sum[1] / points.length];
+}
+
+function arrivalHeadingDegrees(mesh: CityMeshResponse): number {
+  const candidates = (mesh.buildings ?? [])
+    .map((building) => ({
+      building,
+      center: centroid(building.footprint)
+    }))
+    .filter(
+      (item): item is { building: CityBuilding; center: readonly [number, number] } =>
+        Boolean(item.center)
+    )
+    .sort(
+      (a, b) =>
+        Number(b.building.heightM ?? 0) - Number(a.building.heightM ?? 0)
+    )
+    .slice(0, 80);
+
+  if (!candidates.length) return 0;
+
+  let weightedX = 0;
+  let weightedNorth = 0;
+  let totalWeight = 0;
+  for (const item of candidates) {
+    const weight = Math.max(8, Number(item.building.heightM ?? 8));
+    weightedX += item.center[0] * weight;
+    weightedNorth += item.center[1] * weight;
+    totalWeight += weight;
+  }
+
+  const x = weightedX / Math.max(1, totalWeight);
+  const north = weightedNorth / Math.max(1, totalWeight);
+  const magnitude = Math.hypot(x, north);
+
+  if (magnitude >= 40) {
+    const towardSkyline = (Math.atan2(x, north) * 180) / Math.PI;
+    return ((towardSkyline + 180) % 360 + 360) % 360;
+  }
+
+  const meanX =
+    candidates.reduce((sum, item) => sum + item.center[0], 0) / candidates.length;
+  const meanNorth =
+    candidates.reduce((sum, item) => sum + item.center[1], 0) / candidates.length;
+  let xx = 0;
+  let yy = 0;
+  let xy = 0;
+  for (const item of candidates) {
+    const dx = item.center[0] - meanX;
+    const dy = item.center[1] - meanNorth;
+    xx += dx * dx;
+    yy += dy * dy;
+    xy += dx * dy;
+  }
+
+  const axisFromEast = 0.5 * Math.atan2(2 * xy, xx - yy);
+  const axisFromNorth = 90 - (axisFromEast * 180) / Math.PI;
+  return ((axisFromNorth + 90) % 360 + 360) % 360;
+}
+
 function cityIdentity(mesh: CityMeshResponse): CityIdentitySummary {
   const profile = mesh.skylineProfile ?? {};
   return {
+    cityId: mesh.city.id,
     district: profile.district ?? null,
     buildingCount: Number(profile.buildingCount ?? 0),
     maxHeightM: Number(profile.maxHeightM ?? 0),
@@ -282,6 +373,7 @@ function cityIdentity(mesh: CityMeshResponse): CityIdentitySummary {
     roofTaggedCount: Number(profile.roofTaggedCount ?? 0),
     namedStructureCount: Number(profile.namedStructureCount ?? 0),
     tallStructureCount: Number(profile.tallStructureCount ?? 0),
+    arrivalHeadingDegrees: arrivalHeadingDegrees(mesh),
     namedStructures: Array.isArray(profile.namedStructures)
       ? profile.namedStructures
           .filter((item): item is NonNullable<CityIdentitySummary['namedStructures'][number]> =>
