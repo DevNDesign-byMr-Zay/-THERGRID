@@ -714,3 +714,19 @@ test('v4 scenario map effects mirror the backend stress model without mutating s
   assert.match(renderer, /if \(this\.#time\) overlay\.setTime\(this\.#time\)/u);
   assert.match(app, /MODELED SCENARIO · SOURCE DATA UNCHANGED/u);
 });
+
+test('v4 selected spatial entities expose layer provenance and hand off to AI context', async () => {
+  const [layer, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(layer, /provenanceProperties/u);
+  assert.match(layer, /sourceTime: snapshot\.sourceTime/u);
+  assert.match(layer, /fetchedAt: snapshot\.fetchedAt/u);
+  assert.match(layer, /fallback: snapshot\.fallback/u);
+  assert.match(app, /ANALYZE WITH AI/u);
+  assert.match(app, /setIntelWorkspace\('ai'\)/u);
+  assert.match(app, /selection\.properties\?\.sourceTime/u);
+  assert.match(app, /selection\.properties\?\.fetchedAt/u);
+});
