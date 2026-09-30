@@ -199,3 +199,44 @@ The CI-built functional application archive was inspected after the final releas
 - includes `standalone.html`, modular HTML/CSS/JS, Node backend, provider-neutral AI runtime, agent config, JSON manifests, brand assets, app-local environment example, PowerShell/CMD launchers, README, file inventory and SHA-256 sums;
 - the old dashboard screenshot is not required by the runtime package;
 - tests, lint, typecheck, coverage, fresh-clone smoke, container smoke, quality/release-readiness and CodeQL are required before merge.
+
+## Batch 8 — Global intelligence, operator identity, and external compute
+
+Status: IMPLEMENTED / VERIFYING
+
+### Global God's-eye grid
+- native-WebGL planetary latitude/longitude grid;
+- real-coordinate world city nodes;
+- orbit, zoom, point selection and city focus;
+- explicit operator-triggered city descent;
+- live OpenStreetMap Overpass building footprints;
+- building-height extraction and metric projection;
+- interactive 3D wireframe city extrusion;
+- provider attribution and cached requests;
+- explicit fallback labeling when live geometry is unavailable.
+
+### Operator profile
+- editable profile dialog;
+- persistent local JSON store;
+- browser cache fallback;
+- client-side avatar resize;
+- bounded avatar/profile payloads;
+- no profile field grants infrastructure authority.
+
+### Quantum compute
+- credential-free local Sampler fallback;
+- IBM Cloud IAM token exchange;
+- IBM Quantum backend discovery;
+- OpenQASM 3 editor;
+- Sampler V2 job submission;
+- remote job listing and job detail retrieval;
+- job/evidence receipts;
+- explicit separation between hardware submission and completed QPU execution.
+
+### Next expansion
+- configurable commercial/self-hosted geospatial providers for higher-volume deployments;
+- vector road/transmission overlays and terrain/elevation;
+- progressive globe-to-city camera interpolation instead of the current workspace transition;
+- IBM job-result visualization and estimator workflows;
+- additional quantum providers behind the same adapter contract;
+- authenticated multi-user profile/session system for hosted deployments.
