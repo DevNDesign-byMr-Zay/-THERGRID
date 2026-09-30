@@ -474,3 +474,19 @@ test('v4 world scope isolates global live context from selected-city overlays', 
   assert.match(app, /scope === 'city' && atmosphere/u);
   assert.match(app, /scope === 'city' && liveContext/u);
 });
+
+test('v4 God’s-eye city nodes encode AQI categories and descend into selected cities', async () => {
+  const [layer, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(layer, /node\.kind === 'city'/u);
+  assert.match(layer, /category === 'good'/u);
+  assert.match(layer, /category === 'hazardous'/u);
+  assert.match(app, /handleSpatialSelection/u);
+  assert.match(app, /scope !== 'world' \|\| next\?\.kind !== 'city'/u);
+  assert.match(app, /next\.properties\?\.cityId/u);
+  assert.match(app, /setScope\('city'\)/u);
+  assert.match(app, /onSelection=\{handleSpatialSelection\}/u);
+});
