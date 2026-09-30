@@ -123,7 +123,14 @@
     "procedural-skyline-lighting",
     "solar-daylight-context",
     "heat-stress-operation",
-    "visibility-operations"
+    "visibility-operations",
+    "source-backed-city-identity",
+    "named-structure-anchors",
+    "interactive-landmark-layer",
+    "semantic-weather-rendering",
+    "modeled-snow-animation",
+    "modeled-fog-animation",
+    "modeled-thunderstorm-animation"
   ],
   "agents": [
     {
@@ -448,12 +455,37 @@
       "wind-driven-cloud-deck",
       "directional-wind-flow",
       "falling-precipitation",
-      "procedural-night-skyline-lights"
+      "procedural-night-skyline-lights",
+      "modeled-rain",
+      "modeled-snow",
+      "modeled-fog",
+      "modeled-thunderstorm-pulse",
+      "source-backed-landmark-pulse"
     ],
     "solarContext": {
       "terminator": "computed from current UTC solar declination/equation of time",
       "cityLights": "procedural mapped-geometry visualization",
       "occupancyClaim": false
+    },
+    "cityIdentity": {
+      "source": "OpenStreetMap bounded building sample",
+      "anchors": "named and tall mapped structures",
+      "interactiveSelection": true,
+      "metrics": [
+        "max-height",
+        "p95-height",
+        "named-structure-count",
+        "tall-structure-count",
+        "roof-tags",
+        "terrain-relief",
+        "weather",
+        "height-data-coverage"
+      ]
+    },
+    "weatherSemantics": {
+      "basedOn": "current provider weather_code + precipitation + visibility",
+      "lightningStrikeClaim": false,
+      "streetSensorClaim": false
     }
   },
   "profile": {
