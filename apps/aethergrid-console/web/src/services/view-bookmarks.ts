@@ -1,6 +1,7 @@
 import type {
   LayerState,
   SpatialTarget,
+  SpatialScenarioVisual,
   TemporalMode,
   VisualMode
 } from '../renderer/spatial-renderer';
@@ -19,7 +20,9 @@ export interface SpatialViewBookmark {
   };
   visualMode: VisualMode;
   temporalMode: TemporalMode;
+  cursorIso: string;
   scenarioId?: string | null;
+  scenarioVisual?: SpatialScenarioVisual | null;
   useCase: UseCaseId | null;
   layers: readonly LayerState[];
 }
@@ -36,6 +39,7 @@ function validBookmark(value: unknown): value is SpatialViewBookmark {
     (item.scope === 'world' || item.scope === 'city') &&
     typeof item.target?.latitude === 'number' &&
     typeof item.target?.longitude === 'number' &&
+    typeof item.cursorIso === 'string' &&
     typeof item.visualMode === 'string' &&
     Array.isArray(item.layers)
   );
