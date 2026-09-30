@@ -363,7 +363,11 @@
       "power-lines",
       "power-assets",
       "terrain",
-      "roofs"
+      "roofs",
+      "water-areas",
+      "waterways",
+      "coastline",
+      "green-areas"
     ],
     "liveTerrain": true,
     "terrainProvider": "Open-Meteo Elevation / Copernicus DEM GLO-90",
