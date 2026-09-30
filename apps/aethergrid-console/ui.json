@@ -78,7 +78,10 @@
     "ibm-quantum-provider",
     "local-quantum-simulator",
     "live-osm-road-topology",
-    "animated-globe-city-descent"
+    "animated-globe-city-descent",
+    "quantum-job-results",
+    "quantum-job-metrics",
+    "quantum-job-inspector"
   ],
   "agents": [
     {
@@ -264,7 +267,10 @@
       "samplerSubmission": true,
       "jobList": true,
       "serverSideCredentials": true,
-      "ibmApiVersion": "2026-04-15"
+      "ibmApiVersion": "2026-04-15",
+      "jobResults": true,
+      "jobMetrics": true,
+      "jobInspector": true
     }
   },
   "globalWorkspace": {
