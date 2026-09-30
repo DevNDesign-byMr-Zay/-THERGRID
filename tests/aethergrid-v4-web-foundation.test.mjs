@@ -772,3 +772,21 @@ test('v4 operational mode propagates into spatial HUD and AI context', async () 
   assert.match(app, /OPERATION MODE/u);
   assert.match(app, /USE_CASE_PRESETS\.find\(\(preset\) => preset\.id === activeUseCase\)/u);
 });
+
+test('v4 saved views restore spatial layers use case and exact 4d cursor without server mutation', async () => {
+  const [service, panel, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/services/view-bookmarks.ts'),
+    text('apps/aethergrid-console/web/src/components/ViewBookmarksPanel.tsx'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(service, /aethergrid\.operator\.spatial-bookmarks\.v4/u);
+  assert.match(service, /cursorIso/u);
+  assert.match(service, /scenarioVisual/u);
+  assert.match(panel, /createSpatialBookmark/u);
+  assert.match(panel, /saveSpatialBookmarks/u);
+  assert.match(app, /const restoreBookmark = \(bookmark: SpatialViewBookmark\)/u);
+  assert.match(app, /clock\.scrub\(bookmark\.cursorIso, 'scenario'\)/u);
+  assert.match(app, /clock\.scrub\(bookmark\.cursorIso, bookmark\.temporalMode\)/u);
+  assert.doesNotMatch(app, /restoreBookmark[\s\S]{0,1000}applyScenario\(/u);
+});
