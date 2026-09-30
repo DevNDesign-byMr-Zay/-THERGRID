@@ -62,6 +62,19 @@ export interface SpatialPickPoint {
   y: number;
 }
 
+export type SpatialSurfaceSource =
+  | 'depth-surface'
+  | 'terrain'
+  | 'ellipsoid'
+  | 'native-projection';
+
+export interface SpatialSurfacePoint {
+  latitude: number;
+  longitude: number;
+  heightMeters?: number | null;
+  source: SpatialSurfaceSource;
+}
+
 export interface SpatialRendererConfig {
   cesiumIonToken?: string | null;
   worldTerrainAssetId?: number | null;
@@ -108,6 +121,7 @@ export interface SpatialRenderer {
   applyAirQuality(snapshot: AirQualityOverlaySnapshot): void;
   clearAirQuality(): void;
   pick(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null>;
+  pickSurface(point: SpatialPickPoint): Promise<SpatialSurfacePoint | null>;
   resize(): void;
   status(): SpatialRendererStatus;
   destroy(): void;
