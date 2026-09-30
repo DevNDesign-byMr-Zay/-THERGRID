@@ -2224,6 +2224,13 @@
   const globalGlobe = new GlobalGlobe3D(q('#globalGlobe'), {
     onSelectCity: handleGlobalCitySelection,
     onEnterCity: (city) => loadLiveCity(city.id),
+    onSolarUpdate: (solar) => {
+      const label = q('#globalSolarStatus');
+      if (!label || !solar) return;
+      const lat = `${Math.abs(Number(solar.subsolarLat)).toFixed(1)}°${Number(solar.subsolarLat) >= 0 ? 'N' : 'S'}`;
+      const lon = `${Math.abs(Number(solar.subsolarLon)).toFixed(1)}°${Number(solar.subsolarLon) >= 0 ? 'E' : 'W'}`;
+      label.textContent = `SUN ${lat} · ${lon} · TERMINATOR LIVE`;
+    },
   });
   globalGlobe?.setCities(state.geospatial.cities);
   const cityGrid = new SpatialGrid4D(q('#cityGrid'), {
@@ -2453,10 +2460,11 @@
         live: false,
       },
       environment: {
-        schemaVersion: 1,
+        schemaVersion: 2,
         coordinate: { lat: city.lat, lon: city.lon },
         source: { provider: 'local-environment-fallback', live: false, attribution: null, fetchedAt: new Date().toISOString() },
         current: null,
+        solar: null,
       },
       liveContext: {
         schemaVersion: 1,
@@ -2505,9 +2513,21 @@
       : '—';
     const air = mesh.liveContext?.airQuality?.current || null;
     const airQuality = air?.usAqi == null ? '—' : `AQI ${Number(air.usAqi).toFixed(0)} · ${titleCase(air.category || 'unknown')}`;
+    const humidity =
+      environment?.relativeHumidityPercent == null
+        ? '—'
+        : `${Number(environment.relativeHumidityPercent).toFixed(0)}%`;
+    const compactSolarTime = (value) => {
+      const text = String(value || '');
+      const time = text.includes('T') ? text.split('T')[1] : text;
+      return time ? time.slice(0, 5) : '—';
+    };
+    const sunriseSunset = mesh.environment?.solar
+      ? `${compactSolarTime(mesh.environment.solar.sunrise)} / ${compactSolarTime(mesh.environment.solar.sunset)}`
+      : '—';
     const seismic = mesh.liveContext?.seismic || null;
     const seismicLabel = seismic ? `${Number(seismic.eventCount || 0)} nearby · M${Number(seismic.maxMagnitude || 0).toFixed(1)} max` : '—';
-    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Skyline Max</b><em>${skylineMax}</em></span><span><b>P95 Height</b><em>${p95}</em></span><span><b>Height Data</b><em>${heightCoverage}</em></span><span><b>Weather</b><em>${weather}</em></span><span><b>Air</b><em>${airQuality}</em></span><span><b>Seismic</b><em>${seismicLabel}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
+    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Skyline Max</b><em>${skylineMax}</em></span><span><b>P95 Height</b><em>${p95}</em></span><span><b>Height Data</b><em>${heightCoverage}</em></span><span><b>Weather</b><em>${weather}</em></span><span><b>Air</b><em>${airQuality}</em></span><span><b>Humidity</b><em>${humidity}</em></span><span><b>Sunrise / Sunset</b><em>${sunriseSunset}</em></span><span><b>Seismic</b><em>${seismicLabel}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
   }
 
   function showCityTransition(city, stage = 'Aligning global coordinate…', progress = 8) {
@@ -2565,9 +2585,11 @@
         result.liveContext?.airQuality?.source?.attribution,
         result.liveContext?.seismic?.source?.attribution,
       ].filter(Boolean);
-      q('#geoAttribution').textContent =
+      const sourceText =
         attributions.join(' · ') ||
         'Live city geometry unavailable; using local fallback geometry.';
+      q('#geoAttribution').textContent =
+        `${sourceText} · City-light points are procedural visualization from mapped geometry + daylight state, not measured window occupancy.`;
     }
     if (status) {
       const skyline = result.skylineProfile || {};
@@ -2578,7 +2600,7 @@
       const air = result.liveContext?.airQuality?.current || null;
       const seismic = result.liveContext?.seismic || null;
       const currentContext = env
-        ? ` Current environment: ${Number.isFinite(env.temperatureC) ? `${Number(env.temperatureC).toFixed(1)}°C, ` : ''}${Number.isFinite(env.cloudCoverPercent) ? `${Number(env.cloudCoverPercent).toFixed(0)}% cloud, ` : ''}${Number.isFinite(env.windSpeedKph) ? `${Number(env.windSpeedKph).toFixed(1)} km/h wind, ` : ''}${env.isDay ? 'daylight' : 'night'}.`
+        ? ` Current environment: ${Number.isFinite(env.temperatureC) ? `${Number(env.temperatureC).toFixed(1)}°C, ` : ''}${Number.isFinite(env.relativeHumidityPercent) ? `${Number(env.relativeHumidityPercent).toFixed(0)}% humidity, ` : ''}${Number.isFinite(env.cloudCoverPercent) ? `${Number(env.cloudCoverPercent).toFixed(0)}% cloud, ` : ''}${Number.isFinite(env.windSpeedKph) ? `${Number(env.windSpeedKph).toFixed(1)} km/h wind, ` : ''}${env.isDay ? 'daylight' : 'night'}.`
         : '';
       const liveContextCopy = `${air?.usAqi == null ? '' : ` Air quality: US AQI ${Number(air.usAqi).toFixed(0)} (${titleCase(air.category || 'unknown')}).`}${seismic ? ` USGS context: ${Number(seismic.eventCount || 0)} M2.5+ event(s) within ${Number(seismic.radiusKm || 0).toFixed(0)} km.` : ''}`;
       status.innerHTML = `<b>${escapeHtml(result.city.name)}${district} · ${result.buildings.length} mapped structures${maxHeight}</b><p>${result.source?.live ? `Current OpenStreetMap geometry is rendered from source-backed footprints/parts; height coverage ${heightCoverage || 'is shown in the stats panel'}.` : 'Provider request could not be completed; clearly marked local fallback geometry is being rendered.'}${currentContext}${liveContextCopy}</p><button class="secondary-button" data-action="reload-city-live">REFRESH OPEN DATA</button>`;
