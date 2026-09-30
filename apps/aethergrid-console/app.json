@@ -25,7 +25,8 @@
     "proceduralCityLightsBasis": "mapped building geometry + daylight state",
     "landmarkIdentityRequiresSourceNameOrTallGeometry": true,
     "thunderstormLinesRepresentDetectedStrikes": false,
-    "fogSnowRainVisualsRepresentStreetLevelSensors": false
+    "fogSnowRainVisualsRepresentStreetLevelSensors": false,
+    "environmentalFallbackInventsMappedFeatures": false
   },
   "backend": {
     "runtime": "node>=22",
@@ -187,7 +188,15 @@
     "semanticWeatherRendering": true,
     "modeledSnowAnimation": true,
     "modeledFogAnimation": true,
-    "modeledThunderstormAnimation": true
+    "modeledThunderstormAnimation": true,
+    "sourceBackedWaterAreas": true,
+    "sourceBackedWaterways": true,
+    "sourceBackedCoastlines": true,
+    "sourceBackedGreenAreas": true,
+    "sourceTaggedBuildingMaterialOverlays": true,
+    "floodContextUseCase": true,
+    "greenInfrastructureUseCase": true,
+    "noInventedEnvironmentalGeometry": true
   },
   "aiRuntime": {
     "providers": [
@@ -237,7 +246,11 @@
       "power-lines",
       "power-assets",
       "terrain",
-      "roofs"
+      "roofs",
+      "water-areas",
+      "waterways",
+      "coastline",
+      "green-areas"
     ],
     "solidBuildingVolumes": true,
     "buildingParts": true,
@@ -256,7 +269,9 @@
       "air-quality-exposure",
       "seismic-awareness",
       "heat-stress",
-      "visibility-operations"
+      "visibility-operations",
+      "flood-context",
+      "green-infrastructure"
     ],
     "skylineFocusPresets": true,
     "maxSupportedBuildingHeightM": 1200,
@@ -277,6 +292,23 @@
       "tallStructureCount": true,
       "sourceHeightProvenance": true,
       "interactiveAnchors": true
+    },
+    "cityIdentity": {
+      "sourceWater": true,
+      "sourceCoastline": true,
+      "sourceGreenSpace": true,
+      "sourceBuildingMaterials": true,
+      "fallbackInventsWaterOrGreen": false,
+      "waterTags": [
+        "natural=water",
+        "waterway=river|canal|stream|tidal_channel",
+        "natural=coastline"
+      ],
+      "greenTags": [
+        "leisure=park|garden|nature_reserve",
+        "landuse=grass|recreation_ground|meadow",
+        "natural=wood|grassland"
+      ]
     }
   },
   "quantumRuntime": {
