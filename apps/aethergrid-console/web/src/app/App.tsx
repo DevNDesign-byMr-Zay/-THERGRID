@@ -29,6 +29,7 @@ import {
   type GlobalLiveContext
 } from '../services/global-live-context';
 import {
+  airQualityToOverlay,
   loadCityLiveContext,
   seismicToOverlay,
   type CityLiveSnapshot
@@ -377,8 +378,22 @@ export function App() {
   );
 
   const seismicOverlay = useMemo(
-    () => (liveContext && temporal.mode === 'live' ? seismicToOverlay(liveContext) : null),
-    [liveContext, temporal.mode]
+    () =>
+      scope === 'city' && liveContext && temporal.mode === 'live'
+        ? seismicToOverlay(liveContext)
+        : null,
+    [scope, liveContext, temporal.mode]
+  );
+
+  const airQualityOverlay = useMemo(
+    () =>
+      scope === 'city' && liveContext && temporal.mode === 'live'
+        ? airQualityToOverlay(liveContext, {
+            windSpeedKph: atmosphere?.current?.windSpeedKph,
+            windDirectionDegrees: atmosphere?.current?.windDirectionDegrees
+          })
+        : null,
+    [scope, liveContext, temporal.mode, atmosphere]
   );
 
   const activeOverlays = useMemo(
@@ -562,6 +577,7 @@ export function App() {
             visualMode={visualMode}
             overlays={activeOverlays}
             atmosphere={scope === 'city' ? atmosphere : null}
+            airQuality={airQualityOverlay}
             onSelection={handleSpatialSelection}
           />
 
