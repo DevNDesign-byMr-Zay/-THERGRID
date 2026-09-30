@@ -22,13 +22,23 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.equal(response.status, 200);
     const html = await response.text();
     assert.match(html, /<canvas id="spatialGrid"/u);
-    assert.match(html, /data-mode="holographic"/u);
+    assert.match(html, /data-workspace-target="holographic"/u);
+    assert.match(html, /data-workspace="grid"/u);
+    assert.match(html, /data-workspace="holographic"/u);
+    assert.match(html, /data-workspace="quantum"/u);
+    assert.match(html, /data-workspace="ai"/u);
+    assert.match(html, /data-workspace="scenarios"/u);
+    assert.match(html, /data-workspace="evidence"/u);
+    assert.match(html, /data-workspace="settings"/u);
     assert.match(html, /data-view="forecast"/u);
     assert.match(html, /id="timeSlider"/u);
     assert.match(html, /data-map-tool="buildings"/u);
+    assert.match(html, /data-agent="TEAM"/u);
     assert.match(html, /data-agent="VÆLON"/u);
     assert.match(html, /id="quantumCanvas"/u);
     assert.match(html, /id="scenarioChart"/u);
+    assert.match(html, /id="settingDefaultWorkspace"/u);
+    assert.match(html, /id="settingLiveStream"/u);
     assert.match(html, /href="\.\/styles\.css"/u);
     assert.match(html, /src="\.\/app\.js"/u);
     assert.doesNotMatch(html, /dashboard-reference/iu);
@@ -42,6 +52,9 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(appSource, /gl\.drawArrays/u);
     assert.match(appSource, /pointerdown/u);
     assert.match(appSource, /wheel/u);
+    assert.match(appSource, /function switchWorkspace/u);
+    assert.match(appSource, /localStorage\.setItem\(SETTINGS_KEY/u);
+    assert.match(appSource, /data-workspace/u);
 
     const logo = await fetch(`${baseUrl}/assets/brand/aethergrid-logo.webp`);
     assert.equal(logo.status, 200);
@@ -69,6 +82,48 @@ test('ÆTHERGRID backend exposes bounded state and evidence APIs', async () => {
     const evidence = await evidenceResponse.json();
     assert.ok(evidence.evidence.length >= 4);
     assert.ok(evidence.evidence.every((item) => item.status === 'VERIFIED'));
+  });
+});
+
+test('ÆTHERGRID exposes replaceable agent runtime without leaking provider secrets', async () => {
+  await withServer(async (baseUrl) => {
+    const runtimeResponse = await fetch(`${baseUrl}/api/aethergrid/runtime`);
+    assert.equal(runtimeResponse.status, 200);
+    const runtime = await runtimeResponse.json();
+    assert.equal(runtime.mode, 'replaceable-provider-runtime');
+    assert.deepEqual(runtime.supportedProviders, ['local', 'openai-compatible', 'ollama']);
+    assert.deepEqual(Object.keys(runtime.agents), ['VÆLON', 'AUREN', 'SOLVÆR', 'TEAM']);
+    assert.equal(runtime.agents['VÆLON'].provider, 'local');
+    assert.equal(runtime.agents['VÆLON'].status, 'local-fallback');
+    const serialized = JSON.stringify(runtime);
+    assert.doesNotMatch(serialized, /API_KEY/iu);
+    assert.doesNotMatch(serialized, /Bearer /u);
+
+    const agentResponse = await fetch(`${baseUrl}/api/aethergrid/agents/${encodeURIComponent('AUREN')}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'Inspect spatial resilience risk.' }),
+    });
+    assert.equal(agentResponse.status, 200);
+    const agent = await agentResponse.json();
+    assert.match(agent.reply, /AUREN/u);
+    assert.equal(agent.runtime.agent, 'AUREN');
+    assert.equal(agent.runtime.provider, 'local');
+    assert.equal(agent.advisoryOnly, true);
+    assert.match(agent.receipt, /^[a-f0-9]{64}$/u);
+
+    const teamResponse = await fetch(`${baseUrl}/api/aethergrid/team`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'Evaluate renewable load reduction.' }),
+    });
+    assert.equal(teamResponse.status, 200);
+    const team = await teamResponse.json();
+    assert.equal(team.contributions.length, 3);
+    assert.deepEqual(team.contributions.map((item) => item.agent), ['VÆLON', 'AUREN', 'SOLVÆR']);
+    assert.equal(team.runtime.agent, 'TEAM');
+    assert.equal(team.advisoryOnly, true);
+    assert.match(team.receipt, /^[a-f0-9]{64}$/u);
   });
 });
 
@@ -179,6 +234,8 @@ test('ÆTHERGRID AI collaboration and export are functional', async () => {
     assert.equal(chat.status, 200);
     const answer = await chat.json();
     assert.match(answer.reply, /VÆLON/u);
+    assert.match(answer.reply, /AUREN/u);
+    assert.match(answer.reply, /SOLVÆR/u);
     assert.equal(answer.advisoryOnly, true);
 
     const exported = await fetch(`${baseUrl}/api/aethergrid/export`, {
