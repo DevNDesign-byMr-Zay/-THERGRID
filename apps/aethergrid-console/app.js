@@ -3,6 +3,16 @@
   const qa = (selector, root = document) => [...root.querySelectorAll(selector)];
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const SETTINGS_KEY = 'aethergrid.operator.settings.v2';
+  const DEFAULT_GLOBAL_CITIES = Object.freeze([
+    { id: 'new-york', name: 'New York', country: 'United States', lat: 40.7128, lon: -74.006, radiusM: 900 },
+    { id: 'london', name: 'London', country: 'United Kingdom', lat: 51.5074, lon: -0.1278, radiusM: 900 },
+    { id: 'tokyo', name: 'Tokyo', country: 'Japan', lat: 35.6762, lon: 139.6503, radiusM: 900 },
+    { id: 'dubai', name: 'Dubai', country: 'United Arab Emirates', lat: 25.2048, lon: 55.2708, radiusM: 900 },
+    { id: 'singapore', name: 'Singapore', country: 'Singapore', lat: 1.3521, lon: 103.8198, radiusM: 900 },
+    { id: 'sao-paulo', name: 'São Paulo', country: 'Brazil', lat: -23.5505, lon: -46.6333, radiusM: 900 },
+    { id: 'lagos', name: 'Lagos', country: 'Nigeria', lat: 6.5244, lon: 3.3792, radiusM: 900 },
+    { id: 'sydney', name: 'Sydney', country: 'Australia', lat: -33.8688, lon: 151.2093, radiusM: 900 },
+  ]);
 
   const defaultSettings = Object.freeze({
     defaultWorkspace: 'grid',
@@ -64,7 +74,7 @@
     runtime: null,
     geospatial: {
       runtime: null,
-      cities: [],
+      cities: DEFAULT_GLOBAL_CITIES.map((city) => ({ ...city })),
       selectedCityId: 'new-york',
       cityMesh: null,
     },
@@ -1289,6 +1299,7 @@
     onSelectCity: handleGlobalCitySelection,
     onEnterCity: (city) => loadLiveCity(city.id),
   });
+  globalGlobe?.setCities(state.geospatial.cities);
   const cityGrid = new SpatialGrid4D(q('#cityGrid'), {
     yaw: 0.86,
     pitch: 0.62,
@@ -1348,8 +1359,32 @@
       const selected = state.geospatial.cities.find((city) => city.id === state.geospatial.selectedCityId);
       if (selected) globalGlobe?.focusCity(selected);
     } catch {
+      state.geospatial.cities = DEFAULT_GLOBAL_CITIES.map((city) => ({ ...city }));
+      globalGlobe?.setCities(state.geospatial.cities);
+      if (select) {
+        select.innerHTML = state.geospatial.cities
+          .map(
+            (city) =>
+              `<option value="${escapeHtml(city.id)}">${escapeHtml(city.name)} · ${escapeHtml(city.country)}</option>`,
+          )
+          .join('');
+        select.value = state.geospatial.selectedCityId;
+      }
+      if (list) {
+        list.innerHTML = state.geospatial.cities
+          .map(
+            (city) =>
+              `<button class="global-city-button${city.id === state.geospatial.selectedCityId ? ' active' : ''}" data-global-city="${escapeHtml(city.id)}"><b>${escapeHtml(city.name)}</b><small>${escapeHtml(city.country)} · ${Number(city.lat).toFixed(2)}, ${Number(city.lon).toFixed(2)}</small><em>ENTER</em></button>`,
+          )
+          .join('');
+      }
       if (q('#geoRuntimeBadge')) q('#geoRuntimeBadge').textContent = 'STANDALONE GEO';
-      if (list) list.innerHTML = '<div class="empty-state">Start the Node backend to load the real-coordinate global city registry.</div>';
+      if (q('#geoProvenance')) {
+        q('#geoProvenance').innerHTML =
+          '<span><b>Provider</b><em>standalone coordinates</em></span><span><b>City Mesh</b><em>backend required</em></span><span><b>Actuation</b><em>Disabled</em></span>';
+      }
+      const selected = state.geospatial.cities.find((city) => city.id === state.geospatial.selectedCityId);
+      if (selected) globalGlobe?.focusCity(selected);
     }
   }
 
