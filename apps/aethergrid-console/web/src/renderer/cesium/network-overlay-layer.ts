@@ -44,6 +44,9 @@ function colorForIntensity(intensity: number, alpha = 1): Color {
 
 function nodeColor(node: SpatialOverlayNode): Color {
   const intensity = overlayIntensity(node.intensity);
+  if (node.properties?.presentationType === 'urban-illumination') {
+    return Color.fromCssColorString('#ffd37d').withAlpha(0.58 + intensity * 0.34);
+  }
   if (node.kind === 'event' && node.properties?.eventType === 'earthquake') {
     return Color.fromCssColorString('#ff7b63').withAlpha(0.78 + intensity * 0.22);
   }
@@ -356,12 +359,32 @@ export class NetworkOverlayLayer {
 
       const intensity = overlayIntensity(node.intensity);
       const baseSize = 5 + intensity * 7;
+      const urbanLight =
+        node.properties?.presentationType === 'urban-illumination';
       const powerNode =
-        node.kind === 'generation' ||
-        node.kind === 'substation' ||
-        node.kind === 'asset';
+        !urbanLight &&
+        (node.kind === 'generation' ||
+          node.kind === 'substation' ||
+          node.kind === 'asset');
 
-      if (scenario && powerNode) {
+      if (urbanLight) {
+        const pulse =
+          0.5 +
+          0.5 *
+            Math.sin(
+              temporalPhase * 0.12 +
+                node.id.length * 0.71 +
+                intensity * 4.2
+            );
+        point.pixelSize = new ConstantProperty(
+          baseSize * (0.88 + pulse * 0.2)
+        );
+        point.color = new ConstantProperty(
+          Color.fromCssColorString('#ffd37d').withAlpha(
+            0.48 + intensity * 0.22 + pulse * 0.2
+          )
+        );
+      } else if (scenario && powerNode) {
         const pulse = 0.5 + 0.5 * Math.sin(temporalPhase * 0.32 + intensity * 5.1);
         const stressBoost = Math.max(0, scenario.stressFactor - 1);
         point.pixelSize = new ConstantProperty(
