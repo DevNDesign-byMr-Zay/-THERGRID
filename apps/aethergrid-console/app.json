@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "aethergrid.operator-console",
   "name": "ÆTHERGRID Operator Console",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "format": "html+pwa+node-app",
   "entrypoints": {
     "standaloneHtml": "standalone.html",
@@ -60,7 +60,9 @@
       "GET /api/aethergrid/quantum/jobs/:id/metrics",
       "GET /api/aethergrid/terrain/runtime",
       "GET /api/aethergrid/city-operations/use-cases",
-      "POST /api/aethergrid/city-operations/analyze"
+      "POST /api/aethergrid/city-operations/analyze",
+      "GET /api/aethergrid/environment",
+      "GET /api/aethergrid/environment/runtime"
     ]
   },
   "safety": {
@@ -141,7 +143,14 @@
     "cinematicGlobeCityTransition": true,
     "cityOperationsUseCases": true,
     "dedicatedPersistentAgentChats": true,
-    "agentConversationHistory": true
+    "agentConversationHistory": true,
+    "liveOpenWeatherCityContext": true,
+    "realTimeCityTimeSync": true,
+    "sourceBackedRoofGeometry": true,
+    "relationBuildingGeometry": true,
+    "skylineDataQualityReadout": true,
+    "lightDarkSystemAppearance": true,
+    "citySpecificCameraFraming": true
   },
   "aiRuntime": {
     "providers": [
@@ -190,7 +199,8 @@
       "roads",
       "power-lines",
       "power-assets",
-      "terrain"
+      "terrain",
+      "roofs"
     ],
     "solidBuildingVolumes": true,
     "buildingParts": true,
@@ -205,7 +215,13 @@
       "emergency-access",
       "renewable-siting",
       "load-growth"
-    ]
+    ],
+    "skylineFocusPresets": true,
+    "maxSupportedBuildingHeightM": 1200,
+    "relationBuildingGeometry": true,
+    "sourceBackedRoofGeometry": true,
+    "upstreamTimestampVisible": true,
+    "representativeBuildingLimit": 1400
   },
   "quantumRuntime": {
     "module": "quantum-runtime.mjs",
@@ -239,5 +255,35 @@
     "maxSampleGrid": 9,
     "credentialsExposedToBrowser": false,
     "explicitOperatorFetch": true
+  },
+  "environmentRuntime": {
+    "module": "city-environment-runtime.mjs",
+    "providers": [
+      "open-meteo",
+      "local-environment-fallback"
+    ],
+    "endpoint": "GET /api/aethergrid/environment",
+    "runtimeEndpoint": "GET /api/aethergrid/environment/runtime",
+    "currentConditions": true,
+    "browserSecrets": false,
+    "variables": [
+      "temperature_2m",
+      "apparent_temperature",
+      "weather_code",
+      "cloud_cover",
+      "is_day",
+      "precipitation",
+      "wind_speed_10m",
+      "wind_direction_10m"
+    ]
+  },
+  "settingsRuntime": {
+    "persistence": "localStorage",
+    "appearanceModes": [
+      "dark",
+      "light",
+      "system"
+    ],
+    "defaultAppearance": "dark"
   }
 }
