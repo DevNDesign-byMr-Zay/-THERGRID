@@ -94,6 +94,10 @@ const state = {
     { id: 'renewable-integration', title: 'Renewable Integration Study', age: '2 hours', status: 'VERIFIED' },
   ],
   activity: [],
+  externalContext: {
+    geospatial: null,
+    quantum: null,
+  },
 };
 
 function buildSpatialGraph() {
@@ -196,6 +200,21 @@ function snapshot() {
     regions,
     scenarios,
     views,
+  };
+}
+
+function agentContext(input = {}) {
+  return {
+    ...input,
+    region: input.region || state.system.region,
+    scenario: input.scenario || state.system.scenario,
+    view: input.view || state.system.view,
+    metrics: input.metrics || state.metrics,
+    externalContext: {
+      geospatial: state.externalContext.geospatial,
+      quantum: state.externalContext.quantum,
+    },
+    authority: 'advisory-only',
   };
 }
 
@@ -335,12 +354,62 @@ const server = http.createServer(async (request, response) => {
       const mesh = await geoRuntime.cityMesh(cityId, {
         force: url.searchParams.get('force') === '1',
       });
+      state.externalContext.geospatial = {
+        cityId: mesh.city.id,
+        name: mesh.city.name,
+        lat: mesh.city.lat,
+        lon: mesh.city.lon,
+        radiusM: mesh.city.radiusM,
+        source: mesh.source.provider,
+        live: Boolean(mesh.source.live),
+        buildings: mesh.buildings.length,
+        roads: (mesh.roads || []).length,
+        powerLines: (mesh.powerLines || []).length,
+        powerAssets: (mesh.powerAssets || []).length,
+      };
       activity(
-        `Geospatial city mesh loaded: ${mesh.city.name} via ${mesh.source.provider} (${mesh.buildings.length} buildings).`,
+        `Geospatial city mesh loaded: ${mesh.city.name} via ${mesh.source.provider} (${mesh.buildings.length} buildings, ${(mesh.powerLines || []).length} power lines, ${(mesh.powerAssets || []).length} power assets).`,
         'geospatial',
       );
       return json(response, 200, {
         ...mesh,
+        externalContext: state.externalContext,
+        activity: state.activity,
+      });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/geospatial/point') {
+      const mesh = await geoRuntime.pointMesh(
+        {
+          lat: url.searchParams.get('lat'),
+          lon: url.searchParams.get('lon'),
+          name: url.searchParams.get('name') || 'Coordinate Explorer',
+          radiusM: url.searchParams.get('radiusM') || 900,
+        },
+        {
+          force: url.searchParams.get('force') === '1',
+        },
+      );
+      state.externalContext.geospatial = {
+        cityId: mesh.city.id,
+        name: mesh.city.name,
+        lat: mesh.city.lat,
+        lon: mesh.city.lon,
+        radiusM: mesh.city.radiusM,
+        source: mesh.source.provider,
+        live: Boolean(mesh.source.live),
+        buildings: mesh.buildings.length,
+        roads: (mesh.roads || []).length,
+        powerLines: (mesh.powerLines || []).length,
+        powerAssets: (mesh.powerAssets || []).length,
+      };
+      activity(
+        `Coordinate mesh loaded: ${mesh.city.lat.toFixed(5)}, ${mesh.city.lon.toFixed(5)} via ${mesh.source.provider}.`,
+        'geospatial',
+      );
+      return json(response, 200, {
+        ...mesh,
+        externalContext: state.externalContext,
         activity: state.activity,
       });
     }
@@ -404,6 +473,16 @@ const server = http.createServer(async (request, response) => {
       };
       state.evidence.unshift(record);
       state.evidence = state.evidence.slice(0, 24);
+      state.externalContext.quantum = {
+        jobId: result.id,
+        provider: result.provider,
+        backend: result.backend,
+        programId: result.programId,
+        status: result.status,
+        hardwareSubmitted: Boolean(result.hardwareSubmitted),
+        hardwareExecuted: Boolean(result.hardwareExecuted),
+        receipt: result.receipt,
+      };
       activity(
         `Quantum sampler job ${result.id} submitted through ${result.provider}/${result.backend}; status ${result.status}.`,
         'quantum',
@@ -708,14 +787,7 @@ const server = http.createServer(async (request, response) => {
       const agentId = decodeURIComponent(encodedId);
       const result = await agentRuntime.runAgent(agentId, {
         message: input.message,
-        context: {
-          ...input.context,
-          region: input.context?.region || state.system.region,
-          scenario: input.context?.scenario || state.system.scenario,
-          view: input.context?.view || state.system.view,
-          metrics: input.context?.metrics || state.metrics,
-          authority: 'advisory-only',
-        },
+        context: agentContext(input.context),
         history: Array.isArray(input.history) ? input.history : [],
       });
       activity(
@@ -754,14 +826,7 @@ const server = http.createServer(async (request, response) => {
       const input = await body(request);
       const result = await agentRuntime.runTeam({
         message: input.message,
-        context: {
-          ...input.context,
-          region: input.context?.region || state.system.region,
-          scenario: input.context?.scenario || state.system.scenario,
-          view: input.context?.view || state.system.view,
-          metrics: input.context?.metrics || state.metrics,
-          authority: 'advisory-only',
-        },
+        context: agentContext(input.context),
         history: Array.isArray(input.history) ? input.history : [],
       });
       activity(
@@ -807,23 +872,11 @@ const server = http.createServer(async (request, response) => {
         requestedAgent === 'TEAM'
           ? await agentRuntime.runTeam({
               message: input.message,
-              context: {
-                region: state.system.region,
-                scenario: state.system.scenario,
-                view: state.system.view,
-                metrics: state.metrics,
-                authority: 'advisory-only',
-              },
+              context: agentContext(input.context),
             })
           : await agentRuntime.runAgent(requestedAgent, {
               message: input.message,
-              context: {
-                region: state.system.region,
-                scenario: state.system.scenario,
-                view: state.system.view,
-                metrics: state.metrics,
-                authority: 'advisory-only',
-              },
+              context: agentContext(input.context),
             });
       activity(`AI collaboration completed for ${requestedAgent}.`, 'ai');
       return json(response, 200, {
