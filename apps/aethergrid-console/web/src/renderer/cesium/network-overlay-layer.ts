@@ -36,6 +36,14 @@ function colorForIntensity(intensity: number, alpha = 1): Color {
   );
 }
 
+function nodeColor(node: SpatialOverlayNode): Color {
+  const intensity = overlayIntensity(node.intensity);
+  if (node.kind === 'event' && node.properties?.eventType === 'earthquake') {
+    return Color.fromCssColorString('#ff7b63').withAlpha(0.78 + intensity * 0.22);
+  }
+  return colorForIntensity(intensity, 0.96);
+}
+
 function nodeEntity(node: SpatialOverlayNode): Entity {
   const intensity = overlayIntensity(node.intensity);
   return new Entity({
@@ -44,7 +52,7 @@ function nodeEntity(node: SpatialOverlayNode): Entity {
     position: coordinate(node.position),
     point: new PointGraphics({
       pixelSize: 5 + intensity * 7,
-      color: colorForIntensity(intensity, 0.96),
+      color: nodeColor(node),
       outlineColor: new ConstantProperty(Color.WHITE.withAlpha(0.35)),
       outlineWidth: 1.25,
       disableDepthTestDistance: 1_500_000
