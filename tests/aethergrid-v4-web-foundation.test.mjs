@@ -259,3 +259,23 @@ test('v4 provenance UI separates source time from retrieval age', async () => {
   assert.match(app, /sourceTime=\{powerOverlay\?\.sourceTime\}/u);
   assert.match(app, /FETCHED \{formatDataAge\(atmosphere\?\.fetchedAt\)\}/u);
 });
+
+test('v4 city-live context renders source-backed AQI and seismic events only in LIVE mode', async () => {
+  const [service, layer, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/services/city-live-context.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(service, /\/api\/aethergrid\/city-live/u);
+  assert.match(service, /seismicToOverlay/u);
+  assert.match(service, /layerId: 'seismic'/u);
+  assert.match(service, /usAqi/u);
+  assert.match(service, /pm25UgM3/u);
+  assert.match(layer, /eventType === 'earthquake'/u);
+  assert.match(layer, /#ff7b63/u);
+  assert.match(app, /AIR QUALITY/u);
+  assert.match(app, /AQI /u);
+  assert.match(app, /temporal\.mode === 'live' \? seismicToOverlay/u);
+  assert.match(app, /Current AQI and seismic context are hidden outside LIVE mode/u);
+});
