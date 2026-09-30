@@ -28,6 +28,7 @@ export class RendererManager {
   #overlays = new Map<string, SpatialOverlaySnapshot>();
   #atmosphere: AtmosphericOverlaySnapshot | null = null;
   #airQuality: AirQualityOverlaySnapshot | null = null;
+  #failoverReason: string | null = null;
 
   constructor(primary: SpatialRenderer, fallback: SpatialRenderer) {
     this.#primary = primary;
@@ -49,8 +50,10 @@ export class RendererManager {
 
     try {
       await this.#activate(this.#primary);
-    } catch {
+      this.#failoverReason = null;
+    } catch (error) {
       this.#primary.destroy();
+      this.#failoverReason = this.#errorMessage(error);
       await this.#activate(this.#fallback);
     }
 
@@ -59,11 +62,31 @@ export class RendererManager {
 
   async use(engine: SpatialRendererStatus['engine']): Promise<SpatialRendererStatus> {
     const next = engine === this.#primary.engine ? this.#primary : this.#fallback;
-    if (next === this.#current && next.status().ready) return next.status();
+    if (next === this.#current && next.status().ready) return this.status();
 
-    this.#current.destroy();
-    await this.#activate(next);
-    return this.#current.status();
+    const previous = this.#current;
+    previous.destroy();
+
+    try {
+      await this.#activate(next);
+      this.#failoverReason = null;
+      return this.status();
+    } catch (error) {
+      next.destroy();
+
+      if (next === this.#primary) {
+        this.#failoverReason = this.#errorMessage(error);
+        await this.#activate(this.#fallback);
+        return this.status();
+      }
+
+      try {
+        await this.#activate(previous);
+      } catch {
+        previous.destroy();
+      }
+      throw error;
+    }
   }
 
   async flyTo(target: SpatialTarget): Promise<void> {
@@ -128,11 +151,23 @@ export class RendererManager {
   }
 
   status(): SpatialRendererStatus {
-    return this.#current.status();
+    const current = this.#current.status();
+    if (this.#current !== this.#fallback || !this.#failoverReason) return current;
+
+    return {
+      ...current,
+      degraded: true,
+      reason: `Cesium unavailable · ${this.#failoverReason}`
+    };
   }
 
   destroy(): void {
     this.#current.destroy();
+  }
+
+  #errorMessage(error: unknown): string {
+    const message = error instanceof Error ? error.message : String(error);
+    return message.replace(/\s+/gu, ' ').trim().slice(0, 240) || 'unknown renderer failure';
   }
 
   async #activate(renderer: SpatialRenderer): Promise<void> {
