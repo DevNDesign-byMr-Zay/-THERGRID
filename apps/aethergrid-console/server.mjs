@@ -9,7 +9,6 @@ import { createGeoRuntime } from './geo-runtime.mjs';
 import { createProfileStore } from './profile-store.mjs';
 import { createQuantumRuntime } from './quantum-runtime.mjs';
 import { createTerrainRuntime } from './terrain-runtime.mjs';
-import { createTerrainRuntime } from './terrain-runtime.mjs';
 
 const root = fileURLToPath(new URL('./', import.meta.url));
 const port = Number(process.env.AETHERGRID_PORT || process.env.PORT || 8090);
@@ -474,19 +473,6 @@ const server = http.createServer(async (request, response) => {
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/terrain/runtime') {
       return json(response, 200, terrainRuntime.summary());
-    }
-
-    if (request.method === 'GET' && url.pathname === '/api/aethergrid/terrain/sample') {
-      return json(
-        response,
-        200,
-        await terrainRuntime.sample({
-          lat: url.searchParams.get('lat'),
-          lon: url.searchParams.get('lon'),
-          radiusM: url.searchParams.get('radiusM') || 900,
-          gridSize: url.searchParams.get('gridSize') || 7,
-        }),
-      );
     }
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/quantum/runtime') {
