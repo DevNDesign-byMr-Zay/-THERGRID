@@ -2,6 +2,11 @@ import type {
   AtmosphericCurrentState,
   AtmosphericOverlaySnapshot
 } from '../renderer/overlays/atmospheric-overlay';
+import type {
+  OverlayCoordinate,
+  SpatialOverlayEdge,
+  SpatialOverlaySnapshot
+} from '../renderer/overlays/spatial-overlay';
 
 interface EnvironmentResponse {
   coordinate?: {
@@ -92,5 +97,112 @@ export async function loadCityEnvironment(
           visibilityM: finiteOrNull(current.visibilityM)
         }
       : null
+  };
+}
+
+
+function offsetCoordinate(
+  origin: AtmosphericOverlaySnapshot['coordinate'],
+  eastMeters: number,
+  northMeters: number,
+  heightMeters = 260
+): OverlayCoordinate {
+  const latitude = origin.latitude + northMeters / 110_540;
+  const metersPerLongitude =
+    111_320 * Math.max(0.15, Math.cos((origin.latitude * Math.PI) / 180));
+  return {
+    latitude,
+    longitude: origin.longitude + eastMeters / metersPerLongitude,
+    heightMeters
+  };
+}
+
+export function atmosphereToWindOverlay(
+  snapshot: AtmosphericOverlaySnapshot
+): SpatialOverlaySnapshot | null {
+  const current = snapshot.current;
+  if (!current || current.windSpeedKph == null || current.windDirectionDegrees == null) {
+    return null;
+  }
+
+  const speedKph = Math.max(0, current.windSpeedKph);
+  const gustKph = Math.max(speedKph, current.windGustsKph ?? speedKph);
+  if (speedKph < 0.5 && gustKph < 1) return null;
+
+  const meteorologicalFrom = current.windDirectionDegrees;
+  const towardDegrees = (meteorologicalFrom + 180) % 360;
+  const toward = (towardDegrees * Math.PI) / 180;
+  const vectorLength = 360 + Math.min(100, speedKph) * 17;
+  const arrowLength = Math.max(140, vectorLength * 0.24);
+  const intensity = Math.min(1, Math.max(0.08, Math.max(speedKph / 80, gustKph / 120)));
+  const edges: SpatialOverlayEdge[] = [];
+  const anchors = [-1, 0, 1];
+
+  for (const row of anchors) {
+    for (const column of anchors) {
+      const baseEast = column * 1_150;
+      const baseNorth = row * 1_150;
+      const endEast = baseEast + Math.sin(toward) * vectorLength;
+      const endNorth = baseNorth + Math.cos(toward) * vectorLength;
+      const from = offsetCoordinate(snapshot.coordinate, baseEast, baseNorth);
+      const to = offsetCoordinate(snapshot.coordinate, endEast, endNorth, 300);
+      const id = `wind:${row + 1}:${column + 1}`;
+
+      const properties = {
+        vectorType: 'wind',
+        meteorologicalFromDegrees: meteorologicalFrom,
+        towardDegrees,
+        windSpeedKph: speedKph,
+        windGustsKph: gustKph,
+        syntheticGeometry: true
+      } as const;
+
+      edges.push({
+        id,
+        kind: 'flow',
+        from,
+        to,
+        label: `Wind ${speedKph.toFixed(1)} km/h`,
+        value: speedKph,
+        unit: 'km/h',
+        intensity,
+        properties
+      });
+
+      for (const sign of [-1, 1] as const) {
+        const headAngle = toward + Math.PI + sign * (Math.PI / 6);
+        const head = offsetCoordinate(
+          snapshot.coordinate,
+          endEast + Math.sin(headAngle) * arrowLength,
+          endNorth + Math.cos(headAngle) * arrowLength,
+          300
+        );
+        edges.push({
+          id: `${id}:head:${sign}`,
+          kind: 'flow',
+          from: to,
+          to: head,
+          label: 'Wind direction',
+          value: speedKph,
+          unit: 'km/h',
+          intensity,
+          properties
+        });
+      }
+    }
+  }
+
+  return {
+    id: `weather-wind:${snapshot.id}`,
+    layerId: 'weather',
+    eventTime: snapshot.eventTime,
+    sourceTime: snapshot.sourceTime,
+    fetchedAt: snapshot.fetchedAt,
+    live: snapshot.live,
+    stale: false,
+    fallback: snapshot.fallback,
+    attribution: snapshot.attribution,
+    nodes: [],
+    edges
   };
 }
