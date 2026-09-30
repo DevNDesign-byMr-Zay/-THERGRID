@@ -1,3 +1,4 @@
+import type { AtmosphericOverlaySnapshot } from './overlays/atmospheric-overlay';
 import type { SpatialOverlaySnapshot } from './overlays/spatial-overlay';
 
 import type {
@@ -22,6 +23,7 @@ export class RendererManager {
   #time: TemporalInstant | null = null;
   #mode: VisualMode = 'solid';
   #overlays = new Map<string, SpatialOverlaySnapshot>();
+  #atmosphere: AtmosphericOverlaySnapshot | null = null;
 
   constructor(primary: SpatialRenderer, fallback: SpatialRenderer) {
     this.#primary = primary;
@@ -93,6 +95,16 @@ export class RendererManager {
     this.#current.clearOverlay(layerId);
   }
 
+  applyAtmosphere(snapshot: AtmosphericOverlaySnapshot): void {
+    this.#atmosphere = snapshot;
+    this.#current.applyAtmosphere(snapshot);
+  }
+
+  clearAtmosphere(): void {
+    this.#atmosphere = null;
+    this.#current.clearAtmosphere();
+  }
+
   async pick(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null> {
     return this.#current.pick(point);
   }
@@ -116,6 +128,7 @@ export class RendererManager {
     renderer.setLayers(this.#layers);
     renderer.setVisualMode(this.#mode);
     for (const snapshot of this.#overlays.values()) renderer.applyOverlay(snapshot);
+    if (this.#atmosphere) renderer.applyAtmosphere(this.#atmosphere);
     if (this.#time) renderer.setTime(this.#time);
     this.#current = renderer;
   }
