@@ -13,6 +13,10 @@
 - Added skyline identity metadata for named structures and tall-structure counts, with interactive selection of source-backed anchors.
 - Added semantic weather rendering that distinguishes modeled rain, snow, fog and thunderstorm states instead of using one generic precipitation effect.
 - Added explicit fidelity boundaries preventing unnamed tall structures from receiving invented landmark identities and preventing modeled thunderstorm pulses from being presented as detected lightning strikes.
+- Added source-backed OpenStreetMap water areas, waterways, coastline, parks and green-space geometry to distinguish city twins using mapped geography.
+- Added independent WATER, GREEN and LANDMARKS renderer controls with no invented environmental geometry in local fallback mode.
+- Added source-tagged building material overlays and source-bound named-tall-building landmark emphasis.
+- Added Flood Context and Green Infrastructure as bounded advisory workflows, bringing maintained city operations to 12.
 - Added a real-time solar terminator, current subsolar marker, and night-side city illumination to the native-WebGL global globe.
 - Added wind-driven cloud decks, directional weather translation, falling precipitation motion, and procedural skyline lights derived from mapped building geometry plus day/night state.
 - Expanded Open-Meteo city context with modeled relative humidity, surface pressure, sunrise, sunset, daylight duration, and sunshine duration.
