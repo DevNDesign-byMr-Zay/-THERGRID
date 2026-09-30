@@ -27,6 +27,7 @@ import type {
   SpatialJourneyPhase,
   SpatialRendererStatus,
   SpatialSolarStatus,
+  SpatialSurfacePoint,
   SpatialTarget,
   TemporalInstant,
   VisualMode
@@ -239,6 +240,51 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
   clearAirQuality(): void {
     this.#airQuality?.setVisible(false);
+  }
+
+  async pickSurface(point: SpatialPickPoint): Promise<SpatialSurfacePoint | null> {
+    const viewer = this.#requireViewer();
+    const screen = new Cartesian2(point.x, point.y);
+
+    let cartesian =
+      viewer.scene.pickPositionSupported
+        ? viewer.scene.pickPosition(screen)
+        : undefined;
+    let source: SpatialSurfacePoint['source'] | null =
+      cartesian ? 'depth-surface' : null;
+
+    if (!cartesian) {
+      const ray = viewer.camera.getPickRay(screen);
+      const terrain = ray ? viewer.scene.globe.pick(ray, viewer.scene) : undefined;
+      if (terrain) {
+        cartesian = terrain;
+        source = 'terrain';
+      }
+    }
+
+    if (!cartesian) {
+      const ellipsoid = viewer.camera.pickEllipsoid(
+        screen,
+        viewer.scene.globe.ellipsoid
+      );
+      if (ellipsoid) {
+        cartesian = ellipsoid;
+        source = 'ellipsoid';
+      }
+    }
+
+    if (!cartesian || !source) return null;
+
+    const cartographic =
+      viewer.scene.globe.ellipsoid.cartesianToCartographic(cartesian);
+    if (!cartographic) return null;
+
+    return {
+      latitude: CesiumMath.toDegrees(cartographic.latitude),
+      longitude: CesiumMath.toDegrees(cartographic.longitude),
+      heightMeters: cartographic.height,
+      source
+    };
   }
 
   async pick(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null> {
