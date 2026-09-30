@@ -374,6 +374,7 @@
         routes: true,
         buildings: true,
         infrastructure: true,
+        terrain: true,
         nodes: true,
       };
       this.yaw = options.yaw ?? 0.74;
@@ -481,6 +482,7 @@
       const routes = [];
       const infrastructureLines = [];
       const infrastructureNodes = [];
+      const terrainLines = [];
       const nodes = [];
       for (let n = -10; n <= 10; n += 1) {
         this.line(grid, [-10, 0, n], [10, 0, n], n * 0.21);
@@ -541,6 +543,7 @@
       this.geometry.routes = this.makeBuffer(routes);
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
+      this.geometry.terrain = this.makeBuffer(terrainLines);
       this.geometry.nodes = this.makeBuffer(nodes);
     }
 
@@ -552,6 +555,7 @@
       const routes = [];
       const infrastructureLines = [];
       const infrastructureNodes = [];
+      const terrainLines = [];
       const nodes = [];
       for (let n = -10; n <= 10; n += 1) {
         this.line(grid, [-10, 0, n], [10, 0, n], n * 0.21);
@@ -601,6 +605,7 @@
       this.geometry.routes = this.makeBuffer(routes);
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
+      this.geometry.terrain = this.makeBuffer(terrainLines);
       this.geometry.nodes = this.makeBuffer(nodes);
     }
 
@@ -613,6 +618,7 @@
       const routes = [];
       const infrastructureLines = [];
       const infrastructureNodes = [];
+      const terrainLines = [];
       const radius = Math.max(200, Number(mesh.city?.radiusM || 900));
       const scale = 8.5 / radius;
 
@@ -710,11 +716,46 @@
         );
       });
 
+      const terrain = mesh.terrain;
+      if (terrain?.points?.length && Number(terrain.gridSize) >= 2) {
+        const gridSize = Number(terrain.gridSize);
+        const verticalScale = scale * 1.65;
+        const pointAt = (row, column) => terrain.points[row * gridSize + column];
+        const vector = (point) => [
+          Number(point.x) * scale,
+          -0.06 + Math.min(3.2, Number(point.relativeElevationM || 0) * verticalScale),
+          Number(point.z) * scale,
+        ];
+        for (let row = 0; row < gridSize; row += 1) {
+          for (let column = 0; column < gridSize; column += 1) {
+            const current = pointAt(row, column);
+            if (!current) continue;
+            if (column + 1 < gridSize) {
+              this.line(
+                terrainLines,
+                vector(current),
+                vector(pointAt(row, column + 1)),
+                row * 0.17 + column * 0.09,
+              );
+            }
+            if (row + 1 < gridSize) {
+              this.line(
+                terrainLines,
+                vector(current),
+                vector(pointAt(row + 1, column)),
+                row * 0.11 + column * 0.13,
+              );
+            }
+          }
+        }
+      }
+
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
       this.geometry.routes = this.makeBuffer(routes);
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
+      this.geometry.terrain = this.makeBuffer(terrainLines);
       this.geometry.nodes = this.makeBuffer(nodes);
       this.selectedNode = null;
       if (this.selectionBuffer?.buffer) this.gl.deleteBuffer(this.selectionBuffer.buffer);
@@ -923,6 +964,14 @@
         (now - this.timeStart) * 0.00035 * temporalMotion;
       gl.uniform1f(this.loc.time, temporal);
       const amplitude = temporalMotion * this.intensity;
+      if (this.layers.terrain) {
+        this.drawBuffer(
+          this.geometry.terrain,
+          gl.LINES,
+          [0.18, 0.78, 0.62, 0.42],
+          0.025 * amplitude,
+        );
+      }
       if (this.layers.grid) this.drawBuffer(this.geometry.grid, gl.LINES, [0.09, 0.42, 0.75, 0.42], 0.045 * amplitude);
       if (this.layers.buildings) this.drawBuffer(this.geometry.buildings, gl.LINES, [0.14, 0.64, 1, 0.55], 0.07 * amplitude);
       if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [0.67, 0.48, 0.98, Math.min(1, 0.64 * trailBoost)], 0.075 * amplitude * trailBoost);
@@ -1632,6 +1681,20 @@
             ],
       };
     });
+    const terrainGridSize = 7;
+    const terrainPoints = [];
+    for (let row = 0; row < terrainGridSize; row += 1) {
+      for (let column = 0; column < terrainGridSize; column += 1) {
+        const x = -city.radiusM + (column / (terrainGridSize - 1)) * city.radiusM * 2;
+        const z = -city.radiusM + (row / (terrainGridSize - 1)) * city.radiusM * 2;
+        terrainPoints.push({
+          x,
+          z,
+          elevationM: 0,
+          relativeElevationM: 0,
+        });
+      }
+    }
     return {
       schemaVersion: 2,
       city,
@@ -1644,13 +1707,29 @@
       roads,
       powerLines,
       powerAssets,
+      terrain: {
+        source: {
+          provider: 'flat-local-fallback',
+          live: false,
+          attribution: null,
+        },
+        gridSize: terrainGridSize,
+        minElevationM: 0,
+        maxElevationM: 0,
+        points: terrainPoints,
+      },
     };
   }
 
   function updateGlobalGridStats(mesh) {
     const stats = q('#globalGridStats');
     if (!stats) return;
-    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span>`;
+    const terrain = mesh.terrain;
+    const elevation =
+      terrain && Number.isFinite(Number(terrain.minElevationM)) && Number.isFinite(Number(terrain.maxElevationM))
+        ? `${Math.round(Number(terrain.minElevationM))}–${Math.round(Number(terrain.maxElevationM))} m`
+        : '—';
+    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
   }
 
   function applyCityMeshResult(result, status = q('#cityMeshStatus')) {
@@ -1666,8 +1745,12 @@
         : `LOCAL FALLBACK · ${result.buildings.length} BUILDINGS · ${(result.powerLines || []).length} POWER LINES`;
     }
     if (q('#geoAttribution')) {
+      const attributions = [
+        result.source?.attribution,
+        result.terrain?.source?.attribution,
+      ].filter(Boolean);
       q('#geoAttribution').textContent =
-        result.source?.attribution ||
+        attributions.join(' · ') ||
         'Live city geometry unavailable; using local fallback geometry.';
     }
     if (status) {
@@ -1680,6 +1763,21 @@
     );
   }
 
+  async function loadTerrainFor(city) {
+    if (!city) return null;
+    const query = new URLSearchParams({
+      lat: String(city.lat),
+      lon: String(city.lon),
+      radiusM: String(city.radiusM || 900),
+      gridSize: '7',
+    });
+    try {
+      return await api(`./api/aethergrid/terrain?${query.toString()}`);
+    } catch {
+      return null;
+    }
+  }
+
   async function loadLiveCity(cityId = state.geospatial.selectedCityId, { force = false } = {}) {
     const city = state.geospatial.cities.find((item) => item.id === cityId);
     if (city) handleGlobalCitySelection(city);
@@ -1690,9 +1788,11 @@
       const meshRequest = api(
         `./api/aethergrid/geospatial/city/${encodeURIComponent(cityId)}${force ? '?force=1' : ''}`,
       );
+      const terrainRequest = loadTerrainFor(city);
       const descent =
         city && globalGlobe ? globalGlobe.descendToCity(city, 720) : Promise.resolve();
-      const [result] = await Promise.all([meshRequest, descent]);
+      const [result, terrain] = await Promise.all([meshRequest, terrainRequest, descent]);
+      if (terrain) result.terrain = terrain;
       applyCityMeshResult(result, status);
     } catch (error) {
       const fallbackCity =
@@ -1757,8 +1857,10 @@
         ...(force ? { force: '1' } : {}),
       });
       const meshRequest = api(`./api/aethergrid/geospatial/point?${query.toString()}`);
+      const terrainRequest = loadTerrainFor(city);
       const descent = globalGlobe ? globalGlobe.descendToCity(city, 720) : Promise.resolve();
-      const [result] = await Promise.all([meshRequest, descent]);
+      const [result, terrain] = await Promise.all([meshRequest, terrainRequest, descent]);
+      if (terrain) result.terrain = terrain;
       applyCityMeshResult(result, status);
     } catch (error) {
       const fallback = buildStandaloneCityMesh(city);
