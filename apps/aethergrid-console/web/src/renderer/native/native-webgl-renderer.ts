@@ -540,7 +540,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     }
 
     const current = this.#airQuality.current;
-    const aqi = Math.max(0, current.usAqi);
+    const aqi = Math.max(0, current.usAqi ?? 0);
     const pm25 = Math.max(0, current.pm25UgM3 ?? 0);
     const intensity = clamp(Math.max(aqi / 220, pm25 / 80), 0.08, 1);
     const categoryColor =
