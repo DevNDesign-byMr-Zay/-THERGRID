@@ -62,6 +62,25 @@
     ],
     optimizationHistory: [],
     runtime: null,
+    geospatial: {
+      runtime: null,
+      cities: [],
+      selectedCityId: 'new-york',
+      cityMesh: null,
+    },
+    quantumRuntime: null,
+    profile: {
+      id: 'local-operator',
+      displayName: 'Operator',
+      initials: 'IM',
+      title: 'ÆTHERGRID Operator',
+      organization: '',
+      homeRegion: 'New York Metro',
+      timezone: 'America/New_York',
+      bio: '',
+      avatarDataUrl: '',
+      updatedAt: null,
+    },
   };
 
   const toast = q('#toast');
@@ -229,7 +248,7 @@
   }
 
   function switchWorkspace(name, { persist = true } = {}) {
-    const valid = ['grid', 'holographic', 'quantum', 'ai', 'scenarios', 'evidence', 'settings'];
+    const valid = ['grid', 'global', 'holographic', 'quantum', 'ai', 'scenarios', 'evidence', 'settings'];
     if (!valid.includes(name)) name = 'grid';
     state.workspace = name;
     document.body.dataset.workspace = name;
@@ -244,6 +263,8 @@
     requestAnimationFrame(() => {
       spatial?.resize();
       holographic?.resize();
+      globalGlobe?.resize();
+      cityGrid?.resize();
       quantumSurface?.resize();
       scenarioChart?.resize();
     });
