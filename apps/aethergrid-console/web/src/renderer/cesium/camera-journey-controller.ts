@@ -41,12 +41,19 @@ export class CameraJourneyController {
       target.heightMeters ?? 0,
       target.rangeMeters ?? DEFAULT_STAGES.at(-1)?.destinationHeightMeters ?? 5_000
     );
-    const stages = DEFAULT_STAGES.map((stage, index) => ({
+    const baseStages =
+      target.journey === 'global'
+        ? [DEFAULT_STAGES[0]]
+        : target.journey === 'direct'
+          ? [DEFAULT_STAGES.at(-1) ?? DEFAULT_STAGES[0]]
+          : DEFAULT_STAGES;
+
+    const stages = baseStages.map((stage, index) => ({
       ...stage,
       destinationHeightMeters:
-        index === DEFAULT_STAGES.length - 1 ? finalHeight : stage.destinationHeightMeters,
+        index === baseStages.length - 1 ? finalHeight : stage.destinationHeightMeters,
       pitchDegrees:
-        index === DEFAULT_STAGES.length - 1
+        index === baseStages.length - 1
           ? target.pitchDegrees ?? stage.pitchDegrees
           : stage.pitchDegrees
     }));
