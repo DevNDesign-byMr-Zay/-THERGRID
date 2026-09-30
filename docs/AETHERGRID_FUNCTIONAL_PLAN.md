@@ -423,3 +423,43 @@ Each workflow combines only the bounded sources relevant to the operation, retur
 
 ### Accuracy boundary
 The animated layers visualize the freshest bounded feed/model data received by ÆTHERGRID. They are not synthetic claims of street-level sensing. Model weather/AQ resolution and source timestamps remain visible, seismic events are geospatial context rather than damage predictions, and absent live data must remain absent or explicitly fallback.
+
+## Batch 14 — Solar cycle, atmospheric motion, and city identity
+
+Status: IMPLEMENTED / VERIFYING
+
+### Planetary definition
+- compute current subsolar latitude/longitude from UTC;
+- render a native-WebGL solar terminator as a true great-circle boundary;
+- render a live subsolar sun point;
+- identify maintained world-city nodes on the current night side and give them a distinct illumination state;
+- retain AQI, seismic and UTC-sweep layers independently from solar visualization.
+
+### City definition
+- source-backed building geometry produces bounded procedural light anchors;
+- procedural lights respond to day/night state but never claim real occupancy or metered lighting state;
+- cloud-deck density derives from current modeled cloud cover;
+- cloud, AQ and wind fields translate with current modeled wind direction;
+- precipitation has directional drift plus continuous falling motion;
+- CLOUDS and CITY LIGHTS are independent scene layers.
+
+### Environmental context
+- relative humidity;
+- surface pressure;
+- sunrise / sunset;
+- daylight duration;
+- sunshine duration;
+- existing temperature, apparent temperature, wind, gust, cloud, precipitation, solar radiation and visibility signals remain intact.
+
+### Operational workflows
+- Heat Stress: bounded apparent-temperature / humidity / UV / built-form attention proxy;
+- Visibility Operations: bounded visibility / weather / AQ / road-context attention proxy;
+- both remain advisory-only and explicitly avoid clinical, navigation, aviation or emergency-authority claims.
+
+### Verification requirements
+- all ten city-operation workflows must be exercised by tests;
+- environment tests must prove humidity, pressure and solar daily fields map correctly;
+- semantic HTML must expose CLOUDS, CITY LIGHTS, solar HUD, Heat Stress and Visibility Operations;
+- standalone packaging must retain solar calculations, cloud geometry, procedural lights and directional atmosphere shader controls;
+- release-readiness must reject removal of the occupancy-boundary declaration;
+- test, lint, formatting, typecheck, coverage, package, fresh-clone, container, release-readiness and CodeQL gates remain mandatory.
