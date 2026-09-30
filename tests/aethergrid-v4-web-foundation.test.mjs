@@ -508,3 +508,17 @@ test('v4 operator shortcuts keep world city live intel and search keyboard-acces
   assert.match(app, /<kbd aria-hidden="true">⌘K<\/kbd>/u);
   assert.match(styles, /grid-template-columns: 24px 1fr auto auto/u);
 });
+
+test('v4 semantic overlays use camera-distance LOD while global nodes remain orbital', async () => {
+  const layer = await text(
+    'apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'
+  );
+
+  assert.match(layer, /DistanceDisplayCondition/u);
+  assert.match(layer, /node\.kind === 'city' \|\| node\.kind === 'event'/u);
+  assert.match(layer, /return 30_000_000/u);
+  assert.match(layer, /edge\.kind === 'route'/u);
+  assert.match(layer, /return 80_000/u);
+  assert.match(layer, /area\.kind === 'water' \? 100_000 : 80_000/u);
+  assert.match(layer, /Number\.POSITIVE_INFINITY/u);
+});
