@@ -723,3 +723,19 @@ test('v4 selected spatial entities expose layer provenance and hand off to AI co
   assert.match(app, /selection\.properties\?\.sourceTime/u);
   assert.match(app, /selection\.properties\?\.fetchedAt/u);
 });
+
+test('v4 selected-entity AI handoff prefills AUREN without automatic submission', async () => {
+  const [dock, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/components/AgentDock.tsx'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(dock, /AgentHandoffRequest/u);
+  assert.match(dock, /setAgent\(handoff\.agent\)/u);
+  assert.match(dock, /setDraft\(handoff\.prompt\)/u);
+  assert.match(dock, /textareaRef\.current\?\.focus/u);
+  assert.doesNotMatch(dock, /handoff[\s\S]{0,220}void submit\(\)/u);
+  assert.match(app, /agent: 'AUREN'/u);
+  assert.match(app, /Separate observed facts, modeled context, assumptions, uncertainty/u);
+  assert.match(app, /<AgentDock context=\{agentContext\} handoff=\{agentHandoff\}/u);
+});
