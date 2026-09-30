@@ -134,8 +134,7 @@ const INITIAL_LAYERS: readonly LayerState[] = [
   { id: 'weather', visible: true },
   { id: 'air', visible: true },
   { id: 'seismic', visible: true },
-  { id: 'energy', visible: true },
-  { id: 'transit', visible: false }
+  { id: 'energy', visible: true }
 ];
 
 const VISUAL_MODES: readonly VisualMode[] = [
@@ -424,6 +423,50 @@ export function App() {
     setScope('city');
   };
 
+  const layerCounts = useMemo(() => {
+    const semantic = new Map(semanticOverlays.map((snapshot) => [snapshot.layerId, snapshot]));
+    const countOverlay = (id: string) => {
+      const snapshot = semantic.get(id);
+      if (!snapshot) return 0;
+      return (
+        snapshot.nodes.length +
+        snapshot.edges.length +
+        (snapshot.areas?.length ?? 0)
+      );
+    };
+
+    return {
+      world: globalLive?.overlay.nodes.length ?? 0,
+      terrain: scope === 'city' ? 1 : 0,
+      buildings: scope === 'city' ? cityIdentity?.buildingCount ?? 0 : 0,
+      roads: scope === 'city' ? countOverlay('roads') : 0,
+      water: scope === 'city' ? countOverlay('water') : 0,
+      green: scope === 'city' ? countOverlay('green') : 0,
+      grid: 1,
+      weather: scope === 'city' && atmosphere?.current ? 1 : 0,
+      air:
+        scope === 'city' && liveContext?.airQuality.current?.usAqi != null
+          ? 1
+          : 0,
+      seismic:
+        scope === 'world'
+          ? globalLive?.earthquakeCount ?? 0
+          : liveContext?.seismic.eventCount ?? 0,
+      energy:
+        scope === 'city' && powerOverlay
+          ? powerOverlay.nodes.length + powerOverlay.edges.length
+          : 0
+    } satisfies Record<string, number>;
+  }, [
+    semanticOverlays,
+    globalLive,
+    scope,
+    cityIdentity,
+    atmosphere,
+    liveContext,
+    powerOverlay
+  ]);
+
   const toggleLayer = (id: string) => {
     setLayers((current) =>
       current.map((layer) =>
@@ -527,6 +570,7 @@ export function App() {
                   onChange={() => toggleLayer(layer.id)}
                 />
                 <span>{layer.id.toUpperCase()}</span>
+                <em>{layerCounts[layer.id] ?? 0}</em>
               </label>
             ))}
           </div>
