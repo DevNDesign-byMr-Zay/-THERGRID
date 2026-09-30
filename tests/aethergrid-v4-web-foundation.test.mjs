@@ -445,3 +445,19 @@ test('v4 God’s-eye mode renders live global city AQI and seismic context', asy
   assert.match(app, /journey: 'global'/u);
   assert.match(camera, /target\.journey === 'global'/u);
 });
+
+test('v4 operator profile persists real identity and bounded local avatar data', async () => {
+  const [client, menu, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/services/profile-client.ts'),
+    text('apps/aethergrid-console/web/src/components/ProfileMenu.tsx'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(client, /\/api\/aethergrid\/profile/u);
+  assert.match(client, /method: 'PUT'/u);
+  assert.match(menu, /256/u);
+  assert.match(menu, /image\/webp/u);
+  assert.match(menu, /180_000/u);
+  assert.match(menu, /LOCAL PROFILE · NO PROVIDER SECRETS/u);
+  assert.match(app, /<ProfileMenu/u);
+});
