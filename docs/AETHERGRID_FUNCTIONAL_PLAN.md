@@ -502,3 +502,40 @@ Status: IMPLEMENTED / VERIFYING
 - standalone packaging must retain landmark extraction, identity inspector, snow, fog and storm rendering;
 - release-readiness must enforce the no-fake-landmark and no-detected-lightning claims;
 - the full engineering and CodeQL gates remain mandatory before merge.
+
+## Batch 16 — Mapped water, green space, and material identity integration
+
+Status: IMPLEMENTED / VERIFYING
+
+### Integration objective
+- preserve Batch 15 source-backed skyline anchors and semantic rain/snow/fog/thunderstorm rendering;
+- add bounded mapped water, coastline and green-space geometry without replacing or regressing those features;
+- add source-tagged façade material groups without inventing missing architectural metadata.
+
+### Source-backed geography
+- `natural=water` polygon geometry and `water=*` classification;
+- river/canal/stream/tidal-channel line geometry;
+- bounded `natural=coastline` geometry;
+- park/garden/nature-reserve and selected mapped grass/meadow/wood/grassland polygons;
+- WATER and GREEN remain independent native-WebGL layers;
+- local fallback returns empty water/coastline/green arrays rather than synthetic environmental features.
+
+### Architectural identity
+- existing LANDMARKS/CITY IDENTITY behavior remains intact;
+- unnamed tall landmark emphasis now requires a source-backed height rather than inferred height;
+- supported source `building:material` / `building:colour` values create restrained glass, masonry, metal or natural-material overlay buffers;
+- buildings without supported source tags remain on the neutral base material.
+
+### Planning workflows
+Twelve maintained workflows now include Flood Context and Green Infrastructure in addition to the ten v2.8 workflows.
+
+Flood Context is a bounded source-context attention proxy, not a hydrologic model. Green Infrastructure is a screening proxy, not canopy measurement, ecological-quality scoring, exposure analysis, land-feasibility analysis or a siting directive.
+
+### Verification requirements
+- Overpass fixtures must prove water area, river, coastline and park parsing;
+- provider-failure and local-provider fixtures must prove no invented environmental geometry;
+- semantic UI tests must require WATER, GREEN, Flood Context and Green Infrastructure controls;
+- renderer tests must require water/green faces and lines plus all source-tagged material buffers while retaining landmark/snow/fog/storm paths;
+- all twelve city workflows must remain bounded, evidence-backed and advisory-only;
+- packaging and release-readiness must fail if either Batch 15 semantic identity/weather or Batch 16 mapped geography/material behavior disappears;
+- test, lint, typecheck, coverage, fresh-clone smoke, container smoke, package verification, release-readiness and CodeQL remain mandatory.
