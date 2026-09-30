@@ -125,7 +125,7 @@ button {
   position: relative;
   height: 38px;
   display: grid;
-  grid-template-columns: 24px 1fr auto;
+  grid-template-columns: 24px 1fr auto auto;
   align-items: center;
   gap: 6px;
   padding: 0 12px;
@@ -156,6 +156,15 @@ button {
   font-weight: 700;
   letter-spacing: 0.1em;
   cursor: pointer;
+}
+
+.global-search kbd {
+  padding: 4px 5px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: #667b8e;
+  background: rgba(255, 255, 255, 0.018);
+  font-size: 7px;
 }
 
 .search-error {
