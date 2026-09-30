@@ -6,6 +6,7 @@ import {
 } from 'cesium';
 
 import type { VisualMode } from '../spatial-renderer';
+import type { SolarPhase } from '../solar-position';
 
 export interface VisualModeResult {
   requested: VisualMode;
@@ -18,6 +19,8 @@ export class VisualModeController {
   #viewer: Viewer;
   #buildings: Cesium3DTileset | null = null;
   #realityEnabled = false;
+  #mode: VisualMode = 'solid';
+  #solarPhase: SolarPhase = 'day';
 
   constructor(viewer: Viewer, options: { realityEnabled?: boolean } = {}) {
     this.#viewer = viewer;
@@ -28,7 +31,14 @@ export class VisualModeController {
     this.#buildings = tileset;
   }
 
+  setSolarPhase(phase: SolarPhase): void {
+    if (this.#solarPhase === phase) return;
+    this.#solarPhase = phase;
+    this.apply(this.#mode);
+  }
+
   apply(mode: VisualMode): VisualModeResult {
+    this.#mode = mode;
     const buildings = this.#buildings;
     const viewer = this.#viewer;
 
@@ -91,9 +101,30 @@ export class VisualModeController {
     this.#viewer.scene.globe.showGroundAtmosphere = true;
     this.#viewer.scene.highDynamicRange = true;
     if (buildings) {
-      buildings.style = undefined;
+      if (reality || this.#solarPhase === 'day') {
+        buildings.style = undefined;
+      } else if (this.#solarPhase === 'golden-hour') {
+        buildings.style = new Cesium3DTileStyle({
+          color: 'color("#d8b18a", 0.94)'
+        });
+      } else if (this.#solarPhase === 'twilight') {
+        buildings.style = new Cesium3DTileStyle({
+          color: 'color("#59657a", 0.90)'
+        });
+      } else {
+        buildings.style = new Cesium3DTileStyle({
+          color: 'color("#273243", 0.88)'
+        });
+      }
+
       buildings.showOutline = !reality;
-      buildings.outlineColor = Color.BLACK.withAlpha(reality ? 0 : 0.45);
+      buildings.outlineColor = reality
+        ? Color.TRANSPARENT
+        : this.#solarPhase === 'night'
+          ? Color.fromCssColorString('#e4a35b').withAlpha(0.34)
+          : this.#solarPhase === 'twilight'
+            ? Color.fromCssColorString('#a69bc7').withAlpha(0.28)
+            : Color.BLACK.withAlpha(0.45);
     }
     this.#viewer.scene.requestRender();
   }
