@@ -678,3 +678,65 @@ html[data-theme="light"] .toast {
     margin: 0 12px 10px;
   }
 }
+
+
+/* v2.7 live-city animation and feed state */
+.live-context-pill {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operation-live-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  margin: 8px 0 2px;
+  padding: 4px 8px;
+  border: 1px solid rgba(78, 176, 218, 0.28);
+  border-radius: 999px;
+  background: rgba(38, 120, 160, 0.08);
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.global-layer-controls {
+  flex-wrap: wrap;
+}
+
+.global-layer-controls [data-global-layer="weather"],
+.global-layer-controls [data-global-layer="air"],
+.global-layer-controls [data-global-layer="seismic"] {
+  position: relative;
+}
+
+.global-layer-controls [data-global-layer="weather"].active::after,
+.global-layer-controls [data-global-layer="air"].active::after,
+.global-layer-controls [data-global-layer="seismic"].active::after {
+  content: "";
+  width: 5px;
+  height: 5px;
+  margin-left: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  background: currentColor;
+  opacity: 0.9;
+  animation: live-layer-pulse calc(1.7s / max(var(--animation-scale), 0.25)) ease-in-out infinite;
+}
+
+@keyframes live-layer-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.78); }
+  50% { opacity: 1; transform: scale(1.28); }
+}
+
+body[data-motion="reduced"] .global-layer-controls [data-global-layer].active::after {
+  animation: none;
+}
+
+html[data-theme="light"] .operation-live-badge {
+  border-color: rgba(36, 111, 151, 0.28);
+  background: rgba(74, 143, 180, 0.08);
+}

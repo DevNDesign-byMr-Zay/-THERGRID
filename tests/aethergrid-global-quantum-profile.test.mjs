@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { createCityEnvironmentRuntime } from '../apps/aethergrid-console/city-environment-runtime.mjs';
+import { createCityLiveRuntime } from '../apps/aethergrid-console/city-live-runtime.mjs';
 import { createGeoRuntime } from '../apps/aethergrid-console/geo-runtime.mjs';
 import { createProfileStore } from '../apps/aethergrid-console/profile-store.mjs';
 import { API_VERSION, createQuantumRuntime } from '../apps/aethergrid-console/quantum-runtime.mjs';
@@ -288,6 +289,9 @@ test('city environment runtime maps current open weather context without credent
             precipitation: 0,
             wind_speed_10m: 12.4,
             wind_direction_10m: 305,
+            wind_gusts_10m: 21.8,
+            shortwave_radiation: 712,
+            visibility: 24100,
           },
         }),
         { status: 200, headers: { 'content-type': 'application/json' } },
@@ -304,6 +308,9 @@ test('city environment runtime maps current open weather context without credent
   assert.equal(environment.current.cloudCoverPercent, 18);
   assert.equal(environment.current.isDay, true);
   assert.equal(environment.current.windSpeedKph, 12.4);
+  assert.equal(environment.current.windGustsKph, 21.8);
+  assert.equal(environment.current.shortwaveRadiationWm2, 712);
+  assert.equal(environment.current.visibilityM, 24100);
   assert.equal(runtime.summary().credentialsExposed, false);
 
   const fallback = createCityEnvironmentRuntime({
@@ -313,6 +320,117 @@ test('city environment runtime maps current open weather context without credent
   assert.equal(local.source.live, false);
   assert.equal(local.source.provider, 'local-environment-fallback');
   assert.equal(local.current, null);
+});
+
+test('live city context runtime maps Open-Meteo air quality and cached USGS seismic events', async () => {
+  let seismicCalls = 0;
+  let airCalls = 0;
+  const fetchImpl = async (url) => {
+    const href = String(url);
+    if (href.startsWith('https://air.example.test/v1/air-quality')) {
+      airCalls += 1;
+      const parsed = new URL(href);
+      const lat = Number(parsed.searchParams.get('latitude'));
+      assert.match(parsed.searchParams.get('current'), /us_aqi/u);
+      assert.match(parsed.searchParams.get('current'), /pm2_5/u);
+      return new Response(
+        JSON.stringify({
+          timezone: lat > 40 ? 'Europe/London' : 'Asia/Tokyo',
+          current: {
+            time: '2026-09-30T16:00',
+            us_aqi: lat > 40 ? 42 : 74,
+            european_aqi: lat > 40 ? 21 : 38,
+            pm2_5: lat > 40 ? 8.2 : 18.4,
+            pm10: lat > 40 ? 14.1 : 27.5,
+            ozone: 62,
+            nitrogen_dioxide: 21,
+            dust: 3.4,
+            uv_index: 2.8,
+          },
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    }
+    if (href === 'https://quake.example.test/feed.geojson') {
+      seismicCalls += 1;
+      return new Response(
+        JSON.stringify({
+          metadata: {
+            generated: Date.parse('2026-09-30T16:01:00Z'),
+            title: 'M2.5+ earthquakes, past day',
+          },
+          features: [
+            {
+              id: 'nearby-event',
+              geometry: { coordinates: [139.72, 35.71, 18] },
+              properties: {
+                mag: 4.2,
+                place: 'Near test city',
+                time: Date.parse('2026-09-30T15:40:00Z'),
+                updated: Date.parse('2026-09-30T15:45:00Z'),
+                url: 'https://earthquake.example.test/nearby-event',
+              },
+            },
+            {
+              id: 'far-event',
+              geometry: { coordinates: [-122.4, 37.8, 9] },
+              properties: {
+                mag: 5.1,
+                place: 'Far from test city',
+                time: Date.parse('2026-09-30T14:20:00Z'),
+                updated: Date.parse('2026-09-30T14:30:00Z'),
+                url: 'https://earthquake.example.test/far-event',
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { 'content-type': 'application/geo+json' } },
+      );
+    }
+    throw new Error(`unexpected URL: ${href}`);
+  };
+
+  const runtime = createCityLiveRuntime({
+    env: {
+      AETHERGRID_AIR_QUALITY_PROVIDER: 'open-meteo',
+      AETHERGRID_AIR_QUALITY_URL: 'https://air.example.test/v1/air-quality',
+      AETHERGRID_SEISMIC_PROVIDER: 'usgs',
+      AETHERGRID_USGS_EARTHQUAKE_URL: 'https://quake.example.test/feed.geojson',
+      AETHERGRID_SEISMIC_CACHE_TTL_MS: '60000',
+    },
+    fetchImpl,
+    now: () => Date.parse('2026-09-30T16:02:00Z'),
+  });
+
+  const city = await runtime.citySnapshot({
+    lat: 35.6896,
+    lon: 139.6917,
+    radiusKm: 500,
+  });
+  assert.equal(city.airQuality.source.live, true);
+  assert.equal(city.airQuality.current.usAqi, 74);
+  assert.equal(city.airQuality.current.category, 'moderate');
+  assert.equal(city.airQuality.current.pm25UgM3, 18.4);
+  assert.equal(city.seismic.source.live, true);
+  assert.equal(city.seismic.eventCount, 1);
+  assert.equal(city.seismic.events[0].id, 'nearby-event');
+  assert.equal(city.seismic.events[0].magnitude, 4.2);
+  assert.ok(city.seismic.events[0].distanceKm > 0);
+  assert.ok(Number.isFinite(city.seismic.events[0].offsetM.x));
+  assert.ok(Number.isFinite(city.seismic.events[0].offsetM.z));
+
+  const global = await runtime.globalSnapshot([
+    { id: 'tokyo', name: 'Tokyo', lat: 35.6896, lon: 139.6917 },
+    { id: 'london', name: 'London', lat: 51.5136, lon: -0.0917 },
+  ]);
+  assert.equal(global.cities.length, 2);
+  assert.equal(global.cities[0].airQuality.usAqi, 74);
+  assert.equal(global.cities[1].airQuality.usAqi, 42);
+  assert.equal(global.seismic.eventCount, 2);
+  assert.equal(seismicCalls, 1);
+  assert.equal(airCalls, 3);
+  assert.equal(runtime.summary().credentialsExposed, false);
+  assert.equal(runtime.summary().seismicFeed, 'M2.5+ past day GeoJSON');
 });
 
 test('terrain runtime samples real-coordinate elevation grids through a provider adapter', async () => {

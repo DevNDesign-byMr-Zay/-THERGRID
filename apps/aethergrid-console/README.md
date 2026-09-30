@@ -124,6 +124,37 @@ The renderer keeps source-backed tall structures up to 1,200 m, preserves high-v
 This is a source-backed digital-twin representation, not photogrammetry. Where open map data lacks a height, roof, façade or building part, ÆTHERGRID exposes the coverage gap and does not claim architectural identity it cannot verify.
 
 Settings now include **Dark**, **Light**, and **System** appearance modes. The selected mode persists locally and changes the semantic UI plus WebGL scene palette.
+## v2.7 live city animation and operational context
+
+The GLOBAL workspace now animates current source context instead of applying the same ambient motion to every city.
+
+At planetary scale:
+- a secondary WebGL atmosphere shell pulses independently from the latitude/longitude grid;
+- a UTC sweep moves around the globe as a real clock reference;
+- maintained city nodes pulse by their current modeled US AQI when available;
+- recent USGS M2.5+ earthquake events appear as magnitude-tiered pulses;
+- the WORLD NODES list exposes current AQI alongside each configured city when the feed is available.
+
+After descending into a city:
+- current wind speed/direction generates animated 3D wind vectors;
+- current precipitation generates wind-leaning rain streaks;
+- modeled US AQI controls an independent atmospheric particle field;
+- recent nearby USGS events produce directional pulsing rings;
+- WEATHER, AIR and SEISMIC are independent layers and can be disabled without hiding the underlying city twin.
+
+The existing city-operation workflows now consume the same bounded live context where it is relevant. Three dedicated workflows are also available: **Weather Readiness**, **Air Quality Exposure**, and **Seismic Awareness**. Each workflow chooses its own renderer layer profile and animation emphasis and writes the live-source provenance into the evidence-bound result.
+
+The live-data boundary remains explicit. Open-Meteo current weather and air quality are model products at the requested coordinate, not block-level physical sensors. USGS event data is situational earthquake context, not a structural-damage estimate, aftershock forecast or emergency directive. If a provider is unavailable, the related visualization is labeled fallback/unavailable instead of being fabricated.
+
+Configuration:
+
+```text
+AETHERGRID_AIR_QUALITY_PROVIDER=open-meteo
+AETHERGRID_AIR_QUALITY_URL=https://air-quality-api.open-meteo.com/v1/air-quality
+AETHERGRID_SEISMIC_PROVIDER=usgs
+AETHERGRID_USGS_EARTHQUAKE_URL=https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson
+AETHERGRID_SEISMIC_CACHE_TTL_MS=60000
+```
 ## Windows ZIP workflow
 
 After extracting the package:

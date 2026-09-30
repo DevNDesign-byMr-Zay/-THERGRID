@@ -78,6 +78,9 @@ export function createCityEnvironmentRuntime({
           'precipitation',
           'wind_speed_10m',
           'wind_direction_10m',
+          'wind_gusts_10m',
+          'shortwave_radiation',
+          'visibility',
         ].join(','),
       );
       url.searchParams.set('timezone', 'auto');
@@ -127,6 +130,15 @@ export function createCityEnvironmentRuntime({
             : null,
           windDirectionDegrees: Number.isFinite(Number(current.wind_direction_10m))
             ? Number(current.wind_direction_10m)
+            : null,
+          windGustsKph: Number.isFinite(Number(current.wind_gusts_10m))
+            ? Number(current.wind_gusts_10m)
+            : null,
+          shortwaveRadiationWm2: Number.isFinite(Number(current.shortwave_radiation))
+            ? Number(current.shortwave_radiation)
+            : null,
+          visibilityM: Number.isFinite(Number(current.visibility))
+            ? Number(current.visibility)
             : null,
         },
       };
