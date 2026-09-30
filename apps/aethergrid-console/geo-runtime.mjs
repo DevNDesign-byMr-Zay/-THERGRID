@@ -243,6 +243,111 @@ function buildingGeometries(element) {
     .map((member) => member.geometry);
 }
 
+function projectGeometry(geometry = [], city, { close = false } = {}) {
+  const path = geometry
+    .map((point) => projectPoint(Number(point.lat), Number(point.lon), city))
+    .filter(([x, z]) => Number.isFinite(x) && Number.isFinite(z));
+  if (close && path.length >= 3) {
+    const first = path[0];
+    const last = path.at(-1);
+    if (Math.hypot(first[0] - last[0], first[1] - last[1]) > 0.01) path.push([...first]);
+  }
+  return path;
+}
+
+function parseOverpassWater(payload, city) {
+  const waterAreas = [];
+  const waterways = [];
+  const coastlines = [];
+  const linearWaterways = new Set(['river', 'canal', 'stream', 'tidal_channel']);
+
+  for (const element of payload?.elements || []) {
+    const tags = element.tags || {};
+    const natural = String(tags.natural || '');
+    const waterway = String(tags.waterway || '');
+
+    if (natural === 'water' || waterway === 'riverbank') {
+      for (const geometry of buildingGeometries(element)) {
+        const footprint = projectGeometry(geometry, city, { close: true });
+        if (footprint.length < 4) continue;
+        waterAreas.push({
+          id: `osm-water-${element.type}-${element.id}-${waterAreas.length + 1}`,
+          osmId: element.id,
+          name: String(tags.name || tags['waterway:name'] || ''),
+          waterType: String(tags.water || waterway || 'water'),
+          intermittent: String(tags.intermittent || '') === 'yes',
+          footprint,
+        });
+        if (waterAreas.length >= 140) break;
+      }
+    }
+
+    if (element.type === 'way' && linearWaterways.has(waterway) && Array.isArray(element.geometry)) {
+      const path = projectGeometry(element.geometry, city);
+      if (path.length >= 2 && waterways.length < 180) {
+        waterways.push({
+          id: `osm-waterway-${element.id}`,
+          osmId: element.id,
+          name: String(tags.name || ''),
+          waterwayType: waterway,
+          tidal: String(tags.tidal || '') === 'yes',
+          path,
+        });
+      }
+    }
+
+    if (element.type === 'way' && natural === 'coastline' && Array.isArray(element.geometry)) {
+      const path = projectGeometry(element.geometry, city);
+      if (path.length >= 2 && coastlines.length < 120) {
+        coastlines.push({
+          id: `osm-coastline-${element.id}`,
+          osmId: element.id,
+          path,
+        });
+      }
+    }
+  }
+
+  return { waterAreas, waterways, coastlines };
+}
+
+function parseOverpassGreen(payload, city) {
+  const greenAreas = [];
+  const leisureTypes = new Set(['park', 'garden', 'nature_reserve']);
+  const landuseTypes = new Set(['grass', 'recreation_ground', 'meadow']);
+  const naturalTypes = new Set(['wood', 'grassland']);
+
+  for (const element of payload?.elements || []) {
+    const tags = element.tags || {};
+    const leisure = String(tags.leisure || '');
+    const landuse = String(tags.landuse || '');
+    const natural = String(tags.natural || '');
+    if (
+      !leisureTypes.has(leisure) &&
+      !landuseTypes.has(landuse) &&
+      !naturalTypes.has(natural)
+    ) {
+      continue;
+    }
+
+    for (const geometry of buildingGeometries(element)) {
+      const footprint = projectGeometry(geometry, city, { close: true });
+      if (footprint.length < 4) continue;
+      greenAreas.push({
+        id: `osm-green-${element.type}-${element.id}-${greenAreas.length + 1}`,
+        osmId: element.id,
+        name: String(tags.name || ''),
+        greenType: leisure || landuse || natural || 'green',
+        footprint,
+      });
+      if (greenAreas.length >= 180) break;
+    }
+    if (greenAreas.length >= 180) break;
+  }
+
+  return greenAreas;
+}
+
 function representativeBuildings(buildings, limit = 1400) {
   if (buildings.length <= limit) return buildings;
   const priority = [...buildings]
@@ -550,7 +655,18 @@ export function createGeoRuntime({
       attribution: '© OpenStreetMap contributors',
       cities: CITY_PRESETS,
       supportsCustomCoordinates: true,
-      layers: ['buildings', 'building-parts', 'roofs', 'roads', 'power-lines', 'power-assets'],
+      layers: [
+        'buildings',
+        'building-parts',
+        'roofs',
+        'roads',
+        'power-lines',
+        'power-assets',
+        'water-areas',
+        'waterways',
+        'coastline',
+        'green-areas',
+      ],
       skylineFields: ['height', 'est_height', 'building:levels', 'min_height', 'building:min_level', 'roof:shape', 'roof:height', 'roof:levels', 'building:material', 'building:colour', 'roof:material', 'roof:colour'],
       upstreamFreshness: 'OpenStreetMap replication-backed upstream state when queried',
     };
@@ -566,12 +682,16 @@ export function createGeoRuntime({
       const buildings = seededFallback(city);
       const source = { provider: 'local-fallback', live: false, attribution: null };
       return {
-        schemaVersion: 3,
+        schemaVersion: 4,
         city,
         source,
         buildings,
         skylineProfile: skylineProfile(city, buildings, source),
         roads: fallbackRoads(city),
+        waterAreas: [],
+        waterways: [],
+        coastlines: [],
+        greenAreas: [],
         ...power,
       };
     }
@@ -583,6 +703,12 @@ export function createGeoRuntime({
         `nwr["building"](around:${city.radiusM},${city.lat},${city.lon});` +
         `nwr["building:part"](around:${city.radiusM},${city.lat},${city.lon});` +
         `way["highway"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `nwr["natural"="water"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `way["natural"="coastline"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `way["waterway"~"^(river|canal|stream|tidal_channel)$"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `nwr["leisure"~"^(park|garden|nature_reserve)$"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `nwr["landuse"~"^(grass|recreation_ground|meadow)$"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `nwr["natural"~"^(wood|grassland)$"](around:${city.radiusM},${city.lat},${city.lon});` +
         `way["power"~"^(line|minor_line|cable)$"](around:${city.radiusM},${city.lat},${city.lon});` +
         `nwr["power"~"^(substation|plant|generator|transformer)$"](around:${city.radiusM},${city.lat},${city.lon});` +
         `);out tags geom center;`;
@@ -600,6 +726,8 @@ export function createGeoRuntime({
       const payload = await response.json();
       const buildings = parseOverpassBuildings(payload, city);
       const roads = parseOverpassRoads(payload, city);
+      const water = parseOverpassWater(payload, city);
+      const greenAreas = parseOverpassGreen(payload, city);
       const power = parseOverpassPower(payload, city);
       if (buildings.length < 5) {
         throw new Error('Overpass returned too few building footprints');
@@ -613,12 +741,14 @@ export function createGeoRuntime({
         freshnessModel: 'OpenStreetMap upstream database at request time',
       };
       const value = {
-        schemaVersion: 3,
+        schemaVersion: 4,
         city,
         source,
         buildings,
         skylineProfile: skylineProfile(city, buildings, source),
         roads,
+        ...water,
+        greenAreas,
         ...power,
       };
       cache.set(cacheKey, { cachedAt: now(), value });
@@ -633,12 +763,16 @@ export function createGeoRuntime({
         error: error instanceof Error ? error.message : String(error),
       };
       return {
-        schemaVersion: 3,
+        schemaVersion: 4,
         city,
         source,
         buildings,
         skylineProfile: skylineProfile(city, buildings, source),
         roads: fallbackRoads(city),
+        waterAreas: [],
+        waterways: [],
+        coastlines: [],
+        greenAreas: [],
         ...power,
       };
     }
