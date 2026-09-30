@@ -24,6 +24,10 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(html, /<canvas id="spatialGrid"/u);
     assert.match(html, /data-workspace-target="holographic"/u);
     assert.match(html, /data-workspace="grid"/u);
+    assert.match(html, /data-workspace="global"/u);
+    assert.match(html, /id="globalGlobe"/u);
+    assert.match(html, /id="cityGrid"/u);
+    assert.match(html, /data-action="load-live-city"/u);
     assert.match(html, /data-workspace="holographic"/u);
     assert.match(html, /data-workspace="quantum"/u);
     assert.match(html, /data-workspace="ai"/u);
@@ -39,6 +43,10 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(html, /id="scenarioChart"/u);
     assert.match(html, /id="settingDefaultWorkspace"/u);
     assert.match(html, /id="settingLiveStream"/u);
+    assert.match(html, /id="profileForm"/u);
+    assert.match(html, /id="profileAvatarInput"/u);
+    assert.match(html, /id="quantumCircuit"/u);
+    assert.match(html, /data-action="submit-quantum-job"/u);
     assert.match(html, /data-scenario="custom"/u);
     assert.match(html, /id="customLoad"/u);
     assert.match(html, /data-action="apply-custom-scenario"/u);
@@ -54,6 +62,8 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.equal(appResponse.status, 200);
     const appSource = await appResponse.text();
     assert.match(appSource, /class SpatialGrid4D/u);
+    assert.match(appSource, /class GlobalGlobe3D/u);
+    assert.match(appSource, /loadCityMesh\(mesh\)/u);
     assert.match(appSource, /attribute vec4 a_position/u);
     assert.match(appSource, /gl\.drawArrays/u);
     assert.match(appSource, /pointerdown/u);
@@ -67,6 +77,9 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(appSource, /function renderActivity/u);
     assert.match(appSource, /setCompare\(enabled, hours/u);
     assert.match(appSource, /function renderSavedViews/u);
+    assert.match(appSource, /async function loadLiveCity/u);
+    assert.match(appSource, /async function submitQuantumJob/u);
+    assert.match(appSource, /async function saveProfile/u);
     assert.match(appSource, /data-workspace/u);
 
     const logo = await fetch(`${baseUrl}/assets/brand/aethergrid-logo.webp`);
@@ -108,6 +121,10 @@ test('ÆTHERGRID exposes replaceable agent runtime without leaking provider secr
     assert.deepEqual(Object.keys(runtime.agents), ['VÆLON', 'AUREN', 'SOLVÆR', 'TEAM']);
     assert.equal(runtime.agents['VÆLON'].provider, 'local');
     assert.equal(runtime.agents['VÆLON'].status, 'local-fallback');
+    assert.equal(runtime.geospatial.provider, 'osm-overpass');
+    assert.equal(runtime.quantum.provider, 'local-simulator');
+    assert.equal(runtime.quantum.credentialsExposed, false);
+    assert.equal(runtime.profile.persistence, 'local-json');
     const serialized = JSON.stringify(runtime);
     assert.doesNotMatch(serialized, /API_KEY/iu);
     assert.doesNotMatch(serialized, /Bearer /u);
@@ -147,6 +164,53 @@ test('ÆTHERGRID exposes replaceable agent runtime without leaking provider secr
     const detailPayload = await evidenceDetail.json();
     assert.equal(detailPayload.evidence.receipt, team.receipt);
     assert.equal(detailPayload.evidence.details.advisoryOnly, true);
+  });
+});
+
+test('ÆTHERGRID backend exposes profile, world-city and quantum runtime surfaces', async () => {
+  await withServer(async (baseUrl) => {
+    const profileResponse = await fetch(`${baseUrl}/api/aethergrid/profile`);
+    assert.equal(profileResponse.status, 200);
+    const profile = await profileResponse.json();
+    assert.equal(profile.profile.id, 'local-operator');
+    assert.equal(typeof profile.profile.displayName, 'string');
+
+    const citiesResponse = await fetch(`${baseUrl}/api/aethergrid/geospatial/cities`);
+    assert.equal(citiesResponse.status, 200);
+    const cities = await citiesResponse.json();
+    assert.ok(cities.cities.length >= 8);
+    assert.ok(cities.cities.every((city) => Number.isFinite(city.lat) && Number.isFinite(city.lon)));
+    assert.equal(cities.runtime.attribution, '© OpenStreetMap contributors');
+
+    const quantumRuntimeResponse = await fetch(`${baseUrl}/api/aethergrid/quantum/runtime`);
+    assert.equal(quantumRuntimeResponse.status, 200);
+    const quantumRuntime = await quantumRuntimeResponse.json();
+    assert.equal(quantumRuntime.provider, 'local-simulator');
+    assert.equal(quantumRuntime.hardwareExecution, false);
+
+    const backendsResponse = await fetch(`${baseUrl}/api/aethergrid/quantum/backends`);
+    assert.equal(backendsResponse.status, 200);
+    const backends = await backendsResponse.json();
+    assert.equal(backends.backends[0].name, 'aethergrid-local-sampler');
+
+    const jobResponse = await fetch(`${baseUrl}/api/aethergrid/quantum/jobs`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        backend: 'aethergrid-local-sampler',
+        shots: 256,
+        circuit:
+          'OPENQASM 3.0; include "stdgates.inc"; bit[2] c; h $0; cx $0, $1; c[0] = measure $0; c[1] = measure $1;',
+      }),
+    });
+    assert.equal(jobResponse.status, 200);
+    const job = await jobResponse.json();
+    assert.equal(job.job.provider, 'local-simulator');
+    assert.equal(job.job.status, 'COMPLETED');
+    assert.equal(job.job.distribution['00'] + job.job.distribution['11'], 256);
+    assert.equal(job.evidence.type, 'QUANTUM_JOB');
+    assert.equal(job.evidence.details.hardwareExecuted, false);
+    assert.match(job.job.receipt, /^[a-f0-9]{64}$/u);
   });
 });
 
