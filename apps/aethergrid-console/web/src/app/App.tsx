@@ -540,7 +540,7 @@ export function App() {
   const activeOverlays = useMemo(
     () =>
       (scope === 'world'
-        ? [worldOverlay]
+        ? [worldOverlay, measurementOverlay]
         : [
             ...semanticOverlays,
             activeIllumination,
