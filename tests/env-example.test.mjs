@@ -27,6 +27,21 @@ test('.env.example covers the maintained health and observability configuration'
   assert.deepEqual(
     Object.keys(values).sort(),
     [
+      'AETHERGRID_AI_MODEL',
+      'AETHERGRID_AI_PROVIDER',
+      'AETHERGRID_AI_TIMEOUT_MS',
+      'AETHERGRID_AUREN_MODEL',
+      'AETHERGRID_AUREN_PROVIDER',
+      'AETHERGRID_OLLAMA_BASE_URL',
+      'AETHERGRID_OPENAI_API_KEY',
+      'AETHERGRID_OPENAI_BASE_URL',
+      'AETHERGRID_PORT',
+      'AETHERGRID_SOLVAER_MODEL',
+      'AETHERGRID_SOLVAER_PROVIDER',
+      'AETHERGRID_TEAM_MODEL',
+      'AETHERGRID_TEAM_PROVIDER',
+      'AETHERGRID_VAELON_MODEL',
+      'AETHERGRID_VAELON_PROVIDER',
       'GITHUB_SHA',
       'PORT',
       'RELEASE_TAG',
@@ -44,4 +59,8 @@ test('.env.example covers the maintained health and observability configuration'
     port: 8080,
     logLevel: 'info',
   });
+
+  assert.equal(values.AETHERGRID_AI_PROVIDER, 'local');
+  assert.equal(values.AETHERGRID_OPENAI_API_KEY, '');
+  assert.equal(values.AETHERGRID_PORT, '8090');
 });
