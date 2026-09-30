@@ -28,8 +28,31 @@ interface TemporalRailProps {
   state: Readonly<TemporalState>;
 }
 
+function dataModeCopy(mode: TemporalMode): {
+  label: string;
+  detail: string;
+} {
+  if (mode === 'live') {
+    return {
+      label: 'LIVE SOURCES',
+      detail: 'Current weather · AQI · seismic · mapped spatial context'
+    };
+  }
+  if (mode === 'scenario') {
+    return {
+      label: 'MODELED + STATIC',
+      detail: 'Current map topology · modeled scenario effects · live feeds hidden'
+    };
+  }
+  return {
+    label: 'STATIC MAP CONTEXT',
+    detail: 'Solar time is computed · current weather/AQI/seismic hidden'
+  };
+}
+
 export function TemporalRail({ clock, state }: TemporalRailProps) {
   const offset = offsetMinutes(state);
+  const dataMode = dataModeCopy(state.mode);
 
   return (
     <section className="temporal-rail" aria-label="4D time controls">
@@ -75,6 +98,11 @@ export function TemporalRail({ clock, state }: TemporalRailProps) {
       <button className="live-button" type="button" onClick={() => clock.goLive()}>
         LIVE NOW
       </button>
+
+      <div className="temporal-data-status" data-mode={state.mode}>
+        <strong>{dataMode.label}</strong>
+        <span>{dataMode.detail}</span>
+      </div>
 
       <output className="time-readout" aria-live="polite">
         <strong>{labelForOffset(offset)}</strong>
