@@ -822,3 +822,21 @@ test('v4 native failover is a real source-backed WebGL renderer rather than an e
   assert.match(viewport, /new NativeWebglSpatialRenderer\(\)/u);
   assert.doesNotMatch(viewport, /new NativeSpatialRendererAdapter\(\)/u);
 });
+
+test('v4 renderer switching is reversible and preserves safe fallback diagnostics', async () => {
+  const [manager, viewport] = await Promise.all([
+    text('apps/aethergrid-console/web/src/renderer/renderer-manager.ts'),
+    text('apps/aethergrid-console/web/src/components/SpatialViewport.tsx'),
+  ]);
+
+  assert.match(manager, /#failoverReason/u);
+  assert.match(manager, /Cesium unavailable ·/u);
+  assert.match(manager, /await this\.#activate\(this\.#fallback\)/u);
+  assert.match(manager, /for \(const snapshot of this\.#overlays\.values\(\)\) renderer\.applyOverlay/u);
+  assert.match(manager, /if \(this\.#time\) renderer\.setTime\(this\.#time\)/u);
+  assert.match(viewport, /renderer-engine-switch/u);
+  assert.match(viewport, /CESIUM/u);
+  assert.match(viewport, /NATIVE/u);
+  assert.match(viewport, /await manager\.use\(engine\)/u);
+  assert.match(viewport, /await manager\.flyTo\(target\)/u);
+});
