@@ -408,6 +408,7 @@
         weather: true,
         clouds: true,
         illumination: true,
+        landmarks: true,
         air: true,
         seismic: true,
         nodes: true,
@@ -609,6 +610,11 @@
       this.geometry.weather = this.makeBuffer([]);
       this.geometry.clouds = this.makeBuffer([]);
       this.geometry.illumination = this.makeBuffer([]);
+      this.geometry.landmarkSpines = this.makeBuffer([]);
+      this.geometry.landmarkNodes = this.makeBuffer([]);
+      this.geometry.snow = this.makeBuffer([]);
+      this.geometry.fog = this.makeBuffer([]);
+      this.geometry.storm = this.makeBuffer([]);
       this.geometry.precipitation = this.makeBuffer([]);
       this.geometry.air = this.makeBuffer([]);
       this.geometry.seismicLines = this.makeBuffer([]);
@@ -684,6 +690,11 @@
       this.geometry.weather = this.makeBuffer([]);
       this.geometry.clouds = this.makeBuffer([]);
       this.geometry.illumination = this.makeBuffer([]);
+      this.geometry.landmarkSpines = this.makeBuffer([]);
+      this.geometry.landmarkNodes = this.makeBuffer([]);
+      this.geometry.snow = this.makeBuffer([]);
+      this.geometry.fog = this.makeBuffer([]);
+      this.geometry.storm = this.makeBuffer([]);
       this.geometry.precipitation = this.makeBuffer([]);
       this.geometry.air = this.makeBuffer([]);
       this.geometry.seismicLines = this.makeBuffer([]);
@@ -711,6 +722,12 @@
       const weatherLines = [];
       const cloudParticles = [];
       const cityLights = [];
+      const landmarkSpines = [];
+      const landmarkNodes = [];
+      const landmarkCandidates = [];
+      const snowParticles = [];
+      const fogParticles = [];
+      const stormLines = [];
       const precipitationLines = [];
       const airParticles = [];
       const seismicLines = [];
@@ -782,6 +799,32 @@
           this.vertex(cityLights, lightX, lightY, lightZ, phase + band * 0.67);
         }
 
+        const skylineThresholdM = Math.max(
+          80,
+          Number(mesh.skylineProfile?.p95HeightM || 0),
+        );
+        const hasSourceName = Boolean(String(building.name || '').trim());
+        if (hasSourceName || Number(building.heightM || 0) >= skylineThresholdM) {
+          landmarkCandidates.push({
+            id: building.id,
+            label: String(building.name || `Tall structure ${buildingIndex + 1}`),
+            type: 'landmark-building',
+            heightM: Number(building.heightM || 0),
+            heightSource: building.heightSource || null,
+            roofShape: building.roofShape || null,
+            startDate: building.startDate || null,
+            osmId: building.osmId || null,
+            osmType: building.osmType || null,
+            named: hasSourceName,
+            position: [center[0], height + 0.14, center[1]],
+            basePosition: [center[0], Math.max(0.03, baseHeight), center[1]],
+            score:
+              (hasSourceName ? 10000 : 0) +
+              (building.heightSource && building.heightSource !== 'inferred' ? 2500 : 0) +
+              Number(building.heightM || 0),
+          });
+        }
+
         if (buildingIndex < 120 && (building.name || buildingIndex % 10 === 0)) {
           const node = {
             id: building.id,
@@ -799,6 +842,29 @@
           this.vertex(nodes, ...node.position, phase);
         }
       });
+
+      const landmarkSelection = landmarkCandidates
+        .sort((left, right) => right.score - left.score)
+        .slice(0, 18);
+      const existingNodeIds = new Set(this.graphNodes.map((node) => node.id));
+      landmarkSelection.forEach((landmark, landmarkIndex) => {
+        this.line(
+          landmarkSpines,
+          landmark.basePosition,
+          landmark.position,
+          landmarkIndex * 0.73,
+        );
+        this.vertex(
+          landmarkNodes,
+          ...landmark.position,
+          landmarkIndex * 0.91 + landmark.heightM * 0.01,
+        );
+        if (!existingNodeIds.has(landmark.id)) {
+          this.graphNodes.push(landmark);
+          existingNodeIds.add(landmark.id);
+        }
+      });
+      this.landmarkNodes = landmarkSelection;
 
       (mesh.roads || []).forEach((road, roadIndex) => {
         const path = (road.path || []).map(([x, z]) => [x * scale, z * scale]);
@@ -924,8 +990,17 @@
       }
 
       const precipitation = Math.max(0, Number(environment.precipitationMm || 0));
+      const weatherCode = Number(environment.weatherCode || 0);
+      const snowMode = [71, 73, 75, 77, 85, 86].includes(weatherCode);
+      const fogMode =
+        [45, 48].includes(weatherCode) ||
+        (Number.isFinite(Number(environment.visibilityM)) &&
+          Number(environment.visibilityM) < 6000);
+      const stormMode = weatherCode >= 95 && weatherCode <= 99;
       const rainCount =
-        precipitation > 0.02 ? Math.round(clamp(24 + precipitation * 32, 24, 180)) : 0;
+        !snowMode && precipitation > 0.02
+          ? Math.round(clamp(24 + precipitation * 32, 24, 180))
+          : 0;
       for (let index = 0; index < rainCount; index += 1) {
         const x = (deterministic(index, 4) - 0.5) * 17;
         const z = (deterministic(index, 5) - 0.5) * 17;
@@ -938,6 +1013,56 @@
           [x + lean, y - 0.72, z + drift],
           index * 0.43,
         );
+      }
+
+      const snowCount =
+        snowMode && precipitation > 0
+          ? Math.round(clamp(34 + precipitation * 26, 34, 170))
+          : 0;
+      for (let index = 0; index < snowCount; index += 1) {
+        this.vertex(
+          snowParticles,
+          (deterministic(index, 13) - 0.5) * 17,
+          1.1 + deterministic(index, 14) * 5.9,
+          (deterministic(index, 15) - 0.5) * 17,
+          index * 0.31,
+        );
+      }
+
+      const visibilityM = Number(environment.visibilityM);
+      const fogStrength = fogMode
+        ? clamp(
+            Number.isFinite(visibilityM) ? (8000 - visibilityM) / 8000 : 0.55,
+            0.18,
+            0.92,
+          )
+        : 0;
+      const fogCount = fogMode ? Math.round(50 + fogStrength * 110) : 0;
+      for (let index = 0; index < fogCount; index += 1) {
+        this.vertex(
+          fogParticles,
+          (deterministic(index, 16) - 0.5) * 17.5,
+          0.12 + deterministic(index, 17) * 2.2,
+          (deterministic(index, 18) - 0.5) * 17.5,
+          index * 0.17,
+        );
+      }
+
+      if (stormMode) {
+        for (let bolt = 0; bolt < 3; bolt += 1) {
+          const baseX = (deterministic(bolt, 19) - 0.5) * 10;
+          const baseZ = (deterministic(bolt, 20) - 0.5) * 10;
+          let previous = [baseX, 5.8, baseZ];
+          for (let step = 1; step <= 7; step += 1) {
+            const next = [
+              baseX + (deterministic(bolt * 10 + step, 21) - 0.5) * 0.9,
+              5.8 - step * 0.72,
+              baseZ + (deterministic(bolt * 10 + step, 22) - 0.5) * 0.9,
+            ];
+            this.line(stormLines, previous, next, bolt * 1.7 + step * 0.23);
+            previous = next;
+          }
+        }
       }
 
       const air = liveContext.airQuality?.current || {};
@@ -994,6 +1119,11 @@
       this.geometry.weather = this.makeBuffer(weatherLines);
       this.geometry.clouds = this.makeBuffer(cloudParticles);
       this.geometry.illumination = this.makeBuffer(cityLights);
+      this.geometry.landmarkSpines = this.makeBuffer(landmarkSpines);
+      this.geometry.landmarkNodes = this.makeBuffer(landmarkNodes);
+      this.geometry.snow = this.makeBuffer(snowParticles);
+      this.geometry.fog = this.makeBuffer(fogParticles);
+      this.geometry.storm = this.makeBuffer(stormLines);
       this.geometry.precipitation = this.makeBuffer(precipitationLines);
       this.geometry.air = this.makeBuffer(airParticles);
       this.geometry.seismicLines = this.makeBuffer(seismicLines);
