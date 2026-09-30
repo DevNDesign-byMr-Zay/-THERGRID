@@ -607,6 +607,8 @@
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
       this.geometry.terrain = this.makeBuffer(terrainLines);
       this.geometry.weather = this.makeBuffer([]);
+      this.geometry.clouds = this.makeBuffer([]);
+      this.geometry.illumination = this.makeBuffer([]);
       this.geometry.precipitation = this.makeBuffer([]);
       this.geometry.air = this.makeBuffer([]);
       this.geometry.seismicLines = this.makeBuffer([]);
@@ -680,6 +682,8 @@
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
       this.geometry.terrain = this.makeBuffer(terrainLines);
       this.geometry.weather = this.makeBuffer([]);
+      this.geometry.clouds = this.makeBuffer([]);
+      this.geometry.illumination = this.makeBuffer([]);
       this.geometry.precipitation = this.makeBuffer([]);
       this.geometry.air = this.makeBuffer([]);
       this.geometry.seismicLines = this.makeBuffer([]);
@@ -705,6 +709,8 @@
       const infrastructureNodes = [];
       const terrainLines = [];
       const weatherLines = [];
+      const cloudParticles = [];
+      const cityLights = [];
       const precipitationLines = [];
       const airParticles = [];
       const seismicLines = [];
@@ -763,6 +769,17 @@
             const bRoof = [bx, height, bz];
             this.triangle(roofFaces, aRoof, bRoof, roofCenter, phase + 0.24);
           }
+        }
+
+        const sourceHeightM = Math.max(3, Number(building.heightM || 12));
+        const lightBands = Math.min(4, Math.max(1, Math.round(sourceHeightM / 55)));
+        const edgePoint = openFootprint[buildingIndex % openFootprint.length] || center;
+        for (let band = 1; band <= lightBands; band += 1) {
+          const fraction = band / (lightBands + 1);
+          const lightX = center[0] * 0.42 + edgePoint[0] * 0.58;
+          const lightZ = center[1] * 0.42 + edgePoint[1] * 0.58;
+          const lightY = baseHeight + Math.max(0.03, (wallTop - baseHeight) * fraction);
+          this.vertex(cityLights, lightX, lightY, lightZ, phase + band * 0.67);
         }
 
         if (buildingIndex < 120 && (building.name || buildingIndex % 10 === 0)) {
@@ -876,6 +893,18 @@
         const raw = Math.sin(index * 12.9898 + salt * 78.233) * 43758.5453;
         return raw - Math.floor(raw);
       };
+      const cloudCover = clamp(Number(environment.cloudCoverPercent || 0), 0, 100);
+      const cloudCount = Math.round(clamp(cloudCover * 0.9, 0, 90));
+      for (let index = 0; index < cloudCount; index += 1) {
+        this.vertex(
+          cloudParticles,
+          (deterministic(index, 10) - 0.5) * 17.5,
+          4.7 + deterministic(index, 11) * 1.55,
+          (deterministic(index, 12) - 0.5) * 17.5,
+          index * 0.21,
+        );
+      }
+
       const windSpeed = Math.max(0, Number(environment.windSpeedKph || 0));
       const windDirection = (Number(environment.windDirectionDegrees || 0) * Math.PI) / 180;
       const windLength = clamp(0.25 + windSpeed / 32, 0.25, 1.8);
@@ -963,6 +992,8 @@
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
       this.geometry.terrain = this.makeBuffer(terrainLines);
       this.geometry.weather = this.makeBuffer(weatherLines);
+      this.geometry.clouds = this.makeBuffer(cloudParticles);
+      this.geometry.illumination = this.makeBuffer(cityLights);
       this.geometry.precipitation = this.makeBuffer(precipitationLines);
       this.geometry.air = this.makeBuffer(airParticles);
       this.geometry.seismicLines = this.makeBuffer(seismicLines);
@@ -1306,29 +1337,101 @@
       }
       const focus = this.operationProfile || '';
       const windSpeed = Math.max(0, Number(this.environment?.current?.windSpeedKph || 0));
+      const windDirection =
+        (Number(this.environment?.current?.windDirectionDegrees || 0) * Math.PI) / 180;
+      const flowX = Math.sin(windDirection);
+      const flowZ = Math.cos(windDirection);
       const precipitation = Math.max(0, Number(this.environment?.current?.precipitationMm || 0));
+      const currentCloud = clamp(
+        Number(this.environment?.current?.cloudCoverPercent || 0) / 100,
+        0,
+        1,
+      );
+
+      if (this.layers.clouds) {
+        const cloudBoost = focus === 'weather' || focus === 'visibility' ? 1 : 0.58;
+        const cloudSize = 10 + currentCloud * 12;
+        this.drawBuffer(
+          this.geometry.clouds,
+          gl.POINTS,
+          isLightTheme()
+            ? [0.38, 0.48, 0.58, (0.08 + currentCloud * 0.2) * cloudBoost]
+            : [0.62, 0.78, 0.9, (0.08 + currentCloud * 0.24) * cloudBoost],
+          0.12 * amplitude * cloudBoost,
+          1,
+          cloudSize,
+          flowX * 0.62,
+          flowZ * 0.62,
+          0.18,
+          0,
+        );
+      }
+
+      if (this.layers.illumination) {
+        const lightBoost =
+          focus === 'visibility' ? 1.16 : focus === 'heat' ? 0.82 : 1;
+        const nightAlpha = dayMode ? 0.06 : 0.88;
+        const lightSize = dayMode ? 2.2 : 3.8;
+        this.drawBuffer(
+          this.geometry.illumination,
+          gl.POINTS,
+          [1, 0.72, 0.26, nightAlpha * lightBoost],
+          0.025 * amplitude,
+          1,
+          lightSize,
+          0,
+          0,
+          0.18,
+          0,
+        );
+      }
+
       if (this.layers.weather) {
-        const weatherBoost = focus === 'weather' || focus === 'resource-flow' || focus === 'grid-flow' ? 1 : 0.58;
+        const weatherBoost =
+          focus === 'weather' ||
+          focus === 'resource-flow' ||
+          focus === 'grid-flow' ||
+          focus === 'visibility'
+            ? 1
+            : 0.58;
         gl.uniform1f(this.loc.time, temporal * (1 + Math.min(2.4, windSpeed / 30)));
         this.drawBuffer(
           this.geometry.weather,
           gl.LINES,
-          isLightTheme() ? [0.05, 0.46, 0.68, 0.48 * weatherBoost] : [0.35, 0.88, 1, 0.58 * weatherBoost],
-          0.035 * amplitude * weatherBoost,
+          isLightTheme()
+            ? [0.05, 0.46, 0.68, 0.48 * weatherBoost]
+            : [0.35, 0.88, 1, 0.58 * weatherBoost],
+          0.055 * amplitude * weatherBoost,
+          0,
+          1,
+          flowX * 0.8,
+          flowZ * 0.8,
+          0.25,
+          0,
         );
         if (precipitation > 0) {
           this.drawBuffer(
             this.geometry.precipitation,
             gl.LINES,
-            isLightTheme() ? [0.18, 0.42, 0.72, 0.5 * weatherBoost] : [0.32, 0.58, 1, 0.72 * weatherBoost],
-            0.08 * amplitude * weatherBoost,
+            isLightTheme()
+              ? [0.18, 0.42, 0.72, 0.5 * weatherBoost]
+              : [0.32, 0.58, 1, 0.72 * weatherBoost],
+            0.04 * amplitude * weatherBoost,
+            0,
+            1,
+            flowX * 0.22,
+            flowZ * 0.22,
+            0.08,
+            1.05 * Math.min(1.8, 0.7 + precipitation * 0.08),
           );
         }
         gl.uniform1f(this.loc.time, temporal);
       }
+
       if (this.layers.air) {
         const aqi = clamp(Number(this.liveContext?.airQuality?.current?.usAqi || 0), 0, 500);
-        const airBoost = focus === 'air-quality' ? 1 : 0.42;
+        const airBoost =
+          focus === 'air-quality' || focus === 'visibility' || focus === 'heat' ? 1 : 0.42;
         const airColor =
           aqi >= 151
             ? [1, 0.34, 0.4, 0.74 * airBoost]
@@ -1343,7 +1446,11 @@
           airColor,
           0.12 * amplitude * airBoost,
           1,
-          focus === 'air-quality' ? 7 : 4,
+          focus === 'air-quality' || focus === 'visibility' ? 7 : 4,
+          flowX * 0.3,
+          flowZ * 0.3,
+          0.45,
+          0,
         );
       }
       if (this.layers.seismic) {
