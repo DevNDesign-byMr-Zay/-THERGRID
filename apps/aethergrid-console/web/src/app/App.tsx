@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { AgentDock } from '../components/AgentDock';
+import {
+  AgentDock,
+  type AgentHandoffRequest
+} from '../components/AgentDock';
 import { DataSourceBadge } from '../components/DataSourceBadge';
 import { EvidencePanel } from '../components/EvidencePanel';
 import { QuantumPanel } from '../components/QuantumPanel';
@@ -177,6 +180,7 @@ export function App() {
   const [globalLive, setGlobalLive] = useState<GlobalLiveContext | null>(null);
   const [liveContextError, setLiveContextError] = useState<string | null>(null);
   const [scenarioVisual, setScenarioVisual] = useState<ScenarioVisualState | null>(null);
+  const [agentHandoff, setAgentHandoff] = useState<AgentHandoffRequest | null>(null);
   const [cityLoad, setCityLoad] = useState<CityLoadState>({
     spatial: true,
     environment: true,
@@ -947,7 +951,7 @@ export function App() {
           </section>
 
           <div className="intel-workspace intel-ai">
-            <AgentDock context={agentContext} />
+            <AgentDock context={agentContext} handoff={agentHandoff} />
           </div>
           <div className="intel-workspace intel-scenario">
             <ScenarioPanel
@@ -1037,6 +1041,23 @@ export function App() {
                   className="selection-ai-action"
                   type="button"
                   onClick={() => {
+                    const layer = String(selection.properties?.layerId ?? 'unknown layer');
+                    const sourceTime = String(selection.properties?.sourceTime ?? 'unknown');
+                    const sourceState =
+                      selection.properties?.live === true
+                        ? 'live'
+                        : selection.properties?.fallback === true
+                          ? 'fallback'
+                          : 'recorded';
+
+                    setAgentHandoff((current) => ({
+                      id: (current?.id ?? 0) + 1,
+                      agent: 'AUREN',
+                      prompt:
+                        `Analyze the selected ${selection.kind} "${selection.id}" in ${layer}. ` +
+                        `Its source state is ${sourceState} and source time is ${sourceTime}. ` +
+                        'Use the active spatial context and evidence receipts. Separate observed facts, modeled context, assumptions, uncertainty, and suggested operator follow-up.'
+                    }));
                     setIntelWorkspace('ai');
                     setIntelOpen(true);
                   }}
