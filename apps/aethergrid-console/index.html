@@ -143,6 +143,10 @@
                 <button class="active" data-global-layer="routes">ROADS</button>
                 <button class="active" data-global-layer="infrastructure">POWER GRID</button>
                 <button class="active" data-global-layer="terrain">TERRAIN</button>
+                <button class="active" data-global-layer="water">WATER</button>
+                <button class="active" data-global-layer="rail">RAIL</button>
+                <button class="active" data-global-layer="transit">TRANSIT</button>
+                <button class="active" data-global-layer="green">GREEN SPACE</button>
                 <button class="active" data-global-layer="weather">WEATHER</button>
                 <button class="active" data-global-layer="clouds">CLOUDS</button>
                 <button class="active" data-global-layer="illumination">CITY LIGHTS</button>
@@ -191,7 +195,7 @@
               <section class="panel compact-panel city-operations-panel">
                 <header class="panel-head"><div class="panel-title"><span class="badge">◈</span><span><h3>CITY OPERATIONS</h3><small>Use the live 3D twin</small></span></div></header>
                 <div class="city-operation-controls">
-                  <label>USE CASE<select id="cityUseCaseSelect"><option value="grid-resilience">Grid Resilience</option><option value="outage-impact">Outage Impact</option><option value="emergency-access">Emergency Access</option><option value="renewable-siting">Renewable Siting</option><option value="load-growth">Load Growth</option><option value="weather-readiness">Weather Readiness</option><option value="air-quality-exposure">Air Quality Exposure</option><option value="seismic-awareness">Seismic Awareness</option><option value="heat-stress">Heat Stress</option><option value="visibility-operations">Visibility Operations</option></select></label>
+                  <label>USE CASE<select id="cityUseCaseSelect"><option value="grid-resilience">Grid Resilience</option><option value="outage-impact">Outage Impact</option><option value="emergency-access">Emergency Access</option><option value="renewable-siting">Renewable Siting</option><option value="load-growth">Load Growth</option><option value="weather-readiness">Weather Readiness</option><option value="air-quality-exposure">Air Quality Exposure</option><option value="seismic-awareness">Seismic Awareness</option><option value="heat-stress">Heat Stress</option><option value="visibility-operations">Visibility Operations</option><option value="flood-context">Flood Context</option><option value="transit-access">Transit Access</option><option value="urban-cooling">Urban Cooling</option></select></label>
                   <button class="primary-button" data-action="run-city-use-case">RUN CITY ANALYSIS</button>
                 </div>
                 <div class="city-operation-result" id="cityUseCaseResult"><div class="empty-state">Load a live city, then run a use case to turn the 3D twin into an operational planning surface.</div></div>
@@ -199,7 +203,7 @@
               </section>
               <section class="panel compact-panel">
                 <header class="panel-head"><div class="panel-title"><span class="badge">⌁</span><span><h3>LIVE GRID ASSETS</h3><small>Mapped infrastructure</small></span></div></header>
-                <div class="context-list" id="globalGridStats"><span><b>Power Lines</b><em>—</em></span><span><b>Power Assets</b><em>—</em></span><span><b>Roads</b><em>—</em></span><span><b>Buildings</b><em>—</em></span><span><b>Skyline Max</b><em>—</em></span><span><b>P95 Height</b><em>—</em></span><span><b>Height Data</b><em>—</em></span><span><b>Weather</b><em>—</em></span><span><b>Air</b><em>—</em></span><span><b>Humidity</b><em>—</em></span><span><b>Sunrise / Sunset</b><em>—</em></span><span><b>Seismic</b><em>—</em></span><span><b>Elevation</b><em>—</em></span></div>
+                <div class="context-list" id="globalGridStats"><span><b>Power Lines</b><em>—</em></span><span><b>Power Assets</b><em>—</em></span><span><b>Roads</b><em>—</em></span><span><b>Buildings</b><em>—</em></span><span><b>Skyline Max</b><em>—</em></span><span><b>P95 Height</b><em>—</em></span><span><b>Height Data</b><em>—</em></span><span><b>Weather</b><em>—</em></span><span><b>Air</b><em>—</em></span><span><b>Water</b><em>—</em></span><span><b>Rail / Transit</b><em>—</em></span><span><b>Green Space</b><em>—</em></span><span><b>Humidity</b><em>—</em></span><span><b>Sunrise / Sunset</b><em>—</em></span><span><b>Seismic</b><em>—</em></span><span><b>Elevation</b><em>—</em></span></div>
               </section>
               <section class="panel compact-panel">
                 <header class="panel-head"><div class="panel-title"><span class="badge">▤</span><span><h3>DATA PROVENANCE</h3><small>Source transparency</small></span></div></header>
