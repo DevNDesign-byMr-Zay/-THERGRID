@@ -200,6 +200,15 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           path: dist/aethergrid-operator-console.zip
+      - name: Build fully functional ÆTHERGRID app archive
+        run: npm run package:aethergrid-app
+      - name: Retain fully functional ÆTHERGRID app archive
+        uses: actions/upload-artifact@v7
+        with:
+          name: aethergrid-functional-app-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 30
+          path: dist/aethergrid-functional-app.zip
       - name: Smoke-test release manifest generation
         shell: bash
         run: |

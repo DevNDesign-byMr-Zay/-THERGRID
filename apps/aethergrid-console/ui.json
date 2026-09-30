@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 2,
+  "product": "ÆTHERGRID",
+  "viewport": { "width": 1536, "height": 1024 },
+  "referenceImage": "assets/dashboard-reference.webp",
+  "surfaces": ["OVERVIEW","GRID","HOLOGRAPHIC","QUANTUM","AI","SCENARIOS","EVIDENCE","SETTINGS"],
+  "primaryTabs": ["GRID","HOLOGRAPHIC","QUANTUM","AI","EVIDENCE"],
+  "interactiveCapabilities": ["live-view","forecast-view","scenario-view","run-optimization","classical-comparison","ai-chat","evidence-export","operator-report","simulation-package","3d-visualization","technical-evidence"],
+  "agents": [
+    {"id":"VÆLON","role":"Optimization & Scenario Exploration"},
+    {"id":"AUREN","role":"Semantic Analysis & Spatial Intelligence"},
+    {"id":"SOLVÆR","role":"Simulation & Evidence Generation"}
+  ],
+  "authorityBoundary": {
+    "recommendations":"ADVISORY",
+    "hardwareActuation":"DISABLED",
+    "infrastructureDispatch":"DISABLED",
+    "evidence":"REQUIRED"
+  }
+}

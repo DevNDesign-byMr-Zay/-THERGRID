@@ -1,0 +1,7 @@
+# Reference-locked ÆTHERGRID app surfaces.
+# These files are syntax/lint/test/CI verified, but their exact markup and hotspot geometry
+# intentionally remain outside automatic formatter rewrites so the approved reference canvas
+# and interaction coordinates are not changed by formatting-only commits.
+apps/aethergrid-console/
+tests/aethergrid-console.test.mjs
+scripts/assemble-aethergrid-full-app.mjs

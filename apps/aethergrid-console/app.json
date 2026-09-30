@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 2,
+  "id": "aethergrid.operator-console",
+  "name": "ÆTHERGRID Operator Console",
+  "version": "1.0.0",
+  "format": "html+pwa+node-app",
+  "entrypoints": {
+    "standaloneHtml": "index.html",
+    "webApp": "index.html",
+    "backend": "server.mjs",
+    "manifest": "manifest.webmanifest"
+  },
+  "visualContract": {
+    "reference": "assets/dashboard-reference.webp",
+    "referenceViewport": [1536, 1024],
+    "mode": "reference-identical-idle-canvas",
+    "interactiveOverlay": true
+  },
+  "backend": {
+    "runtime": "node>=22",
+    "command": "node server.mjs",
+    "port": 8090,
+    "apis": [
+      "GET /api/aethergrid/health",
+      "GET /api/aethergrid/state",
+      "GET /api/aethergrid/evidence",
+      "POST /api/aethergrid/optimize",
+      "POST /api/aethergrid/chat",
+      "POST /api/aethergrid/export"
+    ]
+  },
+  "safety": {
+    "advisoryOnly": true,
+    "physicalActuation": false,
+    "infrastructureDispatch": false,
+    "humanReviewRequired": true
+  }
+}
