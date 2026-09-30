@@ -10,6 +10,11 @@
 
 ### Added
 
+- Upgraded live OSM city rendering from wireframe-only shells to translucent WebGL building volumes with retained wireframe edges, building-part support, and minimum-height geometry.
+- Added cinematic globe-to-city descent with a local 3D fly-in plus SOLID 3D, X-RAY, and OPERATIONS visual modes.
+- Added bounded city-operation workflows for grid resilience, outage impact, emergency access, renewable siting, and load growth, with evidence receipts and shared AI context.
+- Added independent persistent chat threads for TEAM, VÆLON, AUREN, and SOLVÆR with bounded per-thread history sent to the existing provider-neutral endpoints.
+
 - Added an independent live terrain/elevation layer backed by a provider-neutral runtime, Open-Meteo Elevation / Copernicus DEM GLO-90 sampling, native WebGL terrain wireframes, explicit attribution, and flat local fallback.
 - Added live elevation terrain sampling with a separate native-WebGL TERRAIN layer, bounded real-coordinate requests, visible provenance, and an explicit flat local fallback.
 - Added arbitrary latitude/longitude exploration in the GLOBAL workspace, including animated coordinate descent, bounded radius controls, and custom-coordinate city sessions.
