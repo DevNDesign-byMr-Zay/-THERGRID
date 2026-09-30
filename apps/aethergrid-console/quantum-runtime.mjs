@@ -169,7 +169,8 @@ export function createQuantumRuntime({
       programId: 'sampler',
       status: payload.status || 'QUEUED',
       submittedAt: now(),
-      hardwareExecuted: true,
+      hardwareSubmitted: true,
+      hardwareExecuted: false,
       advisoryOnly: true,
     };
     return { ...result, receipt: receipt(result) };
