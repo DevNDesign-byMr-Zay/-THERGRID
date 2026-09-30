@@ -146,6 +146,201 @@ function buildSpatialGraph() {
 }
 
 const spatialGraph = buildSpatialGraph();
+let activeCityMesh = null;
+
+const CITY_USE_CASES = Object.freeze({
+  'grid-resilience': Object.freeze({
+    id: 'grid-resilience',
+    label: 'Grid Resilience',
+    purpose: 'Inspect mapped electrical topology, terrain and built-environment context for resilience planning.',
+    indexLabel: 'Topology visibility index',
+    agentLead: 'VÆLON',
+    recommendedLayers: ['grid', 'infrastructure', 'nodes', 'terrain', 'buildings'],
+  }),
+  'outage-impact': Object.freeze({
+    id: 'outage-impact',
+    label: 'Outage Impact',
+    purpose: 'Estimate where dense built areas overlap mapped grid assets for bounded outage-planning review.',
+    indexLabel: 'Exposure proxy index',
+    agentLead: 'SOLVÆR',
+    recommendedLayers: ['buildings', 'infrastructure', 'nodes', 'roads'],
+  }),
+  'emergency-access': Object.freeze({
+    id: 'emergency-access',
+    label: 'Emergency Access',
+    purpose: 'Inspect road-network reach and terrain constraints around mapped infrastructure and dense structures.',
+    indexLabel: 'Access coverage index',
+    agentLead: 'AUREN',
+    recommendedLayers: ['roads', 'terrain', 'nodes', 'buildings'],
+  }),
+  'renewable-siting': Object.freeze({
+    id: 'renewable-siting',
+    label: 'Renewable Siting',
+    purpose: 'Surface built-form, terrain and nearby grid context for early-stage renewable siting exploration.',
+    indexLabel: 'Siting context index',
+    agentLead: 'VÆLON',
+    recommendedLayers: ['terrain', 'buildings', 'infrastructure', 'nodes'],
+  }),
+  'load-growth': Object.freeze({
+    id: 'load-growth',
+    label: 'Load Growth',
+    purpose: 'Use mapped building mass and grid proximity as a planning proxy for future load-growth review.',
+    indexLabel: 'Built-load proxy index',
+    agentLead: 'AUREN',
+    recommendedLayers: ['buildings', 'roads', 'infrastructure', 'nodes', 'grid'],
+  }),
+});
+
+function planarLength(path = []) {
+  let total = 0;
+  for (let index = 1; index < path.length; index += 1) {
+    const a = path[index - 1];
+    const b = path[index];
+    if (!a || !b) continue;
+    total += Math.hypot(Number(b[0]) - Number(a[0]), Number(b[1]) - Number(a[1]));
+  }
+  return total;
+}
+
+function polygonArea(path = []) {
+  if (path.length < 3) return 0;
+  let area = 0;
+  for (let index = 0; index < path.length; index += 1) {
+    const a = path[index];
+    const b = path[(index + 1) % path.length];
+    area += Number(a?.[0] || 0) * Number(b?.[1] || 0) - Number(b?.[0] || 0) * Number(a?.[1] || 0);
+  }
+  return Math.abs(area) / 2;
+}
+
+function clampIndex(value) {
+  return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+}
+
+function cityMeshMetrics(mesh) {
+  const buildings = Array.isArray(mesh?.buildings) ? mesh.buildings : [];
+  const roads = Array.isArray(mesh?.roads) ? mesh.roads : [];
+  const powerLines = Array.isArray(mesh?.powerLines) ? mesh.powerLines : [];
+  const powerAssets = Array.isArray(mesh?.powerAssets) ? mesh.powerAssets : [];
+  const radiusM = Math.max(250, Number(mesh?.city?.radiusM || 900));
+  let footprintAreaM2 = 0;
+  let estimatedFloorAreaM2 = 0;
+  let heightTotalM = 0;
+  for (const building of buildings) {
+    const area = polygonArea(building.footprint || []);
+    const minHeight = Math.max(0, Number(building.minHeightM || 0));
+    const height = Math.max(minHeight + 3.2, Number(building.heightM || 12));
+    const levels = Math.max(1, Number(building.levels) || Math.round((height - minHeight) / 3.2));
+    footprintAreaM2 += area;
+    estimatedFloorAreaM2 += area * levels;
+    heightTotalM += height;
+  }
+  const roadLengthKm = roads.reduce((sum, road) => sum + planarLength(road.path || []), 0) / 1000;
+  const primaryRoadKm = roads
+    .filter((road) => /^(motorway|trunk|primary|secondary)$/u.test(String(road.highwayType || '')))
+    .reduce((sum, road) => sum + planarLength(road.path || []), 0) / 1000;
+  const powerLineKm = powerLines.reduce((sum, line) => sum + planarLength(line.path || []), 0) / 1000;
+  const highVoltageKm = powerLines
+    .filter((line) => Number(line.voltage || 0) >= 100000)
+    .reduce((sum, line) => sum + planarLength(line.path || []), 0) / 1000;
+  const substations = powerAssets.filter((asset) => asset.powerType === 'substation').length;
+  const generationAssets = powerAssets.filter((asset) => ['plant', 'generator'].includes(asset.powerType)).length;
+  const terrainReliefM = Math.max(0, Number(mesh?.terrain?.maxElevationM || 0) - Number(mesh?.terrain?.minElevationM || 0));
+  const sampledAreaKm2 = Math.PI * Math.pow(radiusM / 1000, 2);
+  return {
+    buildingCount: buildings.length,
+    footprintAreaM2: Math.round(footprintAreaM2),
+    estimatedFloorAreaM2: Math.round(estimatedFloorAreaM2),
+    averageBuildingHeightM: buildings.length ? Number((heightTotalM / buildings.length).toFixed(1)) : 0,
+    roadLengthKm: Number(roadLengthKm.toFixed(2)),
+    primaryRoadKm: Number(primaryRoadKm.toFixed(2)),
+    powerLineKm: Number(powerLineKm.toFixed(2)),
+    highVoltageKm: Number(highVoltageKm.toFixed(2)),
+    powerAssetCount: powerAssets.length,
+    substations,
+    generationAssets,
+    terrainReliefM: Number(terrainReliefM.toFixed(1)),
+    sampledAreaKm2: Number(sampledAreaKm2.toFixed(2)),
+  };
+}
+
+function analyzeCityUseCase(mesh, useCaseId) {
+  const useCase = CITY_USE_CASES[useCaseId];
+  if (!useCase) {
+    const error = new Error(`unsupported city use case: ${useCaseId}`);
+    error.status = 400;
+    throw error;
+  }
+  if (!mesh?.city) {
+    const error = new Error('city mesh required before running a city operation');
+    error.status = 409;
+    throw error;
+  }
+  const metrics = cityMeshMetrics(mesh);
+  const densityRatio = metrics.sampledAreaKm2 > 0
+    ? metrics.footprintAreaM2 / (metrics.sampledAreaKm2 * 1_000_000)
+    : 0;
+  const builtMass = clampIndex(densityRatio * 420 + metrics.averageBuildingHeightM * 0.55);
+  const roadCoverage = clampIndex(metrics.roadLengthKm * 4 + metrics.primaryRoadKm * 7);
+  const gridCoverage = clampIndex(metrics.powerLineKm * 7 + metrics.powerAssetCount * 5 + metrics.substations * 8);
+  const terrainComplexity = clampIndex(metrics.terrainReliefM * 1.4);
+  let planningIndex = 0;
+  let observations = [];
+  if (useCaseId === 'grid-resilience') {
+    planningIndex = clampIndex(gridCoverage * 0.72 + roadCoverage * 0.18 + (100 - terrainComplexity) * 0.1);
+    observations = [
+      `${metrics.powerLineKm.toFixed(1)} km of mapped power lines and ${metrics.powerAssetCount} mapped power assets are visible in the sampled area.`,
+      `${metrics.substations} mapped substations and ${metrics.highVoltageKm.toFixed(1)} km of ≥100 kV line geometry are available for topology review.`,
+      `Terrain relief across the sampled elevation grid is ${metrics.terrainReliefM.toFixed(0)} m.`,
+    ];
+  } else if (useCaseId === 'outage-impact') {
+    planningIndex = clampIndex(builtMass * 0.58 + gridCoverage * 0.42);
+    observations = [
+      `${metrics.buildingCount} mapped buildings represent approximately ${Math.round(metrics.estimatedFloorAreaM2).toLocaleString()} m² of estimated floor area.`,
+      `${metrics.powerAssetCount} mapped power assets overlap the same bounded city sample.`,
+      'The index is an exposure-planning proxy only; it does not assert customers affected or outage probability.',
+    ];
+  } else if (useCaseId === 'emergency-access') {
+    planningIndex = clampIndex(roadCoverage * 0.76 + (100 - terrainComplexity) * 0.24);
+    observations = [
+      `${metrics.roadLengthKm.toFixed(1)} km of mapped road centerlines are available, including ${metrics.primaryRoadKm.toFixed(1)} km of major roads.`,
+      `Mapped terrain relief is ${metrics.terrainReliefM.toFixed(0)} m across the current sample.`,
+      'Road presence is not a live traffic, closure, routing, or emergency-response guarantee.',
+    ];
+  } else if (useCaseId === 'renewable-siting') {
+    planningIndex = clampIndex((100 - builtMass) * 0.3 + gridCoverage * 0.45 + (100 - terrainComplexity) * 0.25);
+    observations = [
+      `${metrics.generationAssets} mapped generation assets and ${metrics.powerLineKm.toFixed(1)} km of mapped power lines provide grid-context anchors.`,
+      `Mapped building footprint covers approximately ${(densityRatio * 100).toFixed(1)}% of the circular sample area.`,
+      'Resource quality, ownership, permitting, interconnection capacity and environmental constraints require separate authoritative datasets.',
+    ];
+  } else {
+    planningIndex = clampIndex(builtMass * 0.64 + roadCoverage * 0.16 + gridCoverage * 0.2);
+    observations = [
+      `${metrics.buildingCount} mapped buildings average ${metrics.averageBuildingHeightM.toFixed(1)} m in modeled height.`,
+      `Estimated mapped floor area is ${Math.round(metrics.estimatedFloorAreaM2).toLocaleString()} m² inside the bounded sample.`,
+      'This is a built-form planning proxy, not a utility load forecast or customer-demand measurement.',
+    ];
+  }
+  return {
+    schemaVersion: 1,
+    useCase,
+    city: mesh.city,
+    generatedAt: new Date().toISOString(),
+    planningIndex: { label: useCase.indexLabel, value: planningIndex, scale: '0-100 planning proxy' },
+    metrics,
+    observations,
+    dataQuality: {
+      geometryProvider: mesh.source?.provider || 'unknown',
+      liveGeometry: Boolean(mesh.source?.live),
+      terrainProvider: mesh.terrain?.source?.provider || null,
+      liveTerrain: Boolean(mesh.terrain?.source?.live),
+      limitations: 'Decision-support indicators are derived from the currently loaded bounded map sample and are not operational ground truth.',
+    },
+    advisoryOnly: true,
+  };
+}
+
 
 const mime = {
   '.html': 'text/html; charset=utf-8',
@@ -364,6 +559,7 @@ const server = http.createServer(async (request, response) => {
         gridSize: 7,
       });
       const mesh = { ...baseMesh, terrain };
+      activeCityMesh = mesh;
       state.externalContext.geospatial = {
         cityId: mesh.city.id,
         name: mesh.city.name,
@@ -413,6 +609,7 @@ const server = http.createServer(async (request, response) => {
         gridSize: 7,
       });
       const mesh = { ...baseMesh, terrain };
+      activeCityMesh = mesh;
       state.externalContext.geospatial = {
         cityId: mesh.city.id,
         name: mesh.city.name,
@@ -441,6 +638,53 @@ const server = http.createServer(async (request, response) => {
         externalContext: state.externalContext,
         activity: state.activity,
       });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/city-operations/use-cases') {
+      return json(response, 200, {
+        useCases: Object.values(CITY_USE_CASES),
+        activeCity: activeCityMesh?.city || null,
+        advisoryOnly: true,
+      });
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/aethergrid/city-operations/analyze') {
+      const input = await body(request);
+      const analysis = analyzeCityUseCase(activeCityMesh, String(input.useCaseId || 'grid-resilience'));
+      const receipt = createHash('sha256')
+        .update(JSON.stringify({ analysis, at: analysis.generatedAt }))
+        .digest('hex');
+      analysis.receipt = receipt;
+      state.externalContext.geospatial = {
+        ...(state.externalContext.geospatial || {}),
+        useCase: {
+          id: analysis.useCase.id,
+          label: analysis.useCase.label,
+          planningIndex: analysis.planningIndex,
+          metrics: analysis.metrics,
+          observations: analysis.observations,
+          receipt,
+        },
+      };
+      const record = {
+        id: receipt.slice(0, 16),
+        title: `${analysis.city.name}: ${analysis.useCase.label}`,
+        type: 'CITY_OPERATION',
+        age: 'just now',
+        status: 'VERIFIED',
+        receipt,
+        details: {
+          city: analysis.city.name,
+          useCase: analysis.useCase.id,
+          planningIndex: analysis.planningIndex,
+          source: analysis.dataQuality.geometryProvider,
+          advisoryOnly: true,
+        },
+      };
+      state.evidence.unshift(record);
+      state.evidence = state.evidence.slice(0, 24);
+      activity(`City operation completed: ${analysis.useCase.label} for ${analysis.city.name}.`, 'city-operation');
+      return json(response, 200, { analysis, evidence: record, externalContext: state.externalContext, activity: state.activity });
     }
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/terrain') {
@@ -1032,4 +1276,4 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   });
 }
 
-export { regions, scenarios, server, spatialGraph, state, views };
+export { CITY_USE_CASES, analyzeCityUseCase, cityMeshMetrics, regions, scenarios, server, spatialGraph, state, views };
