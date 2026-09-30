@@ -179,6 +179,24 @@ Two additional bounded operations are available:
 - **Visibility Operations** — combines current visibility, precipitation, cloud, AQI, and mapped roads/structures for situational review.
 
 Both operations remain advisory-only. Heat Stress is not WBGT or a clinical risk calculation, and Visibility Operations is not a traffic, aviation, marine, or emergency-clearance authority.
+## v2.9 source-backed city identity and semantic weather
+
+City twins now expose a source-backed identity layer instead of relying on skyline shape alone.
+
+For each loaded OpenStreetMap building sample, ÆTHERGRID derives:
+- named mapped structures, sorted by source-backed modeled height;
+- tall-structure count using the current sample's P95 skyline height with an 80 m floor;
+- max / P95 / median height, roof-tag coverage, building-part count and height-data coverage;
+- interactive LANDMARKS geometry that highlights named/tall structures without inventing missing landmark identity;
+- a CITY IDENTITY inspector that lets the operator select those source-backed anchors in the 3D scene.
+
+Weather rendering is now semantic rather than generic:
+- rain uses wind-drifted falling streaks;
+- modeled snow codes generate slower drifting snow particles;
+- fog codes or low modeled visibility generate a low-altitude fog field;
+- modeled thunderstorm codes add a bounded lightning-style pulse while rain continues independently.
+
+The thunderstorm pulse is **not** a detected lightning strike. Rain, snow and fog effects visualize current provider model context and are not street-level weather instrumentation.
 ## Windows ZIP workflow
 
 After extracting the package:
