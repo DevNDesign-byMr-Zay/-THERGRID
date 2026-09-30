@@ -577,11 +577,35 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
 
       for (const node of snapshot.nodes) {
         const point = this.#project(node.position);
-        let color = this.#visualColor(layerColor(snapshot.layerId, node.kind));
+        const urbanLight =
+          node.properties?.presentationType === 'urban-illumination';
+        const timestamp = Date.parse(this.#time.iso);
+        const phase = Number.isFinite(timestamp) ? timestamp / 1000 : 0;
+        const lightPulse =
+          0.5 +
+          0.5 *
+            Math.sin(
+              phase * 0.12 +
+                node.id.length * 0.71 +
+                (node.intensity ?? 0.5) * 4.2
+            );
+        let color = urbanLight
+          ? rgba(
+              '#ffd37d',
+              0.48 +
+                (node.intensity ?? 0.5) * 0.22 +
+                lightPulse * 0.2
+            )
+          : this.#visualColor(layerColor(snapshot.layerId, node.kind));
         if (node.id === this.#selectedId) color = rgba('#ffffff', 1);
         pointPositions.push(point[0], point[1]);
         pointColors.push(color.r, color.g, color.b, color.a);
-        pointSizes.push(node.id === this.#selectedId ? 13 : 6 + clamp(node.intensity ?? 0.5, 0, 1) * 6);
+        pointSizes.push(
+          node.id === this.#selectedId
+            ? 13
+            : (6 + clamp(node.intensity ?? 0.5, 0, 1) * 6) *
+                (urbanLight ? 0.88 + lightPulse * 0.2 : 1)
+        );
         this.#features.push({
           id: node.id,
           kind: node.kind,
@@ -762,7 +786,32 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
         const x = ((point[0] + 1) / 2) * width;
         const y = ((1 - point[1]) / 2) * height;
         const selected = node.id === this.#selectedId;
-        context.fillStyle = selected ? '#ffffff' : css(this.#visualColor(layerColor(snapshot.layerId, node.kind)));
+        const urbanLight =
+          node.properties?.presentationType === 'urban-illumination';
+        const timestamp = Date.parse(this.#time.iso);
+        const phase = Number.isFinite(timestamp) ? timestamp / 1000 : 0;
+        const lightPulse =
+          0.5 +
+          0.5 *
+            Math.sin(
+              phase * 0.12 +
+                node.id.length * 0.71 +
+                (node.intensity ?? 0.5) * 4.2
+            );
+        context.fillStyle = selected
+          ? '#ffffff'
+          : css(
+              urbanLight
+                ? rgba(
+                    '#ffd37d',
+                    0.48 +
+                      (node.intensity ?? 0.5) * 0.22 +
+                      lightPulse * 0.2
+                  )
+                : this.#visualColor(
+                    layerColor(snapshot.layerId, node.kind)
+                  )
+            );
         context.beginPath();
         context.arc(x, y, selected ? 6 : 3.5 + clamp(node.intensity ?? 0.5, 0, 1) * 2.5, 0, Math.PI * 2);
         context.fill();
