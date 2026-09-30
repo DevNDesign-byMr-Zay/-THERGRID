@@ -295,7 +295,11 @@ export function App() {
             <div className="weather-card-head">
               <span>
                 <small>ATMOSPHERE</small>
-                <strong>{weatherPhenomenon(atmosphere).toUpperCase()}</strong>
+                <strong>
+                  {temporal.mode === 'live'
+                    ? weatherPhenomenon(atmosphere).toUpperCase()
+                    : `${temporal.mode.toUpperCase()} · DATA PENDING`}
+                </strong>
               </span>
               <span className={atmosphere?.live ? 'status-dot live' : 'status-dot'} />
             </div>
@@ -316,7 +320,9 @@ export function App() {
             <p>
               {environmentError
                 ? environmentError
-                : atmosphere?.attribution ?? 'Weather source pending'}
+                : temporal.mode !== 'live'
+                  ? 'Current weather visuals are hidden until a source supports the selected time.'
+                  : atmosphere?.attribution ?? 'Weather source pending'}
             </p>
           </section>
 
