@@ -59,7 +59,12 @@
     "custom-scenario-builder",
     "weighted-optimization-controls",
     "evidence-drill-down",
-    "agent-evidence-receipts"
+    "agent-evidence-receipts",
+    "holographic-temporal-compare",
+    "saved-camera-views",
+    "scenario-duplication",
+    "audit-timeline",
+    "classical-experimental-comparison"
   ],
   "agents": [
     {
@@ -201,5 +206,38 @@
     ],
     "contributionReceipts": true,
     "advisoryOnly": true
+  },
+  "holographicWorkspace": {
+    "independentRenderer": true,
+    "projectionModes": [
+      "perspective",
+      "orthographic",
+      "isometric"
+    ],
+    "temporalModes": [
+      "pulse",
+      "trail",
+      "freeze"
+    ],
+    "temporalComparison": true,
+    "persistentCameraViews": true,
+    "directNodePicking": true
+  },
+  "quantumWorkspace": {
+    "objectiveSelector": true,
+    "weightedObjectives": [
+      "cost",
+      "emissions"
+    ],
+    "constraints": [
+      "minimum-reserve",
+      "classical-baseline-required"
+    ],
+    "comparison": [
+      "classical",
+      "bounded-experimental"
+    ],
+    "runHistory": true,
+    "receipts": true
   }
 }
