@@ -625,6 +625,155 @@ button {
 
 
 
+
+.evidence-panel {
+  display: grid;
+  gap: 9px;
+  padding: 13px;
+  border: 1px solid rgba(112, 231, 255, 0.12);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(112, 231, 255, 0.07), transparent 42%),
+    linear-gradient(145deg, rgba(16, 23, 35, 0.78), rgba(7, 11, 18, 0.86));
+}
+
+.evidence-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.evidence-head small,
+.evidence-head strong {
+  display: block;
+}
+
+.evidence-head small {
+  color: #63778b;
+  font-size: 8px;
+  letter-spacing: 0.13em;
+}
+
+.evidence-head strong {
+  margin-top: 3px;
+  font: 600 10px ui-monospace, "SFMono-Regular", Consolas, monospace;
+  letter-spacing: 0.08em;
+}
+
+.evidence-head button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: #8ca2b4;
+  background: transparent;
+  cursor: pointer;
+}
+
+.evidence-list {
+  display: grid;
+  gap: 4px;
+  max-height: 210px;
+  overflow: auto;
+}
+
+.evidence-list > p {
+  margin: 0;
+  color: #627689;
+  font-size: 7px;
+}
+
+.evidence-list button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+  padding: 7px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 7px;
+  text-align: left;
+  color: #8499aa;
+  background: rgba(255, 255, 255, 0.014);
+  cursor: pointer;
+}
+
+.evidence-list button:hover {
+  border-color: rgba(112, 231, 255, 0.18);
+}
+
+.evidence-list small,
+.evidence-list strong {
+  display: block;
+}
+
+.evidence-list small {
+  color: #576c80;
+  font-size: 6px;
+  letter-spacing: 0.09em;
+}
+
+.evidence-list strong {
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 7px;
+}
+
+.evidence-list em {
+  color: var(--success);
+  font-size: 6px;
+  font-style: normal;
+  letter-spacing: 0.07em;
+}
+
+.evidence-detail {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.evidence-detail small {
+  color: #5e7387;
+  font-size: 6px;
+}
+
+.evidence-detail code {
+  display: block;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+  color: #9ac6da;
+  font-size: 6px;
+}
+
+.evidence-detail pre {
+  max-height: 150px;
+  margin: 0;
+  overflow: auto;
+  color: #728a9b;
+  font: 6px/1.5 ui-monospace, "SFMono-Regular", Consolas, monospace;
+  white-space: pre-wrap;
+}
+
+.evidence-export {
+  min-height: 32px;
+  border: 1px solid rgba(112, 231, 255, 0.22);
+  border-radius: 7px;
+  color: #a8eaff;
+  background: rgba(112, 231, 255, 0.055);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.evidence-export:disabled {
+  opacity: 0.45;
+}
+
 .quantum-panel {
   display: grid;
   gap: 9px;
@@ -1467,7 +1616,8 @@ button {
 :root[data-theme='light'] .live-context-card,
 :root[data-theme='light'] .identity-card,
 :root[data-theme='light'] .agent-dock,
-:root[data-theme='light'] .quantum-panel {
+:root[data-theme='light'] .quantum-panel,
+:root[data-theme='light'] .evidence-panel {
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.8), rgba(234, 241, 247, 0.8));
 }
 
