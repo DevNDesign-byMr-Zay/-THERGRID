@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import { AgentDock } from '../components/AgentDock';
 import { DataSourceBadge } from '../components/DataSourceBadge';
 import { SpatialViewport } from '../components/SpatialViewport';
 import { TemporalRail } from '../components/TemporalRail';
@@ -251,6 +252,59 @@ export function App() {
 
     setSearchError('Enter a supported city or latitude, longitude.');
   };
+
+  const agentContext = useMemo(
+    () => ({
+      region: city.name,
+      view: visualMode,
+      temporalMode: temporal.mode,
+      temporalCursor: temporal.cursorIso,
+      coordinate: {
+        latitude: city.latitude,
+        longitude: city.longitude
+      },
+      cityIdentity: cityIdentity ? { ...cityIdentity } : null,
+      selectedEntity: selection
+        ? {
+            id: selection.id,
+            kind: selection.kind,
+            source: selection.source ?? null,
+            latitude: selection.latitude ?? null,
+            longitude: selection.longitude ?? null,
+            heightMeters: selection.heightMeters ?? null,
+            properties: selection.properties ?? null
+          }
+        : null,
+      environment: atmosphere
+        ? {
+            sourceTime: atmosphere.sourceTime,
+            live: atmosphere.live,
+            current: atmosphere.current
+          }
+        : null,
+      liveContext: liveContext
+        ? {
+            airQuality: liveContext.airQuality,
+            seismic: {
+              eventCount: liveContext.seismic.eventCount,
+              maxMagnitude: liveContext.seismic.maxMagnitude,
+              nearestDistanceKm: liveContext.seismic.nearestDistanceKm,
+              live: liveContext.seismic.source.live
+            }
+          }
+        : null
+    }),
+    [
+      city,
+      visualMode,
+      temporal.mode,
+      temporal.cursorIso,
+      cityIdentity,
+      selection,
+      atmosphere,
+      liveContext
+    ]
+  );
 
   const seismicOverlay = useMemo(
     () => (liveContext && temporal.mode === 'live' ? seismicToOverlay(liveContext) : null),
@@ -575,6 +629,8 @@ export function App() {
               </span>
             </div>
           </section>
+
+          <AgentDock context={agentContext} />
 
           <section className="intel-card">
             <div className="intel-head">
