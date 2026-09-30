@@ -43,6 +43,7 @@ export interface AgentSpatialContext {
   view: string;
   temporalMode: string;
   temporalCursor: string;
+  useCase?: string | null;
   coordinate: {
     latitude: number;
     longitude: number;
