@@ -401,15 +401,17 @@ export function App() {
             properties: selection.properties ?? null
           }
         : null,
-      environment: scope === 'city' && atmosphere
-        ? {
+      environment:
+        scope === 'city' && atmosphere && temporal.mode === 'live'
+          ? {
             sourceTime: atmosphere.sourceTime,
             live: atmosphere.live,
             current: atmosphere.current
-          }
-        : null,
-      liveContext: scope === 'city' && liveContext
-        ? {
+            }
+          : null,
+      liveContext:
+        scope === 'city' && liveContext && temporal.mode === 'live'
+          ? {
             airQuality: liveContext.airQuality,
             seismic: {
               eventCount: liveContext.seismic.eventCount,
@@ -417,8 +419,8 @@ export function App() {
               nearestDistanceKm: liveContext.seismic.nearestDistanceKm,
               live: liveContext.seismic.source.live
             }
-          }
-        : null
+            }
+          : null
     }),
     [
       city,
@@ -501,15 +503,20 @@ export function App() {
       water: scope === 'city' ? countOverlay('water') : 0,
       green: scope === 'city' ? countOverlay('green') : 0,
       grid: 1,
-      weather: scope === 'city' && atmosphere?.current ? 1 : 0,
+      weather:
+        scope === 'city' && temporal.mode === 'live' && atmosphere?.current ? 1 : 0,
       air:
-        scope === 'city' && liveContext?.airQuality.current?.usAqi != null
+        scope === 'city' &&
+        temporal.mode === 'live' &&
+        liveContext?.airQuality.current?.usAqi != null
           ? 1
           : 0,
       seismic:
-        scope === 'world'
-          ? globalLive?.earthquakeCount ?? 0
-          : liveContext?.seismic.eventCount ?? 0,
+        temporal.mode !== 'live'
+          ? 0
+          : scope === 'world'
+            ? globalLive?.earthquakeCount ?? 0
+            : liveContext?.seismic.eventCount ?? 0,
       energy:
         scope === 'city' && powerOverlay
           ? powerOverlay.nodes.length + powerOverlay.edges.length
@@ -522,6 +529,7 @@ export function App() {
     cityIdentity,
     atmosphere,
     liveContext,
+    temporal.mode,
     powerOverlay
   ]);
 
@@ -795,7 +803,9 @@ export function App() {
             layers={layers}
             visualMode={visualMode}
             overlays={activeOverlays}
-            atmosphere={scope === 'city' ? atmosphere : null}
+            atmosphere={
+              scope === 'city' && temporal.mode === 'live' ? atmosphere : null
+            }
             airQuality={airQualityOverlay}
             onSelection={handleSpatialSelection}
           />
