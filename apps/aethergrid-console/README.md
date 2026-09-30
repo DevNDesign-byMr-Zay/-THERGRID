@@ -39,7 +39,7 @@ The generated archive contains `standalone.html`. That file inlines the CSS, Jav
 ## Interactive surfaces
 
 - Native WebGL 4D grid with time-indexed geometry.
-- Interactive wireframe city structures and transmission routes.
+- Live OpenStreetMap city structures rendered as solid translucent 3D volumes plus wireframe edges, with building-part and minimum-height support.
 - Pointer orbit, wheel zoom, double-click camera reset and layer toggles.
 - 24-hour temporal scrubber that changes the fourth-dimension phase.
 - Backend-generated spatial graph with nodes, routes and structures.
@@ -93,6 +93,18 @@ The team route runs the three specialist agents in parallel and then passes thei
 
 `GET /api/aethergrid/runtime` exposes only safe provider/model readiness metadata; API keys are never returned.
 
+## v2.5 city operations and agent workspaces
+
+The GLOBAL workspace now turns mapped city geometry into a usable planning surface rather than a generic wireframe preview:
+
+- cinematic globe-to-city descent followed by a local 3D fly-in;
+- solid, X-ray and operations visual modes;
+- live OSM building footprints, building parts, minimum heights, roads, mapped power infrastructure and elevation;
+- bounded city-operation workflows for grid resilience, outage impact, emergency access, renewable siting and load growth;
+- planning indicators recorded into evidence and shared with the AI runtime as advisory context;
+- independent persistent chat threads for TEAM, VÆLON, AUREN and SOLVÆR, with bounded conversation history sent to the configured model provider.
+
+City-operation scores are planning proxies derived from the currently loaded bounded map sample. They are not utility ground truth, outage forecasts, emergency routing guarantees, resource assessments or dispatch authority.
 ## Windows ZIP workflow
 
 After extracting the package:
