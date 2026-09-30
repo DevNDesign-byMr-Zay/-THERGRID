@@ -1,3 +1,4 @@
+import { createProviderRegistry } from './providers/provider-registry.mjs';
 import http from 'node:http';
 import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
@@ -12,8 +13,9 @@ import { createProfileStore } from './profile-store.mjs';
 import { createQuantumRuntime } from './quantum-runtime.mjs';
 import { createTerrainRuntime } from './terrain-runtime.mjs';
 
+const providerRegistry = createProviderRegistry({ env: process.env });
 const root = fileURLToPath(new URL('./', import.meta.url));
-const port = Number(process.env.AETHERGRID_PORT || process.env.PORT || 8090);
+const port = Number(providerRegistry.config.app.port);
 const agentRuntime = createAgentRuntime();
 const cityEnvironmentRuntime = createCityEnvironmentRuntime();
 const cityLiveRuntime = createCityLiveRuntime();
@@ -839,7 +841,15 @@ const server = http.createServer(async (request, response) => {
       return json(response, 200, { evidence: record, advisoryOnly: true });
     }
 
-    if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
+        if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime/providers') {
+      return json(
+        response,
+        200,
+        providerRegistry.redactor.redactValue(providerRegistry.getSafePublicRuntimeMetadata()),
+      );
+    }
+
+if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
       const ai = agentRuntime.summary();
       return json(response, 200, {
         ...ai,
@@ -1722,4 +1732,4 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   });
 }
 
-export { CITY_USE_CASES, analyzeCityUseCase, cityMeshMetrics, regions, scenarios, server, spatialGraph, state, views };
+export { providerRegistry, CITY_USE_CASES, analyzeCityUseCase, cityMeshMetrics, regions, scenarios, server, spatialGraph, state, views };
