@@ -1099,6 +1099,35 @@ button {
   letter-spacing: 0.06em;
 }
 
+
+.use-case-scene-badge {
+  position: absolute;
+  top: 72px;
+  right: 16px;
+  z-index: 6;
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+  padding: 7px 9px;
+  border: 1px solid rgba(112, 231, 255, 0.15);
+  border-radius: 7px;
+  background: rgba(5, 9, 15, 0.76);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+.use-case-scene-badge span {
+  color: #5f7487;
+  font-size: 6px;
+  letter-spacing: 0.1em;
+}
+
+.use-case-scene-badge strong {
+  color: #cdeffa;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+}
+
 .scene-caption {
   position: absolute;
   right: 16px;
