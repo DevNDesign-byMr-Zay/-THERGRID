@@ -38,6 +38,8 @@ export function OperationalDataPanel({
   const [snapshot, setSnapshot] = useState<OperationalSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const sampleKey = temporalMode === 'live' ? 'live' : cursorIso;
+
   useEffect(() => {
     const controller = new AbortController();
     const refresh = () => {
@@ -47,7 +49,7 @@ export function OperationalDataPanel({
         longitude,
         cityId,
         temporalMode,
-        cursorIso,
+        cursorIso: temporalMode === 'live' ? new Date().toISOString() : cursorIso,
         signal: controller.signal
       })
         .then((next) => {
@@ -66,7 +68,7 @@ export function OperationalDataPanel({
       controller.abort();
       if (timer != null) globalThis.clearInterval(timer);
     };
-  }, [latitude, longitude, cityId, temporalMode, cursorIso]);
+  }, [latitude, longitude, cityId, temporalMode, sampleKey]);
 
   const liveCount = useMemo(
     () => snapshot?.sources.filter((source) => source.state === 'live').length ?? 0,
