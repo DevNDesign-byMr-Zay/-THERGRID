@@ -53,7 +53,9 @@
       "POST /api/aethergrid/team",
       "POST /api/aethergrid/chat",
       "POST /api/aethergrid/export",
-      "POST /api/aethergrid/reset"
+      "POST /api/aethergrid/reset",
+      "GET /api/aethergrid/quantum/jobs/:id/results",
+      "GET /api/aethergrid/quantum/jobs/:id/metrics"
     ]
   },
   "safety": {
@@ -115,7 +117,9 @@
     "quantumJobSubmission": true,
     "localQuantumSamplerFallback": true,
     "liveOpenStreetMapRoadTopology": true,
-    "animatedGlobeCityDescent": true
+    "animatedGlobeCityDescent": true,
+    "quantumJobResults": true,
+    "quantumJobMetrics": true
   },
   "aiRuntime": {
     "providers": [
@@ -161,7 +165,9 @@
       "estimator"
     ],
     "credentialsExposedToBrowser": false,
-    "hardwareSubmissionRequiresServerCredentials": true
+    "hardwareSubmissionRequiresServerCredentials": true,
+    "jobResults": true,
+    "jobMetrics": true
   },
   "profileRuntime": {
     "module": "profile-store.mjs",
