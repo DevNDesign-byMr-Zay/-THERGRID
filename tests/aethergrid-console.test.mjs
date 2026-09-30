@@ -39,6 +39,7 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(html, /id="globalPointLat"/u);
     assert.match(html, /id="globalPointLon"/u);
     assert.match(html, /id="globalTimeSlider"/u);
+    assert.match(html, /data-action="city-live-now"/u);
     assert.match(html, /data-global-layer="infrastructure"/u);
     assert.match(html, /data-global-layer="terrain"/u);
     assert.match(html, /id="globalGridStats"/u);
@@ -60,6 +61,7 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(html, /data-agent="VÆLON"/u);
     assert.match(html, /id="quantumCanvas"/u);
     assert.match(html, /id="scenarioChart"/u);
+    assert.match(html, /id="settingTheme"/u);
     assert.match(html, /id="settingDefaultWorkspace"/u);
     assert.match(html, /id="settingLiveStream"/u);
     assert.match(html, /id="profileForm"/u);
@@ -105,6 +107,11 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(appSource, /loadTerrainFor/u);
     assert.match(appSource, /powerAssets/u);
     assert.match(appSource, /buildingFaces/u);
+    assert.match(appSource, /roofFaces/u);
+    assert.match(appSource, /roofLines/u);
+    assert.match(appSource, /environmentHour/u);
+    assert.match(appSource, /resolvedTheme/u);
+    assert.match(appSource, /cityCameraTarget/u);
     assert.match(appSource, /gl\.TRIANGLES/u);
     assert.match(appSource, /cinematicEntrance/u);
     assert.match(appSource, /async function runCityUseCase/u);
@@ -155,6 +162,8 @@ test('ÆTHERGRID exposes replaceable agent runtime without leaking provider secr
     assert.equal(runtime.agents['VÆLON'].provider, 'local');
     assert.equal(runtime.agents['VÆLON'].status, 'local-fallback');
     assert.equal(runtime.geospatial.provider, 'osm-overpass');
+    assert.equal(runtime.environment.provider, 'open-meteo');
+    assert.equal(runtime.environment.credentialsExposed, false);
     assert.equal(runtime.terrain.provider, 'open-meteo');
     assert.equal(runtime.terrain.credentialsExposed, false);
     assert.equal(runtime.quantum.provider, 'local-simulator');
@@ -220,10 +229,17 @@ test('ÆTHERGRID backend exposes profile, world-city and quantum runtime surface
     assert.deepEqual(cities.runtime.layers, [
       'buildings',
       'building-parts',
+      'roofs',
       'roads',
       'power-lines',
       'power-assets',
     ]);
+
+    const environmentRuntimeResponse = await fetch(`${baseUrl}/api/aethergrid/environment/runtime`);
+    assert.equal(environmentRuntimeResponse.status, 200);
+    const environmentRuntime = await environmentRuntimeResponse.json();
+    assert.equal(environmentRuntime.provider, 'open-meteo');
+    assert.equal(environmentRuntime.credentialsExposed, false);
 
     const terrainRuntimeResponse = await fetch(`${baseUrl}/api/aethergrid/terrain/runtime`);
     assert.equal(terrainRuntimeResponse.status, 200);

@@ -431,6 +431,7 @@ async function main() {
       /id="globalPointLat"/u.test(exactAethergridHtml) &&
       /id="globalPointLon"/u.test(exactAethergridHtml) &&
       /id="globalTimeSlider"/u.test(exactAethergridHtml) &&
+      /data-action="city-live-now"/u.test(exactAethergridHtml) &&
       /data-global-layer="infrastructure"/u.test(exactAethergridHtml) &&
       /data-global-layer="terrain"/u.test(exactAethergridHtml) &&
       /id="globalGridStats"/u.test(exactAethergridHtml) &&
@@ -445,6 +446,7 @@ async function main() {
       /data-workspace="scenarios"/u.test(exactAethergridHtml) &&
       /data-workspace="evidence"/u.test(exactAethergridHtml) &&
       /data-workspace="settings"/u.test(exactAethergridHtml) &&
+      /id="settingTheme"/u.test(exactAethergridHtml) &&
       /id="settingDefaultWorkspace"/u.test(exactAethergridHtml) &&
       /id="profileForm"/u.test(exactAethergridHtml) &&
       /id="quantumCircuit"/u.test(exactAethergridHtml) &&
@@ -481,6 +483,11 @@ async function main() {
       /loadTerrainFor/u.test(exactAethergridJs) &&
       /powerAssets/u.test(exactAethergridJs) &&
       /buildingFaces/u.test(exactAethergridJs) &&
+      /roofFaces/u.test(exactAethergridJs) &&
+      /roofLines/u.test(exactAethergridJs) &&
+      /environmentHour/u.test(exactAethergridJs) &&
+      /resolvedTheme/u.test(exactAethergridJs) &&
+      /cityCameraTarget/u.test(exactAethergridJs) &&
       /gl\.TRIANGLES/u.test(exactAethergridJs) &&
       /cinematicEntrance/u.test(exactAethergridJs) &&
       /async function runCityUseCase/u.test(exactAethergridJs) &&
@@ -498,7 +505,8 @@ async function main() {
       /\.quantum-canvas/u.test(exactAethergridStyles) &&
       /\.city-transition-overlay/u.test(exactAethergridStyles) &&
       /\.city-operation-result/u.test(exactAethergridStyles) &&
-      /\.thread-pill/u.test(exactAethergridStyles),
+      /\.thread-pill/u.test(exactAethergridStyles) &&
+      /html\[data-theme="light"\]/u.test(exactAethergridStyles),
     'ÆTHERGRID styles must target real runtime elements',
   );
   assert(
@@ -547,6 +555,13 @@ async function main() {
       exactAethergridApp.capabilities?.cityOperationsUseCases === true &&
       exactAethergridApp.capabilities?.dedicatedPersistentAgentChats === true &&
       exactAethergridApp.capabilities?.agentConversationHistory === true &&
+      exactAethergridApp.capabilities?.liveOpenWeatherCityContext === true &&
+      exactAethergridApp.capabilities?.realTimeCityTimeSync === true &&
+      exactAethergridApp.capabilities?.sourceBackedRoofGeometry === true &&
+      exactAethergridApp.capabilities?.relationBuildingGeometry === true &&
+      exactAethergridApp.capabilities?.skylineDataQualityReadout === true &&
+      exactAethergridApp.capabilities?.lightDarkSystemAppearance === true &&
+      exactAethergridApp.capabilities?.citySpecificCameraFraming === true &&
       exactAethergridApp.aiRuntime?.replaceableByConfiguration === true &&
       Array.isArray(exactAethergridApp.aiRuntime?.externalContext) &&
       exactAethergridApp.aiRuntime.externalContext.includes('geospatial-summary') &&
@@ -558,9 +573,19 @@ async function main() {
       exactAethergridApp.geospatialRuntime?.livePowerLineGeometry === true &&
       exactAethergridApp.geospatialRuntime?.livePowerAssetGeometry === true &&
       exactAethergridApp.geospatialRuntime?.layers?.includes('building-parts') &&
+      exactAethergridApp.geospatialRuntime?.layers?.includes('roofs') &&
+      exactAethergridApp.geospatialRuntime?.sourceBackedRoofGeometry === true &&
+      exactAethergridApp.geospatialRuntime?.relationBuildingGeometry === true &&
+      exactAethergridApp.geospatialRuntime?.maxSupportedBuildingHeightM === 1200 &&
       exactAethergridApp.geospatialRuntime?.solidBuildingVolumes === true &&
       exactAethergridApp.geospatialRuntime?.buildingParts === true &&
       exactAethergridApp.geospatialRuntime?.layers?.includes('terrain') &&
+      exactAethergridApp.environmentRuntime?.module === 'city-environment-runtime.mjs' &&
+      exactAethergridApp.environmentRuntime?.browserSecrets === false &&
+      Array.isArray(exactAethergridApp.settingsRuntime?.appearanceModes) &&
+      exactAethergridApp.settingsRuntime.appearanceModes.includes('light') &&
+      exactAethergridApp.settingsRuntime.appearanceModes.includes('dark') &&
+      exactAethergridApp.settingsRuntime.appearanceModes.includes('system') &&
       exactAethergridApp.terrainRuntime?.module === 'terrain-runtime.mjs' &&
       exactAethergridApp.terrainRuntime?.credentialsExposedToBrowser === false &&
       exactAethergridApp.quantumRuntime?.ibmApiVersion === '2026-04-15' &&
@@ -582,6 +607,8 @@ async function main() {
     '/api/aethergrid/geospatial/point',
     '/api/aethergrid/city-operations/use-cases',
     '/api/aethergrid/city-operations/analyze',
+    '/api/aethergrid/environment',
+    '/api/aethergrid/environment/runtime',
     '/api/aethergrid/terrain',
     '/api/aethergrid/terrain/runtime',
     '/api/aethergrid/quantum/runtime',
@@ -620,6 +647,9 @@ async function main() {
   const aethergridAiRuntime = await text('apps/aethergrid-console/ai-runtime.mjs');
   const aethergridProfileStore = await text('apps/aethergrid-console/profile-store.mjs');
   const aethergridGeoRuntime = await text('apps/aethergrid-console/geo-runtime.mjs');
+  const aethergridEnvironmentRuntime = await text(
+    'apps/aethergrid-console/city-environment-runtime.mjs',
+  );
   const aethergridTerrainRuntime = await text('apps/aethergrid-console/terrain-runtime.mjs');
   const aethergridQuantumRuntime = await text('apps/aethergrid-console/quantum-runtime.mjs');
   assert(
@@ -648,9 +678,14 @@ async function main() {
   assert(
     /OpenStreetMap Overpass/u.test(aethergridGeoRuntime) &&
       /© OpenStreetMap contributors/u.test(aethergridGeoRuntime) &&
-      /way\["building"\]/u.test(aethergridGeoRuntime) &&
-      /way\["building:part"\]/u.test(aethergridGeoRuntime) &&
-      /minHeightM/u.test(aethergridGeoRuntime) &&
+      /nwr\["building"\]/u.test(aethergridGeoRuntime) &&
+      /nwr\["building:part"\]/u.test(aethergridGeoRuntime) &&
+      /heightProfile/u.test(aethergridGeoRuntime) &&
+      /numericRoofHeight/u.test(aethergridGeoRuntime) &&
+      /buildingGeometries/u.test(aethergridGeoRuntime) &&
+      /representativeBuildings/u.test(aethergridGeoRuntime) &&
+      /skylineProfile/u.test(aethergridGeoRuntime) &&
+      /timestamp_osm_base/u.test(aethergridGeoRuntime) &&
       /way\["highway"\]/u.test(aethergridGeoRuntime) &&
       /way\["power"~"\^\(line\|minor_line\|cable\)\$"\]/u.test(aethergridGeoRuntime) &&
       /substation\|plant\|generator\|transformer/u.test(aethergridGeoRuntime) &&
@@ -660,6 +695,16 @@ async function main() {
       /supportsCustomCoordinates: true/u.test(aethergridGeoRuntime) &&
       /cache/u.test(aethergridGeoRuntime),
     'ÆTHERGRID geospatial runtime must keep on-demand OpenStreetMap building, road and power-grid geometry with arbitrary coordinate support',
+  );
+  assert(
+    /api\.open-meteo\.com\/v1\/forecast/u.test(aethergridEnvironmentRuntime) &&
+      /temperature_2m/u.test(aethergridEnvironmentRuntime) &&
+      /cloud_cover/u.test(aethergridEnvironmentRuntime) &&
+      /is_day/u.test(aethergridEnvironmentRuntime) &&
+      /wind_speed_10m/u.test(aethergridEnvironmentRuntime) &&
+      /local-environment-fallback/u.test(aethergridEnvironmentRuntime) &&
+      /credentialsExposed: false/u.test(aethergridEnvironmentRuntime),
+    'ÆTHERGRID city environment runtime must keep current open weather context with explicit fallback',
   );
   assert(
     /api\.open-meteo\.com\/v1\/elevation/u.test(aethergridTerrainRuntime) &&
@@ -697,7 +742,10 @@ async function main() {
       /STOP-AETHERGRID\.ps1/u.test(exactAethergridPackager) &&
       /START-AETHERGRID\.cmd/u.test(exactAethergridPackager) &&
       /agent-config\.mjs/u.test(exactAethergridPackager) &&
-      /ai-runtime\.mjs/u.test(exactAethergridPackager),
+      /ai-runtime\.mjs/u.test(exactAethergridPackager) &&
+      /city-environment-runtime\.mjs/u.test(exactAethergridPackager) &&
+      /id="settingTheme"/u.test(exactAethergridPackager) &&
+      /city-live-now/u.test(exactAethergridPackager),
     'ÆTHERGRID packager must generate standalone WebGL HTML and complete backend/launcher runtime without the reference screenshot',
   );
   const aethergridStartScript = await text('apps/aethergrid-console/START-AETHERGRID.ps1');
@@ -714,6 +762,8 @@ async function main() {
       /AETHERGRID_OLLAMA_BASE_URL=/u.test(aethergridAppEnv) &&
       /AETHERGRID_GEO_PROVIDER=osm-overpass/u.test(aethergridAppEnv) &&
       /AETHERGRID_OVERPASS_URL=/u.test(aethergridAppEnv) &&
+      /AETHERGRID_ENVIRONMENT_PROVIDER=open-meteo/u.test(aethergridAppEnv) &&
+      /AETHERGRID_OPEN_METEO_URL=/u.test(aethergridAppEnv) &&
       /AETHERGRID_TERRAIN_PROVIDER=open-meteo/u.test(aethergridAppEnv) &&
       /AETHERGRID_ELEVATION_URL=/u.test(aethergridAppEnv) &&
       /AETHERGRID_QUANTUM_PROVIDER=local-simulator/u.test(aethergridAppEnv) &&

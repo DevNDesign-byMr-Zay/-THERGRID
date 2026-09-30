@@ -4,17 +4,18 @@
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const SETTINGS_KEY = 'aethergrid.operator.settings.v2';
   const DEFAULT_GLOBAL_CITIES = Object.freeze([
-    { id: 'new-york', name: 'New York', country: 'United States', lat: 40.7128, lon: -74.006, radiusM: 900 },
-    { id: 'london', name: 'London', country: 'United Kingdom', lat: 51.5074, lon: -0.1278, radiusM: 900 },
-    { id: 'tokyo', name: 'Tokyo', country: 'Japan', lat: 35.6762, lon: 139.6503, radiusM: 900 },
-    { id: 'dubai', name: 'Dubai', country: 'United Arab Emirates', lat: 25.2048, lon: 55.2708, radiusM: 900 },
-    { id: 'singapore', name: 'Singapore', country: 'Singapore', lat: 1.3521, lon: 103.8198, radiusM: 900 },
-    { id: 'sao-paulo', name: 'São Paulo', country: 'Brazil', lat: -23.5505, lon: -46.6333, radiusM: 900 },
-    { id: 'lagos', name: 'Lagos', country: 'Nigeria', lat: 6.5244, lon: 3.3792, radiusM: 900 },
-    { id: 'sydney', name: 'Sydney', country: 'Australia', lat: -33.8688, lon: 151.2093, radiusM: 900 },
+    { id: 'new-york', name: 'New York', country: 'United States', district: 'Midtown Manhattan', lat: 40.7549, lon: -73.984, radiusM: 1600 },
+    { id: 'london', name: 'London', country: 'United Kingdom', district: 'City of London / South Bank', lat: 51.5136, lon: -0.0917, radiusM: 1700 },
+    { id: 'tokyo', name: 'Tokyo', country: 'Japan', district: 'Shinjuku', lat: 35.6896, lon: 139.6917, radiusM: 1700 },
+    { id: 'dubai', name: 'Dubai', country: 'United Arab Emirates', district: 'Downtown Dubai', lat: 25.1972, lon: 55.2744, radiusM: 1800 },
+    { id: 'singapore', name: 'Singapore', country: 'Singapore', district: 'Marina Bay / Downtown Core', lat: 1.2838, lon: 103.8515, radiusM: 1700 },
+    { id: 'sao-paulo', name: 'São Paulo', country: 'Brazil', district: 'Paulista / Bela Vista', lat: -23.5614, lon: -46.6559, radiusM: 1700 },
+    { id: 'lagos', name: 'Lagos', country: 'Nigeria', district: 'Victoria Island / Eko Atlantic', lat: 6.4281, lon: 3.4219, radiusM: 1800 },
+    { id: 'sydney', name: 'Sydney', country: 'Australia', district: 'CBD / Circular Quay', lat: -33.8651, lon: 151.2099, radiusM: 1700 },
   ]);
 
   const defaultSettings = Object.freeze({
+    theme: 'dark',
     defaultWorkspace: 'grid',
     density: 'comfortable',
     animationIntensity: 100,
@@ -113,6 +114,24 @@
       .replace(/\b\w/g, (letter) => letter.toUpperCase());
   }
 
+  function resolvedTheme(theme = state.settings.theme) {
+    if (theme === 'system') {
+      return globalThis.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    return theme === 'light' ? 'light' : 'dark';
+  }
+
+  function isLightTheme() {
+    return resolvedTheme() === 'light';
+  }
+
+  function environmentHour(environment) {
+    const value = String(environment?.current?.time || '');
+    const match = value.match(/T(\d{2}):(\d{2})/u);
+    if (!match) return null;
+    return Number(match[1]) + Number(match[2]) / 60;
+  }
+
   function showToast(title, copy) {
     if (!toast) return;
     toast.innerHTML = `<b>${escapeHtml(title)}</b><small>${escapeHtml(copy)}</small>`;
@@ -179,6 +198,9 @@
   }
 
   function applySettings() {
+    const theme = resolvedTheme(state.settings.theme);
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
     document.body.dataset.density = state.settings.density;
     document.body.dataset.spatialLabels = state.settings.spatialLabels ? 'on' : 'off';
     document.body.dataset.motion =
@@ -189,6 +211,7 @@
     );
 
     const bindings = {
+      settingTheme: state.settings.theme,
       settingDefaultWorkspace: state.settings.defaultWorkspace,
       settingDensity: state.settings.density,
       settingAnimation: state.settings.animationIntensity,
@@ -223,6 +246,7 @@
 
   function bindSettings() {
     const binding = [
+      ['settingTheme', 'theme', 'value'],
       ['settingDefaultWorkspace', 'defaultWorkspace', 'value'],
       ['settingDensity', 'density', 'value'],
       ['settingAnimation', 'animationIntensity', 'number'],
@@ -257,6 +281,9 @@
       showToast('SETTINGS RESET', 'Operator preferences restored to defaults.');
     });
     q('[data-action="health-check"]')?.addEventListener('click', healthCheck);
+    globalThis.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change', () => {
+      if (state.settings.theme === 'system') applySettings();
+    });
   }
 
   function switchWorkspace(name, { persist = true } = {}) {
@@ -390,6 +417,9 @@
       this.compareEnabled = false;
       this.compareTimeHours = 18;
       this.cityVisualMode = 'solid';
+      this.environment = null;
+      this.skylineProfile = null;
+      this.cityCameraTarget = { yaw: 0.78, pitch: 0.57, distance: 18 };
       this.drag = null;
       this.timeStart = performance.now();
       this.geometry = {};
@@ -489,6 +519,8 @@
       const grid = [];
       const buildings = [];
       const buildingFaces = [];
+      const roofFaces = [];
+      const roofLines = [];
       const routes = [];
       const infrastructureLines = [];
       const infrastructureNodes = [];
@@ -551,6 +583,8 @@
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
       this.geometry.buildingFaces = this.makeBuffer(buildingFaces);
+      this.geometry.roofFaces = this.makeBuffer(roofFaces);
+      this.geometry.roofLines = this.makeBuffer(roofLines);
       this.geometry.routes = this.makeBuffer(routes);
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
@@ -564,6 +598,8 @@
       const grid = [];
       const buildings = [];
       const buildingFaces = [];
+      const roofFaces = [];
+      const roofLines = [];
       const routes = [];
       const infrastructureLines = [];
       const infrastructureNodes = [];
@@ -615,6 +651,8 @@
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
       this.geometry.buildingFaces = this.makeBuffer(buildingFaces);
+      this.geometry.roofFaces = this.makeBuffer(roofFaces);
+      this.geometry.roofLines = this.makeBuffer(roofLines);
       this.geometry.routes = this.makeBuffer(routes);
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
@@ -628,6 +666,9 @@
       const grid = [];
       const buildings = [];
       const buildingFaces = [];
+      const roofFaces = [];
+      const roofLines = [];
+      const cityCenters = [];
       const nodes = [];
       const routes = [];
       const infrastructureLines = [];
@@ -645,36 +686,61 @@
       mesh.buildings.forEach((building, buildingIndex) => {
         const footprint = (building.footprint || []).map(([x, z]) => [x * scale, z * scale]);
         if (footprint.length < 3) return;
+        const openFootprint =
+          footprint.length > 3 &&
+          Math.hypot(
+            footprint[0][0] - footprint.at(-1)[0],
+            footprint[0][1] - footprint.at(-1)[1],
+          ) < 0.001
+            ? footprint.slice(0, -1)
+            : footprint;
+        if (openFootprint.length < 3) return;
+        const center = openFootprint
+          .reduce((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0])
+          .map((value) => value / openFootprint.length);
+        cityCenters.push(center);
         const baseHeight = Math.max(0, Number(building.minHeightM || 0) * scale);
         const height = Math.max(baseHeight + 0.035, Number(building.heightM || 12) * scale);
+        const roofHeight = clamp(Number(building.roofHeightM || 0) * scale, 0, Math.max(0, height - baseHeight));
+        const supportedApexRoof = /^(pyramidal|hipped|conical|dome|onion)$/u.test(String(building.roofShape || ''));
+        const wallTop = supportedApexRoof && roofHeight > 0 ? Math.max(baseHeight + 0.02, height - roofHeight) : height;
         const phase = buildingIndex * 0.13;
-        for (let index = 1; index < footprint.length; index += 1) {
-          const [ax, az] = footprint[index - 1];
-          const [bx, bz] = footprint[index];
+        for (let index = 0; index < openFootprint.length; index += 1) {
+          const [ax, az] = openFootprint[index];
+          const [bx, bz] = openFootprint[(index + 1) % openFootprint.length];
           const aBase = [ax, baseHeight, az];
           const bBase = [bx, baseHeight, bz];
-          const aTop = [ax, height, az];
-          const bTop = [bx, height, bz];
+          const aTop = [ax, wallTop, az];
+          const bTop = [bx, wallTop, bz];
           this.line(buildings, aBase, bBase, phase);
           this.line(buildings, aTop, bTop, phase + 0.2);
           this.line(buildings, aBase, aTop, phase + 0.4);
           this.triangle(buildingFaces, aBase, bBase, bTop, phase + 0.08);
           this.triangle(buildingFaces, aBase, bTop, aTop, phase + 0.16);
+
+          if (supportedApexRoof && roofHeight > 0) {
+            const apex = [center[0], height, center[1]];
+            this.triangle(roofFaces, aTop, bTop, apex, phase + 0.24);
+            this.line(roofLines, aTop, apex, phase + 0.28);
+          } else {
+            const roofCenter = [center[0], height, center[1]];
+            const aRoof = [ax, height, az];
+            const bRoof = [bx, height, bz];
+            this.triangle(roofFaces, aRoof, bRoof, roofCenter, phase + 0.24);
+          }
         }
 
-        if (buildingIndex < 80 && (building.name || buildingIndex % 8 === 0)) {
-          const center = footprint
-            .reduce(
-              (acc, point) => [acc[0] + point[0], acc[1] + point[1]],
-              [0, 0],
-            )
-            .map((value) => value / footprint.length);
+        if (buildingIndex < 120 && (building.name || buildingIndex % 10 === 0)) {
           const node = {
             id: building.id,
             label: building.name || `Building ${buildingIndex + 1}`,
             type: 'building',
             heightM: building.heightM,
+            heightSource: building.heightSource || null,
+            roofShape: building.roofShape || null,
+            buildingMaterial: building.buildingMaterial || null,
             osmId: building.osmId || null,
+            osmType: building.osmType || null,
             position: [center[0], height + 0.08, center[1]],
           };
           this.graphNodes.push(node);
@@ -772,6 +838,8 @@
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
       this.geometry.buildingFaces = this.makeBuffer(buildingFaces);
+      this.geometry.roofFaces = this.makeBuffer(roofFaces);
+      this.geometry.roofLines = this.makeBuffer(roofLines);
       this.geometry.routes = this.makeBuffer(routes);
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
@@ -780,9 +848,34 @@
       this.selectedNode = null;
       if (this.selectionBuffer?.buffer) this.gl.deleteBuffer(this.selectionBuffer.buffer);
       this.selectionBuffer = null;
-      this.yaw = 0.78;
-      this.pitch = 0.57;
-      this.distance = 18;
+      this.environment = mesh.environment || null;
+      this.skylineProfile = mesh.skylineProfile || null;
+
+      let dominantYaw = 0.78;
+      if (cityCenters.length >= 6) {
+        const mean = cityCenters
+          .reduce((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0])
+          .map((value) => value / cityCenters.length);
+        let xx = 0;
+        let zz = 0;
+        let xz = 0;
+        cityCenters.forEach(([x, z]) => {
+          const dx = x - mean[0];
+          const dz = z - mean[1];
+          xx += dx * dx;
+          zz += dz * dz;
+          xz += dx * dz;
+        });
+        dominantYaw = 0.5 * Math.atan2(2 * xz, xx - zz) + 0.76;
+      }
+      const skylineUnits = Number(mesh.skylineProfile?.maxHeightM || 0) * scale;
+      const densityBias = clamp((Number(mesh.skylineProfile?.buildingCount || 0) - 300) / 1400, 0, 1);
+      this.cityCameraTarget = {
+        yaw: dominantYaw,
+        pitch: clamp(0.5 + skylineUnits * 0.025, 0.5, 0.72),
+        distance: clamp(17 + skylineUnits * 0.72 + densityBias * 2.5, 17, 27),
+      };
+      Object.assign(this, this.cityCameraTarget);
       this.updateReadout();
     }
 
@@ -796,7 +889,7 @@
     }
 
     cinematicEntrance(durationMs = 1050) {
-      const target = { yaw: 0.78, pitch: 0.57, distance: 18 };
+      const target = this.cityCameraTarget || { yaw: 0.78, pitch: 0.57, distance: 18 };
       if (state.settings.reducedMotion) {
         Object.assign(this, target);
         this.updateReadout();
@@ -1006,7 +1099,19 @@
       gl.depthFunc(gl.LEQUAL);
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-      gl.clearColor(0.008, 0.025, 0.06, 1);
+      const liveIsDay = this.environment?.current?.isDay;
+      const temporalIsDay = this.timeHours >= 6 && this.timeHours < 18;
+      const dayMode = liveIsDay == null ? temporalIsDay : Math.abs(this.timeHours - (environmentHour(this.environment) ?? this.timeHours)) < 0.3 ? liveIsDay : temporalIsDay;
+      const cloud = clamp(Number(this.environment?.current?.cloudCoverPercent || 0) / 100, 0, 1);
+      if (isLightTheme()) {
+        const base = dayMode ? 0.92 - cloud * 0.08 : 0.82;
+        gl.clearColor(base, base + 0.025, Math.min(1, base + 0.055), 1);
+      } else if (dayMode) {
+        gl.clearColor(0.018 + cloud * 0.008, 0.055 + cloud * 0.012, 0.11 + cloud * 0.02, 1);
+      } else {
+        if (isLightTheme()) gl.clearColor(0.9, 0.94, 0.98, 1);
+      else gl.clearColor(0.004, 0.015, 0.04, 1);
+      }
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.useProgram(this.program);
       gl.uniformMatrix4fv(this.loc.mvp, false, mvp);
@@ -1029,11 +1134,15 @@
       if (this.layers.grid) this.drawBuffer(this.geometry.grid, gl.LINES, [0.09, 0.42, 0.75, this.cityVisualMode === 'operations' ? 0.18 : 0.42], 0.045 * amplitude);
       if (this.layers.buildings && this.cityVisualMode !== 'xray') {
         const faceAlpha = this.cityVisualMode === 'operations' ? 0.13 : 0.28;
-        this.drawBuffer(this.geometry.buildingFaces, gl.TRIANGLES, [0.035, 0.31, 0.58, faceAlpha], 0.025 * amplitude);
+        const faceColor = isLightTheme() ? [0.15, 0.42, 0.62, faceAlpha] : [0.035, 0.31, 0.58, faceAlpha];
+        this.drawBuffer(this.geometry.buildingFaces, gl.TRIANGLES, faceColor, 0.025 * amplitude);
+        this.drawBuffer(this.geometry.roofFaces, gl.TRIANGLES, isLightTheme() ? [0.23, 0.49, 0.7, Math.min(0.48, faceAlpha + 0.12)] : [0.08, 0.46, 0.78, Math.min(0.52, faceAlpha + 0.12)], 0.018 * amplitude);
       }
       if (this.layers.buildings) {
         const edgeAlpha = this.cityVisualMode === 'xray' ? 0.28 : this.cityVisualMode === 'operations' ? 0.38 : 0.72;
-        this.drawBuffer(this.geometry.buildings, gl.LINES, [0.14, 0.64, 1, edgeAlpha], 0.07 * amplitude);
+        const edgeColor = isLightTheme() ? [0.03, 0.31, 0.52, edgeAlpha] : [0.14, 0.64, 1, edgeAlpha];
+        this.drawBuffer(this.geometry.buildings, gl.LINES, edgeColor, 0.07 * amplitude);
+        this.drawBuffer(this.geometry.roofLines, gl.LINES, isLightTheme() ? [0.21, 0.19, 0.55, edgeAlpha] : [0.55, 0.64, 1, edgeAlpha], 0.05 * amplitude);
       }
       if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [0.67, 0.48, 0.98, Math.min(1, 0.64 * trailBoost)], 0.075 * amplitude * trailBoost);
       if (this.layers.infrastructure) {
@@ -1553,7 +1662,7 @@
     if (q('#globalCoordinates')) q('#globalCoordinates').textContent = `${latLabel} · ${lonLabel}`;
     const status = q('#cityMeshStatus');
     if (status) {
-      status.innerHTML = `<b>${escapeHtml(city.name)} · ${escapeHtml(city.country)}</b><p>Real-coordinate world node selected. Descend to request live buildings, roads and mapped power infrastructure.</p>`;
+      status.innerHTML = `<b>${escapeHtml(city.name)} · ${escapeHtml(city.district || city.country)}</b><p>Real-coordinate skyline focus selected. Descend to request current open-source structures, roads, terrain, environment context and mapped power infrastructure.</p>`;
     }
   }
 
@@ -1619,7 +1728,7 @@
         list.innerHTML = state.geospatial.cities
           .map(
             (city) =>
-              `<button class="global-city-button${city.id === state.geospatial.selectedCityId ? ' active' : ''}" data-global-city="${escapeHtml(city.id)}"><b>${escapeHtml(city.name)}</b><small>${escapeHtml(city.country)} · ${Number(city.lat).toFixed(2)}, ${Number(city.lon).toFixed(2)}</small><em>ENTER</em></button>`,
+              `<button class="global-city-button${city.id === state.geospatial.selectedCityId ? ' active' : ''}" data-global-city="${escapeHtml(city.id)}"><b>${escapeHtml(city.name)}</b><small>${escapeHtml(city.district || city.country)} · ${Number(city.lat).toFixed(2)}, ${Number(city.lon).toFixed(2)}</small><em>ENTER</em></button>`,
           )
           .join('');
       }
@@ -1646,7 +1755,7 @@
         list.innerHTML = state.geospatial.cities
           .map(
             (city) =>
-              `<button class="global-city-button${city.id === state.geospatial.selectedCityId ? ' active' : ''}" data-global-city="${escapeHtml(city.id)}"><b>${escapeHtml(city.name)}</b><small>${escapeHtml(city.country)} · ${Number(city.lat).toFixed(2)}, ${Number(city.lon).toFixed(2)}</small><em>ENTER</em></button>`,
+              `<button class="global-city-button${city.id === state.geospatial.selectedCityId ? ' active' : ''}" data-global-city="${escapeHtml(city.id)}"><b>${escapeHtml(city.name)}</b><small>${escapeHtml(city.district || city.country)} · ${Number(city.lat).toFixed(2)}, ${Number(city.lon).toFixed(2)}</small><em>ENTER</em></button>`,
           )
           .join('');
       }
@@ -1678,6 +1787,10 @@
         id: `standalone-${index + 1}`,
         name: '',
         heightM: 9 + random() * 110,
+        heightSource: 'synthetic-fallback',
+        minHeightM: 0,
+        roofShape: '',
+        roofHeightM: 0,
         footprint: [
           [x - width, z - depth],
           [x + width, z - depth],
@@ -1756,8 +1869,11 @@
         });
       }
     }
+    const fallbackHeights = buildings.map((building) => Number(building.heightM || 0)).sort((a, b) => a - b);
+    const fallbackPercentile = (amount) =>
+      fallbackHeights[Math.min(fallbackHeights.length - 1, Math.floor((fallbackHeights.length - 1) * amount))] || 0;
     return {
-      schemaVersion: 2,
+      schemaVersion: 3,
       city,
       source: {
         provider: 'standalone-local-fallback',
@@ -1765,6 +1881,25 @@
         attribution: 'Live OpenStreetMap geometry requires the Node backend.',
       },
       buildings,
+      skylineProfile: {
+        district: city.district || null,
+        buildingCount: buildings.length,
+        maxHeightM: Number(Math.max(...fallbackHeights).toFixed(1)),
+        p95HeightM: Number(fallbackPercentile(0.95).toFixed(1)),
+        medianHeightM: Number(fallbackPercentile(0.5).toFixed(1)),
+        sourceBackedHeightCoveragePercent: 0,
+        buildingPartCount: 0,
+        roofTaggedCount: 0,
+        upstreamTimestamp: null,
+        sourceProvider: 'standalone-local-fallback',
+        live: false,
+      },
+      environment: {
+        schemaVersion: 1,
+        coordinate: { lat: city.lat, lon: city.lon },
+        source: { provider: 'local-environment-fallback', live: false, attribution: null, fetchedAt: new Date().toISOString() },
+        current: null,
+      },
       roads,
       powerLines,
       powerAssets,
@@ -1786,11 +1921,25 @@
     const stats = q('#globalGridStats');
     if (!stats) return;
     const terrain = mesh.terrain;
+    const skyline = mesh.skylineProfile || {};
+    const environment = mesh.environment?.current || null;
     const elevation =
       terrain && Number.isFinite(Number(terrain.minElevationM)) && Number.isFinite(Number(terrain.maxElevationM))
         ? `${Math.round(Number(terrain.minElevationM))}–${Math.round(Number(terrain.maxElevationM))} m`
         : '—';
-    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
+    const skylineMax = Number.isFinite(Number(skyline.maxHeightM)) && Number(skyline.maxHeightM) > 0
+      ? `${Number(skyline.maxHeightM).toFixed(0)} m`
+      : '—';
+    const p95 = Number.isFinite(Number(skyline.p95HeightM)) && Number(skyline.p95HeightM) > 0
+      ? `${Number(skyline.p95HeightM).toFixed(0)} m`
+      : '—';
+    const heightCoverage = Number.isFinite(Number(skyline.sourceBackedHeightCoveragePercent))
+      ? `${Number(skyline.sourceBackedHeightCoveragePercent).toFixed(0)}%`
+      : '—';
+    const weather = environment
+      ? `${Number.isFinite(environment.temperatureC) ? `${Number(environment.temperatureC).toFixed(1)}°C` : 'current'} · ${Number.isFinite(environment.cloudCoverPercent) ? `${Number(environment.cloudCoverPercent).toFixed(0)}% cloud` : environment.isDay ? 'day' : 'night'}`
+      : '—';
+    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Skyline Max</b><em>${skylineMax}</em></span><span><b>P95 Height</b><em>${p95}</em></span><span><b>Height Data</b><em>${heightCoverage}</em></span><span><b>Weather</b><em>${weather}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
   }
 
   function showCityTransition(city, stage = 'Aligning global coordinate…', progress = 8) {
@@ -1816,7 +1965,11 @@
     state.geospatial.cityMesh = result;
     if (Array.isArray(result.activity)) state.activity = result.activity;
     cityGrid?.loadCityMesh(result);
-    cityGrid?.setTime(q('#globalTimeSlider')?.value || state.settings.defaultHour);
+    const liveHour = environmentHour(result.environment);
+    const initialHour = liveHour ?? Number(q('#globalTimeSlider')?.value || state.settings.defaultHour);
+    cityGrid?.setTime(initialHour);
+    if (q('#globalTimeSlider')) q('#globalTimeSlider').value = String(initialHour);
+    if (q('#globalTimeValue')) q('#globalTimeValue').textContent = formatHour(initialHour);
     cityGrid?.setCityVisualMode('solid');
     qa('[data-city-visual]').forEach((button) => button.classList.toggle('active', button.dataset.cityVisual === 'solid'));
     state.geospatial.activeUseCase = null;
@@ -1838,13 +1991,25 @@
       const attributions = [
         result.source?.attribution,
         result.terrain?.source?.attribution,
+        result.environment?.source?.attribution,
       ].filter(Boolean);
       q('#geoAttribution').textContent =
         attributions.join(' · ') ||
         'Live city geometry unavailable; using local fallback geometry.';
     }
     if (status) {
-      status.innerHTML = `<b>${escapeHtml(result.city.name)} · ${result.buildings.length} buildings · ${(result.roads || []).length} roads · ${(result.powerAssets || []).length} power assets</b><p>${result.source?.live ? 'Live OpenStreetMap building, road and power-infrastructure geometry is rendered as independent interactive 3D layers.' : 'Provider request could not be completed; clearly marked local fallback geometry is being rendered.'}</p><button class="secondary-button" data-action="reload-city-live">REFRESH LIVE GEOMETRY</button>`;
+      const skyline = result.skylineProfile || {};
+      const env = result.environment?.current || null;
+      const district = result.city?.district ? ` · ${escapeHtml(result.city.district)}` : '';
+      const maxHeight = Number.isFinite(Number(skyline.maxHeightM)) ? ` · max ${Number(skyline.maxHeightM).toFixed(0)} m` : '';
+      const heightCoverage = Number.isFinite(Number(skyline.sourceBackedHeightCoveragePercent)) ? ` · ${Number(skyline.sourceBackedHeightCoveragePercent).toFixed(0)}% source-backed heights` : '';
+      const currentContext = env ? ` Current environment: ${Number.isFinite(env.temperatureC) ? `${Number(env.temperatureC).toFixed(1)}°C, ` : ''}${Number.isFinite(env.cloudCoverPercent) ? `${Number(env.cloudCoverPercent).toFixed(0)}% cloud, ` : ''}${env.isDay ? 'daylight' : 'night'}.` : '';
+      status.innerHTML = `<b>${escapeHtml(result.city.name)}${district} · ${result.buildings.length} mapped structures${maxHeight}</b><p>${result.source?.live ? `Current OpenStreetMap geometry is rendered from source-backed footprints/parts; height coverage ${heightCoverage || 'is shown in the stats panel'}.` : 'Provider request could not be completed; clearly marked local fallback geometry is being rendered.'}${currentContext}</p><button class="secondary-button" data-action="reload-city-live">REFRESH OPEN DATA</button>`;
+    }
+    if (q('#geoProvenance')) {
+      const upstream = result.source?.upstreamTimestamp || result.source?.fetchedAt || 'unavailable';
+      const weatherAt = result.environment?.source?.modelTime || result.environment?.current?.time || 'unavailable';
+      q('#geoProvenance').innerHTML = `<span><b>Geometry</b><em>${escapeHtml(result.source?.provider || 'local')}</em></span><span><b>OSM State</b><em>${escapeHtml(upstream)}</em></span><span><b>Environment</b><em>${escapeHtml(result.environment?.source?.provider || 'local')}</em></span><span><b>Observed</b><em>${escapeHtml(weatherAt)}</em></span><span><b>Height Coverage</b><em>${Number(result.skylineProfile?.sourceBackedHeightCoveragePercent || 0).toFixed(0)}%</em></span><span><b>Actuation</b><em>Disabled</em></span>`;
     }
     renderActivity();
     showToast(
@@ -2081,12 +2246,26 @@
       input.focus();
     }
   });
+  function syncCityLiveNow() {
+    const environment = state.geospatial.cityMesh?.environment;
+    const hour = environmentHour(environment);
+    if (hour == null) {
+      showToast('LIVE TIME UNAVAILABLE', 'Load a backend-connected city with current environment data first.');
+      return;
+    }
+    cityGrid?.setTime(hour);
+    if (q('#globalTimeSlider')) q('#globalTimeSlider').value = String(hour);
+    if (q('#globalTimeValue')) q('#globalTimeValue').textContent = formatHour(hour);
+    showToast('LIVE CITY TIME', `${state.geospatial.cityMesh?.city?.name || 'City'} · ${formatHour(hour)} local model time`);
+  }
+
   q('#globalTimeSlider')?.addEventListener('input', (event) => {
     cityGrid?.setTime(event.target.value);
     if (q('#globalTimeValue')) {
       q('#globalTimeValue').textContent = formatHour(event.target.value);
     }
   });
+  q('[data-action="city-live-now"]')?.addEventListener('click', syncCityLiveNow);
   q('[data-global-action="reset"]')?.addEventListener('click', () => {
     globalGlobe?.reset();
     setGlobalMode('globe');

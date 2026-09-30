@@ -153,7 +153,7 @@ A fresh ZIP is considered functional when:
 
 ## Current verified state
 
-Batches 1–11 are implemented and required to pass the maintained verification gates before merge to `main`.
+Batches 1–12 are implemented and have passed the maintained feature-branch verification gates; the exact merge candidate must remain green before entering `main`.
 
 - Grid, Global, Holographic, Quantum, AI, Scenarios, Evidence and Settings are distinct routed workspaces.
 - WebGL node picking, scenario editing/duplication, evidence drill-down, agent receipts, persistent settings/profile, global coordinate exploration, mapped grid infrastructure, terrain and quantum provider workflows are all present.
@@ -164,11 +164,12 @@ Batches 1–11 are implemented and required to pass the maintained verification 
 
 The CI-built functional application archive was inspected after the final release gates passed:
 
-- 26 regular files;
+- 27 regular files;
 - 0 empty files;
 - includes `standalone.html`, modular HTML/CSS/JS, Node backend, provider-neutral AI runtime, agent config, JSON manifests, brand assets, app-local environment example, PowerShell/CMD launchers, README, file inventory and SHA-256 sums;
 - the old dashboard screenshot is not required by the runtime package;
 - tests, lint, typecheck, coverage, fresh-clone smoke, container smoke, quality/release-readiness and CodeQL are required before merge.
+- v2.6 verified functional ZIP: 684,707 bytes; SHA-256 `ea253b688d9c5195f99cdc5a3b79e020d697023d48772b63c2ef0fb783d4e3a6`.
 
 ## Batch 8 — Global intelligence, operator identity, and external compute
 
@@ -213,7 +214,7 @@ Status: COMPLETE
 
 ## Batch 9 — Global grid intelligence and shared agent context
 
-Status: IMPLEMENTED / VERIFYING
+Status: COMPLETE
 
 ### Arbitrary coordinate exploration
 - operator-entered latitude/longitude;
@@ -329,3 +330,43 @@ Each workflow analyzes the currently loaded bounded city mesh, returns transpare
 - city-operation tests must prove all five workflows stay bounded and advisory-only;
 - agent-thread UI must preserve separate history while backend agent/team routes remain unchanged;
 - all pre-existing tests, coverage, lint, typecheck, smoke, release-readiness, package and CodeQL gates must remain green.
+
+## Batch 12 — Source-backed skyline fidelity, live city context, and appearance modes
+
+Status: COMPLETE
+
+### City-specific 3D/4D identity
+- preset city coordinates target recognizable skyline districts rather than generic centroids;
+- OpenStreetMap ways and relation outer geometry are accepted for buildings and building parts;
+- source-backed height supports `height`, `est_height`, `building:levels`, `min_height`, and `building:min_level`;
+- the former 450 m renderer cap is removed; verified source heights are preserved up to a defensive 1,200 m ceiling;
+- supported source roof shapes and roof heights generate native WebGL roof surfaces/lines;
+- dense city samples preserve source-backed tall/complex structures before spatially sampling the remainder;
+- each city fly-in derives camera yaw from its footprint distribution and distance/pitch from its skyline profile;
+- skyline max, P95 height, source-backed height coverage, building-part count, roof coverage and upstream timestamp remain explicit metadata.
+
+### Current open-data context
+- OpenStreetMap Overpass remains operator-triggered and attribution-bound;
+- upstream OSM timestamp is retained when returned by Overpass;
+- `city-environment-runtime.mjs` adds current Open-Meteo temperature, apparent temperature, weather code, cloud cover, daylight, precipitation, wind speed and wind direction;
+- terrain remains bounded Open-Meteo Elevation / Copernicus DEM GLO-90 sampling;
+- city 4D time synchronizes to current local model time when environment context is available;
+- LIVE NOW restores the current city time after temporal exploration;
+- provider timestamps and fallback state are visible rather than represented as live when unavailable.
+
+### Appearance
+- Settings expose Dark, Light and System modes;
+- appearance persists in the existing local settings store;
+- System mode reacts to operating-system color preference changes;
+- semantic panels, controls and native WebGL city/globe palettes respond to the resolved theme.
+
+### Fidelity boundary
+The city twin is only as exact as the open-source geometry and metadata available for the selected coordinate. ÆTHERGRID must never invent an unverified landmark, façade, roof dimension or hardware state and then label it as source-backed. Missing data remains visible through coverage/provenance readouts or an explicit fallback state.
+
+### Verification requirements
+- tests prove an 828 m source height is not flattened and imperial heights are converted correctly;
+- tests prove relation building geometry and roof metadata survive parsing;
+- tests prove current environment data maps through the provider-neutral runtime without browser secrets;
+- release readiness requires roof buffers, city-specific camera framing, live-time controls and Light/Dark/System settings;
+- the full ZIP requires the new city environment runtime as a non-empty file;
+- all existing safety, coverage, smoke, packaging and CodeQL gates remain mandatory.

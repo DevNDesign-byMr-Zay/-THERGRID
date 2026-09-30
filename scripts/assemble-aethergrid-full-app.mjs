@@ -19,6 +19,7 @@ const REQUIRED_FILES = Object.freeze([
   'ai-runtime.mjs',
   'profile-store.mjs',
   'geo-runtime.mjs',
+  'city-environment-runtime.mjs',
   'terrain-runtime.mjs',
   'quantum-runtime.mjs',
   'app.json',
@@ -177,6 +178,8 @@ assert(/id="globalPointLon"/u.test(sourceHtml), 'runtime index.html must expose 
 assert(/data-global-layer="infrastructure"/u.test(sourceHtml), 'runtime index.html must expose the live power-grid layer toggle');
 assert(/data-global-layer="terrain"/u.test(sourceHtml), 'runtime index.html must expose the live terrain layer toggle');
 assert(/id="globalTimeSlider"/u.test(sourceHtml), 'runtime index.html must expose the global 4D time index');
+assert(/data-action="city-live-now"/u.test(sourceHtml), 'runtime index.html must expose city live-time synchronization');
+assert(/id="settingTheme"/u.test(sourceHtml), 'runtime index.html must expose persistent appearance modes');
 assert(/id="profileForm"/u.test(sourceHtml), 'runtime index.html must expose the persistent operator profile form');
 assert(/id="quantumCircuit"/u.test(sourceHtml), 'runtime index.html must expose real quantum job controls');
 assert(/data-agent="TEAM"/u.test(sourceHtml), 'runtime index.html must expose team-agent mode');
@@ -204,6 +207,8 @@ assert(!/assets\/brand\//u.test(standaloneHtml), 'standalone HTML must embed bra
 assert(/attribute vec4 a_position/u.test(standaloneHtml), 'standalone HTML must embed the native 4D WebGL shader');
 assert(/data-workspace="holographic"/u.test(standaloneHtml), 'standalone HTML must retain routed workspaces');
 assert(/id="settingDefaultWorkspace"/u.test(standaloneHtml), 'standalone HTML must retain functional settings controls');
+assert(/id="settingTheme"/u.test(standaloneHtml), 'standalone HTML must retain light/dark/system appearance controls');
+assert(/data-action="city-live-now"/u.test(standaloneHtml), 'standalone HTML must retain live city-time controls');
 assert(/id="globalPointLat"/u.test(standaloneHtml), 'standalone HTML must retain coordinate exploration controls');
 assert(/data-global-layer="infrastructure"/u.test(standaloneHtml), 'standalone HTML must retain the power-grid layer control');
 assert(/data-global-layer="terrain"/u.test(standaloneHtml), 'standalone HTML must retain the terrain layer control');
@@ -213,6 +218,9 @@ assert(/infrastructureLines/u.test(standaloneHtml), 'standalone HTML must retain
 assert(/terrainLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL terrain geometry');
 assert(/data-global-layer="terrain"/u.test(standaloneHtml), 'standalone HTML must retain terrain layer controls');
 assert(/terrainLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL terrain geometry');
+assert(/roofFaces/u.test(standaloneHtml), 'standalone HTML must retain source-shaped roof geometry');
+assert(/resolvedTheme/u.test(standaloneHtml), 'standalone HTML must retain appearance mode logic');
+assert(/environmentHour/u.test(standaloneHtml), 'standalone HTML must retain live city time synchronization');
 payload.set('standalone.html', Buffer.from(standaloneHtml, 'utf8'));
 
 const inventory = [...payload.entries()]
@@ -238,7 +246,13 @@ payload.set(
           'live-elevation-terrain',
           'replaceable-ai-agents',
           'ibm-quantum-compute-adapter',
-          'persistent-operator-profile'
+          'persistent-operator-profile',
+          'source-backed-city-roofs',
+          'city-specific-skyline-framing',
+          'live-open-city-environment',
+          'city-local-live-time-sync',
+          'light-dark-system-theme',
+          'skyline-data-quality'
         ],
         files: inventory,
       },
