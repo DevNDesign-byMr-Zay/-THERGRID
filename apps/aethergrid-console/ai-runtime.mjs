@@ -203,15 +203,26 @@ export function createAgentRuntime({ env = process.env, now = () => Date.now() }
     let synthesisResult;
     let error = null;
     try {
-      synthesisResult = await providerComplete(
-        team,
-        [
-          { role: 'system', content: team.systemPrompt },
-          contextMessage(context),
-          { role: 'user', content: synthesisPrompt, context },
-        ],
-        controller.signal,
-      );
+      if (team.provider === 'local') {
+        synthesisResult = {
+          text:
+            `TEAM SYNTHESIS\n\n` +
+            contributions.map((item) => `${item.id}: ${item.reply}`).join('\n\n') +
+            '\n\nCombined next step: reconcile optimization tradeoffs with the spatial analysis, then validate the candidate through SOLVÆR evidence before operator promotion. Authority remains advisory-only.',
+          usage: null,
+          providerRequestId: null,
+        };
+      } else {
+        synthesisResult = await providerComplete(
+          team,
+          [
+            { role: 'system', content: team.systemPrompt },
+            contextMessage(context),
+            { role: 'user', content: synthesisPrompt, context },
+          ],
+          controller.signal,
+        );
+      }
     } catch (providerError) {
       fallbackUsed = true;
       error = providerError instanceof Error ? providerError.message : String(providerError);
