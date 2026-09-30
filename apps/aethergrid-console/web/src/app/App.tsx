@@ -446,6 +446,7 @@ export function App() {
               <>
                 <h3>{selection.id}</h3>
                 <p>{selection.kind}</p>
+                <small className="selection-hint">ESC TO CLEAR</small>
                 <dl>
                   <div><dt>SOURCE</dt><dd>{selection.source ?? 'UNKNOWN'}</dd></div>
                   <div><dt>LAT</dt><dd>{selection.latitude?.toFixed(5) ?? '—'}</dd></div>
