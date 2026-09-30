@@ -187,3 +187,21 @@ AETHERGRID_OPEN_METEO_API_KEY=
 The terrain request is limited to a 3×3–9×9 grid, which remains within the provider adapter's bounded request contract. Elevation provenance is shown separately from OpenStreetMap provenance. The standalone HTML keeps a flat local terrain surface so the TERRAIN control remains functional without network access.
 
 Deployment owners are responsible for using provider access and licensing that fits their deployment, including commercial usage where applicable.
+
+## Terrain and elevation layer
+
+The GLOBAL city renderer now supports a real terrain layer in addition to buildings, roads and mapped power infrastructure.
+
+Backend-connected mode uses the provider-neutral `terrain-runtime.mjs`. The default live adapter samples elevation through Open-Meteo's Elevation API, which exposes Copernicus DEM GLO-90 elevation data. Sampling is bounded to a small 3×3 through 9×9 grid around the operator-selected coordinate. The resulting elevation points are projected into the same local metric frame as the city geometry and rendered as native WebGL terrain wireframes.
+
+The terrain layer can be toggled independently with **TERRAIN**. It does not replace the city with a raster or screenshot.
+
+Configuration:
+
+```text
+AETHERGRID_TERRAIN_PROVIDER=open-meteo
+AETHERGRID_ELEVATION_URL=https://api.open-meteo.com/v1/elevation
+AETHERGRID_OPEN_METEO_API_KEY=
+```
+
+When the live elevation provider is unavailable, the renderer uses a clearly labeled flat local fallback. Terrain source attribution is shown alongside OpenStreetMap attribution. Terrain summaries may be passed to the AI team as bounded context, but no terrain or AI path grants physical actuation authority.
