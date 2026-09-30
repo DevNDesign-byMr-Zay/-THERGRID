@@ -88,7 +88,10 @@
     "global-city-time-index",
     "agent-external-context",
     "live-elevation-terrain",
-    "terrain-wireframe-layer"
+    "terrain-wireframe-layer",
+    "live-terrain-elevation",
+    "independent-terrain-layer",
+    "terrain-fallback"
   ],
   "agents": [
     {
@@ -304,17 +307,29 @@
       "buildings",
       "roads",
       "power-lines",
-      "power-assets"
+      "power-assets",
+      "terrain"
     ],
     "liveTerrain": true,
-    "terrainProvider": "Open-Meteo elevation / Copernicus DEM GLO-90",
+    "terrainProvider": "Open-Meteo Elevation / Copernicus DEM GLO-90",
     "terrainLayerControl": true,
-    "terrainEndpoint": "GET /api/aethergrid/terrain"
+    "terrainEndpoint": "GET /api/aethergrid/terrain",
+    "liveTerrainElevation": true
   },
   "profile": {
     "persistence": "backend local JSON with browser cache fallback",
     "editable": true,
     "avatar": true,
     "avatarMaxEncodedBytes": 180000
+  },
+  "terrainRuntime": {
+    "providerEndpoint": "GET /api/aethergrid/terrain/runtime",
+    "sampleEndpoint": "GET /api/aethergrid/terrain",
+    "providers": [
+      "open-meteo",
+      "flat-local"
+    ],
+    "maxGridSize": 9,
+    "serverSideCredentials": true
   }
 }
