@@ -410,7 +410,7 @@ export function App() {
           <div className="scene-caption">
             <span>{city.name}</span>
             <strong>{city.latitude.toFixed(4)}°, {city.longitude.toFixed(4)}°</strong>
-            <small>DOUBLE-CLICK A 3D FEATURE TO INSPECT</small>
+            <small>CLICK OR TAP A 3D FEATURE TO INSPECT</small>
           </div>
         </section>
 
