@@ -279,7 +279,10 @@ test('v4 city-live context renders source-backed AQI and seismic events only in 
   assert.match(layer, /#ff7b63/u);
   assert.match(app, /AIR QUALITY/u);
   assert.match(app, /AQI /u);
-  assert.match(app, /temporal\.mode === 'live' \? seismicToOverlay/u);
+  assert.match(
+    app,
+    /scope === 'city' && liveContext && temporal\.mode === 'live'[\s\S]*seismicToOverlay\(liveContext\)/u,
+  );
   assert.match(app, /Current AQI and seismic context are hidden outside LIVE mode/u);
 });
 
