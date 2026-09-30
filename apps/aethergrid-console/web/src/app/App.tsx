@@ -10,6 +10,7 @@ import { QuantumPanel } from '../components/QuantumPanel';
 import { ProfileMenu } from '../components/ProfileMenu';
 import { ScenarioPanel } from '../components/ScenarioPanel';
 import { SpatialAnalysisPanel } from '../components/SpatialAnalysisPanel';
+import { SpatialComparisonPanel } from '../components/SpatialComparisonPanel';
 import { RuntimeDiagnosticsPanel } from '../components/RuntimeDiagnosticsPanel';
 import { SpatialViewport } from '../components/SpatialViewport';
 import { TemporalRail } from '../components/TemporalRail';
@@ -57,6 +58,11 @@ import {
   measurementToOverlay,
   type SpatialMeasurement
 } from '../services/spatial-analysis';
+import {
+  captureSpatialObservation,
+  compareSpatialObservations,
+  type SpatialObservation
+} from '../services/spatial-comparison';
 import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
 import type { SpatialViewBookmark } from '../services/view-bookmarks';
 import {
@@ -190,6 +196,10 @@ export function App() {
     useState<readonly SpatialSurfacePoint[]>([]);
   const [measurementFrame, setMeasurementFrame] =
     useState<TemporalInstant | null>(null);
+  const [observationA, setObservationA] =
+    useState<SpatialObservation | null>(null);
+  const [observationB, setObservationB] =
+    useState<SpatialObservation | null>(null);
   const [powerOverlay, setPowerOverlay] = useState<SpatialOverlaySnapshot | null>(null);
   const [illuminationOverlay, setIlluminationOverlay] =
     useState<SpatialOverlaySnapshot | null>(null);
@@ -241,6 +251,14 @@ export function App() {
         ? measurementToOverlay(measurement, measurementFrame)
         : null,
     [measurement, measurementFrame]
+  );
+
+  const spatialComparison = useMemo(
+    () =>
+      observationA && observationB
+        ? compareSpatialObservations(observationA, observationB)
+        : null,
+    [observationA, observationB]
   );
 
   useEffect(() => {
@@ -582,6 +600,56 @@ export function App() {
   const clearMeasurement = () => {
     setMeasurementPoints([]);
     setMeasurementFrame(null);
+  };
+
+  const captureObservation = (slot: 'a' | 'b') => {
+    const observation = captureSpatialObservation({
+      region: scope === 'world' ? 'GLOBAL' : city.name,
+      latitude: scope === 'world' ? 20 : city.latitude,
+      longitude: scope === 'world' ? 0 : city.longitude,
+      temporal: temporalInstant,
+      useCase: activeUseCase,
+      visualMode,
+      cityIdentity: scope === 'city' ? cityIdentity : null,
+      atmosphere:
+        scope === 'city' && temporal.mode === 'live' ? atmosphere : null,
+      liveContext:
+        scope === 'city' && temporal.mode === 'live' ? liveContext : null,
+      selection,
+      measurement
+    });
+
+    if (slot === 'a') setObservationA(observation);
+    else setObservationB(observation);
+  };
+
+  const clearComparison = () => {
+    setObservationA(null);
+    setObservationB(null);
+  };
+
+  const analyzeComparison = () => {
+    if (!spatialComparison) return;
+    const deltas = spatialComparison.metricDeltas
+      .slice(0, 10)
+      .map(
+        (metric) =>
+          `${metric.label}: ${metric.a.toFixed(2)} → ${metric.b.toFixed(2)} (${
+            metric.delta >= 0 ? '+' : ''
+          }${metric.delta.toFixed(2)} ${metric.unit})`
+      )
+      .join('; ');
+
+    setAgentHandoff((current) => ({
+      id: (current?.id ?? 0) + 1,
+      agent: 'AUREN',
+      prompt:
+        `Compare operator-captured Frame A (${spatialComparison.a.region}, ${spatialComparison.a.temporal.mode}, ${spatialComparison.a.temporal.iso}) with Frame B (${spatialComparison.b.region}, ${spatialComparison.b.temporal.mode}, ${spatialComparison.b.temporal.iso}). ` +
+        `Mutually available numeric changes: ${deltas || 'none'}. ` +
+        'Use the active spatial context and provenance. Distinguish observation from modeled context, do not infer causation from correlation, identify missing/non-comparable fields, and suggest evidence needed before an operator decision.'
+    }));
+    setIntelWorkspace('ai');
+    setIntelOpen(true);
   };
 
   const changeInteractionMode = (mode: SpatialInteractionMode) => {
@@ -1252,6 +1320,14 @@ export function App() {
               measurement={measurement}
               onModeChange={changeInteractionMode}
               onReset={clearMeasurement}
+            />
+            <SpatialComparisonPanel
+              a={observationA}
+              b={observationB}
+              comparison={spatialComparison}
+              onCapture={captureObservation}
+              onClear={clearComparison}
+              onAnalyze={spatialComparison ? analyzeComparison : undefined}
             />
           </div>
           <div className="intel-workspace intel-ai">
