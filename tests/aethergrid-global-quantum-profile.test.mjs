@@ -340,10 +340,17 @@ test('IBM Quantum adapter submits jobs while keeping credentials private', async
     }
     if (href === 'https://quantum.example.test/api/v1/jobs' && options.method === 'POST') {
       const body = JSON.parse(options.body);
-      assert.equal(body.program_id, 'sampler');
       assert.equal(body.backend, 'ibm_test_qpu');
       assert.equal(body.params.version, 2);
       assert.match(body.params.pubs[0][0], /^OPENQASM 3\.0;/u);
+      if (body.program_id === 'estimator') {
+        assert.equal(body.params.pubs[0][1], 'ZZ');
+        return new Response(JSON.stringify({ id: 'job-estimator-456', status: 'Queued' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+      assert.equal(body.program_id, 'sampler');
       return new Response(JSON.stringify({ id: 'job-123', status: 'Queued' }), {
         status: 200,
         headers: { 'content-type': 'application/json' },
@@ -436,6 +443,20 @@ test('IBM Quantum adapter submits jobs while keeping credentials private', async
   assert.equal(submitted.hardwareExecuted, false);
   assert.match(submitted.receipt, /^[a-f0-9]{64}$/u);
 
+  const estimator = await runtime.submitEstimator({
+    backend: 'ibm_test_qpu',
+    circuit:
+      'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; h q[0]; cx q[0], q[1];',
+    observable: 'ZZ',
+  });
+  assert.equal(estimator.id, 'job-estimator-456');
+  assert.equal(estimator.provider, 'ibm-quantum');
+  assert.equal(estimator.programId, 'estimator');
+  assert.equal(estimator.observable, 'ZZ');
+  assert.equal(estimator.hardwareSubmitted, true);
+  assert.equal(estimator.hardwareExecuted, false);
+  assert.match(estimator.receipt, /^[a-f0-9]{64}$/u);
+
   const jobs = await runtime.listJobs();
   assert.equal(jobs.jobs[0].id, 'job-123');
   assert.equal(jobs.jobs[0].programId, 'sampler');
@@ -466,5 +487,24 @@ test('local quantum sampler remains usable with no cloud credentials', async () 
   assert.equal(result.status, 'COMPLETED');
   assert.equal(result.hardwareExecuted, false);
   assert.equal(result.distribution['00'] + result.distribution['11'], 1000);
+  assert.match(result.receipt, /^[a-f0-9]{64}$/u);
+});
+
+test('local quantum estimator provides a bounded analytic fallback with explicit provenance', async () => {
+  const runtime = createQuantumRuntime({
+    env: { AETHERGRID_QUANTUM_PROVIDER: 'local-simulator' },
+  });
+  const result = await runtime.submitEstimator({
+    circuit:
+      'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; h q[0]; cx q[0], q[1];',
+    observable: 'ZZ',
+  });
+  assert.equal(result.provider, 'local-simulator');
+  assert.equal(result.programId, 'estimator');
+  assert.equal(result.status, 'COMPLETED');
+  assert.equal(result.observable, 'ZZ');
+  assert.equal(result.expectationValue, 1);
+  assert.equal(result.hardwareExecuted, false);
+  assert.equal(result.approximation, 'bounded-local-analytic-demo');
   assert.match(result.receipt, /^[a-f0-9]{64}$/u);
 });
