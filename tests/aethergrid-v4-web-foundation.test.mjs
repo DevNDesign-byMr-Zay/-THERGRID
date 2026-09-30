@@ -1083,3 +1083,20 @@ test('v4 analysis workspace compares frame a b and keeps causal interpretation u
   assert.match(panel, /EXPORT ANALYSIS JSON/u);
   assert.match(panel, /OPERATOR ANALYSIS · NON-AUTHORITATIVE/u);
 });
+
+test('v4 spatial analysis promotion boundary keeps local comparison separate from server evidence', async () => {
+  const [readme, plan, comparison, panel] = await Promise.all([
+    text('apps/aethergrid-console/README.md'),
+    text('docs/AETHERGRID_FUNCTIONAL_PLAN.md'),
+    text('apps/aethergrid-console/web/src/services/spatial-comparison.ts'),
+    text('apps/aethergrid-console/web/src/components/SpatialComparisonPanel.tsx'),
+  ]);
+
+  assert.match(readme, /non-authoritative local comparison export/u);
+  assert.match(readme, /separate from the server evidence ledger/u);
+  assert.match(plan, /local operator-analysis JSON export labeled non-authoritative/u);
+  assert.match(plan, /do not establish causal relationships/u);
+  assert.match(comparison, /authoritative: false/u);
+  assert.match(comparison, /not a substitute for the server evidence ledger/u);
+  assert.match(panel, /OPERATOR ANALYSIS · NON-AUTHORITATIVE/u);
+});
