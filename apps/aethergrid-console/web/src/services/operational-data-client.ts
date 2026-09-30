@@ -195,9 +195,9 @@ export async function loadHydrologyGauge(
   if (!result.ok) return unavailable('hydrology', `Hydrology endpoint unavailable (HTTP ${result.status}).`);
   const data = object(result.payload.data ?? result.payload);
   const stage = finite(data.observedStageFeet);
-  const gaugeId = text(data.gaugeId);
+  const returnedGaugeId = text(data.gaugeId);
   const metrics = [
-    gaugeId ? { label: 'GAUGE', value: gaugeId } : null,
+    returnedGaugeId ? { label: 'GAUGE', value: returnedGaugeId } : null,
     stage == null ? null : { label: 'STAGE', value: `${stage.toFixed(2)} ft` }
   ].filter((item): item is { label: string; value: string } => Boolean(item));
   return normalizeCommon(
@@ -220,9 +220,9 @@ export async function loadEnergyContextForRegion(
   if (!result.ok) return unavailable('energy', `Energy endpoint unavailable (HTTP ${result.status}).`);
   const data = object(result.payload.data ?? result.payload);
   const count = finite(data.recordsCount);
-  const region = text(data.region);
+  const returnedRegion = text(data.region);
   const metrics = [
-    region ? { label: 'REGION', value: region } : null,
+    returnedRegion ? { label: 'REGION', value: returnedRegion } : null,
     count == null ? null : { label: 'RECORDS', value: String(Math.round(count)) }
   ].filter((item): item is { label: string; value: string } => Boolean(item));
   return normalizeCommon(
