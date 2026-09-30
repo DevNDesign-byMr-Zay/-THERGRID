@@ -171,3 +171,19 @@ OpenStreetMap data remains attribution-bound and operator-triggered. If the live
 VÆLON, AUREN, SOLVÆR, and TEAM requests now receive a bounded external-context summary containing the most recently loaded geospatial scene and quantum job state. The AI runtime receives counts, provider identity, coordinate/region context, job identity/status, and evidence receipts—not provider secrets or unrestricted infrastructure authority.
 
 This means an agent can reason about what the operator actually loaded in GLOBAL or QUANTUM without silently controlling those systems. Physical actuation remains disabled.
+
+## Live elevation terrain
+
+The GLOBAL city renderer can request a bounded elevation grid for the active coordinate and render it as a separate native-WebGL terrain wireframe beneath the city/power layers.
+
+The maintained provider adapter is `open-meteo`, with an explicit `flat-local` fallback. Configure it with:
+
+```text
+AETHERGRID_TERRAIN_PROVIDER=open-meteo
+AETHERGRID_ELEVATION_URL=https://api.open-meteo.com/v1/elevation
+AETHERGRID_OPEN_METEO_API_KEY=
+```
+
+The terrain request is limited to a 3×3–9×9 grid, which remains within the provider adapter's bounded request contract. Elevation provenance is shown separately from OpenStreetMap provenance. The standalone HTML keeps a flat local terrain surface so the TERRAIN control remains functional without network access.
+
+Deployment owners are responsible for using provider access and licensing that fits their deployment, including commercial usage where applicable.
