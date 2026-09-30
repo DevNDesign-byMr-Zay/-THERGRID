@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { SpatialViewport } from '../components/SpatialViewport';
 import { TemporalRail } from '../components/TemporalRail';
+import { useAppearance } from '../hooks/use-appearance';
 import { useTemporalClock } from '../hooks/use-temporal-clock';
 import {
   weatherPhenomenon,
@@ -117,6 +118,7 @@ const VISUAL_MODES: readonly VisualMode[] = [
 
 export function App() {
   const { clock, state: temporal } = useTemporalClock();
+  const appearance = useAppearance();
   const [city, setCity] = useState<CityTarget>(CITY_TARGETS[0]);
   const [visualMode, setVisualMode] = useState<VisualMode>('solid');
   const [layers, setLayers] = useState<readonly LayerState[]>(INITIAL_LAYERS);
@@ -188,10 +190,21 @@ export function App() {
           <kbd>⌘ K</kbd>
         </div>
 
-        <div className="live-cluster">
-          <span className="status-dot live" />
-          <span>LIVE WORLD</span>
-          <strong>{new Date(temporal.liveIso).toLocaleTimeString()}</strong>
+        <div className="topbar-actions">
+          <button
+            className="appearance-button"
+            type="button"
+            onClick={appearance.cycle}
+            aria-label={`Appearance: ${appearance.mode}. Select to cycle theme.`}
+          >
+            <span aria-hidden="true">{appearance.resolved === 'light' ? '☀' : '◐'}</span>
+            <strong>{appearance.mode.toUpperCase()}</strong>
+          </button>
+          <div className="live-cluster">
+            <span className="status-dot live" />
+            <span>LIVE WORLD</span>
+            <strong>{new Date(temporal.liveIso).toLocaleTimeString()}</strong>
+          </div>
         </div>
       </header>
 
