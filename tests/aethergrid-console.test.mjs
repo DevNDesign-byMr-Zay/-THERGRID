@@ -42,6 +42,9 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(html, /data-action="city-live-now"/u);
     assert.match(html, /data-global-layer="infrastructure"/u);
     assert.match(html, /data-global-layer="terrain"/u);
+    assert.match(html, /data-global-layer="water"/u);
+    assert.match(html, /data-global-layer="green"/u);
+    assert.match(html, /data-global-layer="landmarks"/u);
     assert.match(html, /data-global-layer="weather"/u);
     assert.match(html, /data-global-layer="clouds"/u);
     assert.match(html, /data-global-layer="illumination"/u);
@@ -54,6 +57,8 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(html, /value="seismic-awareness"/u);
     assert.match(html, /value="heat-stress"/u);
     assert.match(html, /value="visibility-operations"/u);
+    assert.match(html, /value="flood-context"/u);
+    assert.match(html, /value="green-infrastructure"/u);
     assert.match(html, /id="globalGridStats"/u);
     assert.match(html, /id="cityTransitionOverlay"/u);
     assert.match(html, /data-city-visual="solid"/u);
@@ -116,6 +121,15 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(appSource, /async function loadCoordinateCity/u);
     assert.match(appSource, /infrastructureLines/u);
     assert.match(appSource, /terrainLines/u);
+    assert.match(appSource, /waterLines/u);
+    assert.match(appSource, /waterFaces/u);
+    assert.match(appSource, /greenLines/u);
+    assert.match(appSource, /greenFaces/u);
+    assert.match(appSource, /landmarkLines/u);
+    assert.match(appSource, /materialGlassFaces/u);
+    assert.match(appSource, /materialMasonryFaces/u);
+    assert.match(appSource, /materialMetalFaces/u);
+    assert.match(appSource, /materialNaturalFaces/u);
     assert.match(appSource, /loadTerrainFor/u);
     assert.match(appSource, /powerAssets/u);
     assert.match(appSource, /buildingFaces/u);
@@ -345,7 +359,7 @@ test('ÆTHERGRID city operations derive bounded planning indicators from the act
     city: { id: 'test-city', name: 'Test City', lat: 40.7, lon: -74, radiusM: 900 },
     source: { provider: 'test-mapped-geometry', live: true },
     buildings: [
-      { id: 'b1', heightM: 32, levels: 10, footprint: [[0, 0], [30, 0], [30, 20], [0, 20], [0, 0]] },
+      { id: 'b1', name: 'Test Landmark', heightM: 92, heightSource: 'height', levels: 28, buildingMaterial: 'glass', footprint: [[0, 0], [30, 0], [30, 20], [0, 20], [0, 0]] },
       { id: 'b2', heightM: 16, minHeightM: 3, footprint: [[60, 10], [82, 10], [82, 30], [60, 30], [60, 10]] },
     ],
     roads: [
@@ -358,6 +372,28 @@ test('ÆTHERGRID city operations derive bounded planning indicators from the act
     powerAssets: [
       { id: 's1', powerType: 'substation', position: [100, 100] },
       { id: 'g1', powerType: 'generator', position: [-120, 80] },
+    ],
+    waterAreas: [
+      {
+        id: 'w1',
+        name: 'Test Basin',
+        waterType: 'lake',
+        footprint: [[-300, -250], [-80, -250], [-80, -60], [-300, -60], [-300, -250]],
+      },
+    ],
+    waterways: [
+      { id: 'wr1', name: 'Test River', waterwayType: 'river', path: [[-420, 180], [0, 140], [420, 120]] },
+    ],
+    coastlines: [
+      { id: 'c1', path: [[-440, 320], [0, 300], [440, 280]] },
+    ],
+    greenAreas: [
+      {
+        id: 'g1',
+        name: 'Test Park',
+        greenType: 'park',
+        footprint: [[120, -250], [340, -250], [340, -70], [120, -70], [120, -250]],
+      },
     ],
     terrain: {
       minElevationM: 4,
@@ -412,14 +448,22 @@ test('ÆTHERGRID city operations derive bounded planning indicators from the act
   assert.ok(metrics.powerLineKm > 0);
   assert.equal(metrics.substations, 1);
   assert.equal(metrics.generationAssets, 1);
+  assert.ok(metrics.waterAreaM2 > 0);
+  assert.ok(metrics.waterwayLengthKm > 0);
+  assert.equal(metrics.waterFeatureCount, 3);
+  assert.ok(metrics.greenAreaM2 > 0);
+  assert.equal(metrics.greenFeatureCount, 1);
+  assert.equal(metrics.namedLandmarkCount, 1);
   assert.equal(metrics.terrainReliefM, 27);
 
-  assert.equal(Object.keys(CITY_USE_CASES).length, 10);
+  assert.equal(Object.keys(CITY_USE_CASES).length, 12);
   assert.ok(CITY_USE_CASES['weather-readiness']);
   assert.ok(CITY_USE_CASES['air-quality-exposure']);
   assert.ok(CITY_USE_CASES['seismic-awareness']);
   assert.ok(CITY_USE_CASES['heat-stress']);
   assert.ok(CITY_USE_CASES['visibility-operations']);
+  assert.ok(CITY_USE_CASES['flood-context']);
+  assert.ok(CITY_USE_CASES['green-infrastructure']);
 
   for (const id of Object.keys(CITY_USE_CASES)) {
     const analysis = analyzeCityUseCase(mesh, id);
@@ -438,6 +482,9 @@ test('ÆTHERGRID city operations derive bounded planning indicators from the act
     assert.equal(analysis.dataQuality.liveWeather, true);
     assert.equal(analysis.dataQuality.liveAirQuality, true);
     assert.equal(analysis.dataQuality.liveSeismic, true);
+    assert.equal(analysis.dataQuality.mappedWaterFeatures, 3);
+    assert.equal(analysis.dataQuality.mappedGreenFeatures, 1);
+    assert.equal(analysis.dataQuality.mappedNamedLandmarks, 1);
     assert.equal(analysis.advisoryOnly, true);
   }
 });
