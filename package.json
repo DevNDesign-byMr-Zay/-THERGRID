@@ -14,7 +14,7 @@
     "demo": "node scripts/demo.mjs",
     "dashboard-demo": "node scripts/dashboard-demo.mjs",
     "check": "npm run verify:release && npm run package:aethergrid && npm run package:aethergrid-app && npm run syntax && npm run lint && npm run typecheck && npm run typecheck:strict-renderer && npm run format:check && npm run coverage && npm run demo && npm run dashboard-demo",
-    "lint": "eslint --max-warnings=0 src tests scripts apps/operator-console/app.js apps/aethergrid-console/app.js apps/aethergrid-console/server.mjs apps/aethergrid-console/agent-config.mjs apps/aethergrid-console/ai-runtime.mjs",
+    "lint": "eslint --max-warnings=0 src tests scripts apps/operator-console/app.js apps/aethergrid-console/app.js apps/aethergrid-console/server.mjs apps/aethergrid-console/agent-config.mjs apps/aethergrid-console/ai-runtime.mjs apps/aethergrid-console/profile-store.mjs apps/aethergrid-console/geo-runtime.mjs apps/aethergrid-console/quantum-runtime.mjs",
     "format:check": "prettier --check 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs' 'apps/aethergrid-console/**/*.{html,css,js,mjs,json}'",
     "format": "prettier --write 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs' 'apps/aethergrid-console/**/*.{html,css,js,mjs,json}'",
     "health": "node src/platform-health-service.mjs",
