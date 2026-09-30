@@ -282,6 +282,18 @@
     ]);
   }
 
+  function orthographic(left, right, bottom, top, near, far) {
+    const lr = 1 / (left - right);
+    const bt = 1 / (bottom - top);
+    const nf = 1 / (near - far);
+    return new Float32Array([
+      -2 * lr, 0, 0, 0,
+      0, -2 * bt, 0, 0,
+      0, 0, 2 * nf, 0,
+      (left + right) * lr, (top + bottom) * bt, (far + near) * nf, 1,
+    ]);
+  }
+
   function lookAt(eye, target, up) {
     let zx = eye[0] - target[0];
     let zy = eye[1] - target[1];
@@ -322,6 +334,9 @@
       this.distance = options.distance ?? 20;
       this.timeHours = 12;
       this.autoRotate = false;
+      this.projectionMode = 'perspective';
+      this.temporalMode = 'pulse';
+      this.intensity = 1;
       this.drag = null;
       this.timeStart = performance.now();
       this.geometry = {};
@@ -583,6 +598,24 @@
       this.timeHours = Number(hours);
     }
 
+    setProjection(mode) {
+      this.projectionMode = mode === 'orthographic' ? 'orthographic' : 'perspective';
+      if (mode === 'orthographic') this.setPreset('top');
+      if (mode === 'isometric') {
+        this.projectionMode = 'perspective';
+        this.setPreset('isometric');
+      }
+      if (mode === 'perspective') this.setPreset('overview');
+    }
+
+    setTemporalMode(mode) {
+      this.temporalMode = ['pulse', 'trail', 'freeze'].includes(mode) ? mode : 'pulse';
+    }
+
+    setIntensity(value) {
+      this.intensity = clamp(Number(value), 0, 1);
+    }
+
     toggle(layer) {
       if (layer === 'reset') return this.resetCamera();
       if (layer === 'layers') {
@@ -627,7 +660,10 @@
         Math.cos(this.yaw) * Math.cos(this.pitch) * this.distance,
       ];
       const view = lookAt(eye, [0, 1.05, 0], [0, 1, 0]);
-      const projection = perspective(Math.PI / 3.1, aspect, 0.1, 100);
+      const projection =
+        this.projectionMode === 'orthographic'
+          ? orthographic(-12 * aspect, 12 * aspect, -12, 12, 0.1, 100)
+          : perspective(Math.PI / 3.1, aspect, 0.1, 100);
       const mvp = mat4Multiply(projection, view);
       gl.enable(gl.DEPTH_TEST);
       gl.depthFunc(gl.LEQUAL);
@@ -637,13 +673,18 @@
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.useProgram(this.program);
       gl.uniformMatrix4fv(this.loc.mvp, false, mvp);
-      const motionScale = state.settings.reducedMotion ? 0 : state.settings.animationIntensity / 100;
-      const temporal = (this.timeHours / 24) * Math.PI * 2 + (now - this.timeStart) * 0.00035 * motionScale;
+      const settingsMotion = state.settings.reducedMotion ? 0 : state.settings.animationIntensity / 100;
+      const temporalMotion = this.temporalMode === 'freeze' ? 0 : settingsMotion;
+      const trailBoost = this.temporalMode === 'trail' ? 1.35 : 1;
+      const temporal =
+        (this.timeHours / 24) * Math.PI * 2 +
+        (now - this.timeStart) * 0.00035 * temporalMotion;
       gl.uniform1f(this.loc.time, temporal);
-      if (this.layers.grid) this.drawBuffer(this.geometry.grid, gl.LINES, [0.09, 0.42, 0.75, 0.42], 0.045 * motionScale);
-      if (this.layers.buildings) this.drawBuffer(this.geometry.buildings, gl.LINES, [0.14, 0.64, 1, 0.55], 0.07 * motionScale);
-      if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [0.83, 0.36, 1, 0.9], 0.11 * motionScale);
-      if (this.layers.nodes) this.drawBuffer(this.geometry.nodes, gl.POINTS, [0.22, 1, 0.84, 1], 0.08 * motionScale, 1, 9);
+      const amplitude = temporalMotion * this.intensity;
+      if (this.layers.grid) this.drawBuffer(this.geometry.grid, gl.LINES, [0.09, 0.42, 0.75, 0.42], 0.045 * amplitude);
+      if (this.layers.buildings) this.drawBuffer(this.geometry.buildings, gl.LINES, [0.14, 0.64, 1, 0.55], 0.07 * amplitude);
+      if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [0.83, 0.36, 1, Math.min(1, 0.78 * trailBoost)], 0.11 * amplitude * trailBoost);
+      if (this.layers.nodes) this.drawBuffer(this.geometry.nodes, gl.POINTS, [0.22, 1, 0.84, 1], 0.08 * amplitude, 1, 9);
       requestAnimationFrame(this.animate);
     };
   }
@@ -1009,7 +1050,21 @@
     button.addEventListener('click', () => holographic?.setPreset(button.dataset.cameraPreset)),
   );
   q('#holoProjection')?.addEventListener('change', (event) => {
-    holographic?.setPreset(event.target.value === 'top' ? 'top' : event.target.value === 'isometric' ? 'isometric' : 'overview');
+    const mode =
+      event.target.value === 'top'
+        ? 'orthographic'
+        : event.target.value === 'isometric'
+          ? 'isometric'
+          : 'perspective';
+    holographic?.setProjection(mode);
+    showToast('HOLOGRAPHIC PROJECTION', titleCase(event.target.value));
+  });
+  q('#holoTemporalMode')?.addEventListener('change', (event) => {
+    holographic?.setTemporalMode(event.target.value);
+    showToast('TEMPORAL OVERLAY', titleCase(event.target.value));
+  });
+  q('#holoIntensity')?.addEventListener('input', (event) => {
+    holographic?.setIntensity(Number(event.target.value) / 100);
   });
   q('[data-holo-action="save-camera"]')?.addEventListener('click', () => {
     const saved = JSON.parse(localStorage.getItem('aethergrid.saved.cameras') || '[]');
