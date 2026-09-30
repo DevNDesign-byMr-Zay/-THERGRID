@@ -438,6 +438,8 @@ async function main() {
       /data-global-layer="clouds"/u.test(exactAethergridHtml) &&
       /data-global-layer="illumination"/u.test(exactAethergridHtml) &&
       /data-global-layer="landmarks"/u.test(exactAethergridHtml) &&
+      /data-global-layer="water"/u.test(exactAethergridHtml) &&
+      /data-global-layer="green"/u.test(exactAethergridHtml) &&
       /id="cityIdentity"/u.test(exactAethergridHtml) &&
       /data-global-layer="air"/u.test(exactAethergridHtml) &&
       /data-global-layer="seismic"/u.test(exactAethergridHtml) &&
@@ -447,6 +449,8 @@ async function main() {
       /value="seismic-awareness"/u.test(exactAethergridHtml) &&
       /value="heat-stress"/u.test(exactAethergridHtml) &&
       /value="visibility-operations"/u.test(exactAethergridHtml) &&
+      /value="flood-context"/u.test(exactAethergridHtml) &&
+      /value="green-infrastructure"/u.test(exactAethergridHtml) &&
       /id="globalSolarStatus"/u.test(exactAethergridHtml) &&
       /id="globalGridStats"/u.test(exactAethergridHtml) &&
       /id="cityTransitionOverlay"/u.test(exactAethergridHtml) &&
@@ -504,6 +508,14 @@ async function main() {
       /cityLights/u.test(exactAethergridJs) &&
       /landmarkCandidates/u.test(exactAethergridJs) &&
       /landmarkSpines/u.test(exactAethergridJs) &&
+      /waterLines/u.test(exactAethergridJs) &&
+      /waterFaces/u.test(exactAethergridJs) &&
+      /greenLines/u.test(exactAethergridJs) &&
+      /greenFaces/u.test(exactAethergridJs) &&
+      /materialGlassFaces/u.test(exactAethergridJs) &&
+      /materialMasonryFaces/u.test(exactAethergridJs) &&
+      /materialMetalFaces/u.test(exactAethergridJs) &&
+      /materialNaturalFaces/u.test(exactAethergridJs) &&
       /snowParticles/u.test(exactAethergridJs) &&
       /fogParticles/u.test(exactAethergridJs) &&
       /stormLines/u.test(exactAethergridJs) &&
@@ -630,7 +642,17 @@ async function main() {
       exactAethergridApp.capabilities?.modeledSnowAnimation === true &&
       exactAethergridApp.capabilities?.modeledFogAnimation === true &&
       exactAethergridApp.capabilities?.modeledThunderstormAnimation === true &&
+      exactAethergridApp.capabilities?.sourceBackedWaterAreas === true &&
+      exactAethergridApp.capabilities?.sourceBackedWaterways === true &&
+      exactAethergridApp.capabilities?.sourceBackedCoastlines === true &&
+      exactAethergridApp.capabilities?.sourceBackedGreenAreas === true &&
+      exactAethergridApp.capabilities?.sourceTaggedBuildingMaterialOverlays === true &&
+      exactAethergridApp.capabilities?.floodContextUseCase === true &&
+      exactAethergridApp.capabilities?.greenInfrastructureUseCase === true &&
+      exactAethergridApp.capabilities?.noInventedEnvironmentalGeometry === true &&
       exactAethergridApp.visualContract?.proceduralCityLightsRepresentOccupancy === false &&
+      exactAethergridApp.visualContract?.sourceTaggedMaterialStyling === true &&
+      exactAethergridApp.visualContract?.environmentalGeometryFallbackInvented === false &&
       exactAethergridApp.visualContract?.landmarkIdentityRequiresSourceNameOrTallGeometry ===
         true &&
       exactAethergridApp.visualContract?.thunderstormLinesRepresentDetectedStrikes === false &&
@@ -653,6 +675,14 @@ async function main() {
       exactAethergridApp.geospatialRuntime?.solidBuildingVolumes === true &&
       exactAethergridApp.geospatialRuntime?.buildingParts === true &&
       exactAethergridApp.geospatialRuntime?.layers?.includes('terrain') &&
+      exactAethergridApp.geospatialRuntime?.layers?.includes('water-areas') &&
+      exactAethergridApp.geospatialRuntime?.layers?.includes('waterways') &&
+      exactAethergridApp.geospatialRuntime?.layers?.includes('coastline') &&
+      exactAethergridApp.geospatialRuntime?.layers?.includes('green-areas') &&
+      exactAethergridApp.geospatialRuntime?.geographicIdentity?.fallbackInventsWaterOrGreen ===
+        false &&
+      exactAethergridApp.geospatialRuntime?.cityOperations?.includes('flood-context') &&
+      exactAethergridApp.geospatialRuntime?.cityOperations?.includes('green-infrastructure') &&
       exactAethergridApp.environmentRuntime?.module === 'city-environment-runtime.mjs' &&
       exactAethergridApp.environmentRuntime?.browserSecrets === false &&
       exactAethergridApp.environmentRuntime?.solarContext === true &&
@@ -665,6 +695,8 @@ async function main() {
       exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('clouds') &&
       exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('illumination') &&
       exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('landmarks') &&
+      exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('water') &&
+      exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('green') &&
       exactAethergridApp.geospatialRuntime?.skylineIdentity?.namedStructures === true &&
       exactAethergridApp.geospatialRuntime?.skylineIdentity?.interactiveAnchors === true &&
       exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('air') &&
@@ -784,11 +816,16 @@ async function main() {
       /way\["power"~"\^\(line\|minor_line\|cable\)\$"\]/u.test(aethergridGeoRuntime) &&
       /substation\|plant\|generator\|transformer/u.test(aethergridGeoRuntime) &&
       /parseOverpassRoads/u.test(aethergridGeoRuntime) &&
+      /parseOverpassWater/u.test(aethergridGeoRuntime) &&
+      /parseOverpassGreen/u.test(aethergridGeoRuntime) &&
+      /natural"="water/u.test(aethergridGeoRuntime) &&
+      /natural"="coastline/u.test(aethergridGeoRuntime) &&
+      /greenAreas/u.test(aethergridGeoRuntime) &&
       /parseOverpassPower/u.test(aethergridGeoRuntime) &&
       /async function pointMesh/u.test(aethergridGeoRuntime) &&
       /supportsCustomCoordinates: true/u.test(aethergridGeoRuntime) &&
       /cache/u.test(aethergridGeoRuntime),
-    'ÆTHERGRID geospatial runtime must keep on-demand OpenStreetMap building, road and power-grid geometry with arbitrary coordinate support',
+    'ÆTHERGRID geospatial runtime must keep on-demand OpenStreetMap building, road, water, green-space and power-grid geometry with arbitrary coordinate support',
   );
   assert(
     /api\.open-meteo\.com\/v1\/forecast/u.test(aethergridEnvironmentRuntime) &&
@@ -865,6 +902,11 @@ async function main() {
       /data-global-layer="clouds"/u.test(exactAethergridPackager) &&
       /data-global-layer="illumination"/u.test(exactAethergridPackager) &&
       /data-global-layer="landmarks"/u.test(exactAethergridPackager) &&
+      /data-global-layer="water"/u.test(exactAethergridPackager) &&
+      /data-global-layer="green"/u.test(exactAethergridPackager) &&
+      /waterLines/u.test(exactAethergridPackager) &&
+      /greenFaces/u.test(exactAethergridPackager) &&
+      /materialGlassFaces/u.test(exactAethergridPackager) &&
       /id="cityIdentity"/u.test(exactAethergridPackager) &&
       /landmarkCandidates/u.test(exactAethergridPackager) &&
       /snowParticles/u.test(exactAethergridPackager) &&
@@ -872,6 +914,8 @@ async function main() {
       /stormLines/u.test(exactAethergridPackager) &&
       /value="heat-stress"/u.test(exactAethergridPackager) &&
       /value="visibility-operations"/u.test(exactAethergridPackager) &&
+      /value="flood-context"/u.test(exactAethergridPackager) &&
+      /value="green-infrastructure"/u.test(exactAethergridPackager) &&
       /solarPosition/u.test(exactAethergridPackager) &&
       /data-global-layer="air"/u.test(exactAethergridPackager) &&
       /data-global-layer="seismic"/u.test(exactAethergridPackager) &&
