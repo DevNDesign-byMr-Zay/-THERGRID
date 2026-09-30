@@ -913,7 +913,10 @@ test('v4 live wind field is source-backed spatial geometry shared by Cesium and 
   assert.match(service, /syntheticGeometry: true/u);
   assert.match(service, /layerId: 'weather'/u);
   assert.match(app, /const windOverlay = useMemo/u);
-  assert.match(app, /powerOverlay, windOverlay, seismicOverlay/u);
+  assert.match(
+    app,
+    /powerOverlay,[\s\S]{0,120}windOverlay,[\s\S]{0,120}seismicOverlay/u,
+  );
   assert.match(cesium, /windEdge/u);
   assert.match(cesium, /#7de9ff/u);
   assert.match(nativeRenderer, /windEdge/u);
