@@ -47,8 +47,8 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
   const geometry = [
     { lat: 40.7548, lon: -73.9841 },
     { lat: 40.7548, lon: -73.9839 },
-    { lat: 40.7550, lon: -73.9839 },
-    { lat: 40.7550, lon: -73.9841 },
+    { lat: 40.755, lon: -73.9839 },
+    { lat: 40.755, lon: -73.9841 },
     { lat: 40.7548, lon: -73.9841 },
   ];
   const fetchImpl = async (url, options) => {
@@ -192,7 +192,9 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
   assert.equal(skylineTower.roofShape, 'pyramidal');
   assert.equal(skylineTower.roofHeightM, 20);
   assert.equal(skylineTower.buildingMaterial, 'glass');
-  const relationBuilding = first.buildings.find((building) => building.name === 'Relation Building');
+  const relationBuilding = first.buildings.find(
+    (building) => building.name === 'Relation Building',
+  );
   assert.ok(relationBuilding);
   assert.equal(relationBuilding.osmType, 'relation');
   assert.ok(Math.abs(relationBuilding.heightM - 94.488) < 0.01);
