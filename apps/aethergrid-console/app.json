@@ -57,7 +57,8 @@
       "POST /api/aethergrid/export",
       "POST /api/aethergrid/reset",
       "GET /api/aethergrid/quantum/jobs/:id/results",
-      "GET /api/aethergrid/quantum/jobs/:id/metrics"
+      "GET /api/aethergrid/quantum/jobs/:id/metrics",
+      "GET /api/aethergrid/terrain/runtime"
     ]
   },
   "safety": {
@@ -128,7 +129,10 @@
     "globalTemporalCityScrubbing": true,
     "liveAgentExternalContext": true,
     "liveElevationTerrain": true,
-    "terrainWireframeLayer": true
+    "terrainWireframeLayer": true,
+    "liveTerrainElevation": true,
+    "independentTerrainLayer": true,
+    "terrainFallback": true
   },
   "aiRuntime": {
     "providers": [
@@ -172,7 +176,8 @@
       "buildings",
       "roads",
       "power-lines",
-      "power-assets"
+      "power-assets",
+      "terrain"
     ]
   },
   "quantumRuntime": {
@@ -203,11 +208,9 @@
       "open-meteo",
       "flat-local"
     ],
-    "liveElevation": true,
-    "dataset": "Copernicus DEM GLO-90 via Open-Meteo",
-    "resolutionMeters": 90,
-    "maxPointsPerRequest": 100,
+    "sourceModel": "Copernicus DEM GLO-90 via Open-Meteo",
+    "maxSampleGrid": 9,
     "credentialsExposedToBrowser": false,
-    "fallback": "flat-local"
+    "explicitOperatorFetch": true
   }
 }
