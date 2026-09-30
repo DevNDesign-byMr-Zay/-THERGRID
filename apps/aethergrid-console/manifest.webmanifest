@@ -1,0 +1,10 @@
+{
+  "name": "ÆTHERGRID Operator Console",
+  "short_name": "ÆTHERGRID",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#030813",
+  "theme_color": "#030813",
+  "description": "Operator intelligence for digital-twin, holographic, quantum, AI, and evidence review."
+}
