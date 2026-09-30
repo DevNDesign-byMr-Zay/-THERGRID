@@ -308,12 +308,17 @@
     "variables": [
       "temperature_2m",
       "apparent_temperature",
+      "relative_humidity_2m",
+      "surface_pressure",
       "weather_code",
       "cloud_cover",
       "is_day",
       "precipitation",
       "wind_speed_10m",
-      "wind_direction_10m"
+      "wind_direction_10m",
+      "wind_gusts_10m",
+      "shortwave_radiation",
+      "visibility"
     ],
     "currentVariables": [
       "temperature_2m",
