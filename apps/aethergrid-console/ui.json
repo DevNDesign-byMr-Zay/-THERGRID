@@ -398,7 +398,25 @@
       "provider": "Open-Meteo",
       "endpoint": "GET /api/aethergrid/environment",
       "runtimeEndpoint": "GET /api/aethergrid/environment/runtime",
-      "currentConditions": true
+      "currentConditions": true,
+      "currentFields": [
+        "temperature",
+        "apparent-temperature",
+        "relative-humidity",
+        "surface-pressure",
+        "cloud-cover",
+        "precipitation",
+        "wind",
+        "wind-gusts",
+        "shortwave-radiation",
+        "visibility"
+      ],
+      "dailyFields": [
+        "sunrise",
+        "sunset",
+        "daylight-duration",
+        "sunshine-duration"
+      ]
     },
     "liveContext": {
       "airQualityProvider": "Open-Meteo Air Quality",
@@ -408,7 +426,9 @@
       "animatedLayers": [
         "weather",
         "air",
-        "seismic"
+        "seismic",
+        "clouds",
+        "illumination"
       ]
     },
     "globeAnimations": [
