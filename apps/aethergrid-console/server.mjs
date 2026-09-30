@@ -470,6 +470,15 @@ function analyzeCityUseCase(mesh, useCaseId) {
     liveSignals.visibilityM == null
       ? 0
       : clampIndex(Math.max(0, 20_000 - liveSignals.visibilityM) / 200);
+  const waterContext = clampIndex(metrics.waterLengthKm * 6 + metrics.waterFeatureCount * 4);
+  const transitContext = clampIndex(
+    metrics.railLengthKm * 8 + metrics.transitAssetCount * 6 + metrics.primaryRoadKm * 2,
+  );
+  const greenCoverage = clampIndex(
+    metrics.sampledAreaKm2 > 0
+      ? (metrics.greenSpaceAreaM2 / (metrics.sampledAreaKm2 * 1_000_000)) * 520
+      : 0,
+  );
 
   let planningIndex = 0;
   let observations = [];
@@ -561,6 +570,38 @@ function analyzeCityUseCase(mesh, useCaseId) {
       `Precipitation is ${liveSignals.precipitationMm.toFixed(1)} mm and modeled US AQI is ${liveSignals.usAqi == null ? 'unavailable' : liveSignals.usAqi.toFixed(0)}.`,
       `The scene pairs atmospheric context with ${metrics.roadLengthKm.toFixed(1)} km of mapped roads; it is not a navigation clearance, aviation minimum or live traffic visibility guarantee.`,
     ];
+  } else if (useCaseId === 'flood-context') {
+    planningIndex = clampIndex(
+      waterContext * 0.42 +
+        weatherStress * 0.34 +
+        terrainComplexity * 0.16 +
+        builtMass * 0.08,
+    );
+    observations = [
+      `${metrics.waterFeatureCount} mapped water/coastline features span ${metrics.waterLengthKm.toFixed(1)} km in the bounded sample.`,
+      `Current modeled precipitation is ${liveSignals.precipitationMm.toFixed(1)} mm; terrain relief is ${metrics.terrainReliefM.toFixed(0)} m.`,
+      'This is a water/terrain/weather context index only; it is not a hydrologic flood model, inundation map, warning or evacuation directive.',
+    ];
+  } else if (useCaseId === 'transit-access') {
+    planningIndex = transitContext;
+    observations = [
+      `${metrics.railFeatureCount} mapped rail corridors span ${metrics.railLengthKm.toFixed(1)} km with ${metrics.transitAssetCount} mapped transit nodes in the sample.`,
+      `${metrics.primaryRoadKm.toFixed(1)} km of major roads provide surrounding network context.`,
+      'Mapped rail/station presence does not represent real-time service, headways, accessibility status, delays or passenger demand.',
+    ];
+  } else if (useCaseId === 'urban-cooling') {
+    planningIndex = clampIndex(
+      greenCoverage * 0.38 +
+        waterContext * 0.12 +
+        (100 - apparentHeatStress) * 0.24 +
+        (100 - builtMass) * 0.16 +
+        (100 - humidityStress) * 0.1,
+    );
+    observations = [
+      `${metrics.greenSpaceCount} mapped green-space features represent approximately ${Math.round(metrics.greenSpaceAreaM2).toLocaleString()} m² of bounded mapped area.`,
+      `Current apparent temperature is ${liveSignals.apparentTemperatureC == null ? 'unavailable' : `${liveSignals.apparentTemperatureC.toFixed(1)}°C`} with ${liveSignals.relativeHumidityPercent == null ? 'unavailable humidity' : `${liveSignals.relativeHumidityPercent.toFixed(0)}% humidity`}.`,
+      'The index is an urban-form cooling-context proxy; it does not quantify canopy temperature, shade availability, evapotranspiration or public-health heat exposure.',
+    ];
   } else {
     planningIndex = clampIndex(seismicStress * 0.72 + builtMass * 0.18 + terrainComplexity * 0.1);
     observations = [
@@ -571,7 +612,7 @@ function analyzeCityUseCase(mesh, useCaseId) {
   }
 
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     useCase,
     city: mesh.city,
     generatedAt: new Date().toISOString(),
@@ -865,6 +906,10 @@ const server = http.createServer(async (request, response) => {
         live: Boolean(mesh.source.live),
         buildings: mesh.buildings.length,
         roads: (mesh.roads || []).length,
+        waterFeatures: (mesh.waterLines || []).length,
+        railFeatures: (mesh.railLines || []).length,
+        transitAssets: (mesh.transitAssets || []).length,
+        greenSpaces: (mesh.greenSpaces || []).length,
         powerLines: (mesh.powerLines || []).length,
         powerAssets: (mesh.powerAssets || []).length,
         skyline: mesh.skylineProfile || null,
@@ -955,6 +1000,10 @@ const server = http.createServer(async (request, response) => {
         live: Boolean(mesh.source.live),
         buildings: mesh.buildings.length,
         roads: (mesh.roads || []).length,
+        waterFeatures: (mesh.waterLines || []).length,
+        railFeatures: (mesh.railLines || []).length,
+        transitAssets: (mesh.transitAssets || []).length,
+        greenSpaces: (mesh.greenSpaces || []).length,
         powerLines: (mesh.powerLines || []).length,
         powerAssets: (mesh.powerAssets || []).length,
         skyline: mesh.skylineProfile || null,
