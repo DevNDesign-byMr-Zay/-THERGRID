@@ -742,3 +742,21 @@ test('v4 selected-entity AI handoff prefills AUREN without automatic submission'
   assert.match(app, /Separate observed facts, modeled context, assumptions, uncertainty/u);
   assert.match(app, /<AgentDock context=\{agentContext\} handoff=\{agentHandoff\}/u);
 });
+
+test('v4 operational presets use only implemented layers and preserve manual custom control', async () => {
+  const [presets, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/app/use-case-presets.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(presets, /grid-resilience/u);
+  assert.match(presets, /environmental/u);
+  assert.match(presets, /seismic-response/u);
+  assert.match(presets, /skyline-analysis/u);
+  assert.doesNotMatch(presets, /transit/u);
+  assert.doesNotMatch(presets, /hydrology/u);
+  assert.match(app, /const applyUseCase = \(preset: UseCasePreset\)/u);
+  assert.match(app, /visible: preset\.layers\.includes\(layer\.id\)/u);
+  assert.match(app, /setActiveUseCase\(null\)/u);
+  assert.match(app, /CUSTOM · manually controlled layers and view/u);
+});
