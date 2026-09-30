@@ -41,6 +41,12 @@ import {
 } from '../services/city-power-overlay';
 import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
 
+interface CityLoadState {
+  spatial: boolean;
+  environment: boolean;
+  liveContext: boolean;
+}
+
 interface CityTarget extends SpatialTarget {
   id: string;
   name: string;
@@ -169,6 +175,11 @@ export function App() {
   const [liveContext, setLiveContext] = useState<CityLiveSnapshot | null>(null);
   const [globalLive, setGlobalLive] = useState<GlobalLiveContext | null>(null);
   const [liveContextError, setLiveContextError] = useState<string | null>(null);
+  const [cityLoad, setCityLoad] = useState<CityLoadState>({
+    spatial: true,
+    environment: true,
+    liveContext: true
+  });
 
   const temporalInstant = useMemo(
     () => ({
@@ -207,6 +218,11 @@ export function App() {
     setEnvironmentError(null);
     setLiveContext(null);
     setLiveContextError(null);
+    setCityLoad({
+      spatial: true,
+      environment: true,
+      liveContext: true
+    });
 
     const spatialRequest = city.custom
       ? loadCoordinateSpatialBundle(
@@ -226,6 +242,11 @@ export function App() {
       .catch((error) => {
         if (controller.signal.aborted) return;
         setPowerOverlayError(error instanceof Error ? error.message : String(error));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setCityLoad((current) => ({ ...current, spatial: false }));
+        }
       });
 
     void loadCityEnvironment(city.latitude, city.longitude, controller.signal)
@@ -233,6 +254,11 @@ export function App() {
       .catch((error) => {
         if (controller.signal.aborted) return;
         setEnvironmentError(error instanceof Error ? error.message : String(error));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setCityLoad((current) => ({ ...current, environment: false }));
+        }
       });
 
     void loadCityLiveContext(city.latitude, city.longitude, controller.signal)
@@ -240,6 +266,11 @@ export function App() {
       .catch((error) => {
         if (controller.signal.aborted) return;
         setLiveContextError(error instanceof Error ? error.message : String(error));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setCityLoad((current) => ({ ...current, liveContext: false }));
+        }
       });
 
     return () => controller.abort();
@@ -627,6 +658,22 @@ export function App() {
             airQuality={airQualityOverlay}
             onSelection={handleSpatialSelection}
           />
+
+          {scope === 'city' && Object.values(cityLoad).some(Boolean) ? (
+            <div className="city-load-status" aria-live="polite">
+              <div>
+                <span>LOADING {city.name}</span>
+                <strong>
+                  {Object.values(cityLoad).filter(Boolean).length} SOURCES PENDING
+                </strong>
+              </div>
+              <ul>
+                <li data-ready={!cityLoad.spatial}>GEOMETRY</li>
+                <li data-ready={!cityLoad.environment}>ATMOSPHERE</li>
+                <li data-ready={!cityLoad.liveContext}>LIVE CONTEXT</li>
+              </ul>
+            </div>
+          ) : null}
 
           <DataSourceBadge
             label={
