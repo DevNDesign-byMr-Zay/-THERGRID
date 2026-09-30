@@ -44,6 +44,9 @@ function colorForIntensity(intensity: number, alpha = 1): Color {
 
 function nodeColor(node: SpatialOverlayNode): Color {
   const intensity = overlayIntensity(node.intensity);
+  if (node.properties?.analysisType === 'measurement') {
+    return Color.fromCssColorString('#c9a7ff').withAlpha(0.98);
+  }
   if (node.properties?.presentationType === 'urban-illumination') {
     return Color.fromCssColorString('#ffd37d').withAlpha(0.58 + intensity * 0.34);
   }
@@ -140,6 +143,9 @@ function nodeEntity(
 }
 
 function edgeColor(edge: SpatialOverlayEdge, intensity: number): Color {
+  if (edge.kind === 'analysis-line' && edge.properties?.analysisType === 'measurement') {
+    return Color.fromCssColorString('#c9a7ff').withAlpha(0.9);
+  }
   if (edge.kind === 'flow' && edge.properties?.vectorType === 'wind') {
     return Color.fromCssColorString('#7de9ff').withAlpha(0.42 + intensity * 0.42);
   }
@@ -153,6 +159,9 @@ function edgeColor(edge: SpatialOverlayEdge, intensity: number): Color {
 }
 
 function edgeWidth(edge: SpatialOverlayEdge, intensity: number): number {
+  if (edge.kind === 'analysis-line' && edge.properties?.analysisType === 'measurement') {
+    return 3.1;
+  }
   if (edge.kind === 'flow' && edge.properties?.vectorType === 'wind') {
     return 1.1 + intensity * 1.8;
   }
