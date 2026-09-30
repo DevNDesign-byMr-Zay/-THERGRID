@@ -67,12 +67,12 @@
   }
   function mat4Multiply(a, b) {
     const o = new Float32Array(16);
-    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
-      o[c + r * 4] =
-        a[r * 4] * b[c] +
-        a[r * 4 + 1] * b[c + 4] +
-        a[r * 4 + 2] * b[c + 8] +
-        a[r * 4 + 3] * b[c + 12];
+    for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) {
+      o[c * 4 + r] =
+        a[r] * b[c * 4] +
+        a[4 + r] * b[c * 4 + 1] +
+        a[8 + r] * b[c * 4 + 2] +
+        a[12 + r] * b[c * 4 + 3];
     }
     return o;
   }
@@ -285,7 +285,7 @@
         Math.cos(this.yaw)*Math.cos(this.pitch)*this.distance
       ];
       const view=lookAt(eye,[0,1.05,0],[0,1,0]), proj=perspective(Math.PI/3.1,aspect,.1,100), mvp=mat4Multiply(proj,view);
-      gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.clearColor(.008,.025,.06,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+      gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.clearColor(.008,.025,.06,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
       gl.useProgram(this.program);gl.uniformMatrix4fv(this.loc.mvp,false,mvp);
       const temporal=(this.timeHours/24)*Math.PI*2+(now-this.timeStart)*.00035;
       gl.uniform1f(this.loc.time,temporal);
@@ -368,7 +368,7 @@
   function connectStream(){
     if(location.protocol==='file:'||!('EventSource'in window))return;
     stream?.close();stream=new EventSource('./api/aethergrid/stream');
-    stream.addEventListener('telemetry',(event)=>{try{mergeState(JSON.parse(event.data))}catch{}});
+    stream.addEventListener('telemetry',(event)=>{try{const payload=JSON.parse(event.data);mergeState(payload.state||payload)}catch{}});
     stream.onerror=()=>{q('#streamReadout').textContent='RECONNECTING';setTimeout(connectStream,2500)};
     stream.onopen=()=>{q('#streamReadout').textContent='LIVE STREAM'};
   }
