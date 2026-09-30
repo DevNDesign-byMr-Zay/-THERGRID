@@ -104,3 +104,54 @@ test('v4 operator shell keeps the spatial viewport dominant and responsive', asy
   assert.match(styles, /prefers-reduced-motion/u);
   assert.doesNotMatch(styles, /fonts\.googleapis\.com/u);
 });
+
+
+test('v4 camera journey preserves one WGS84 scene from globe to district', async () => {
+  const camera = await text(
+    'apps/aethergrid-console/web/src/renderer/cesium/camera-journey-controller.ts'
+  );
+
+  assert.match(camera, /phase: 'global'/u);
+  assert.match(camera, /phase: 'regional'/u);
+  assert.match(camera, /phase: 'city'/u);
+  assert.match(camera, /phase: 'district'/u);
+  assert.match(camera, /11_000_000/u);
+  assert.match(camera, /Cartesian3\.fromDegrees/u);
+  assert.match(camera, /this\.#camera\.flyTo/u);
+  assert.doesNotMatch(camera, /scene\s*=|new Viewer/u);
+});
+
+test('v4 source-backed power overlay preserves live and fallback provenance', async () => {
+  const [overlayContract, adapter, cesiumLayer, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/renderer/overlays/spatial-overlay.ts'),
+    text('apps/aethergrid-console/web/src/services/city-power-overlay.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(overlayContract, /eventTime/u);
+  assert.match(overlayContract, /sourceTime/u);
+  assert.match(overlayContract, /fallback/u);
+  assert.match(adapter, /\/api\/aethergrid\/geospatial\/city\//u);
+  assert.match(adapter, /source\.live === true/u);
+  assert.match(adapter, /upstreamTimestamp/u);
+  assert.match(adapter, /localMetersToCoordinate/u);
+  assert.match(cesiumLayer, /CustomDataSource/u);
+  assert.match(cesiumLayer, /PolylineGraphics/u);
+  assert.match(cesiumLayer, /PointGraphics/u);
+  assert.match(app, /OSM POWER · LIVE SOURCE/u);
+  assert.match(app, /POWER · FALLBACK/u);
+  assert.match(app, /POWER DATA UNAVAILABLE/u);
+});
+
+test('v4 streamed 3D buildings have actual visual-mode styling', async () => {
+  const controller = await text(
+    'apps/aethergrid-console/web/src/renderer/cesium/visual-mode-controller.ts'
+  );
+
+  assert.match(controller, /Cesium3DTileStyle/u);
+  assert.match(controller, /mode === 'xray'/u);
+  assert.match(controller, /mode === 'holographic'/u);
+  assert.match(controller, /mode === 'reality'/u);
+  assert.match(controller, /Reality mode requires a configured photorealistic 3D Tiles provider/u);
+});
