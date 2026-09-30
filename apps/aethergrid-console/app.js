@@ -1662,7 +1662,7 @@
     if (q('#globalCoordinates')) q('#globalCoordinates').textContent = `${latLabel} · ${lonLabel}`;
     const status = q('#cityMeshStatus');
     if (status) {
-      status.innerHTML = `<b>${escapeHtml(city.name)} · ${escapeHtml(city.country)}</b><p>Real-coordinate world node selected. Descend to request live buildings, roads and mapped power infrastructure.</p>`;
+      status.innerHTML = `<b>${escapeHtml(city.name)} · ${escapeHtml(city.district || city.country)}</b><p>Real-coordinate skyline focus selected. Descend to request current open-source structures, roads, terrain, environment context and mapped power infrastructure.</p>`;
     }
   }
 
@@ -1787,6 +1787,10 @@
         id: `standalone-${index + 1}`,
         name: '',
         heightM: 9 + random() * 110,
+        heightSource: 'synthetic-fallback',
+        minHeightM: 0,
+        roofShape: '',
+        roofHeightM: 0,
         footprint: [
           [x - width, z - depth],
           [x + width, z - depth],
@@ -1865,8 +1869,11 @@
         });
       }
     }
+    const fallbackHeights = buildings.map((building) => Number(building.heightM || 0)).sort((a, b) => a - b);
+    const fallbackPercentile = (amount) =>
+      fallbackHeights[Math.min(fallbackHeights.length - 1, Math.floor((fallbackHeights.length - 1) * amount))] || 0;
     return {
-      schemaVersion: 2,
+      schemaVersion: 3,
       city,
       source: {
         provider: 'standalone-local-fallback',
@@ -1874,6 +1881,25 @@
         attribution: 'Live OpenStreetMap geometry requires the Node backend.',
       },
       buildings,
+      skylineProfile: {
+        district: city.district || null,
+        buildingCount: buildings.length,
+        maxHeightM: Number(Math.max(...fallbackHeights).toFixed(1)),
+        p95HeightM: Number(fallbackPercentile(0.95).toFixed(1)),
+        medianHeightM: Number(fallbackPercentile(0.5).toFixed(1)),
+        sourceBackedHeightCoveragePercent: 0,
+        buildingPartCount: 0,
+        roofTaggedCount: 0,
+        upstreamTimestamp: null,
+        sourceProvider: 'standalone-local-fallback',
+        live: false,
+      },
+      environment: {
+        schemaVersion: 1,
+        coordinate: { lat: city.lat, lon: city.lon },
+        source: { provider: 'local-environment-fallback', live: false, attribution: null, fetchedAt: new Date().toISOString() },
+        current: null,
+      },
       roads,
       powerLines,
       powerAssets,
