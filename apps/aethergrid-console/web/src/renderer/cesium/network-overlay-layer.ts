@@ -44,6 +44,24 @@ function nodeColor(node: SpatialOverlayNode): Color {
   if (node.kind === 'event' && node.properties?.eventType === 'earthquake') {
     return Color.fromCssColorString('#ff7b63').withAlpha(0.78 + intensity * 0.22);
   }
+  if (node.kind === 'city') {
+    const category = String(node.properties?.category || 'unknown');
+    const cityColor =
+      category === 'good'
+        ? '#63ffc5'
+        : category === 'moderate'
+          ? '#f1d66d'
+          : category === 'unhealthy-sensitive'
+            ? '#f5a05d'
+            : category === 'unhealthy'
+              ? '#ff6f69'
+              : category === 'very-unhealthy'
+                ? '#b97cff'
+                : category === 'hazardous'
+                  ? '#d85d88'
+                  : '#70e7ff';
+    return Color.fromCssColorString(cityColor).withAlpha(0.86 + intensity * 0.14);
+  }
   return colorForIntensity(intensity, 0.96);
 }
 
