@@ -1,3 +1,5 @@
+import type { SpatialOverlaySnapshot } from './overlays/spatial-overlay';
+
 export type SpatialEngine = 'cesium' | 'native-webgl';
 
 export type VisualMode =
@@ -72,6 +74,8 @@ export interface SpatialRenderer {
   setLayers(layers: readonly LayerState[]): void;
   selectFeature(id: string | null): void;
   setVisualMode(mode: VisualMode): void;
+  applyOverlay(snapshot: SpatialOverlaySnapshot): void;
+  clearOverlay(layerId: string): void;
   pick(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null>;
   resize(): void;
   status(): SpatialRendererStatus;
