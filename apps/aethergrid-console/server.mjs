@@ -243,6 +243,24 @@ const CITY_USE_CASES = Object.freeze({
     recommendedLayers: ['roads', 'buildings', 'illumination', 'clouds', 'weather', 'air', 'nodes'],
     animationProfile: 'visibility',
   }),
+  'flood-context': Object.freeze({
+    id: 'flood-context',
+    label: 'Flood Context',
+    purpose: 'Place mapped water, coastline, terrain, roads and grid assets beside current precipitation for bounded flood-context review.',
+    indexLabel: 'Flood context attention index',
+    agentLead: 'SOLVÆR',
+    recommendedLayers: ['water', 'terrain', 'weather', 'roads', 'infrastructure', 'buildings', 'nodes'],
+    animationProfile: 'flood-context',
+  }),
+  'green-infrastructure': Object.freeze({
+    id: 'green-infrastructure',
+    label: 'Green Infrastructure',
+    purpose: 'Compare mapped green space with built density, current heat, humidity and air quality for early-stage green-infrastructure review.',
+    indexLabel: 'Green infrastructure attention index',
+    agentLead: 'AUREN',
+    recommendedLayers: ['green', 'buildings', 'landmarks', 'weather', 'air', 'nodes'],
+    animationProfile: 'green-infrastructure',
+  }),
 });
 
 function planarLength(path = []) {
@@ -276,6 +294,10 @@ function cityMeshMetrics(mesh) {
   const roads = Array.isArray(mesh?.roads) ? mesh.roads : [];
   const powerLines = Array.isArray(mesh?.powerLines) ? mesh.powerLines : [];
   const powerAssets = Array.isArray(mesh?.powerAssets) ? mesh.powerAssets : [];
+  const waterAreas = Array.isArray(mesh?.waterAreas) ? mesh.waterAreas : [];
+  const waterways = Array.isArray(mesh?.waterways) ? mesh.waterways : [];
+  const coastlines = Array.isArray(mesh?.coastlines) ? mesh.coastlines : [];
+  const greenAreas = Array.isArray(mesh?.greenAreas) ? mesh.greenAreas : [];
   const radiusM = Math.max(250, Number(mesh?.city?.radiusM || 900));
   let footprintAreaM2 = 0;
   let estimatedFloorAreaM2 = 0;
@@ -301,6 +323,23 @@ function cityMeshMetrics(mesh) {
   const generationAssets = powerAssets.filter((asset) => ['plant', 'generator'].includes(asset.powerType)).length;
   const terrainReliefM = Math.max(0, Number(mesh?.terrain?.maxElevationM || 0) - Number(mesh?.terrain?.minElevationM || 0));
   const sampledAreaKm2 = Math.PI * Math.pow(radiusM / 1000, 2);
+  const waterAreaM2 = waterAreas.reduce(
+    (sum, feature) => sum + polygonArea(feature.footprint || []),
+    0,
+  );
+  const waterwayLengthKm =
+    [...waterways, ...coastlines].reduce(
+      (sum, feature) => sum + planarLength(feature.path || []),
+      0,
+    ) / 1000;
+  const greenAreaM2 = greenAreas.reduce(
+    (sum, feature) => sum + polygonArea(feature.footprint || []),
+    0,
+  );
+  const namedLandmarkCount = Number(
+    mesh?.skylineProfile?.namedStructureCount ||
+      buildings.filter((building) => String(building.name || '').trim()).length,
+  );
   return {
     buildingCount: buildings.length,
     footprintAreaM2: Math.round(footprintAreaM2),
@@ -313,6 +352,12 @@ function cityMeshMetrics(mesh) {
     powerAssetCount: powerAssets.length,
     substations,
     generationAssets,
+    waterAreaM2: Math.round(waterAreaM2),
+    waterwayLengthKm: Number(waterwayLengthKm.toFixed(2)),
+    waterFeatureCount: waterAreas.length + waterways.length + coastlines.length,
+    greenAreaM2: Math.round(greenAreaM2),
+    greenFeatureCount: greenAreas.length,
+    namedLandmarkCount,
     terrainReliefM: Number(terrainReliefM.toFixed(1)),
     sampledAreaKm2: Number(sampledAreaKm2.toFixed(2)),
   };
@@ -429,6 +474,10 @@ function analyzeCityUseCase(mesh, useCaseId) {
     liveSignals.visibilityM == null
       ? 0
       : clampIndex(Math.max(0, 20_000 - liveSignals.visibilityM) / 200);
+  const sampleAreaM2 = Math.max(1, metrics.sampledAreaKm2 * 1_000_000);
+  const mappedWaterCoverage = clampIndex((metrics.waterAreaM2 / sampleAreaM2) * 900);
+  const mappedWaterEdge = clampIndex(metrics.waterwayLengthKm * 12);
+  const mappedGreenCoverage = clampIndex((metrics.greenAreaM2 / sampleAreaM2) * 1400);
 
   let planningIndex = 0;
   let observations = [];
@@ -520,6 +569,33 @@ function analyzeCityUseCase(mesh, useCaseId) {
       `Precipitation is ${liveSignals.precipitationMm.toFixed(1)} mm and modeled US AQI is ${liveSignals.usAqi == null ? 'unavailable' : liveSignals.usAqi.toFixed(0)}.`,
       `The scene pairs atmospheric context with ${metrics.roadLengthKm.toFixed(1)} km of mapped roads; it is not a navigation clearance, aviation minimum or live traffic visibility guarantee.`,
     ];
+  } else if (useCaseId === 'flood-context') {
+    planningIndex = clampIndex(
+      mappedWaterCoverage * 0.28 +
+        mappedWaterEdge * 0.18 +
+        weatherStress * 0.28 +
+        terrainComplexity * 0.12 +
+        builtMass * 0.08 +
+        gridCoverage * 0.06,
+    );
+    observations = [
+      `${metrics.waterFeatureCount} mapped water/coastline feature(s), ${metrics.waterAreaM2.toLocaleString()} m² of mapped water area and ${metrics.waterwayLengthKm.toFixed(1)} km of mapped waterway/coastline lines are present in this bounded sample.`,
+      `Current model precipitation is ${liveSignals.precipitationMm.toFixed(1)} mm; mapped terrain relief is ${metrics.terrainReliefM.toFixed(0)} m, with ${metrics.roadLengthKm.toFixed(1)} km of roads and ${metrics.powerAssetCount} grid assets shown for context.`,
+      'This is a source-context attention proxy only. It does not model drainage capacity, runoff, river stage, storm surge, flood depth, inundation extent or emergency clearance.',
+    ];
+  } else if (useCaseId === 'green-infrastructure') {
+    planningIndex = clampIndex(
+      (100 - mappedGreenCoverage) * 0.32 +
+        apparentHeatStress * 0.25 +
+        humidityStress * 0.12 +
+        airStress * 0.13 +
+        builtMass * 0.18,
+    );
+    observations = [
+      `${metrics.greenFeatureCount} mapped green-space feature(s) cover approximately ${metrics.greenAreaM2.toLocaleString()} m² inside the bounded sample.`,
+      `Current model context includes apparent temperature ${liveSignals.apparentTemperatureC == null ? 'unavailable' : `${liveSignals.apparentTemperatureC.toFixed(1)}°C`}, humidity ${liveSignals.relativeHumidityPercent == null ? 'unavailable' : `${liveSignals.relativeHumidityPercent.toFixed(0)}%`} and US AQI ${liveSignals.usAqi == null ? 'unavailable' : liveSignals.usAqi.toFixed(0)}.`,
+      'Mapped green geometry is a screening input only; it is not canopy coverage, ecological quality, public-health exposure, land ownership, feasibility or a siting directive.',
+    ];
   } else {
     planningIndex = clampIndex(seismicStress * 0.72 + builtMass * 0.18 + terrainComplexity * 0.1);
     observations = [
@@ -530,7 +606,7 @@ function analyzeCityUseCase(mesh, useCaseId) {
   }
 
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     useCase,
     city: mesh.city,
     generatedAt: new Date().toISOString(),
@@ -558,8 +634,12 @@ function analyzeCityUseCase(mesh, useCaseId) {
       liveAirQuality: Boolean(mesh.liveContext?.airQuality?.source?.live),
       seismicProvider: mesh.liveContext?.seismic?.source?.provider || null,
       liveSeismic: Boolean(mesh.liveContext?.seismic?.source?.live),
+      mappedWaterFeatures: metrics.waterFeatureCount,
+      mappedGreenFeatures: metrics.greenFeatureCount,
+      mappedNamedLandmarks: metrics.namedLandmarkCount,
+      environmentalGeometryInvented: false,
       limitations:
-        'Decision-support indicators combine the currently loaded bounded map sample with current model/feed context and are not operational ground truth.',
+        'Decision-support indicators combine the currently loaded bounded map sample with current model/feed context and are not operational ground truth. Missing water, green-space and landmark source geometry remains absent rather than being fabricated.',
     },
     advisoryOnly: true,
   };
