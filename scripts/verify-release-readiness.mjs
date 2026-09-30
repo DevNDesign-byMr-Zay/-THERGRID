@@ -477,7 +477,8 @@ async function main() {
     /standalone\.html/u.test(exactAethergridPackager) &&
       /runtime must not use a dashboard reference image/u.test(exactAethergridPackager) &&
       /attribute vec4 a_position/u.test(exactAethergridPackager) &&
-      !/REQUIRED_FILES[\s\S]*assets\/dashboard-reference\.webp/u.test(exactAethergridPackager),
+      !/^\s*'assets\/dashboard-reference\.webp',/mu.test(exactAethergridPackager) &&
+      /path === 'assets\/dashboard-reference\.webp'\) continue/u.test(exactAethergridPackager),
     'ÆTHERGRID packager must generate standalone WebGL HTML without requiring the reference screenshot',
   );
 
