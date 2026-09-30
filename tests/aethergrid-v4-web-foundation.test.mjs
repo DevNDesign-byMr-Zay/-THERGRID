@@ -1020,9 +1020,7 @@ test('v4 surface picking is renderer-neutral and labels terrain versus projectio
 });
 
 test('v4 measurement computes geodesic distance bearing and optional elevation without inventing native height', async () => {
-  const analysis = await text(
-    'apps/aethergrid-console/web/src/services/spatial-analysis.ts',
-  );
+  const analysis = await text('apps/aethergrid-console/web/src/services/spatial-analysis.ts');
 
   assert.match(analysis, /EARTH_RADIUS_METERS/u);
   assert.match(analysis, /measureSpatialPoints/u);
