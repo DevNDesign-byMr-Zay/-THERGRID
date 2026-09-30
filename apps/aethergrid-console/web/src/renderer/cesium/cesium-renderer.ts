@@ -72,6 +72,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #visualMode: VisualMode = 'solid';
   #selectedTile: { feature: Cesium3DTileFeature; color: Color } | null = null;
   #layers = new Map<string, LayerState>();
+  #time: TemporalInstant | null = null;
   #ready = false;
   #degraded = false;
   #busy = false;
@@ -165,10 +166,11 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
   setTime(time: TemporalInstant): void {
     const viewer = this.#requireViewer();
+    this.#time = { ...time };
     this.#solar = this.#solarLighting?.setTime(time) ?? this.#solar;
     if (this.#solar) this.#visualController?.setSolarPhase(this.#solar.phase);
     this.#grid?.setTime(time.iso);
-    for (const overlay of this.#overlays.values()) overlay.setTime(time.iso);
+    for (const overlay of this.#overlays.values()) overlay.setTime(time);
     this.#weather?.setTime(time);
     this.#airQuality?.setTime(time);
     viewer.scene.requestRender();
@@ -210,6 +212,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       this.#overlays.set(snapshot.layerId, overlay);
     }
     overlay.apply(snapshot);
+    if (this.#time) overlay.setTime(this.#time);
     overlay.setVisible(this.#layerVisible(snapshot.layerId, true));
   }
 
@@ -325,6 +328,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     if (this.#viewer && !this.#viewer.isDestroyed()) this.#viewer.destroy();
     this.#viewer = null;
     this.#buildings = null;
+    this.#time = null;
     this.#ready = false;
   }
 
