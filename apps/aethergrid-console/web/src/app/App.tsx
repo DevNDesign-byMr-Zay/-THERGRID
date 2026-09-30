@@ -329,20 +329,27 @@ export function App() {
     setSearchError('Enter a supported city or latitude, longitude.');
   };
 
-  const sceneTarget = useMemo<SpatialTarget>(
-    () =>
-      scope === 'world'
-        ? {
-            latitude: 20,
-            longitude: 0,
-            rangeMeters: 11_800_000,
-            pitchDegrees: -88,
-            headingDegrees: 0,
-            journey: 'global'
-          }
-        : { ...city, journey: 'full' },
-    [scope, city]
-  );
+  const sceneTarget = useMemo<SpatialTarget>(() => {
+    if (scope === 'world') {
+      return {
+        latitude: 20,
+        longitude: 0,
+        rangeMeters: 11_800_000,
+        pitchDegrees: -88,
+        headingDegrees: 0,
+        journey: 'global'
+      };
+    }
+
+    const identityMatches = cityIdentity?.cityId === city.id;
+    return {
+      ...city,
+      headingDegrees: identityMatches
+        ? cityIdentity.arrivalHeadingDegrees
+        : city.headingDegrees ?? 0,
+      journey: identityMatches ? 'direct' : 'full'
+    };
+  }, [scope, city, cityIdentity]);
 
   const worldOverlay = useMemo(
     () => (globalLive && temporal.mode === 'live' ? globalLive.overlay : null),
@@ -795,6 +802,14 @@ export function App() {
               <strong>
                 {cityIdentity
                   ? `${cityIdentity.sourceBackedHeightCoveragePercent.toFixed(1)}%`
+                  : '—'}
+              </strong>
+            </div>
+            <div className="identity-quality">
+              <span>ARRIVAL HEADING</span>
+              <strong>
+                {cityIdentity
+                  ? `${cityIdentity.arrivalHeadingDegrees.toFixed(0)}°`
                   : '—'}
               </strong>
             </div>
