@@ -3034,9 +3034,10 @@
       (mesh.waterways || []).length +
       (mesh.coastlines || []).length;
     const greenFeatureCount = (mesh.greenAreas || []).length;
+    const terrainFit = mesh.terrain?.source?.live ? 'DEM DRAPED' : 'FLAT FALLBACK';
     const seismic = mesh.liveContext?.seismic || null;
     const seismicLabel = seismic ? `${Number(seismic.eventCount || 0)} nearby · M${Number(seismic.maxMagnitude || 0).toFixed(1)} max` : '—';
-    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Skyline Max</b><em>${skylineMax}</em></span><span><b>P95 Height</b><em>${p95}</em></span><span><b>Height Data</b><em>${heightCoverage}</em></span><span><b>Weather</b><em>${weather}</em></span><span><b>Air</b><em>${airQuality}</em></span><span><b>Humidity</b><em>${humidity}</em></span><span><b>Sunrise / Sunset</b><em>${sunriseSunset}</em></span><span><b>Water Features</b><em>${waterFeatureCount}</em></span><span><b>Green Areas</b><em>${greenFeatureCount}</em></span><span><b>Seismic</b><em>${seismicLabel}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
+    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Skyline Max</b><em>${skylineMax}</em></span><span><b>P95 Height</b><em>${p95}</em></span><span><b>Height Data</b><em>${heightCoverage}</em></span><span><b>Weather</b><em>${weather}</em></span><span><b>Air</b><em>${airQuality}</em></span><span><b>Humidity</b><em>${humidity}</em></span><span><b>Sunrise / Sunset</b><em>${sunriseSunset}</em></span><span><b>Water Features</b><em>${waterFeatureCount}</em></span><span><b>Green Areas</b><em>${greenFeatureCount}</em></span><span><b>Terrain Fit</b><em>${terrainFit}</em></span><span><b>Seismic</b><em>${seismicLabel}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
   }
 
   function updateCityIdentity(mesh) {
@@ -3073,6 +3074,7 @@
       ['Tall', Number(skyline.tallStructureCount || 0).toLocaleString()],
       ['Roof Tags', Number(skyline.roofTaggedCount || 0).toLocaleString()],
       ['Relief', terrainRelief == null ? '—' : `${terrainRelief.toFixed(0)} m`],
+      ['Terrain Fit', mesh.terrain?.source?.live ? 'DEM DRAPED' : 'FLAT FALLBACK'],
       ['Weather', weather],
       ['Water', waterFeatureCount.toLocaleString()],
       ['Green', greenFeatureCount.toLocaleString()],
@@ -3092,7 +3094,7 @@
         ([label, value]) =>
           `<span><b>${escapeHtml(label)}</b><em>${escapeHtml(value)}</em></span>`,
       )
-      .join('')}</div><div class="identity-anchor-list"><small>SOURCE-BACKED IDENTITY ANCHORS</small>${anchorHtml}</div><p class="identity-boundary">Named/tall anchors, mapped water/green geometry and material tags come from the loaded OpenStreetMap sample. Weather identity comes from current provider model context; no landmark, environmental geometry or weather layer is treated as direct sensing.</p>`;
+      .join('')}</div><div class="identity-anchor-list"><small>SOURCE-BACKED IDENTITY ANCHORS</small>${anchorHtml}</div><p class="identity-boundary">Named/tall anchors, mapped water/green geometry and material tags come from the loaded OpenStreetMap sample. When live elevation is present, building foundations, roads, green space and mapped grid assets are vertically aligned by bilinear interpolation across the bounded DEM sample; this is visualization-grade terrain fitting, not survey/LiDAR precision. Weather identity comes from current provider model context; no landmark, environmental geometry or weather layer is treated as direct sensing.</p>`;
   }
 
   function showCityTransition(city, stage = 'Aligning global coordinate…', progress = 8) {
@@ -3160,7 +3162,7 @@
         attributions.join(' · ') ||
         'Live city geometry unavailable; using local fallback geometry.';
       q('#geoAttribution').textContent =
-        `${sourceText} · Water/green geography and material tint appear only when mapped source tags are present. City-light points are procedural visualization from mapped geometry + daylight state, not measured window occupancy. Snow/fog/rain/storm effects visualize current model context; storm pulses are not detected lightning strikes.`;
+        `${sourceText} · Water/green geography and material tint appear only when mapped source tags are present. Building foundations, roads, waterways, green space and mapped grid assets are terrain-aligned with bilinear interpolation when live DEM samples are available; elevation fitting is not survey/LiDAR grade. Water polygons remain level presentation surfaces rather than being warped over terrain. City-light points are procedural visualization from mapped geometry + daylight state, not measured window occupancy. Snow/fog/rain/storm effects visualize current model context; storm pulses are not detected lightning strikes.`;
     }
     if (status) {
       const skyline = result.skylineProfile || {};
@@ -3181,7 +3183,7 @@
       const weatherAt = result.environment?.source?.modelTime || result.environment?.current?.time || 'unavailable';
       const airAt = result.liveContext?.airQuality?.source?.modelTime || 'unavailable';
       const quakeAt = result.liveContext?.seismic?.source?.generatedAt || result.liveContext?.seismic?.source?.fetchedAt || 'unavailable';
-      q('#geoProvenance').innerHTML = `<span><b>Geometry</b><em>${escapeHtml(result.source?.provider || 'local')}</em></span><span><b>OSM State</b><em>${escapeHtml(upstream)}</em></span><span><b>Water / Green</b><em>${(result.waterAreas || []).length + (result.waterways || []).length + (result.coastlines || []).length} / ${(result.greenAreas || []).length}</em></span><span><b>Weather</b><em>${escapeHtml(result.environment?.source?.provider || 'local')} · ${escapeHtml(weatherAt)}</em></span><span><b>Air</b><em>${escapeHtml(result.liveContext?.airQuality?.source?.provider || 'local')} · ${escapeHtml(airAt)}</em></span><span><b>Seismic</b><em>${escapeHtml(result.liveContext?.seismic?.source?.provider || 'local')} · ${escapeHtml(quakeAt)}</em></span><span><b>Height Coverage</b><em>${Number(result.skylineProfile?.sourceBackedHeightCoveragePercent || 0).toFixed(0)}%</em></span><span><b>Actuation</b><em>Disabled</em></span>`;
+      q('#geoProvenance').innerHTML = `<span><b>Geometry</b><em>${escapeHtml(result.source?.provider || 'local')}</em></span><span><b>OSM State</b><em>${escapeHtml(upstream)}</em></span><span><b>Water / Green</b><em>${(result.waterAreas || []).length + (result.waterways || []).length + (result.coastlines || []).length} / ${(result.greenAreas || []).length}</em></span><span><b>Weather</b><em>${escapeHtml(result.environment?.source?.provider || 'local')} · ${escapeHtml(weatherAt)}</em></span><span><b>Air</b><em>${escapeHtml(result.liveContext?.airQuality?.source?.provider || 'local')} · ${escapeHtml(airAt)}</em></span><span><b>Seismic</b><em>${escapeHtml(result.liveContext?.seismic?.source?.provider || 'local')} · ${escapeHtml(quakeAt)}</em></span><span><b>Height Coverage</b><em>${Number(result.skylineProfile?.sourceBackedHeightCoveragePercent || 0).toFixed(0)}%</em></span><span><b>Terrain Fit</b><em>${result.terrain?.source?.live ? 'DEM DRAPED' : 'FLAT FALLBACK'}</em></span><span><b>Actuation</b><em>Disabled</em></span>`;
     }
     renderActivity();
     showToast(
