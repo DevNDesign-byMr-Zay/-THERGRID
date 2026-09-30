@@ -153,7 +153,7 @@ A fresh ZIP is considered functional when:
 
 ## Current verified state
 
-Batches 1–12 are verified on `main`; Batch 13 is implemented on the feature branch and must pass the maintained gates before entering `main`.
+Batches 1–13 are implemented; Batch 13 has passed the maintained feature-branch gates and the exact merge candidate must remain green before entering `main`.
 
 - Grid, Global, Holographic, Quantum, AI, Scenarios, Evidence and Settings are distinct routed workspaces.
 - WebGL node picking, scenario editing/duplication, evidence drill-down, agent receipts, persistent settings/profile, global coordinate exploration, mapped grid infrastructure, terrain and quantum provider workflows are all present.
@@ -164,12 +164,13 @@ Batches 1–12 are verified on `main`; Batch 13 is implemented on the feature br
 
 The CI-built functional application archive was inspected after the final release gates passed:
 
-- 27 regular files;
+- 28 regular files;
 - 0 empty files;
 - includes `standalone.html`, modular HTML/CSS/JS, Node backend, provider-neutral AI runtime, agent config, JSON manifests, brand assets, app-local environment example, PowerShell/CMD launchers, README, file inventory and SHA-256 sums;
 - the old dashboard screenshot is not required by the runtime package;
 - tests, lint, typecheck, coverage, fresh-clone smoke, container smoke, quality/release-readiness and CodeQL are required before merge.
 - v2.6 verified functional ZIP: 684,707 bytes; SHA-256 `ea253b688d9c5195f99cdc5a3b79e020d697023d48772b63c2ef0fb783d4e3a6`.
+- v2.7 verified functional ZIP: 750,259 bytes; SHA-256 `9bac618a2b451e9e8795883b72b6c61ca03be93a9adb7175065d77e6c3a488a2`.
 
 ## Batch 8 — Global intelligence, operator identity, and external compute
 
@@ -373,7 +374,7 @@ The city twin is only as exact as the open-source geometry and metadata availabl
 
 ## Batch 13 — Live animated cities, globe intelligence, and source-driven use cases
 
-Status: IMPLEMENTED / VERIFYING
+Status: COMPLETE
 
 ### Animated planet
 - secondary native-WebGL atmospheric shell;
