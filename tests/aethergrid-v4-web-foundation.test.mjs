@@ -24,9 +24,10 @@ test('v4 web workspace remains isolated from the verified v3 runtime', async () 
 });
 
 test('v4 spatial renderer has Cesium primary and native fallback contracts', async () => {
-  const [contract, cesiumRenderer, nativeRenderer, manager] = await Promise.all([
+  const [contract, cesiumRenderer, geodeticGrid, nativeRenderer, manager] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/spatial-renderer.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/geodetic-grid-layer.ts'),
     text('apps/aethergrid-console/web/src/renderer/native/native-renderer-adapter.ts'),
     text('apps/aethergrid-console/web/src/renderer/renderer-manager.ts'),
   ]);
@@ -51,6 +52,10 @@ test('v4 spatial renderer has Cesium primary and native fallback contracts', asy
   assert.match(cesiumRenderer, /Terrain\.fromWorldTerrain/u);
   assert.match(cesiumRenderer, /createOsmBuildingsAsync/u);
   assert.match(cesiumRenderer, /depthTestAgainstTerrain = true/u);
+  assert.match(cesiumRenderer, /GeodeticGridLayer/u);
+  assert.match(geodeticGrid, /Cartesian3\.fromDegrees/u);
+  assert.match(geodeticGrid, /setTime\(isoTime/u);
+  assert.match(geodeticGrid, /Math\.sin/u);
   assert.match(nativeRenderer, /LegacyNativeSpatialBridge/u);
   assert.match(manager, /await this\.#activate\(this\.#primary\)/u);
   assert.match(manager, /await this\.#activate\(this\.#fallback\)/u);
