@@ -406,6 +406,8 @@
         infrastructure: true,
         terrain: true,
         weather: true,
+        clouds: true,
+        illumination: true,
         air: true,
         seismic: true,
         nodes: true,
@@ -461,10 +463,16 @@
          uniform float u_time;
          uniform float u_amp;
          uniform float u_pointSize;
+         uniform vec2 u_flow;
+         uniform float u_verticalScale;
+         uniform float u_drop;
          varying float v_phase;
          void main(){
            vec3 p=a_position.xyz;
-           p.y += sin(a_position.w + u_time) * u_amp;
+           float phase=a_position.w + u_time;
+           p.y += sin(phase) * u_amp * u_verticalScale;
+           p.xz += u_flow * sin(phase) * u_amp;
+           p.y -= fract(phase * 0.15915494) * u_drop;
            gl_Position=u_mvp*vec4(p,1.0);
            gl_PointSize=u_pointSize;
            v_phase=0.5+0.5*sin(a_position.w+u_time);
@@ -496,6 +504,9 @@
         color: gl.getUniformLocation(this.program, 'u_color'),
         pointSize: gl.getUniformLocation(this.program, 'u_pointSize'),
         pointMode: gl.getUniformLocation(this.program, 'u_pointMode'),
+        flow: gl.getUniformLocation(this.program, 'u_flow'),
+        verticalScale: gl.getUniformLocation(this.program, 'u_verticalScale'),
+        drop: gl.getUniformLocation(this.program, 'u_drop'),
       };
     }
 
@@ -1180,7 +1191,18 @@
       }
     }
 
-    drawBuffer(item, primitive, color, amplitude, pointMode = 0, pointSize = 1) {
+    drawBuffer(
+      item,
+      primitive,
+      color,
+      amplitude,
+      pointMode = 0,
+      pointSize = 1,
+      flowX = 0,
+      flowZ = 0,
+      verticalScale = 1,
+      drop = 0,
+    ) {
       if (!item) return;
       const gl = this.gl;
       gl.bindBuffer(gl.ARRAY_BUFFER, item.buffer);
@@ -1190,6 +1212,9 @@
       gl.uniform1f(this.loc.amp, amplitude);
       gl.uniform1f(this.loc.pointMode, pointMode);
       gl.uniform1f(this.loc.pointSize, pointSize);
+      gl.uniform2f(this.loc.flow, flowX, flowZ);
+      gl.uniform1f(this.loc.verticalScale, verticalScale);
+      gl.uniform1f(this.loc.drop, drop);
       gl.drawArrays(primitive, 0, item.count);
     }
 
