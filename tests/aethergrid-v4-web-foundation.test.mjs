@@ -279,3 +279,27 @@ test('v4 city-live context renders source-backed AQI and seismic events only in 
   assert.match(app, /temporal\.mode === 'live' \? seismicToOverlay/u);
   assert.match(app, /Current AQI and seismic context are hidden outside LIVE mode/u);
 });
+
+test('v4 Cesium city identity includes mapped roads water coastline and green areas', async () => {
+  const [contract, service, layer, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/renderer/overlays/spatial-overlay.ts'),
+    text('apps/aethergrid-console/web/src/services/city-power-overlay.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(contract, /OverlayAreaKind = 'water' \| 'green'/u);
+  assert.match(service, /cityMeshToSemanticOverlays/u);
+  assert.match(service, /layerId: 'roads'/u);
+  assert.match(service, /layerId: 'water'/u);
+  assert.match(service, /layerId: 'green'/u);
+  assert.match(service, /loadCitySpatialBundle/u);
+  assert.match(service, /loadCoordinateSpatialBundle/u);
+  assert.match(layer, /PolygonGraphics/u);
+  assert.match(layer, /PolygonHierarchy/u);
+  assert.match(layer, /edge\.kind === 'coastline'/u);
+  assert.match(layer, /edge\.kind === 'waterway'/u);
+  assert.match(app, /id: 'roads', visible: true/u);
+  assert.match(app, /id: 'water', visible: true/u);
+  assert.match(app, /id: 'green', visible: true/u);
+});
