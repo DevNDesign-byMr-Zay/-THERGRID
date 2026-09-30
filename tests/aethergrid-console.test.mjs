@@ -45,6 +45,8 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(html, /data-global-layer="weather"/u);
     assert.match(html, /data-global-layer="clouds"/u);
     assert.match(html, /data-global-layer="illumination"/u);
+    assert.match(html, /data-global-layer="landmarks"/u);
+    assert.match(html, /id="cityIdentity"/u);
     assert.match(html, /data-global-layer="air"/u);
     assert.match(html, /data-global-layer="seismic"/u);
     assert.match(html, /id="globalLiveStatus"/u);
@@ -127,6 +129,13 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(appSource, /seismicLines/u);
     assert.match(appSource, /cloudParticles/u);
     assert.match(appSource, /cityLights/u);
+    assert.match(appSource, /landmarkCandidates/u);
+    assert.match(appSource, /landmarkSpines/u);
+    assert.match(appSource, /snowParticles/u);
+    assert.match(appSource, /fogParticles/u);
+    assert.match(appSource, /stormLines/u);
+    assert.match(appSource, /weatherPhenomenon/u);
+    assert.match(appSource, /function updateCityIdentity/u);
     assert.match(appSource, /u_flow/u);
     assert.match(appSource, /u_drop/u);
     assert.match(appSource, /setLiveActivity/u);
