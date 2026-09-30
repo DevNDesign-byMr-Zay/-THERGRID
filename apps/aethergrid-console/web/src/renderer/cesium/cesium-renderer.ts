@@ -1,5 +1,6 @@
 import {
   Cartesian2,
+  BoundingSphere,
   Cartesian3,
   Cesium3DTileFeature,
   Cesium3DTileset,
@@ -111,11 +112,8 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       target.latitude,
       Math.max(0, target.heightMeters ?? 0)
     );
-    await viewer.camera.flyToBoundingSphere(
-      {
-        center: destination,
-        radius: Math.max(10, target.rangeMeters ?? DEFAULT_RANGE_METERS)
-      },
+    viewer.camera.flyToBoundingSphere(
+      new BoundingSphere(destination, Math.max(10, target.rangeMeters ?? DEFAULT_RANGE_METERS)),
       {
         offset: new HeadingPitchRange(
           CesiumMath.toRadians(target.headingDegrees ?? 0),
