@@ -10,6 +10,13 @@
 
 ### Added
 
+- Added skyline-focused presets for New York, London, Tokyo, Dubai, Singapore, São Paulo, Lagos, and Sydney so city descent targets recognizable urban cores instead of generic centroids.
+- Expanded OpenStreetMap city parsing to ways plus relation outer geometry, source-backed height/estimated-height/level metadata, minimum heights, roof metadata, materials/colours, and visible upstream timestamps.
+- Removed the former 450 m building-height flattening ceiling, added supported native-WebGL roof geometry, and added city-specific camera framing derived from mapped footprint distribution and skyline height.
+- Added current Open-Meteo city environment context and LIVE NOW synchronization for the GLOBAL 4D city time surface, with current temperature/cloud/daylight/precipitation/wind provenance.
+- Added persistent Dark, Light, and System appearance modes across semantic UI surfaces and WebGL city/globe palettes.
+- Added skyline quality readouts so source-backed height coverage and fallback state are visible instead of overstating open-data fidelity.
+
 - Upgraded live OSM city rendering from wireframe-only shells to translucent WebGL building volumes with retained wireframe edges, building-part support, and minimum-height geometry.
 - Added cinematic globe-to-city descent with a local 3D fly-in plus SOLID 3D, X-RAY, and OPERATIONS visual modes.
 - Added bounded city-operation workflows for grid resilience, outage impact, emergency access, renewable siting, and load growth, with evidence receipts and shared AI context.
