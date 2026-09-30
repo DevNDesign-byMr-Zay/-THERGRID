@@ -3,10 +3,11 @@ export function createProviderReceipt(options = {}) {
 
   return Object.freeze({
     provider: options.provider || 'unknown-provider',
+    capability: options.capability || 'general',
     dataset: options.dataset || 'unknown-dataset',
-    requestId: options.requestId || `req-${now}`,
+    requestId: options.requestId || `req-${Date.now()}`,
     retrievedAt: options.retrievedAt || now,
-    observedAt: options.observedAt || now,
+    observedAt: options.observedAt || null,
     modelRunAt: options.modelRunAt || null,
     expiresAt: options.expiresAt || null,
     cacheState: options.cacheState || 'miss',

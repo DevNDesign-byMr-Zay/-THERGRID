@@ -1,7 +1,20 @@
 import { z } from 'zod';
 
 const optionalString = z.string().optional().default('');
-const optionalUrl = z.string().optional().default('');
+
+const optionalUrl = z
+  .string()
+  .optional()
+  .default('')
+  .refine((val) => {
+    if (!val || val.trim() === '') return true;
+    try {
+      const parsed = new URL(val);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }, { message: 'Invalid URL format; must be a valid HTTP or HTTPS URL' });
 
 const numberFromEnv = (defaultValue) =>
   z
@@ -23,9 +36,9 @@ export const envSchema = z.object({
   AETHERGRID_AI_PROVIDER: z.string().optional().default('local'),
   AETHERGRID_AI_MODEL: optionalString,
   AETHERGRID_AI_TIMEOUT_MS: numberFromEnv(45000),
-  AETHERGRID_OPENAI_BASE_URL: z.string().optional().default('https://api.openai.com/v1'),
+  AETHERGRID_OPENAI_BASE_URL: optionalUrl,
   AETHERGRID_OPENAI_API_KEY: optionalString,
-  AETHERGRID_OLLAMA_BASE_URL: z.string().optional().default('http://127.0.0.1:11434'),
+  AETHERGRID_OLLAMA_BASE_URL: optionalUrl,
 
   // Agent overrides
   AETHERGRID_VAELON_PROVIDER: optionalString,
@@ -39,7 +52,7 @@ export const envSchema = z.object({
 
   // Geo / Spatial
   AETHERGRID_GEO_PROVIDER: z.string().optional().default('osm-overpass'),
-  AETHERGRID_OVERPASS_URL: z.string().optional().default('https://overpass-api.de/api/interpreter'),
+  AETHERGRID_OVERPASS_URL: optionalUrl,
   AETHERGRID_GEO_USER_AGENT: z
     .string()
     .optional()
@@ -48,35 +61,26 @@ export const envSchema = z.object({
 
   // City Environment / Weather
   AETHERGRID_ENVIRONMENT_PROVIDER: z.string().optional().default('open-meteo'),
-  AETHERGRID_OPEN_METEO_URL: z.string().optional().default('https://api.open-meteo.com/v1/forecast'),
+  AETHERGRID_OPEN_METEO_URL: optionalUrl,
 
   // Air Quality
   AETHERGRID_AIR_QUALITY_PROVIDER: z.string().optional().default('open-meteo'),
-  AETHERGRID_AIR_QUALITY_URL: z
-    .string()
-    .optional()
-    .default('https://air-quality-api.open-meteo.com/v1/air-quality'),
+  AETHERGRID_AIR_QUALITY_URL: optionalUrl,
 
   // Seismic
   AETHERGRID_SEISMIC_PROVIDER: z.string().optional().default('usgs'),
-  AETHERGRID_USGS_EARTHQUAKE_URL: z
-    .string()
-    .optional()
-    .default('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson'),
+  AETHERGRID_USGS_EARTHQUAKE_URL: optionalUrl,
   AETHERGRID_SEISMIC_CACHE_TTL_MS: numberFromEnv(60000),
 
   // Terrain
   AETHERGRID_TERRAIN_PROVIDER: z.string().optional().default('open-meteo'),
-  AETHERGRID_ELEVATION_URL: z.string().optional().default('https://api.open-meteo.com/v1/elevation'),
+  AETHERGRID_ELEVATION_URL: optionalUrl,
   AETHERGRID_OPEN_METEO_API_KEY: optionalString,
 
   // Quantum
   AETHERGRID_QUANTUM_PROVIDER: z.string().optional().default('local-simulator'),
-  AETHERGRID_IBM_QUANTUM_BASE_URL: z
-    .string()
-    .optional()
-    .default('https://quantum.cloud.ibm.com/api/v1/'),
-  AETHERGRID_IBM_IAM_URL: z.string().optional().default('https://iam.cloud.ibm.com/identity/token'),
+  AETHERGRID_IBM_QUANTUM_BASE_URL: optionalUrl,
+  AETHERGRID_IBM_IAM_URL: optionalUrl,
   AETHERGRID_IBM_QUANTUM_API_KEY: optionalString,
   AETHERGRID_IBM_QUANTUM_SERVICE_CRN: optionalString,
   AETHERGRID_IBM_QUANTUM_BACKEND: optionalString,

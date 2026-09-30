@@ -5,7 +5,7 @@ import { createUrlPolicy } from '../security/url-policy.mjs';
 import { createCacheStore } from './cache-store.mjs';
 import { createCircuitBreaker } from './circuit-breaker.mjs';
 import { createRateLimiter } from './rate-limiter.mjs';
-import { createProviderReceipt } from './provider-receipt.mjs';
+import { createProviderExecutor } from './provider-executor.mjs';
 
 export function createProviderRegistry(options = {}) {
   const rawEnv = options.env || process.env;
@@ -27,6 +27,8 @@ export function createProviderRegistry(options = {}) {
     config.futureProviders.tomorrowIo.baseUrl || 'https://api.tomorrow.io/v4',
     config.futureProviders.nws.apiUrl || 'https://api.weather.gov',
     config.futureProviders.eia.baseUrl || 'https://api.eia.gov/v2',
+    config.futureProviders.hydrology.baseUrl || 'https://api.water.noaa.gov/nwps/v1',
+    config.futureProviders.dwave.solverUrl || 'https://cloud.dwavesys.com/sapi/v2',
   ]);
 
   const cache = createCacheStore();
@@ -47,7 +49,16 @@ export function createProviderRegistry(options = {}) {
     return rateLimiters.get(providerId);
   }
 
-  // Register providers
+  const executor = createProviderExecutor({
+    urlPolicy,
+    health,
+    redactor,
+    cache,
+    getBreaker,
+    getRateLimiter,
+  });
+
+  // Register initial readiness statuses for providers
   health.registerProvider('spatial', {
     name: 'Native WebGL 4D Grid',
     capabilities: ['spatial'],
@@ -99,7 +110,7 @@ export function createProviderRegistry(options = {}) {
   });
 
   health.registerProvider('energy', {
-    name: 'Local Microgrid Simulator & EIA Context',
+    name: 'Local Microgrid Simulator',
     capabilities: ['energy'],
     status: PROVIDER_STATUS.READY,
   });
@@ -122,146 +133,15 @@ export function createProviderRegistry(options = {}) {
     status: config.futureProviders.hydrology.apiKey ? PROVIDER_STATUS.READY : PROVIDER_STATUS.UNCONFIGURED,
   });
 
-  async function executeProviderRequest(providerId, params = {}, fetcher, fallbackFetcher) {
-    const breaker = getBreaker(providerId);
-    const limiter = getRateLimiter(providerId);
-
-    const cacheKey = params.cacheKey || `${providerId}:${JSON.stringify(params)}`;
-    const cacheTtlMs = params.ttlMs || 60000;
-
-    // Check rate limit
-    if (!limiter.tryAcquire()) {
-      health.recordExecution(providerId, {
-        error: true,
-        degraded: true,
-        circuitState: breaker.getState(),
-      });
-      if (typeof fallbackFetcher === 'function') {
-        const fallbackData = await fallbackFetcher({ reason: 'rate_limited' });
-        const receipt = createProviderReceipt({
-          provider: providerId,
-          dataset: params.dataset || providerId,
-          cacheState: 'miss',
-          live: false,
-          fallback: true,
-          attribution: params.attribution || '',
-        });
-        return { data: fallbackData, receipt };
-      }
-      throw new Error(`Rate limit exceeded for provider '${providerId}'`);
-    }
-
-    // Check cache
-    const cached = cache.get(cacheKey);
-    if (cached.found && !cached.isStale) {
-      health.recordExecution(providerId, {
-        success: true,
-        cacheHit: true,
-        latencyMs: 0,
-        circuitState: breaker.getState(),
-        rateLimitRemaining: limiter.getStatus().remaining,
-      });
-      const receipt = createProviderReceipt({
-        provider: providerId,
-        dataset: params.dataset || providerId,
-        cacheState: 'hit',
-        live: true,
-        stale: false,
-        attribution: params.attribution || '',
-      });
-      return { data: cached.value, receipt };
-    }
-
-    const startTime = Date.now();
-    try {
-      if (params.url) {
-        urlPolicy.validateUrl(params.url);
-      }
-
-      const cbResult = await breaker.execute(
-        async () => {
-          const data = await fetcher();
-          cache.set(cacheKey, data, cacheTtlMs);
-          return data;
-        },
-        async (errInfo) => {
-          if (cached.found) {
-            return {
-              staleData: cached.value,
-              isStale: true,
-            };
-          }
-          if (typeof fallbackFetcher === 'function') {
-            const fallbackData = await fallbackFetcher(errInfo);
-            return {
-              fallbackData,
-              isFallback: true,
-            };
-          }
-          throw errInfo.error || new Error(`Provider '${providerId}' unavailable`);
-        },
-      );
-
-      const latencyMs = Date.now() - startTime;
-
-      if (cbResult.usedFallback) {
-        const isStale = Boolean(cbResult.result?.isStale);
-        const data = isStale ? cbResult.result.staleData : cbResult.result.fallbackData;
-        health.recordExecution(providerId, {
-          success: true,
-          fallbackActive: !isStale,
-          degraded: true,
-          latencyMs,
-          circuitState: breaker.getState(),
-          rateLimitRemaining: limiter.getStatus().remaining,
-        });
-        const receipt = createProviderReceipt({
-          provider: providerId,
-          dataset: params.dataset || providerId,
-          cacheState: isStale ? 'stale' : 'miss',
-          live: false,
-          stale: isStale,
-          fallback: !isStale,
-          attribution: params.attribution || '',
-        });
-        return { data, receipt };
-      }
-
-      health.recordExecution(providerId, {
-        success: true,
-        cacheHit: false,
-        latencyMs,
-        circuitState: breaker.getState(),
-        rateLimitRemaining: limiter.getStatus().remaining,
-      });
-
-      const receipt = createProviderReceipt({
-        provider: providerId,
-        dataset: params.dataset || providerId,
-        cacheState: 'miss',
-        live: true,
-        stale: false,
-        attribution: params.attribution || '',
-      });
-
-      return { data: cbResult.result, receipt };
-    } catch (err) {
-      const latencyMs = Date.now() - startTime;
-      health.recordExecution(providerId, {
-        error: true,
-        latencyMs,
-        circuitState: breaker.getState(),
-      });
-      const redactedMsg = redactor.redactString(err.message || String(err));
-      throw new Error(`Provider Execution Error [${providerId}]: ${redactedMsg}`);
-    }
+  function executeProviderRequest(providerId, params = {}, fetcher, fallbackFetcher) {
+    return executor.execute(providerId, params, fetcher, fallbackFetcher);
   }
 
   function getProvidersByCapability(capability) {
     const all = health.getAllStatuses();
     const matches = {};
     for (const [id, info] of Object.entries(all)) {
-      if (info.capabilities.includes(capability)) {
+      if (info.capabilities && info.capabilities.includes(capability)) {
         matches[id] = info;
       }
     }
@@ -289,7 +169,7 @@ export function createProviderRegistry(options = {}) {
       },
       airQuality: {
         provider: config.airQuality.provider,
-        status: healthStatuses.airQuality?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses['air-quality']?.status || PROVIDER_STATUS.READY,
       },
       seismic: {
         provider: config.seismic.provider,
@@ -327,6 +207,7 @@ export function createProviderRegistry(options = {}) {
     redactor,
     urlPolicy,
     cache,
+    executor,
     getBreaker,
     getRateLimiter,
     executeProviderRequest,

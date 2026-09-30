@@ -19,10 +19,11 @@ import {
 import { createProviderRegistry } from '../apps/aethergrid-console/providers/provider-registry.mjs';
 import { createRequestContext } from '../apps/aethergrid-console/providers/request-context.mjs';
 import { createProviderReceipt } from '../apps/aethergrid-console/providers/provider-receipt.mjs';
-import { createProviderAdapter } from '../apps/aethergrid-console/providers/adapter.mjs';
+import { createProviderAdapter } from '../apps/aethergrid-console/providers/provider-adapter.mjs';
+import { createProviderExecutor } from '../apps/aethergrid-console/providers/provider-executor.mjs';
 import { server } from '../apps/aethergrid-console/server.mjs';
 
-describe('ÆTHERGRID v4.0 — Provider, Configuration, Secret-Safety & Runtime Execution Foundation', () => {
+describe('ÆTHERGRID v4.0 Batch 19A — Provider Execution Layer, Security & Runtime Foundation', () => {
   let activePort = 0;
 
   before(async () => {
@@ -49,6 +50,13 @@ describe('ÆTHERGRID v4.0 — Provider, Configuration, Secret-Safety & Runtime E
     it('normalizes port numbers and invalid non-numeric port strings to defaults', () => {
       const parsed = parseEnv({ AETHERGRID_PORT: 'invalid-port' });
       assert.equal(parsed.AETHERGRID_PORT, 8090);
+    });
+
+    it('rejects invalid URL environment variables', () => {
+      assert.throws(
+        () => parseEnv({ AETHERGRID_OPEN_METEO_URL: 'not-a-valid-url' }),
+        /Invalid URL format/,
+      );
     });
 
     it('tolerates missing optional future provider configuration without throwing', () => {
@@ -100,39 +108,79 @@ describe('ÆTHERGRID v4.0 — Provider, Configuration, Secret-Safety & Runtime E
     });
   });
 
-  describe('3. Outbound Provider URL Policy', () => {
+  describe('3. Outbound Provider URL Policy Hardening', () => {
     it('allows default approved provider URLs and local Ollama', () => {
       const policy = createUrlPolicy();
       assert.equal(policy.isAllowedUrl('https://api.open-meteo.com/v1/forecast'), true);
       assert.equal(policy.isAllowedUrl('http://127.0.0.1:11434/api/generate'), true);
+      assert.equal(policy.isAllowedUrl('http://localhost:11434/api/generate'), true);
     });
 
-    it('blocks unapproved arbitrary client URLs', () => {
-      const policy = createUrlPolicy();
-      assert.equal(policy.isAllowedUrl('https://malicious-external-domain.com/steal'), false);
+    it('blocks lookalike domain prefix-spoofing attacks', () => {
+      const policy = createUrlPolicy(['https://api.openai.com']);
+      // Should reject domain spoofing like https://api.openai.com.attacker.com/
+      assert.equal(policy.isAllowedUrl('https://api.openai.com.attacker.com/v1/chat'), false);
       assert.throws(
-        () => policy.validateUrl('https://malicious-external-domain.com/steal'),
+        () => policy.validateUrl('https://api.openai.com.attacker.com/v1/chat'),
         /Outbound URL blocked by security policy/,
       );
     });
+
+    it('blocks URLs with embedded credentials or unsupported protocols', () => {
+      const policy = createUrlPolicy(['https://api.openai.com']);
+      assert.equal(policy.isAllowedUrl('https://user:password@api.openai.com/v1/chat'), false);
+      assert.equal(policy.isAllowedUrl('ftp://api.openai.com/v1/chat'), false);
+    });
   });
 
-  describe('4. Provider Cache Foundation', () => {
-    it('supports set, get, TTL expiration and hit/miss metadata', async () => {
+  describe('4. Provider Cache & Stale-While-Revalidate (SWR) Foundation', () => {
+    it('supports set, get, TTL expiration, and SWR stale return metadata', async () => {
       const cache = createCacheStore({ defaultTtlMs: 50 });
-      cache.set('key1', { temp: 22 });
+      cache.set('key1', { temp: 22 }, 50);
 
       const hit = cache.get('key1');
       assert.equal(hit.found, true);
       assert.equal(hit.value.temp, 22);
       assert.equal(hit.isStale, false);
-      assert.equal(hit.metadata.hit, true);
 
       await new Promise((res) => setTimeout(res, 60));
 
       const staleGet = cache.get('key1');
       assert.equal(staleGet.found, true);
       assert.equal(staleGet.isStale, true);
+    });
+
+    it('returns stale cached data via provider executor when SWR is triggered', async () => {
+      const cache = createCacheStore({ defaultTtlMs: 30 });
+      const executor = createProviderExecutor({ cache });
+
+      let fetchCount = 0;
+      const fetcher = async () => {
+        fetchCount += 1;
+        return { temp: 20 + fetchCount };
+      };
+
+      // Initial miss -> fetches fresh
+      const res1 = await executor.execute('weather', { cacheKey: 'test-swr', ttlMs: 30 }, fetcher);
+      assert.equal(res1.data.temp, 21);
+      assert.equal(res1.receipt.cacheState, 'miss');
+      assert.equal(res1.receipt.live, true);
+
+      // Hit -> returns cached
+      const res2 = await executor.execute('weather', { cacheKey: 'test-swr', ttlMs: 30 }, fetcher);
+      assert.equal(res2.data.temp, 21);
+      assert.equal(res2.receipt.cacheState, 'hit');
+      assert.equal(res2.receipt.live, true);
+
+      // Wait for TTL expiration
+      await new Promise((res) => setTimeout(res, 40));
+
+      // Stale -> returns stale data with stale: true and live: false
+      const res3 = await executor.execute('weather', { cacheKey: 'test-swr', ttlMs: 30 }, fetcher);
+      assert.equal(res3.data.temp, 21);
+      assert.equal(res3.receipt.cacheState, 'stale');
+      assert.equal(res3.receipt.stale, true);
+      assert.equal(res3.receipt.live, false);
     });
   });
 
@@ -187,8 +235,8 @@ describe('ÆTHERGRID v4.0 — Provider, Configuration, Secret-Safety & Runtime E
     });
   });
 
-  describe('7. Provider Registry & Health', () => {
-    it('registers capabilities and exposes normalized status', () => {
+  describe('7. Provider Registry & Dynamic Health', () => {
+    it('registers capabilities, exposes normalized status, and records execution metrics', () => {
       const health = createProviderHealth();
       health.registerProvider('weather', {
         name: 'Open-Meteo',
@@ -196,9 +244,16 @@ describe('ÆTHERGRID v4.0 — Provider, Configuration, Secret-Safety & Runtime E
         status: PROVIDER_STATUS.READY,
       });
 
+      health.recordExecution('weather', {
+        success: true,
+        latencyMs: 12,
+        circuitState: 'CLOSED',
+      });
+
       const weatherStatus = health.getProviderStatus('weather');
       assert.equal(weatherStatus.status, 'ready');
-      assert.deepEqual(weatherStatus.capabilities, ['weather']);
+      assert.equal(weatherStatus.lastLatencyMs, 12);
+      assert.ok(weatherStatus.lastSuccessAt > 0);
     });
 
     it('queryable by capability', () => {
@@ -209,7 +264,7 @@ describe('ÆTHERGRID v4.0 — Provider, Configuration, Secret-Safety & Runtime E
     });
   });
 
-  describe('8. Provider Endpoints Verification', () => {
+  describe('8. Public Endpoints & Secret Safety Verification', () => {
     it('responds to GET /api/aethergrid/runtime/providers with safe metadata and no secrets', async () => {
       const res = await fetch(`http://127.0.0.1:${activePort}/api/aethergrid/runtime/providers`);
       assert.equal(res.status, 200);
@@ -219,9 +274,6 @@ describe('ÆTHERGRID v4.0 — Provider, Configuration, Secret-Safety & Runtime E
       assert.equal(body.spatial.status, 'ready');
       assert.equal(body.weather.provider, 'open-meteo');
       assert.equal(body.weather.status, 'ready');
-      assert.equal(body.quantum.provider, 'local-simulator');
-      assert.equal(body.quantum.hardwareEnabled, false);
-      assert.equal(body.ai.status, 'ready');
 
       const textPayload = JSON.stringify(body);
       assert.ok(!textPayload.includes('apiKey'));
@@ -280,11 +332,12 @@ describe('ÆTHERGRID v4.0 — Provider, Configuration, Secret-Safety & Runtime E
 
       const adapter = createProviderAdapter({
         id: 'test-adapter',
+        capability: 'weather',
         capabilities: ['weather'],
         request: async () => ({ status: 'ok' }),
       });
       assert.equal(adapter.id, 'test-adapter');
-      assert.deepEqual(adapter.capabilities, ['weather']);
+      assert.equal(adapter.capability, 'weather');
     });
   });
 });

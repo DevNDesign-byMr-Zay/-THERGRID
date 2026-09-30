@@ -1,35 +1,13 @@
-# ÆTHERGRID v4.0 Production Provider Architecture & Execution Layer
+# ÆTHERGRID v4.0 Production Provider Architecture
 
 ## Overview
 
-ÆTHERGRID v4.0 features a validated server-side provider execution layer that normalizes external integrations (spatial, geospatial, weather, hazards, air quality, seismic, terrain, quantum, AI, energy, transit, and hydrology).
+ÆTHERGRID v4.0 introduces a server-side provider runtime and configuration registry that normalizes all external integrations (spatial, geospatial, weather, air quality, seismic, terrain, quantum, AI, energy, transit, and hydrology).
 
-The execution layer enforces a unified pipeline:
+The system follows a strict unidimensional flow:
 
-```text
-Validated ENV
-    ↓
-Provider Config
-    ↓
-Provider Registry
-    ↓
-Provider Adapter
-    ↓
-URL Policy
-    ↓
-Rate Limiter
-    ↓
-Circuit Breaker
-    ↓
-Cache
-    ↓
-External Provider
-    ↓
-Normalizer
-    ↓
-Provenance Receipt
-    ↓
-ÆTHERGRID API
+```
+process.env → validated config → provider registry → provider adapters → normalized runtime status
 ```
 
 ---
@@ -37,45 +15,52 @@ Provenance Receipt
 ## Configuration & Secret Boundaries
 
 1. **Central Validation (`apps/aethergrid-console/config/env-schema.mjs`)**:
-   Schema-validated configuration using `zod`. Optional providers remain non-blocking for fresh clones and offline execution.
+   Uses `zod` to validate environment variables at server boot. Unconfigured or optional providers fall back safely without preventing application startup.
 
 2. **Secret Safety (`apps/aethergrid-console/security/secret-redactor.mjs`)**:
-   Credentials (API keys, tokens, CRN strings, auth headers) are defensively redacted from log output, error stack traces, public responses, evidence exports, and packaged standalone ZIP assets.
+   Credentials (API keys, tokens, CRN strings, auth headers) are registered during configuration loading and defensively stripped from:
+   - Log output and error stack traces
+   - Public runtime API responses
+   - Evidence exports and serialized payloads
+   - Standalone ZIP distribution assets
 
-3. **Public Configuration Bridge (`GET /api/aethergrid/config/public`)**:
-   Exposes safe browser-readable settings (such as client Cesium tokens) while strictly redacting server secrets (IBM keys, OpenAI keys, Tomorrow.io keys, D-Wave tokens, etc.).
+3. **Public vs. Private Configuration (`public-config.mjs` vs `provider-config.mjs`)**:
+   - Private configuration contains actual connection strings and credentials (server-side only).
+   - Public configuration exposes only non-sensitive boolean availability flags (`hardwareEnabled`, `configured`) and endpoint modes.
+   - Endpoint `/api/aethergrid/runtime/providers` returns normalized public readiness metadata.
 
 ---
 
-## Provider Adapters & Provenance Receipts
+## Provider Lifecycle & Status States
 
-All adapters produce normalized data accompanied by a `providerReceipt`:
+Providers transition across normalized readiness states:
+- `ready`: Fully configured and operational.
+- `degraded`: Configured but encountering partial issues or missing optional parameters.
+- `unconfigured`: Optional provider with no credentials or endpoint configured.
+- `unavailable`: External service unreachable or circuit breaker open.
+- `fallback`: Default offline/local implementation active (e.g. local quantum simulator, local AI runtime).
 
-```json
-{
-  "provider": "open-meteo",
-  "dataset": "weather-realtime",
-  "requestId": "req-a1b2c3d4",
-  "retrievedAt": "2026-04-15T12:00:00.000Z",
-  "observedAt": "2026-04-15T12:00:00.000Z",
-  "modelRunAt": null,
-  "expiresAt": null,
-  "cacheState": "hit",
-  "live": true,
-  "stale": false,
-  "fallback": false,
-  "attribution": "Open-Meteo"
-}
-```
+---
 
-### Implemented Adapters
-- **OpenStreetMap / Overpass**: Geo / city geometry layer.
-- **Open-Meteo & Tomorrow.io**: Weather & Air Quality providers.
-- **USGS**: Earthquake & seismic feed.
-- **Copernicus DEM / Open-Meteo**: Terrain & elevation provider.
-- **NWS (`api.weather.gov`)**: Active US hazard alerts (`GET /api/aethergrid/hazards/alerts`).
-- **U.S. EIA API v2**: Regional energy context and generation mix (`GET /api/aethergrid/energy/context`).
-- **NOAA / NWPS**: River stage and flood hydrology provider (`GET /api/aethergrid/hydrology/gauges`).
-- **D-Wave Systems**: Quantum annealing workload adapter & local classical annealer fallback.
-- **IBM Quantum**: IAM authentication, backend discovery, Sampler, Estimator, and QPU safety boundary.
-- **GTFS-RT Transit Registry**: City-specific transit feed registry (`GET /api/aethergrid/transit/vehicles`).
+## Core Safety & Reliability Primitives
+
+### 1. Outbound URL Policy (`apps/aethergrid-console/security/url-policy.mjs`)
+Restricts server-side outbound HTTP requests strictly to pre-approved provider hostnames and validated local developer endpoints (e.g., local Ollama on `127.0.0.1`).
+
+### 2. Provider Cache (`apps/aethergrid-console/providers/cache-store.mjs`)
+In-memory request cache supporting TTL, stale state detection, retrieval timestamps, hit/miss metadata, and stale-while-revalidate semantics.
+
+### 3. Circuit Breaker (`apps/aethergrid-console/providers/circuit-breaker.mjs`)
+State machine (`CLOSED`, `OPEN`, `HALF_OPEN`) preventing repeated calls to failing upstream providers. Distinguishes timeouts, provider errors, and fallback activations.
+
+### 4. Rate Limiting (`apps/aethergrid-console/providers/rate-limiter.mjs`)
+Per-provider request budget enforcement to prevent exceeding API limits (e.g., IBM Quantum submission limits).
+
+---
+
+## Registering Future Provider Adapters
+
+Future provider adapters (e.g., Cesium, Tomorrow.io, Overture, EIA, D-Wave) register with `providerRegistry` by defining:
+1. Schema additions in `env-schema.mjs`.
+2. A wrapped adapter invoking `getBreaker(id)`, `getRateLimiter(id)`, and `urlPolicy.validateUrl(...)`.
+3. Capability registration via `providerHealth.registerProvider(id, { name, capabilities, status })`.

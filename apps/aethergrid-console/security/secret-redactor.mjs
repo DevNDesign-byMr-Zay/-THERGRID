@@ -10,6 +10,13 @@ const DEFAULT_SECRET_KEYS = [
   'service_crn',
 ];
 
+const PUBLIC_EXEMPT_KEYS = [
+  'cesiumiontoken',
+  'cesium_ion_token',
+  'publictoken',
+  'public_token',
+];
+
 export function createSecretRedactor(knownSecrets = []) {
   const secretSet = new Set();
 
@@ -32,8 +39,12 @@ export function createSecretRedactor(knownSecrets = []) {
       if (!item || typeof item !== 'object') continue;
 
       for (const [key, value] of Object.entries(item)) {
+        const lowerKey = key.toLowerCase();
+        if (PUBLIC_EXEMPT_KEYS.some((pk) => lowerKey.includes(pk.toLowerCase()))) {
+          continue;
+        }
+
         if (typeof value === 'string') {
-          const lowerKey = key.toLowerCase();
           if (
             DEFAULT_SECRET_KEYS.some((sk) => lowerKey.includes(sk.toLowerCase())) &&
             value.trim().length >= 3
@@ -51,17 +62,14 @@ export function createSecretRedactor(knownSecrets = []) {
     if (typeof text !== 'string') return text;
     let redacted = text;
 
-    // 1. Redact exact known secrets
     for (const secret of secretSet) {
       if (secret && redacted.includes(secret)) {
         redacted = redacted.replaceAll(secret, '[REDACTED_SECRET]');
       }
     }
 
-    // 2. Redact Bearer tokens / Basic auth in string
     redacted = redacted.replace(/Bearer\s+[A-Za-z0-9._~+/-]+=*/gi, 'Bearer [REDACTED_TOKEN]');
 
-    // 3. Redact common query param key values (e.g. ?key=xyz or &api_key=xyz)
     redacted = redacted.replace(
       /([?&](?:api_?[kK]ey|token|key|secret|auth)=)[^&\s]+/gi,
       '$1[REDACTED_PARAM]',
@@ -97,7 +105,9 @@ export function createSecretRedactor(knownSecrets = []) {
       const copy = {};
       for (const [k, v] of Object.entries(value)) {
         const lowerKey = k.toLowerCase();
-        if (
+        if (PUBLIC_EXEMPT_KEYS.some((pk) => lowerKey.includes(pk.toLowerCase()))) {
+          copy[k] = v;
+        } else if (
           DEFAULT_SECRET_KEYS.some((sk) => lowerKey.includes(sk.toLowerCase())) &&
           typeof v === 'string'
         ) {

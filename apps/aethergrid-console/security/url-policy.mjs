@@ -1,18 +1,19 @@
-export function createUrlPolicy(allowedUrlsOrPrefixes = []) {
-  const allowedPrefixes = new Set();
+export function createUrlPolicy(allowedUrlsOrOrigins = []) {
+  const allowedOrigins = new Set();
+  const allowedHosts = new Set();
 
-  function addAllowedPrefix(rawUrlOrPrefix) {
-    if (!rawUrlOrPrefix || typeof rawUrlOrPrefix !== 'string') return;
+  function addAllowedOrigin(rawUrlOrOrigin) {
+    if (!rawUrlOrOrigin || typeof rawUrlOrOrigin !== 'string') return;
     try {
-      const parsed = new URL(rawUrlOrPrefix);
-      allowedPrefixes.add(parsed.origin.toLowerCase());
-      allowedPrefixes.add(rawUrlOrPrefix.toLowerCase());
+      const parsed = new URL(rawUrlOrOrigin);
+      allowedOrigins.add(parsed.origin.toLowerCase());
+      allowedHosts.add(parsed.hostname.toLowerCase());
     } catch {
-      allowedPrefixes.add(rawUrlOrPrefix.toLowerCase());
+      allowedHosts.add(rawUrlOrOrigin.toLowerCase().trim());
     }
   }
 
-  // Pre-approved default provider domains / patterns
+  // Pre-approved default provider domains
   const defaults = [
     'https://api.openai.com',
     'http://127.0.0.1:11434',
@@ -31,11 +32,11 @@ export function createUrlPolicy(allowedUrlsOrPrefixes = []) {
   ];
 
   for (const d of defaults) {
-    addAllowedPrefix(d);
+    addAllowedOrigin(d);
   }
 
-  for (const item of allowedUrlsOrPrefixes) {
-    if (item) addAllowedPrefix(item);
+  for (const item of allowedUrlsOrOrigins) {
+    if (item) addAllowedOrigin(item);
   }
 
   function isAllowedUrl(targetUrl) {
@@ -52,17 +53,22 @@ export function createUrlPolicy(allowedUrlsOrPrefixes = []) {
       return false;
     }
 
-    const targetLower = targetUrl.toLowerCase();
-    const originLower = parsed.origin.toLowerCase();
+    // Disallow embedded credentials in URL
+    if (parsed.username || parsed.password) {
+      return false;
+    }
 
-    for (const prefix of allowedPrefixes) {
-      if (
-        originLower === prefix ||
-        targetLower.startsWith(prefix) ||
-        (prefix.startsWith('http') && originLower.startsWith(prefix))
-      ) {
-        return true;
-      }
+    const targetOrigin = parsed.origin.toLowerCase();
+    const targetHostname = parsed.hostname.toLowerCase();
+
+    // Allow loopback endpoints for local development (Ollama, local microgrid, etc.)
+    if (targetHostname === '127.0.0.1' || targetHostname === 'localhost') {
+      return true;
+    }
+
+    // Exact origin match
+    if (allowedOrigins.has(targetOrigin)) {
+      return true;
     }
 
     return false;
@@ -71,14 +77,15 @@ export function createUrlPolicy(allowedUrlsOrPrefixes = []) {
   function validateUrl(targetUrl) {
     if (!isAllowedUrl(targetUrl)) {
       throw new Error(
-        `Outbound URL blocked by security policy: ${targetUrl}. Must be an approved provider URL or local endpoint.`,
+        `Outbound URL blocked by security policy: ${targetUrl}. Must be an approved provider origin or local endpoint.`,
       );
     }
     return targetUrl;
   }
 
   return {
-    addAllowedPrefix,
+    addAllowedPrefix: addAllowedOrigin,
+    addAllowedOrigin,
     isAllowedUrl,
     validateUrl,
   };

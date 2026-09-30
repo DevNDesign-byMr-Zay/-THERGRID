@@ -3,7 +3,8 @@ export function createProviderAdapter(options = {}) {
   if (!id) throw new Error('Provider adapter requires an id');
 
   const name = options.name || id;
-  const capabilities = Object.freeze([...(options.capabilities || [])]);
+  const capability = options.capability || 'general';
+  const capabilities = Object.freeze([...(options.capabilities || [capability])]);
 
   function configured() {
     return typeof options.configured === 'function' ? options.configured() : true;
@@ -12,7 +13,7 @@ export function createProviderAdapter(options = {}) {
   function health() {
     return typeof options.health === 'function'
       ? options.health()
-      : { status: 'ready', capabilities };
+      : { status: 'ready', capability, capabilities };
   }
 
   async function request(params = {}, context = {}) {
@@ -25,6 +26,7 @@ export function createProviderAdapter(options = {}) {
   return Object.freeze({
     id,
     name,
+    capability,
     capabilities,
     configured,
     health,
