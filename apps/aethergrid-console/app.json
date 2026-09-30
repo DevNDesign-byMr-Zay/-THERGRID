@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "aethergrid.operator-console",
   "name": "ÆTHERGRID Operator Console",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "format": "html+pwa+node-app",
   "entrypoints": {
     "standaloneHtml": "index.html",
@@ -26,6 +26,7 @@
     "apis": [
       "GET /api/aethergrid/health",
       "GET /api/aethergrid/state",
+      "GET /api/aethergrid/stream",
       "GET /api/aethergrid/telemetry",
       "GET /api/aethergrid/evidence",
       "POST /api/aethergrid/view",
@@ -61,6 +62,7 @@
     "aiCollaboration": true,
     "boundedOptimization": true,
     "evidenceExport": true,
-    "localStandaloneFallback": true
+    "localStandaloneFallback": true,
+    "liveEventStream": true
   }
 }
