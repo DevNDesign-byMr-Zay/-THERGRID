@@ -2,22 +2,25 @@
   "schemaVersion": 2,
   "id": "aethergrid.operator-console",
   "name": "ÆTHERGRID Operator Console",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "format": "html+pwa+node-app",
   "entrypoints": {
-    "standaloneHtml": "index.html",
+    "standaloneHtml": "standalone.html",
     "webApp": "index.html",
     "backend": "server.mjs",
     "manifest": "manifest.webmanifest"
   },
   "visualContract": {
-    "reference": "assets/dashboard-reference.webp",
+    "designReferenceOnly": true,
+    "runtimeUsesBackgroundReferenceImage": false,
+    "runtimeComposition": "semantic-dom-native-webgl-canvas",
     "referenceViewport": [
       1536,
       1024
     ],
-    "mode": "reference-identical-idle-canvas",
-    "interactiveOverlay": true
+    "target": "approved-aethergrid-command-center",
+    "designReferenceRepositoryPath": "assets/dashboard-reference.webp",
+    "designReferenceIncludedInRuntimePackage": false
   },
   "backend": {
     "runtime": "node>=22",
@@ -28,6 +31,7 @@
       "GET /api/aethergrid/state",
       "GET /api/aethergrid/stream",
       "GET /api/aethergrid/telemetry",
+      "GET /api/aethergrid/spatial",
       "GET /api/aethergrid/evidence",
       "POST /api/aethergrid/view",
       "POST /api/aethergrid/region",
@@ -45,24 +49,30 @@
     "humanReviewRequired": true
   },
   "standalone": {
-    "selfContained": true,
-    "externalAssetsRequired": false,
-    "embeddedCss": true,
-    "embeddedJavascript": true,
-    "embeddedDashboardReference": true,
+    "selfContainedGeneratedAtPackageTime": true,
+    "sourceHtml": "index.html",
+    "outputHtml": "standalone.html",
+    "externalRuntimeDependencies": false,
     "opensViaFileProtocol": true
   },
   "capabilities": {
+    "semanticDomPanels": true,
+    "nativeWebGL4DGrid": true,
+    "interactiveWireframeMap": true,
+    "backendSpatialGraph": true,
+    "cameraOrbitZoom": true,
+    "temporalScrubbing": true,
+    "realCanvasCharts": true,
+    "holographicWireframes": true,
     "liveTelemetry": true,
+    "liveEventStream": true,
     "regionSwitching": true,
     "scenarioSwitching": true,
     "commandSearch": true,
     "metricDrilldowns": true,
-    "holographicLayerControls": true,
     "aiCollaboration": true,
     "boundedOptimization": true,
     "evidenceExport": true,
-    "localStandaloneFallback": true,
-    "liveEventStream": true
+    "localStandaloneFallback": true
   }
 }

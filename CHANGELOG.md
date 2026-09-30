@@ -10,6 +10,10 @@
 
 ### Added
 
+- Replaced the screenshot-backed ÆTHERGRID runtime with semantic HTML panels, real controls, native WebGL wireframe geometry, animated canvas/SVG charts, and canonical logo assets.
+- Added a true time-indexed spatial graph model represented as x/y/z + time, including interactive orbit/zoom controls, a 24-hour temporal scrubber, layer toggles, wireframe buildings, transmission routes, live nodes, and backend-served geometry at `/api/aethergrid/spatial`.
+- Added generated `standalone.html` packaging that inlines CSS, JavaScript and brand assets while preserving the actual WebGL renderer; the old dashboard reference image is excluded from the runtime ZIP and retained only as a design reference.
+
 - Rebuilt the ÆTHERGRID operator console to match the approved modern command-center reference, including the New York Metro digital-twin field, side navigation, AI collaboration rail, animated metrics/quantum/scenario surfaces, holographic previews, evidence history, and export tools.
 - Brought the approved ÆTHERGRID dashboard to life with subtle scanline/energy/node motion, active-selection feedback, command search, metric drill-downs, region switching, scenario switching, holographic layer controls, live/forecast/scenario modes, agent drill-downs, AI chat, bounded optimization, health/reset actions, and evidence exports.
 - Expanded the ÆTHERGRID Node backend with telemetry, view, region, scenario, reset, activity/audit, optimization, collaboration, and export endpoints while preserving the advisory-only/no-actuation authority boundary.

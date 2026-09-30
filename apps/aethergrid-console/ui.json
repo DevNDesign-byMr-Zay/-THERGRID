@@ -5,7 +5,6 @@
     "width": 1536,
     "height": 1024
   },
-  "referenceImage": "assets/dashboard-reference.webp",
   "surfaces": [
     "OVERVIEW",
     "GRID",
@@ -24,14 +23,19 @@
     "EVIDENCE"
   ],
   "interactiveCapabilities": [
+    "native-webgl-4d-grid",
+    "orbit-camera",
+    "wheel-zoom",
+    "temporal-scrubbing",
+    "wireframe-layer-toggles",
+    "backend-spatial-graph",
     "live-view",
     "forecast-view",
     "scenario-view",
     "command-search",
     "region-switching",
     "metric-drilldowns",
-    "map-controls",
-    "holographic-layer-controls",
+    "holographic-wireframes",
     "run-optimization",
     "classical-comparison",
     "ai-chat",
@@ -67,16 +71,15 @@
     "evidence": "REQUIRED"
   },
   "motion": {
-    "idleBaselinePreserved": true,
+    "realGeometryAnimation": true,
     "effects": [
-      "map-scanline",
-      "energy-sheen",
-      "grid-node-pulses",
-      "status-pulse",
-      "selection-glow",
-      "energy-flow-canvas",
-      "dynamic-clock",
-      "stream-status"
+      "temporal-grid-deformation",
+      "animated-transmission-routes",
+      "wireframe-buildings",
+      "node-pulses",
+      "quantum-wave-surface",
+      "scenario-line-motion",
+      "wireframe-thumbnails"
     ],
     "reducedMotionSupported": true
   },
@@ -90,5 +93,28 @@
     "regions",
     "scenarios",
     "views"
-  ]
+  ],
+  "runtimeComposition": "semantic-dom-native-webgl",
+  "runtimeUsesBackgroundReferenceImage": false,
+  "spatialModel": {
+    "dimensions": [
+      "x",
+      "y",
+      "z",
+      "time"
+    ],
+    "renderEngine": "native-webgl",
+    "vertexAttribute": "vec4(x,y,z,timePhase)",
+    "interaction": [
+      "pointer-orbit",
+      "wheel-zoom",
+      "double-click-reset",
+      "time-slider",
+      "layer-toggle"
+    ],
+    "backendEndpoint": "GET /api/aethergrid/spatial",
+    "backgroundImageRequired": false
+  },
+  "designReferenceRepositoryPath": "assets/dashboard-reference.webp",
+  "designReferenceIncludedInRuntimePackage": false
 }

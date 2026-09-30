@@ -75,6 +75,51 @@ const state = {
   activity: [],
 };
 
+function buildSpatialGraph() {
+  const nodes = [
+    { id: 'renewables-west', label: 'Renewable Generation', type: 'generation', position: [-6, 0.35, -3], capacityMw: 2130 },
+    { id: 'midtown-load', label: 'Grid Load', type: 'load', position: [-2, 0.55, 1], loadMw: 2410 },
+    { id: 'battery-east', label: 'Energy Storage', type: 'storage', position: [2, 0.65, -2], capacityMw: 590 },
+    { id: 'nyc-core', label: 'New York City', type: 'city', position: [5, 0.48, 3], loadMw: 1240 },
+    { id: 'north-hub', label: 'North Hub', type: 'transmission', position: [0, 0.72, 5], capacityMw: 880 },
+    { id: 'coastal-hub', label: 'Coastal Hub', type: 'transmission', position: [7, 0.38, -5], capacityMw: 720 },
+    { id: 'west-hub', label: 'West Hub', type: 'transmission', position: [-7, 0.44, 5], capacityMw: 760 },
+  ];
+  const routeIndexes = [[0,1],[1,2],[2,3],[1,4],[3,5],[4,6],[6,0],[4,3],[2,5]];
+  const routes = routeIndexes.map(([a,b], index) => ({
+    id: `route-${index + 1}`,
+    from: nodes[a].id,
+    to: nodes[b].id,
+    capacityMw: 480 + index * 55,
+    phase: index * 0.57,
+  }));
+  let seed = 31;
+  const random = () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) | 0;
+    return (seed >>> 0) / 4294967296;
+  };
+  const structures = Array.from({ length: 72 }, (_, index) => ({
+    id: `structure-${index + 1}`,
+    x: random() * 18 - 9,
+    z: random() * 18 - 9,
+    width: 0.28 + random() * 0.62,
+    depth: 0.28 + random() * 0.62,
+    height: 0.35 + random() * 2.8,
+    temporalPhase: random() * Math.PI * 2,
+  }));
+  return {
+    schemaVersion: 1,
+    dimensions: ['x', 'y', 'z', 'time'],
+    coordinateSystem: 'normalized-operator-grid',
+    temporal: { minHour: 0, maxHour: 24, unit: 'hour' },
+    nodes,
+    routes,
+    structures,
+  };
+}
+
+const spatialGraph = buildSpatialGraph();
+
 const mime = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -193,7 +238,7 @@ const server = http.createServer(async (request, response) => {
       const sendEvent = () => {
         telemetryTick();
         response.write(
-          `data: ${JSON.stringify({ state: snapshot(), at: new Date().toISOString() })}\n\n`,
+          `event: telemetry\ndata: ${JSON.stringify({ state: snapshot(), at: new Date().toISOString() })}\n\n`,
         );
       };
       sendEvent();
@@ -219,6 +264,18 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/evidence') {
       return json(response, 200, { evidence: state.evidence, activity: state.activity });
     }
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/spatial') {
+      const requestedHour = Number(url.searchParams.get('hour') ?? 12);
+      const hour = Math.max(0, Math.min(24, Number.isFinite(requestedHour) ? requestedHour : 12));
+      return json(response, 200, {
+        ...spatialGraph,
+        timeHour: hour,
+        region: state.system.region,
+        scenario: state.system.scenario,
+        advisoryOnly: true,
+      });
+    }
+
 
     if (request.method === 'POST' && url.pathname === '/api/aethergrid/view') {
       const input = await body(request);
@@ -352,4 +409,4 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   });
 }
 
-export { regions, scenarios, server, state, views };
+export { regions, scenarios, server, spatialGraph, state, views };

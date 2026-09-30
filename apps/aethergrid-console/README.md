@@ -1,41 +1,54 @@
 # ÆTHERGRID Operator Console
 
-This directory contains the complete front end and back end for the approved ÆTHERGRID dashboard.
+This directory contains the maintained ÆTHERGRID front end and Node backend.
 
-## Standalone HTML
+## Runtime architecture
 
-Open `index.html` directly. It is now a **single self-contained file**: the approved dashboard canvas, CSS, and JavaScript are embedded inside the HTML itself. No sibling asset folder, stylesheet, script file, localhost server, or network connection is required for the visual UI to render when opened with the `file://` protocol.
+The live interface is no longer a screenshot with hotspots. The application is composed from real HTML controls, semantic panels, SVG/canvas charts, canonical brand assets, and a native WebGL spatial renderer.
 
-The modular `styles.css`, `app.js`, and dashboard reference asset remain in the app package as maintained source files and for backend/PWA development, but `index.html` no longer depends on them to render.
+The main spatial surface represents **four dimensions as x/y/z space plus time**. Each WebGL vertex carries a temporal phase as its fourth attribute, and the operator can orbit the camera, zoom, toggle wireframe layers, and scrub the time dimension. When the Node backend is running, the renderer loads its nodes, transmission routes, structures, region and scenario context from `GET /api/aethergrid/spatial`.
+
+The old dashboard reference remains a design reference only and is excluded from the distributable runtime ZIP. It is not used as a background image.
 
 ## Full app
+
 Run:
 
 ```bash
 node server.mjs
 ```
 
-Then open `http://127.0.0.1:8090`.
+Then open:
 
-The Node backend now provides live telemetry, state, region switching, review-mode switching, scenario selection, bounded optimization, AI collaboration, evidence, export, reset, and health APIs. The application remains advisory-only and does not expose physical infrastructure actuation.
+```text
+http://127.0.0.1:8090
+```
+
+The backend provides state, live telemetry, server-sent events, the 4D spatial graph, region switching, review-mode switching, scenarios, bounded optimization, AI collaboration, evidence, exports, reset and health APIs. Physical grid actuation and infrastructure dispatch remain disabled.
+
+## Standalone HTML
+
+Run:
+
+```bash
+npm run package:aethergrid-app
+```
+
+The generated archive contains `standalone.html`. That file inlines the CSS, JavaScript and canonical logo assets so it can be opened directly with `file://` while retaining the real WebGL grid and local simulation fallback.
 
 ## Interactive surfaces
 
-The approved dashboard remains the visual baseline, but the interface now has a real interaction layer:
+- Native WebGL 4D grid with time-indexed geometry.
+- Interactive wireframe city structures and transmission routes.
+- Pointer orbit, wheel zoom, double-click camera reset and layer toggles.
+- 24-hour temporal scrubber that changes the fourth-dimension phase.
+- Backend-generated spatial graph with nodes, routes and structures.
+- Live / forecast / scenario modes and region switching.
+- Real metric cards with SVG sparklines.
+- Animated optimization landscape and scenario comparison canvases.
+- Holographic wireframe preview canvases.
+- VÆLON, AUREN and SOLVÆR collaboration surfaces plus AI chat.
+- Evidence review and JSON export packages.
+- Server-sent live telemetry with standalone local fallback.
 
-- top GRID / HOLOGRAPHIC / QUANTUM / AI / EVIDENCE modes;
-- left navigation for Overview, Grid, Holographic, Quantum, AI, Scenarios, Evidence, and Settings;
-- live / forecast / scenario review modes;
-- command search across assets, storage, renewables, and scenarios;
-- region switching for New York Metro, Long Island, Hudson Valley, and Upstate New York;
-- clickable system-metric cards with animated drill-down telemetry;
-- holographic layer controls for infrastructure, energy flow, risk zones, and future state;
-- VÆLON, AUREN, and SOLVÆR collaboration surfaces plus AI team chat;
-- bounded optimization with classical-baseline preservation;
-- evidence review and JSON export packages;
-- health-check and reset controls;
-- subtle scanline, node-pulse, energy-sheen, active-selection animation, and a live canvas energy-flow layer that preserves the approved idle composition;
-- a dynamic HUD clock and connection indicator;
-- server-sent live telemetry streaming when the Node backend is running, with polling/standalone fallback behavior.
-
-When opened directly from disk, the self-contained HTML uses local fallback state so the controls still work. When served through `server.mjs`, the same controls are backed by the Node APIs and a short in-memory audit/activity log.
+ÆTHERGRID is an operator-review surface. Simulation and optimization remain advisory and evidence-bound.
