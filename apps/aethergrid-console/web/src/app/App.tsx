@@ -685,6 +685,13 @@ export function App() {
             </div>
           ) : null}
 
+          {temporal.mode === 'scenario' && scenarioVisual ? (
+            <div className="scenario-scene-badge">
+              <span>MODELED SCENARIO · SOURCE DATA UNCHANGED</span>
+              <strong>{scenarioVisual.stressFactor.toFixed(2)}× NETWORK STRESS</strong>
+            </div>
+          ) : null}
+
           <DataSourceBadge
             label={
               scope === 'world'
