@@ -687,9 +687,7 @@ async function main() {
   const aethergridEnvironmentRuntime = await text(
     'apps/aethergrid-console/city-environment-runtime.mjs',
   );
-  const aethergridLiveRuntime = await text(
-    'apps/aethergrid-console/city-live-runtime.mjs',
-  );
+  const aethergridLiveRuntime = await text('apps/aethergrid-console/city-live-runtime.mjs');
   const aethergridTerrainRuntime = await text('apps/aethergrid-console/terrain-runtime.mjs');
   const aethergridQuantumRuntime = await text('apps/aethergrid-console/quantum-runtime.mjs');
   assert(
