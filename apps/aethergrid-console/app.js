@@ -53,6 +53,7 @@
       AUREN: { role: 'Semantic & Spatial Intelligence', status: 'READY' },
       'SOLVÆR': { role: 'Simulation & Evidence Generation', status: 'READY' },
     },
+    activity: [],
     evidence: [
       { id: 'peak-load-reduction', title: 'Scenario: Peak Load Reduction', type: 'Scenario', age: '12 min ago', status: 'Verified' },
       { id: 'quantum-optimization', title: 'Quantum Optimization Run', type: 'Optimization', age: '28 min ago', status: 'Verified' },
@@ -121,6 +122,7 @@
     if (next.optimization) Object.assign(state.optimization, next.optimization);
     if (next.agents) Object.assign(state.agents, next.agents);
     if (Array.isArray(next.evidence)) state.evidence = next.evidence;
+    if (Array.isArray(next.activity)) state.activity = next.activity;
     syncStateToUi();
   }
 
@@ -976,7 +978,26 @@
     renderEvidence();
   }
 
+  function renderActivity() {
+    const container = q('#auditTimeline');
+    if (!container) return;
+    const events = state.activity.slice(0, 16);
+    container.innerHTML = events.length
+      ? events
+          .map(
+            (item) =>
+              `<div class="audit-event"><time>${escapeHtml(
+                item.at ? new Date(item.at).toLocaleTimeString() : 'recent',
+              )}</time><b>${escapeHtml(item.type || 'system')}</b><span>${escapeHtml(
+                item.message || String(item),
+              )}</span></div>`,
+          )
+          .join('')
+      : '<div class="empty-state">No backend activity recorded in this session yet.</div>';
+  }
+
   function renderEvidence() {
+    renderActivity();
     const filter = (q('#evidenceSearch')?.value || '').trim().toLowerCase();
     const status = q('#evidenceStatus')?.value || 'all';
     const rows = state.evidence.filter((item) => {
@@ -1005,6 +1026,7 @@
     try {
       const result = await api('./api/aethergrid/evidence');
       if (Array.isArray(result.evidence)) state.evidence = result.evidence;
+      if (Array.isArray(result.activity)) state.activity = result.activity;
       renderEvidence();
       showToast('EVIDENCE REFRESHED', 'Latest backend evidence loaded.');
     } catch {
@@ -1371,6 +1393,43 @@
     activateScenario('custom', currentCustomScenarioParameters()),
   );
 
+  const scenarioTemplateParameters = {
+    'peak-demand': {
+      loadMultiplierPercent: 125,
+      renewableAvailabilityPercent: 92,
+      storageReservePercent: 22,
+      weatherRiskPercent: 22,
+    },
+    'renewable-surge': {
+      loadMultiplierPercent: 92,
+      renewableAvailabilityPercent: 148,
+      storageReservePercent: 18,
+      weatherRiskPercent: 12,
+    },
+    'storage-stress': {
+      loadMultiplierPercent: 112,
+      renewableAvailabilityPercent: 88,
+      storageReservePercent: 8,
+      weatherRiskPercent: 26,
+    },
+    'weather-event': {
+      loadMultiplierPercent: 108,
+      renewableAvailabilityPercent: 78,
+      storageReservePercent: 30,
+      weatherRiskPercent: 78,
+    },
+  };
+
+  q('[data-action="duplicate-scenario"]')?.addEventListener('click', () => {
+    const parameters =
+      state.system.scenario === 'custom'
+        ? { ...state.system.scenarioParameters }
+        : { ...(scenarioTemplateParameters[state.system.scenario] || currentCustomScenarioParameters()) };
+    syncCustomScenarioControls(parameters);
+    activateScenario('custom', parameters);
+    showToast('SCENARIO DUPLICATED', 'Template copied into the editable custom scenario.');
+  });
+
   q('[data-action="reset-scenario"]')?.addEventListener('click', () =>
     activateScenario('peak-demand'),
   );
@@ -1421,6 +1480,8 @@
         },
       });
       receipt = result.receipt;
+      if (Array.isArray(result.activity)) state.activity = result.activity;
+      renderActivity();
     } catch {
       state.optimization.runCount += 1;
       state.optimization.candidateCost = Math.max(9800, state.optimization.candidateCost - 35);
@@ -1518,10 +1579,13 @@
       });
       reply = result.reply || result.synthesis || reply;
       if (result.runtime) state.runtime = result.runtime;
+      if (Array.isArray(result.activity)) state.activity = result.activity;
       if (result.evidence) {
         state.evidence.unshift(result.evidence);
         state.evidence = state.evidence.slice(0, 24);
         renderEvidence();
+      } else {
+        renderActivity();
       }
       const contributionMarkup = Array.isArray(result.contributions)
         ? `<details class="agent-contributions"><summary>View ${result.contributions.length} specialist contributions</summary>${result.contributions
