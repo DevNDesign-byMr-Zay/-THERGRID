@@ -179,6 +179,25 @@ Two additional bounded operations are available:
 - **Visibility Operations** — combines current visibility, precipitation, cloud, AQI, and mapped roads/structures for situational review.
 
 Both operations remain advisory-only. Heat Stress is not WBGT or a clinical risk calculation, and Visibility Operations is not a traffic, aviation, marine, or emergency-clearance authority.
+## v2.9 mapped city identity
+
+v2.9 makes city twins read as different places through additional source-backed OpenStreetMap geometry rather than city-specific decorative presets.
+
+When present in the live OSM response, the city scene now renders:
+- mapped water areas from `natural=water` / water-type tags;
+- linear rivers, canals, streams and tidal channels;
+- mapped coastline segments;
+- parks, gardens, reserves, grass/recreation/meadow areas, woods and grassland;
+- source-tagged building material/colour groups as restrained façade overlays;
+- named tall buildings with source-backed heights as landmark emphasis.
+
+WATER, GREEN and LANDMARKS are independent renderer layers. Live water and green geometry is never synthesized in fallback mode: if the upstream map request is unavailable, those layers remain empty instead of inventing a shoreline or park.
+
+Two additional source-driven planning workflows are available:
+- **Flood Context** combines mapped water/coastline geometry, terrain relief, current precipitation, roads and grid context. It is not an inundation, storm-surge, drainage or river-stage forecast.
+- **Green Infrastructure** combines mapped green-space geometry, built form and current heat/humidity/AQI context. It is not measured canopy cover, thermal comfort, public-health exposure or a siting directive.
+
+Material tinting is only used when source material/colour tags are present. Landmark emphasis requires a name plus a source-backed height at or above the greater of 70 m or the city sample's 95th-percentile height; it does not invent landmark identity.
 ## Windows ZIP workflow
 
 After extracting the package:
