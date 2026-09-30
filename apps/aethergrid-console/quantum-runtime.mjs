@@ -14,6 +14,38 @@ function safeUrl(value, label) {
   return url;
 }
 
+function normalizeBackend(item = {}) {
+  const statusValue =
+    typeof item.status === 'object'
+      ? item.status?.name
+      : item.status || item.state?.status || item.state;
+  return {
+    name: item.name || item.backend_name || item.id,
+    status: statusValue || 'available',
+    statusReason:
+      typeof item.status === 'object' ? item.status?.reason || null : item.state?.reason || null,
+    simulator: Boolean(item.is_simulator ?? item.simulator),
+    pendingJobs: item.queue_length ?? item.pending_jobs ?? item.pendingJobs ?? null,
+    qubits: item.qubits ?? null,
+  };
+}
+
+function normalizeJob(job = {}) {
+  const status =
+    typeof job.state === 'object'
+      ? job.state?.status || job.status
+      : job.status || job.state || null;
+  return {
+    id: job.id || job.job_id || null,
+    backend: job.backend || job.backend_name || null,
+    programId: job.program_id || job.program?.id || null,
+    status,
+    created: job.created || job.created_at || null,
+    hardwareSubmitted: true,
+    hardwareExecuted: String(status || '').toLowerCase() === 'completed',
+  };
+}
+
 export function createQuantumRuntime({
   env = process.env,
   fetchImpl = fetch,
@@ -105,12 +137,7 @@ export function createQuantumRuntime({
     const list = Array.isArray(payload) ? payload : payload.devices || payload.backends || [];
     return {
       provider: 'ibm-quantum',
-      backends: list.map((item) => ({
-        name: item.name || item.backend_name || item.id,
-        status: item.status || item.state || 'available',
-        simulator: Boolean(item.simulator),
-        pendingJobs: item.pending_jobs ?? item.pendingJobs ?? null,
-      })),
+      backends: list.map(normalizeBackend),
     };
   }
 
@@ -178,30 +205,62 @@ export function createQuantumRuntime({
 
   async function listJobs({ limit = 20 } = {}) {
     if (provider !== 'ibm-quantum') return { provider: 'local-simulator', jobs: [] };
-    const payload = await ibmRequest(`jobs?limit=${Math.max(1, Math.min(100, Number(limit) || 20))}`);
+    const payload = await ibmRequest(`jobs?limit=${Math.max(1, Math.min(200, Number(limit) || 20))}`);
     const jobs = Array.isArray(payload) ? payload : payload.jobs || payload.items || [];
     return {
       provider: 'ibm-quantum',
-      jobs: jobs.map((job) => ({
-        id: job.id,
-        backend: job.backend || job.backend_name || null,
-        programId: job.program_id || null,
-        status: job.status || job.state || null,
-        created: job.created || job.created_at || null,
-      })),
+      jobs: jobs.map(normalizeJob),
     };
   }
 
-  async function job(id) {
+  function requireRemoteProvider() {
     if (provider !== 'ibm-quantum') {
-      const error = new Error('local simulator jobs complete synchronously and are not remotely queryable');
+      const error = new Error(
+        'local simulator jobs complete synchronously and are not remotely queryable',
+      );
       error.status = 404;
       throw error;
     }
-    return ibmRequest(`jobs/${encodeURIComponent(id)}`);
   }
 
-  return { summary, listBackends, submitSampler, listJobs, job, DEFAULT_CIRCUIT };
+  async function job(id) {
+    requireRemoteProvider();
+    const payload = await ibmRequest(`jobs/${encodeURIComponent(id)}`);
+    return {
+      provider: 'ibm-quantum',
+      ...normalizeJob(payload),
+      rawState: payload.state || null,
+    };
+  }
+
+  async function jobResults(id) {
+    requireRemoteProvider();
+    return {
+      provider: 'ibm-quantum',
+      jobId: id,
+      result: await ibmRequest(`jobs/${encodeURIComponent(id)}/results`),
+    };
+  }
+
+  async function jobMetrics(id) {
+    requireRemoteProvider();
+    return {
+      provider: 'ibm-quantum',
+      jobId: id,
+      metrics: await ibmRequest(`jobs/${encodeURIComponent(id)}/metrics`),
+    };
+  }
+
+  return {
+    summary,
+    listBackends,
+    submitSampler,
+    listJobs,
+    job,
+    jobResults,
+    jobMetrics,
+    DEFAULT_CIRCUIT,
+  };
 }
 
 export { API_VERSION, DEFAULT_CIRCUIT };
