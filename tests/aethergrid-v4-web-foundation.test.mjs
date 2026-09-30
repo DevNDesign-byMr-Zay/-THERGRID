@@ -105,10 +105,9 @@ test('v4 operator shell keeps the spatial viewport dominant and responsive', asy
   assert.doesNotMatch(styles, /fonts\.googleapis\.com/u);
 });
 
-
 test('v4 camera journey preserves one WGS84 scene from globe to district', async () => {
   const camera = await text(
-    'apps/aethergrid-console/web/src/renderer/cesium/camera-journey-controller.ts'
+    'apps/aethergrid-console/web/src/renderer/cesium/camera-journey-controller.ts',
   );
 
   assert.match(camera, /phase: 'global'/u);
@@ -146,7 +145,7 @@ test('v4 source-backed power overlay preserves live and fallback provenance', as
 
 test('v4 streamed 3D buildings have actual visual-mode styling', async () => {
   const controller = await text(
-    'apps/aethergrid-console/web/src/renderer/cesium/visual-mode-controller.ts'
+    'apps/aethergrid-console/web/src/renderer/cesium/visual-mode-controller.ts',
   );
 
   assert.match(controller, /Cesium3DTileStyle/u);
