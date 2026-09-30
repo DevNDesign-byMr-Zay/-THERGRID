@@ -27,7 +27,10 @@ import type {
   SpatialTarget,
   VisualMode
 } from '../renderer/spatial-renderer';
-import { loadCityEnvironment } from '../services/city-environment';
+import {
+  atmosphereToWindOverlay,
+  loadCityEnvironment
+} from '../services/city-environment';
 import type { ScenarioVisualState } from '../services/scenario-client';
 import {
   loadGlobalLiveContext,
@@ -436,6 +439,14 @@ export function App() {
     ]
   );
 
+  const windOverlay = useMemo(
+    () =>
+      scope === 'city' && atmosphere && temporal.mode === 'live'
+        ? atmosphereToWindOverlay(atmosphere)
+        : null,
+    [scope, atmosphere, temporal.mode]
+  );
+
   const seismicOverlay = useMemo(
     () =>
       scope === 'city' && liveContext && temporal.mode === 'live'
@@ -459,11 +470,18 @@ export function App() {
     () =>
       (scope === 'world'
         ? [worldOverlay]
-        : [...semanticOverlays, powerOverlay, seismicOverlay]
+        : [...semanticOverlays, powerOverlay, windOverlay, seismicOverlay]
       ).filter(
         (snapshot): snapshot is SpatialOverlaySnapshot => Boolean(snapshot)
       ),
-    [scope, worldOverlay, semanticOverlays, powerOverlay, seismicOverlay]
+    [
+      scope,
+      worldOverlay,
+      semanticOverlays,
+      powerOverlay,
+      windOverlay,
+      seismicOverlay
+    ]
   );
 
   const handleSpatialSelection = (next: SpatialFeatureSelection | null) => {
@@ -504,7 +522,9 @@ export function App() {
       green: scope === 'city' ? countOverlay('green') : 0,
       grid: 1,
       weather:
-        scope === 'city' && temporal.mode === 'live' && atmosphere?.current ? 1 : 0,
+        scope === 'city' && temporal.mode === 'live'
+          ? (windOverlay?.edges.length ?? (atmosphere?.current ? 1 : 0))
+          : 0,
       air:
         scope === 'city' &&
         temporal.mode === 'live' &&
@@ -530,6 +550,7 @@ export function App() {
     atmosphere,
     liveContext,
     temporal.mode,
+    windOverlay,
     powerOverlay
   ]);
 
