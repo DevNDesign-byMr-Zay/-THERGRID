@@ -4,6 +4,7 @@ import { AgentDock } from '../components/AgentDock';
 import { DataSourceBadge } from '../components/DataSourceBadge';
 import { EvidencePanel } from '../components/EvidencePanel';
 import { QuantumPanel } from '../components/QuantumPanel';
+import { ProfileMenu } from '../components/ProfileMenu';
 import { ScenarioPanel } from '../components/ScenarioPanel';
 import { RuntimeDiagnosticsPanel } from '../components/RuntimeDiagnosticsPanel';
 import { SpatialViewport } from '../components/SpatialViewport';
@@ -428,6 +429,7 @@ export function App() {
             <span aria-hidden="true">{appearance.resolved === 'light' ? '☀' : '◐'}</span>
             <strong>{appearance.mode.toUpperCase()}</strong>
           </button>
+          <ProfileMenu />
           <div className="live-cluster">
             <span className="status-dot live" />
             <span>LIVE WORLD</span>
