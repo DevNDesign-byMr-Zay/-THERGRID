@@ -201,3 +201,19 @@ test('v4 appearance preserves dark light system preferences without provider cou
   assert.match(app, /appearance\.cycle/u);
   assert.match(styles, /data-theme='light'/u);
 });
+
+
+test('v4 world search supports named cities and arbitrary real coordinates', async () => {
+  const [app, powerService] = await Promise.all([
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/services/city-power-overlay.ts'),
+  ]);
+
+  assert.match(app, /navigateSearch/u);
+  assert.match(app, /latitude >= -90 && latitude <= 90/u);
+  assert.match(app, /longitude >= -180 && longitude <= 180/u);
+  assert.match(app, /City or lat, lon/u);
+  assert.match(app, /custom: true/u);
+  assert.match(powerService, /loadCoordinatePowerOverlay/u);
+  assert.match(powerService, /\/api\/aethergrid\/geospatial\/point/u);
+});
