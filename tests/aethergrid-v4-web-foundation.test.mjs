@@ -835,7 +835,10 @@ test('v4 renderer switching is reversible and preserves safe fallback diagnostic
   assert.match(manager, /#failoverReason/u);
   assert.match(manager, /Cesium unavailable ·/u);
   assert.match(manager, /await this\.#activate\(this\.#fallback\)/u);
-  assert.match(manager, /for \(const snapshot of this\.#overlays\.values\(\)\) renderer\.applyOverlay/u);
+  assert.match(
+    manager,
+    /for \(const snapshot of this\.#overlays\.values\(\)\) renderer\.applyOverlay/u,
+  );
   assert.match(manager, /if \(this\.#time\) renderer\.setTime\(this\.#time\)/u);
   assert.match(viewport, /renderer-engine-switch/u);
   assert.match(viewport, /CESIUM/u);
@@ -872,10 +875,7 @@ test('v4 live 4d clock advances automatically while non-live cursors remain inde
   assert.match(clock, /#liveTimer/u);
   assert.match(clock, /setInterval\(\(\) => \{/u);
   assert.match(clock, /this\.#state\.liveIso = liveIso/u);
-  assert.match(
-    clock,
-    /this\.#state\.mode === 'live' && !this\.#state\.playing/u,
-  );
+  assert.match(clock, /this\.#state\.mode === 'live' && !this\.#state\.playing/u);
   assert.match(clock, /this\.#state\.cursorIso = liveIso/u);
   assert.match(clock, /clearInterval\(this\.#liveTimer\)/u);
   assert.match(rail, /disabled=\{state\.mode === 'live'\}/u);
