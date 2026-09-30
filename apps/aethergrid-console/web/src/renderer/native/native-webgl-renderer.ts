@@ -105,6 +105,7 @@ function mix(a: Rgba, b: Rgba, amount: number): Rgba {
 }
 
 function layerColor(layerId: string, kind = ''): Rgba {
+  if (layerId === 'analysis') return rgba('#c9a7ff', 0.94);
   if (layerId === 'energy') return rgba('#70e7ff', 0.9);
   if (layerId === 'roads') return rgba('#9aa9b7', 0.58);
   if (layerId === 'water') return rgba('#38bde8', 0.72);
