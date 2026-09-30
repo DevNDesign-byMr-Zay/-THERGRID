@@ -130,7 +130,15 @@
     "semantic-weather-rendering",
     "modeled-snow-animation",
     "modeled-fog-animation",
-    "modeled-thunderstorm-animation"
+    "modeled-thunderstorm-animation",
+    "source-backed-water-areas",
+    "source-backed-waterways",
+    "source-backed-coastline",
+    "source-backed-green-areas",
+    "source-tagged-building-material-overlays",
+    "source-backed-landmark-emphasis",
+    "flood-context-use-case",
+    "green-infrastructure-use-case"
   ],
   "agents": [
     {
@@ -362,7 +370,11 @@
       "power-lines",
       "power-assets",
       "terrain",
-      "roofs"
+      "roofs",
+      "water-areas",
+      "waterways",
+      "coastline",
+      "green-areas"
     ],
     "liveTerrain": true,
     "terrainProvider": "Open-Meteo Elevation / Copernicus DEM GLO-90",
@@ -390,7 +402,9 @@
         "air-quality-exposure",
         "seismic-awareness",
         "heat-stress",
-        "visibility-operations"
+        "visibility-operations",
+        "flood-context",
+        "green-infrastructure"
       ],
       "advisoryOnly": true
     },
@@ -435,7 +449,10 @@
         "air",
         "seismic",
         "clouds",
-        "illumination"
+        "illumination",
+        "water",
+        "green",
+        "landmarks"
       ]
     },
     "globeAnimations": [
@@ -480,7 +497,13 @@
         "terrain-relief",
         "weather",
         "height-data-coverage"
-      ]
+      ],
+      "mappedWater": true,
+      "mappedGreenSpace": true,
+      "mappedCoastline": true,
+      "sourceTaggedBuildingMaterials": true,
+      "sourceBoundLandmarkEmphasis": true,
+      "noSyntheticWaterOrGreenFallback": true
     },
     "weatherSemantics": {
       "basedOn": "current provider weather_code + precipitation + visibility",
@@ -503,5 +526,6 @@
     ],
     "maxGridSize": 9,
     "serverSideCredentials": true
-  }
+  },
+  "version": "2.9.0"
 }
