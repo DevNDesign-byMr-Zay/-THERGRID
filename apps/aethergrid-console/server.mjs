@@ -363,9 +363,17 @@ const server = http.createServer(async (request, response) => {
       request.method === 'GET' &&
       url.pathname.startsWith('/api/aethergrid/quantum/jobs/')
     ) {
-      const jobId = decodeURIComponent(
-        url.pathname.slice('/api/aethergrid/quantum/jobs/'.length),
-      );
+      const suffix = url.pathname.slice('/api/aethergrid/quantum/jobs/'.length);
+      const [encodedJobId, action] = suffix.split('/');
+      const jobId = decodeURIComponent(encodedJobId || '');
+      if (!jobId) return json(response, 400, { error: 'quantum_job_id_required' });
+      if (action === 'results') {
+        return json(response, 200, await quantumRuntime.jobResults(jobId));
+      }
+      if (action === 'metrics') {
+        return json(response, 200, await quantumRuntime.jobMetrics(jobId));
+      }
+      if (action) return json(response, 404, { error: 'quantum_job_route_not_found' });
       return json(response, 200, await quantumRuntime.job(jobId));
     }
 
