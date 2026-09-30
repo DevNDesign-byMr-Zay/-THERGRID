@@ -16,10 +16,10 @@ export interface CameraJourneyStage {
 }
 
 const DEFAULT_STAGES: readonly CameraJourneyStage[] = [
-  { phase: 'global', destinationHeightMeters: 2_400_000, durationSeconds: 0.9, pitchDegrees: -82 },
-  { phase: 'regional', destinationHeightMeters: 420_000, durationSeconds: 0.8, pitchDegrees: -68 },
-  { phase: 'city', destinationHeightMeters: 48_000, durationSeconds: 0.85, pitchDegrees: -48 },
-  { phase: 'district', destinationHeightMeters: 5_000, durationSeconds: 1.0, pitchDegrees: -34 }
+  { phase: 'global', destinationHeightMeters: 11_000_000, durationSeconds: 1.05, pitchDegrees: -88 },
+  { phase: 'regional', destinationHeightMeters: 1_200_000, durationSeconds: 0.9, pitchDegrees: -72 },
+  { phase: 'city', destinationHeightMeters: 120_000, durationSeconds: 0.85, pitchDegrees: -50 },
+  { phase: 'district', destinationHeightMeters: 6_000, durationSeconds: 1.0, pitchDegrees: -34 }
 ];
 
 export class CameraJourneyController {
