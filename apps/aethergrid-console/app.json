@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "aethergrid.operator-console",
   "name": "ÆTHERGRID Operator Console",
-  "version": "2.9.1",
+  "version": "3.0.0",
   "format": "html+pwa+node-app",
   "entrypoints": {
     "standaloneHtml": "standalone.html",
@@ -27,7 +27,10 @@
     "thunderstormLinesRepresentDetectedStrikes": false,
     "fogSnowRainVisualsRepresentStreetLevelSensors": false,
     "sourceTaggedMaterialStyling": true,
-    "environmentalGeometryFallbackInvented": false
+    "environmentalGeometryFallbackInvented": false,
+    "surveyGradeElevation": false,
+    "waterAreasWarpedToTerrain": false,
+    "unnamedTallLandmarkRequiresSourceBackedHeight": true
   },
   "backend": {
     "runtime": "node>=22",
@@ -197,7 +200,15 @@
     "sourceTaggedBuildingMaterialOverlays": true,
     "floodContextUseCase": true,
     "greenInfrastructureUseCase": true,
-    "noInventedEnvironmentalGeometry": true
+    "noInventedEnvironmentalGeometry": true,
+    "terrainConformingCityGeometry": true,
+    "bilinearTerrainInterpolation": true,
+    "terrainAnchoredBuildings": true,
+    "terrainDrapedRoads": true,
+    "terrainDrapedWaterways": true,
+    "terrainAlignedGreenSpace": true,
+    "terrainDrapedInfrastructure": true,
+    "levelWaterAreaPresentation": true
   },
   "aiRuntime": {
     "providers": [
@@ -346,7 +357,19 @@
     "sourceModel": "Copernicus DEM GLO-90 via Open-Meteo",
     "maxSampleGrid": 9,
     "credentialsExposedToBrowser": false,
-    "explicitOperatorFetch": true
+    "explicitOperatorFetch": true,
+    "interpolation": "bilinear-local-grid",
+    "cityConformance": {
+      "buildings": "flat foundation anchored at interpolated footprint-center terrain height",
+      "roads": "per-vertex DEM drape",
+      "waterways": "per-vertex DEM drape",
+      "coastline": "bounded terrain datum",
+      "greenAreas": "per-vertex DEM drape",
+      "powerLines": "per-vertex DEM drape plus line clearance",
+      "powerAssets": "interpolated DEM anchor plus asset marker height",
+      "waterAreas": "level plane using the lowest interpolated polygon-edge elevation",
+      "surveyGrade": false
+    }
   },
   "environmentRuntime": {
     "module": "city-environment-runtime.mjs",
