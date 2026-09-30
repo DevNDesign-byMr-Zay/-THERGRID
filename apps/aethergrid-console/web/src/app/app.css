@@ -1414,6 +1414,12 @@ button {
   letter-spacing: 0.08em;
 }
 
+.scenario-scene-badge small {
+  color: #786fa1;
+  font-size: 5px;
+  letter-spacing: 0.07em;
+}
+
 .scenario-visual-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
