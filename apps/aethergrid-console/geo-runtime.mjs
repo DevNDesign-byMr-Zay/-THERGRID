@@ -669,12 +669,16 @@ export function createGeoRuntime({
       const buildings = seededFallback(city);
       const source = { provider: 'local-fallback', live: false, attribution: null };
       return {
-        schemaVersion: 3,
+        schemaVersion: 4,
         city,
         source,
         buildings,
         skylineProfile: skylineProfile(city, buildings, source),
         roads: fallbackRoads(city),
+        waterLines: [],
+        railLines: [],
+        transitAssets: [],
+        greenSpaces: [],
         ...power,
       };
     }
@@ -686,6 +690,13 @@ export function createGeoRuntime({
         `nwr["building"](around:${city.radiusM},${city.lat},${city.lon});` +
         `nwr["building:part"](around:${city.radiusM},${city.lat},${city.lon});` +
         `way["highway"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `way["waterway"~"^(river|canal|stream|drain)$"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `way["natural"~"^(water|coastline)$"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `way["railway"~"^(rail|subway|tram|light_rail|monorail)$"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `nwr["railway"~"^(station|halt|subway_entrance|tram_stop)$"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `way["leisure"~"^(park|garden)$"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `way["landuse"~"^(grass|recreation_ground|village_green)$"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `way["natural"~"^(wood|scrub|heath)$"](around:${city.radiusM},${city.lat},${city.lon});` +
         `way["power"~"^(line|minor_line|cable)$"](around:${city.radiusM},${city.lat},${city.lon});` +
         `nwr["power"~"^(substation|plant|generator|transformer)$"](around:${city.radiusM},${city.lat},${city.lon});` +
         `);out tags geom center;`;
@@ -703,6 +714,7 @@ export function createGeoRuntime({
       const payload = await response.json();
       const buildings = parseOverpassBuildings(payload, city);
       const roads = parseOverpassRoads(payload, city);
+      const urbanFabric = parseOverpassUrbanFabric(payload, city);
       const power = parseOverpassPower(payload, city);
       if (buildings.length < 5) {
         throw new Error('Overpass returned too few building footprints');
@@ -716,12 +728,13 @@ export function createGeoRuntime({
         freshnessModel: 'OpenStreetMap upstream database at request time',
       };
       const value = {
-        schemaVersion: 3,
+        schemaVersion: 4,
         city,
         source,
         buildings,
         skylineProfile: skylineProfile(city, buildings, source),
         roads,
+        ...urbanFabric,
         ...power,
       };
       cache.set(cacheKey, { cachedAt: now(), value });
@@ -736,12 +749,16 @@ export function createGeoRuntime({
         error: error instanceof Error ? error.message : String(error),
       };
       return {
-        schemaVersion: 3,
+        schemaVersion: 4,
         city,
         source,
         buildings,
         skylineProfile: skylineProfile(city, buildings, source),
         roads: fallbackRoads(city),
+        waterLines: [],
+        railLines: [],
+        transitAssets: [],
+        greenSpaces: [],
         ...power,
       };
     }
