@@ -412,6 +412,98 @@ function parseOverpassRoads(payload, city) {
   return roads;
 }
 
+function parseOverpassUrbanFabric(payload, city) {
+  const waterLines = [];
+  const railLines = [];
+  const transitAssets = [];
+  const greenSpaces = [];
+
+  for (const element of payload?.elements || []) {
+    const tags = element.tags || {};
+    const path =
+      element.type === 'way' && Array.isArray(element.geometry)
+        ? element.geometry
+            .map((point) => projectPoint(Number(point.lat), Number(point.lon), city))
+            .filter(([x, z]) => Number.isFinite(x) && Number.isFinite(z))
+        : [];
+
+    const waterType =
+      tags.natural === 'coastline'
+        ? 'coastline'
+        : tags.natural === 'water'
+          ? String(tags.water || 'water')
+          : tags.waterway
+            ? String(tags.waterway)
+            : '';
+    if (waterType && path.length >= 2 && waterLines.length < 180) {
+      waterLines.push({
+        id: \`osm-water-\${element.id}\`,
+        osmId: element.id,
+        name: String(tags.name || ''),
+        waterType,
+        path,
+      });
+    }
+
+    const railwayType = String(tags.railway || '');
+    if (
+      path.length >= 2 &&
+      ['rail', 'subway', 'tram', 'light_rail', 'monorail'].includes(railwayType) &&
+      railLines.length < 180
+    ) {
+      railLines.push({
+        id: \`osm-rail-\${element.id}\`,
+        osmId: element.id,
+        name: String(tags.name || tags.ref || ''),
+        railwayType,
+        service: String(tags.service || ''),
+        operator: String(tags.operator || ''),
+        path,
+      });
+    }
+
+    if (['station', 'halt', 'subway_entrance', 'tram_stop'].includes(railwayType)) {
+      const coordinate = elementCoordinate(element);
+      if (coordinate && transitAssets.length < 180) {
+        transitAssets.push({
+          id: \`osm-transit-\${element.type}-\${element.id}\`,
+          osmId: element.id,
+          osmType: element.type,
+          name: String(tags.name || tags.ref || ''),
+          railwayType,
+          operator: String(tags.operator || ''),
+          position: projectPoint(coordinate[0], coordinate[1], city),
+        });
+      }
+    }
+
+    const greenType =
+      ['park', 'garden'].includes(String(tags.leisure || ''))
+        ? String(tags.leisure)
+        : ['grass', 'recreation_ground', 'village_green'].includes(String(tags.landuse || ''))
+          ? String(tags.landuse)
+          : ['wood', 'scrub', 'heath'].includes(String(tags.natural || ''))
+            ? String(tags.natural)
+            : '';
+    if (greenType && path.length >= 3 && greenSpaces.length < 140) {
+      greenSpaces.push({
+        id: \`osm-green-\${element.id}\`,
+        osmId: element.id,
+        name: String(tags.name || ''),
+        greenType,
+        path,
+      });
+    }
+  }
+
+  return {
+    waterLines,
+    railLines,
+    transitAssets,
+    greenSpaces,
+  };
+}
+
 function elementCoordinate(element) {
   if (Number.isFinite(Number(element.lat)) && Number.isFinite(Number(element.lon))) {
     return [Number(element.lat), Number(element.lon)];
@@ -550,7 +642,18 @@ export function createGeoRuntime({
       attribution: '© OpenStreetMap contributors',
       cities: CITY_PRESETS,
       supportsCustomCoordinates: true,
-      layers: ['buildings', 'building-parts', 'roofs', 'roads', 'power-lines', 'power-assets'],
+      layers: [
+        'buildings',
+        'building-parts',
+        'roofs',
+        'roads',
+        'water',
+        'rail',
+        'transit',
+        'green-space',
+        'power-lines',
+        'power-assets',
+      ],
       skylineFields: ['height', 'est_height', 'building:levels', 'min_height', 'building:min_level', 'roof:shape', 'roof:height', 'roof:levels', 'building:material', 'building:colour', 'roof:material', 'roof:colour'],
       upstreamFreshness: 'OpenStreetMap replication-backed upstream state when queried',
     };
