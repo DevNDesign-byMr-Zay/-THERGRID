@@ -1341,6 +1341,48 @@ export function App() {
               cityId={city.id}
               temporalMode={temporal.mode}
               cursorIso={temporal.cursorIso}
+              weatherCurrent={
+                atmosphere
+                  ? {
+                      live: atmosphere.live,
+                      provider: atmosphere.attribution,
+                      sourceTime: atmosphere.sourceTime,
+                      fetchedAt: atmosphere.fetchedAt,
+                      attribution: atmosphere.attribution,
+                      summary: weatherPhenomenon(atmosphere).toUpperCase()
+                    }
+                  : null
+              }
+              airQualityCurrent={
+                liveContext
+                  ? {
+                      live: liveContext.airQuality.source.live,
+                      provider: liveContext.airQuality.source.provider,
+                      sourceTime:
+                        liveContext.airQuality.source.modelTime ??
+                        liveContext.airQuality.current?.time ??
+                        null,
+                      fetchedAt: liveContext.airQuality.source.fetchedAt,
+                      attribution: liveContext.airQuality.source.attribution,
+                      summary:
+                        liveContext.airQuality.current?.usAqi != null
+                          ? `AQI ${liveContext.airQuality.current.usAqi.toFixed(0)}`
+                          : 'AIR QUALITY SOURCE'
+                    }
+                  : null
+              }
+              seismicCurrent={
+                liveContext
+                  ? {
+                      live: liveContext.seismic.source.live,
+                      provider: liveContext.seismic.source.provider,
+                      sourceTime: liveContext.seismic.source.generatedAt ?? null,
+                      fetchedAt: liveContext.seismic.source.fetchedAt,
+                      attribution: liveContext.seismic.source.attribution,
+                      summary: `${liveContext.seismic.eventCount} RECENT EVENTS`
+                    }
+                  : null
+              }
             />
           </div>
           <div className="intel-workspace intel-analysis">
