@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { server, state } from '../apps/aethergrid-console/server.mjs';
+import { server, spatialGraph, state } from '../apps/aethergrid-console/server.mjs';
 
 async function withServer(run) {
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -16,27 +16,36 @@ async function withServer(run) {
   }
 }
 
-test('ÆTHERGRID serves the approved interactive dashboard shell', async () => {
+test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-backed shell', async () => {
   await withServer(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/`);
     assert.equal(response.status, 200);
     const html = await response.text();
-    assert.match(html, /data:image\/webp;base64,/u);
-    assert.doesNotMatch(html, /href="\.\/styles\.css"/u);
-    assert.doesNotMatch(html, /src="\.\/app\.js"/u);
-    assert.match(html, /<style>[\s\S]+\.dashboard-stage/u);
-    assert.match(html, /<script>[\s\S]+runOptimization/u);
-    assert.match(html, /data-action="run-optimization"/u);
-    assert.match(html, /data-action="ai-chat"/u);
-    assert.match(html, /data-action="export-operator"/u);
-    assert.match(html, /data-action="search"/u);
-    assert.match(html, /data-action="change-region"/u);
-    assert.match(html, /data-action="metric-generation"/u);
-    assert.match(html, /id="selectionGlow"/u);
-    assert.match(html, /class="scanline"/u);
-    assert.match(html, /id="gridEnergyCanvas"/u);
-    assert.match(html, /id="hudClock"/u);
-    assert.match(html, /id="streamState"/u);
+    assert.match(html, /<canvas id="spatialGrid"/u);
+    assert.match(html, /data-mode="holographic"/u);
+    assert.match(html, /data-view="forecast"/u);
+    assert.match(html, /id="timeSlider"/u);
+    assert.match(html, /data-map-tool="buildings"/u);
+    assert.match(html, /data-agent="VÆLON"/u);
+    assert.match(html, /id="quantumCanvas"/u);
+    assert.match(html, /id="scenarioChart"/u);
+    assert.match(html, /href="\.\/styles\.css"/u);
+    assert.match(html, /src="\.\/app\.js"/u);
+    assert.doesNotMatch(html, /dashboard-reference/iu);
+    assert.doesNotMatch(html, /class="dashboard-reference"/u);
+
+    const appResponse = await fetch(`${baseUrl}/app.js`);
+    assert.equal(appResponse.status, 200);
+    const appSource = await appResponse.text();
+    assert.match(appSource, /class SpatialGrid4D/u);
+    assert.match(appSource, /attribute vec4 a_position/u);
+    assert.match(appSource, /gl\.drawArrays/u);
+    assert.match(appSource, /pointerdown/u);
+    assert.match(appSource, /wheel/u);
+
+    const logo = await fetch(`${baseUrl}/assets/brand/aethergrid-logo.webp`);
+    assert.equal(logo.status, 200);
+    assert.match(logo.headers.get('content-type'), /^image\/webp/u);
   });
 });
 
@@ -60,6 +69,25 @@ test('ÆTHERGRID backend exposes bounded state and evidence APIs', async () => {
     const evidence = await evidenceResponse.json();
     assert.ok(evidence.evidence.length >= 4);
     assert.ok(evidence.evidence.every((item) => item.status === 'VERIFIED'));
+  });
+});
+
+test('ÆTHERGRID backend exposes a time-indexed 4D spatial graph', async () => {
+  assert.deepEqual(spatialGraph.dimensions, ['x', 'y', 'z', 'time']);
+  assert.ok(spatialGraph.nodes.length >= 7);
+  assert.ok(spatialGraph.routes.length >= 8);
+  assert.ok(spatialGraph.structures.length >= 60);
+
+  await withServer(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/aethergrid/spatial?hour=18.5`);
+    assert.equal(response.status, 200);
+    const graph = await response.json();
+    assert.deepEqual(graph.dimensions, ['x', 'y', 'z', 'time']);
+    assert.equal(graph.timeHour, 18.5);
+    assert.equal(graph.advisoryOnly, true);
+    assert.ok(graph.nodes.every((node) => Array.isArray(node.position) && node.position.length === 3));
+    assert.ok(graph.routes.every((route) => typeof route.from === 'string' && typeof route.to === 'string'));
+    assert.ok(graph.structures.every((item) => Number.isFinite(item.temporalPhase)));
   });
 });
 
@@ -118,8 +146,7 @@ test('ÆTHERGRID backend streams live telemetry events', async () => {
     const first = await reader.read();
     controller.abort();
     const text = new TextDecoder().decode(first.value);
-    assert.match(text, /^data: /u);
-    assert.match(text, /New York Metro/u);
+    assert.match(text, /^event: telemetry\ndata: /u);
     assert.match(text, /ADVISORY ONLY/u);
   });
 });
