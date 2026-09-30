@@ -113,6 +113,40 @@ Deliver:
 - no-screenshot regression gate;
 - SHA-256 inventory.
 
+## Batch 18 — v4 spatial operator foundation
+
+Status: IMPLEMENTED ON DRAFT BRANCH
+
+Deliver:
+- typed React/Cesium operator shell under `apps/aethergrid-console/web/` while preserving the maintained Node backend;
+- continuous WGS84 globe → region → city → district camera travel with city-specific skyline framing derived from mapped geometry;
+- renderer-neutral `SpatialRenderer` contract with Cesium primary rendering and a real source-backed native WebGL failover;
+- reversible CESIUM / NATIVE switching with failure diagnostics and preserved overlays, time, layers, selection and scenario state;
+- progressively refined terrain/building detail as the camera approaches city/district scale;
+- computed solar state tied to the 4D clock, solar-aware building presentation and mapped-building nighttime illumination;
+- continuously advancing LIVE time plus independent historical, forecast and scenario cursors;
+- explicit temporal-data eligibility so current-only weather/AQI/seismic context is not presented as historical or forecast data;
+- source-driven cloud, precipitation, fog, AQI, thunderstorm and geographic wind-vector presentation;
+- source-backed city-load readiness, selectable provenance and operator-controlled AUREN handoff;
+- backend-aligned scenario stress visualization with source-baseline comparison and no source-data mutation;
+- real operational presets using only implemented layers;
+- persistent local spatial bookmarks that restore scope, target, layers, visual mode, operation mode and 4D cursor without backend mutation.
+
+Fidelity / authority boundaries:
+- thunderstorm flash cadence is synthetic presentation derived from provider-coded storm conditions, not detected lightning;
+- mapped-building illumination is presentation-only and is not occupancy, window-state or utility-load telemetry;
+- native failover preserves a functional operator scene but is not photorealistic equivalence to streamed Cesium content;
+- OpenStreetMap, terrain, weather, AQI and seismic data keep source/fallback/provenance state;
+- scenario visuals remain modeled overlays and never become authoritative source truth;
+- physical infrastructure actuation remains disabled.
+
+Promotion requirements:
+- dedicated v4 TypeScript/build gate passes;
+- root conventional tests, coverage, lint/format, strict renderer typecheck, fresh-clone smoke and container smoke pass;
+- CodeQL passes;
+- v4 docs and release-readiness tests stay synchronized with implemented behavior;
+- v4 remains draft until the maintained package path is explicitly promoted.
+
 ## Replaceable model contract
 
 Each agent resolves through configuration with this shape:
