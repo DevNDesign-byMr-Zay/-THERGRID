@@ -25,6 +25,8 @@ import type {
   VisualMode
 } from '../spatial-renderer';
 
+import { GeodeticGridLayer } from './geodetic-grid-layer';
+
 const DEFAULT_RANGE_METERS = 2_500;
 
 function featureId(feature: Cesium3DTileFeature): string | null {
@@ -49,6 +51,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #container: HTMLElement | null = null;
   #viewer: Viewer | null = null;
   #buildings: Cesium3DTileset | null = null;
+  #grid: GeodeticGridLayer | null = null;
   #visualMode: VisualMode = 'solid';
   #layers = new Map<string, LayerState>();
   #ready = false;
@@ -88,6 +91,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
     this.#viewer.scene.globe.enableLighting = true;
     this.#viewer.scene.globe.depthTestAgainstTerrain = true;
+    this.#grid = new GeodeticGridLayer(this.#viewer.scene);
 
     try {
       this.#buildings = await createOsmBuildingsAsync({
@@ -128,6 +132,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   setTime(time: TemporalInstant): void {
     const viewer = this.#requireViewer();
     viewer.clock.currentTime = JulianDate.fromIso8601(time.iso);
+    this.#grid?.setTime(time.iso);
     viewer.scene.requestRender();
   }
 
@@ -195,6 +200,8 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   destroy(): void {
     if (this.#viewer && !this.#viewer.isDestroyed()) this.#viewer.destroy();
     this.#viewer = null;
+    this.#grid?.destroy();
+    this.#grid = null;
     this.#buildings = null;
     this.#ready = false;
   }
@@ -212,6 +219,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     if (!this.#viewer) return;
     this.#viewer.scene.globe.show = this.#layerVisible('terrain', true);
     if (this.#buildings) this.#buildings.show = this.#layerVisible('buildings', true);
+    this.#grid?.setVisible(this.#layerVisible('grid', true));
     this.#viewer.scene.requestRender();
   }
 }
