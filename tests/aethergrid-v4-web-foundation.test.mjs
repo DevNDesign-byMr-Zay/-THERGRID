@@ -803,3 +803,22 @@ test('v4 scenario comparison ghosts preserve source baseline beside modeled powe
   assert.match(layer, /ghost\.show =\s*Boolean\(scenario\)/u);
   assert.match(app, /DIM = SOURCE BASELINE · BRIGHT = MODELED SCENARIO/u);
 });
+
+test('v4 native failover is a real source-backed WebGL renderer rather than an empty adapter', async () => {
+  const [nativeRenderer, viewport] = await Promise.all([
+    text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+    text('apps/aethergrid-console/web/src/components/SpatialViewport.tsx'),
+  ]);
+
+  assert.match(nativeRenderer, /class NativeWebglSpatialRenderer implements SpatialRenderer/u);
+  assert.match(nativeRenderer, /getContext\('webgl'/u);
+  assert.match(nativeRenderer, /getContext\('2d'\)/u);
+  assert.match(nativeRenderer, /gl\.drawArrays/u);
+  assert.match(nativeRenderer, /this\.#overlays\.set\(snapshot\.layerId, snapshot\)/u);
+  assert.match(nativeRenderer, /this\.#time\.mode === 'scenario'/u);
+  assert.match(nativeRenderer, /solarStateAt/u);
+  assert.match(nativeRenderer, /#pickEdge/u);
+  assert.match(nativeRenderer, /WebGL unavailable; using Canvas2D source-overlay fallback/u);
+  assert.match(viewport, /new NativeWebglSpatialRenderer\(\)/u);
+  assert.doesNotMatch(viewport, /new NativeSpatialRendererAdapter\(\)/u);
+});
