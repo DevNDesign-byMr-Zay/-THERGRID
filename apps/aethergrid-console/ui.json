@@ -130,7 +130,15 @@
     "semantic-weather-rendering",
     "modeled-snow-animation",
     "modeled-fog-animation",
-    "modeled-thunderstorm-animation"
+    "modeled-thunderstorm-animation",
+    "source-backed-water-areas",
+    "source-backed-waterways",
+    "source-backed-coastline",
+    "source-backed-green-areas",
+    "source-tagged-building-material-overlays",
+    "flood-context-operation",
+    "green-infrastructure-operation",
+    "no-invented-environmental-geometry"
   ],
   "agents": [
     {
@@ -362,7 +370,11 @@
       "power-lines",
       "power-assets",
       "terrain",
-      "roofs"
+      "roofs",
+      "water-areas",
+      "waterways",
+      "coastline",
+      "green-areas"
     ],
     "liveTerrain": true,
     "terrainProvider": "Open-Meteo Elevation / Copernicus DEM GLO-90",
@@ -390,7 +402,9 @@
         "air-quality-exposure",
         "seismic-awareness",
         "heat-stress",
-        "visibility-operations"
+        "visibility-operations",
+        "flood-context",
+        "green-infrastructure"
       ],
       "advisoryOnly": true
     },
@@ -479,8 +493,14 @@
         "roof-tags",
         "terrain-relief",
         "weather",
-        "height-data-coverage"
-      ]
+        "height-data-coverage",
+        "water-feature-count",
+        "green-area-count"
+      ],
+      "mappedWaterAndCoastline": true,
+      "mappedGreenSpace": true,
+      "sourceTaggedBuildingMaterials": true,
+      "fallbackInventsEnvironmentalGeometry": false
     },
     "weatherSemantics": {
       "basedOn": "current provider weather_code + precipitation + visibility",
