@@ -88,7 +88,12 @@
     "customScenarioBuilder": true,
     "weightedOptimizationControls": true,
     "evidenceDrillDown": true,
-    "agentEvidenceReceipts": true
+    "agentEvidenceReceipts": true,
+    "holographicTemporalCompare": true,
+    "savedCameraViews": true,
+    "scenarioDuplication": true,
+    "auditTimeline": true,
+    "classicalExperimentalComparison": true
   },
   "aiRuntime": {
     "providers": [
