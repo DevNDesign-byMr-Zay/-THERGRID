@@ -509,10 +509,24 @@ button {
   pointer-events: none;
 }
 
-.source-badge span {
+.source-badge-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.source-badge-title span {
   font-size: 8px;
   letter-spacing: 0.1em;
   color: #b9c9d7;
+}
+
+.source-badge-title em {
+  color: #71869a;
+  font-size: 7px;
+  font-style: normal;
+  letter-spacing: 0.1em;
 }
 
 .source-badge small {
@@ -524,7 +538,8 @@ button {
   border-color: rgba(99, 255, 197, 0.34);
 }
 
-.source-badge[data-source-state='live'] span {
+.source-badge[data-source-state='live'] .source-badge-title span,
+.source-badge[data-source-state='live'] .source-badge-title em {
   color: var(--success);
 }
 
@@ -532,7 +547,8 @@ button {
   border-color: rgba(245, 195, 112, 0.34);
 }
 
-.source-badge[data-source-state='fallback'] span {
+.source-badge[data-source-state='fallback'] .source-badge-title span,
+.source-badge[data-source-state='fallback'] .source-badge-title em {
   color: #f0c477;
 }
 
@@ -540,8 +556,19 @@ button {
   border-color: rgba(255, 112, 112, 0.34);
 }
 
-.source-badge[data-source-state='unavailable'] span {
+.source-badge[data-source-state='unavailable'] .source-badge-title span,
+.source-badge[data-source-state='unavailable'] .source-badge-title em {
   color: #ff9494;
+}
+
+.source-time-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 5px;
+  color: #536a7e;
+  font-size: 7px;
+  letter-spacing: 0.06em;
 }
 
 .scene-caption {
@@ -658,6 +685,18 @@ button {
   color: #718496;
   font-size: 9px;
   line-height: 1.45;
+}
+
+.weather-source-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.045);
+  color: #566d81;
+  font-size: 7px;
+  letter-spacing: 0.05em;
 }
 
 .intel-card,
