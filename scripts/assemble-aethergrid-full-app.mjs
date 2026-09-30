@@ -211,6 +211,8 @@ assert(/async function loadCoordinateCity/u.test(standaloneHtml), 'standalone HT
 assert(/loadTerrainFor/u.test(standaloneHtml), 'standalone HTML must retain live terrain request wiring');
 assert(/infrastructureLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL power-grid geometry');
 assert(/terrainLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL terrain geometry');
+assert(/data-global-layer="terrain"/u.test(standaloneHtml), 'standalone HTML must retain terrain layer controls');
+assert(/terrainLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL terrain geometry');
 payload.set('standalone.html', Buffer.from(standaloneHtml, 'utf8'));
 
 const inventory = [...payload.entries()]
