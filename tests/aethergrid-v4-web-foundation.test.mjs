@@ -511,7 +511,7 @@ test('v4 operator shortcuts keep world city live intel and search keyboard-acces
 
 test('v4 semantic overlays use camera-distance LOD while global nodes remain orbital', async () => {
   const layer = await text(
-    'apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'
+    'apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts',
   );
 
   assert.match(layer, /DistanceDisplayCondition/u);
@@ -567,10 +567,7 @@ test('v4 intelligence workspace tabs preserve mounted AI scenario quantum eviden
   assert.match(app, /SYSTEM/u);
   assert.match(app, /intel-workspace intel-ai/u);
   assert.match(app, /intel-workspace intel-quantum/u);
-  assert.match(
-    styles,
-    /\.intel-workspace,\s*\.intel-context-panel \{\s*display: none/u,
-  );
+  assert.match(styles, /\.intel-workspace,\s*\.intel-context-panel \{\s*display: none/u);
   assert.match(styles, /data-workspace='ai'/u);
   assert.match(styles, /data-workspace='evidence'/u);
 });
@@ -616,9 +613,7 @@ test('v4 camera descent exposes live phase and adaptive terrain building detail'
 });
 
 test('v4 viewport prevents duplicate initial camera descent while polling transition status', async () => {
-  const viewport = await text(
-    'apps/aethergrid-console/web/src/components/SpatialViewport.tsx'
-  );
+  const viewport = await text('apps/aethergrid-console/web/src/components/SpatialViewport.tsx');
 
   assert.match(viewport, /lastJourneyKeyRef/u);
   assert.match(viewport, /if \(lastJourneyKeyRef\.current === targetKey\) return/u);
@@ -641,9 +636,7 @@ test('v4 city transitions report geometry atmosphere and live-context readiness 
 });
 
 test('v4 streamed 3d buildings defer until city or district detail', async () => {
-  const renderer = await text(
-    'apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'
-  );
+  const renderer = await text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts');
 
   assert.match(renderer, /#buildingsShouldShow/u);
   assert.match(renderer, /this\.#detailLevel === 'city'/u);
@@ -667,7 +660,7 @@ test('v4 solid building presentation responds to solar phase without affecting s
 
 test('v4 city descent uses a true heading pitch range orbit around the geographic target', async () => {
   const camera = await text(
-    'apps/aethergrid-console/web/src/renderer/cesium/camera-journey-controller.ts'
+    'apps/aethergrid-console/web/src/renderer/cesium/camera-journey-controller.ts',
   );
 
   assert.match(camera, /BoundingSphere/u);
