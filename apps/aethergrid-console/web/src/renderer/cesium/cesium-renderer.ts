@@ -9,7 +9,6 @@ import {
   Color,
   Entity,
   Ion,
-  JulianDate,
   Math as CesiumMath,
   Terrain,
   Viewer,
@@ -24,7 +23,10 @@ import type {
   SpatialPickPoint,
   SpatialRenderer,
   SpatialRendererConfig,
+  SpatialDetailLevel,
+  SpatialJourneyPhase,
   SpatialRendererStatus,
+  SpatialSolarStatus,
   SpatialTarget,
   TemporalInstant,
   VisualMode
@@ -34,6 +36,7 @@ import { AirQualityLayer } from './air-quality-layer';
 import { CameraJourneyController } from './camera-journey-controller';
 import { GeodeticGridLayer } from './geodetic-grid-layer';
 import { NetworkOverlayLayer } from './network-overlay-layer';
+import { SolarLightingController } from './solar-lighting-controller';
 import { VisualModeController } from './visual-mode-controller';
 import { WeatherAtmosphereLayer } from './weather-atmosphere-layer';
 
@@ -64,12 +67,17 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #visualController: VisualModeController | null = null;
   #weather: WeatherAtmosphereLayer | null = null;
   #airQuality: AirQualityLayer | null = null;
+  #solarLighting: SolarLightingController | null = null;
   #overlays = new Map<string, NetworkOverlayLayer>();
   #visualMode: VisualMode = 'solid';
   #selectedTile: { feature: Cesium3DTileFeature; color: Color } | null = null;
   #layers = new Map<string, LayerState>();
   #ready = false;
   #degraded = false;
+  #busy = false;
+  #journeyPhase: SpatialJourneyPhase = 'idle';
+  #detailLevel: SpatialDetailLevel = 'district';
+  #solar: SpatialSolarStatus | null = null;
   #reason: string | null = null;
 
   mount(container: HTMLElement): void {
@@ -96,6 +104,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       navigationHelpButton: false,
       sceneModePicker: false,
       selectionIndicator: true,
+      shadows: true,
       timeline: false,
       terrain: Terrain.fromWorldTerrain({
         requestVertexNormals: true,
@@ -112,6 +121,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     });
     this.#weather = new WeatherAtmosphereLayer(this.#viewer);
     this.#airQuality = new AirQualityLayer(this.#viewer);
+    this.#solarLighting = new SolarLightingController(this.#viewer);
 
     try {
       this.#buildings = await createOsmBuildingsAsync({
@@ -120,6 +130,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       });
       this.#viewer.scene.primitives.add(this.#buildings);
       this.#visualController.setBuildings(this.#buildings);
+      this.#applyDetailForPhase(this.#journeyPhase === 'idle' ? 'district' : this.#journeyPhase);
     } catch (error) {
       this.#degraded = true;
       this.#reason =
@@ -135,12 +146,25 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   async flyTo(target: SpatialTarget): Promise<void> {
     this.#requireViewer();
     if (!this.#cameraJourney) throw new Error('Cesium camera journey is not initialized');
-    await this.#cameraJourney.flyTo(target);
+
+    this.#busy = true;
+    this.#solar = this.#solarLighting?.setTarget(target) ?? this.#solar;
+    try {
+      await this.#cameraJourney.flyTo(target, (phase) => {
+        this.#journeyPhase = phase;
+        this.#applyDetailForPhase(phase);
+      });
+    } finally {
+      this.#busy = false;
+      this.#journeyPhase = 'idle';
+      if (target.journey === 'global') this.#applyDetailForPhase('global');
+      else this.#applyDetailForPhase('district');
+    }
   }
 
   setTime(time: TemporalInstant): void {
     const viewer = this.#requireViewer();
-    viewer.clock.currentTime = JulianDate.fromIso8601(time.iso);
+    this.#solar = this.#solarLighting?.setTime(time) ?? this.#solar;
     this.#grid?.setTime(time.iso);
     for (const overlay of this.#overlays.values()) overlay.setTime(time.iso);
     this.#weather?.setTime(time);
@@ -274,6 +298,10 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       ready: this.#ready,
       visualMode: this.#visualMode,
       degraded: this.#degraded,
+      busy: this.#busy,
+      journeyPhase: this.#journeyPhase,
+      detailLevel: this.#detailLevel,
+      solar: this.#solar,
       reason: this.#reason
     };
   }
@@ -287,6 +315,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#weather = null;
     this.#airQuality?.destroy();
     this.#airQuality = null;
+    this.#solarLighting = null;
     for (const overlay of this.#overlays.values()) overlay.destroy();
     this.#overlays.clear();
     this.#grid?.destroy();
@@ -303,6 +332,27 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       this.#selectedTile = null;
     }
     if (this.#viewer) this.#viewer.selectedEntity = undefined;
+  }
+
+  #applyDetailForPhase(phase: Exclude<SpatialJourneyPhase, 'idle'>): void {
+    const viewer = this.#viewer;
+    if (!viewer) return;
+
+    const detail: Record<
+      Exclude<SpatialJourneyPhase, 'idle'>,
+      { level: SpatialDetailLevel; terrainSse: number; buildingSse: number }
+    > = {
+      global: { level: 'world', terrainSse: 5.2, buildingSse: 30 },
+      regional: { level: 'regional', terrainSse: 3.6, buildingSse: 22 },
+      city: { level: 'city', terrainSse: 2.2, buildingSse: 16 },
+      district: { level: 'district', terrainSse: 1.4, buildingSse: 10 }
+    };
+
+    const next = detail[phase];
+    this.#detailLevel = next.level;
+    viewer.scene.globe.maximumScreenSpaceError = next.terrainSse;
+    if (this.#buildings) this.#buildings.maximumScreenSpaceError = next.buildingSse;
+    viewer.scene.requestRender();
   }
 
   #requireViewer(): Viewer {
