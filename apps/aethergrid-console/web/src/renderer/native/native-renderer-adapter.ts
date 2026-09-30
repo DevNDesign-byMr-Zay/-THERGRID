@@ -28,10 +28,12 @@ export class NativeSpatialRendererAdapter implements SpatialRenderer {
   #container: HTMLElement | null = null;
   #bridge: LegacyNativeSpatialBridge;
   #ready = false;
+  #bridgeAttached: boolean;
   #visualMode: VisualMode = 'holographic';
 
   constructor(bridge: LegacyNativeSpatialBridge = {}) {
     this.#bridge = bridge;
+    this.#bridgeAttached = Object.keys(bridge).length > 0;
   }
 
   mount(container: HTMLElement): void {
@@ -78,8 +80,8 @@ export class NativeSpatialRendererAdapter implements SpatialRenderer {
       engine: this.engine,
       ready: this.#ready,
       visualMode: this.#visualMode,
-      degraded: false,
-      reason: null
+      degraded: !this.#bridgeAttached,
+      reason: this.#bridgeAttached ? null : 'Verified v3 native renderer bridge is not attached to the migration shell yet'
     };
   }
 
