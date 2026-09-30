@@ -760,3 +760,15 @@ test('v4 operational presets use only implemented layers and preserve manual cus
   assert.match(app, /setActiveUseCase\(null\)/u);
   assert.match(app, /CUSTOM · manually controlled layers and view/u);
 });
+
+test('v4 operational mode propagates into spatial HUD and AI context', async () => {
+  const [client, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/services/agent-client.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(client, /useCase\?: string \| null/u);
+  assert.match(app, /useCase: activeUseCase/u);
+  assert.match(app, /OPERATION MODE/u);
+  assert.match(app, /USE_CASE_PRESETS\.find\(\(preset\) => preset\.id === activeUseCase\)/u);
+});
