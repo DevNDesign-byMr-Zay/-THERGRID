@@ -2723,7 +2723,7 @@
       ? `${Number(skyline.sourceBackedHeightCoveragePercent).toFixed(0)}%`
       : '—';
     const weather = environment
-      ? `${Number.isFinite(environment.temperatureC) ? `${Number(environment.temperatureC).toFixed(1)}°C` : 'current'} · ${Number.isFinite(environment.cloudCoverPercent) ? `${Number(environment.cloudCoverPercent).toFixed(0)}% cloud` : environment.isDay ? 'day' : 'night'}`
+      ? `${weatherPhenomenon(mesh.environment)} · ${Number.isFinite(environment.temperatureC) ? `${Number(environment.temperatureC).toFixed(1)}°C` : 'current'} · ${Number.isFinite(environment.cloudCoverPercent) ? `${Number(environment.cloudCoverPercent).toFixed(0)}% cloud` : environment.isDay ? 'day' : 'night'}`
       : '—';
     const air = mesh.liveContext?.airQuality?.current || null;
     const airQuality = air?.usAqi == null ? '—' : `AQI ${Number(air.usAqi).toFixed(0)} · ${titleCase(air.category || 'unknown')}`;
@@ -2845,7 +2845,7 @@
         attributions.join(' · ') ||
         'Live city geometry unavailable; using local fallback geometry.';
       q('#geoAttribution').textContent =
-        `${sourceText} · City-light points are procedural visualization from mapped geometry + daylight state, not measured window occupancy.`;
+        `${sourceText} · City-light points are procedural visualization from mapped geometry + daylight state, not measured window occupancy. Snow/fog/rain/storm effects visualize current model context; storm pulses are not detected lightning strikes.`;
     }
     if (status) {
       const skyline = result.skylineProfile || {};
@@ -2858,7 +2858,7 @@
       const currentContext = env
         ? ` Current environment: ${Number.isFinite(env.temperatureC) ? `${Number(env.temperatureC).toFixed(1)}°C, ` : ''}${Number.isFinite(env.relativeHumidityPercent) ? `${Number(env.relativeHumidityPercent).toFixed(0)}% humidity, ` : ''}${Number.isFinite(env.cloudCoverPercent) ? `${Number(env.cloudCoverPercent).toFixed(0)}% cloud, ` : ''}${Number.isFinite(env.windSpeedKph) ? `${Number(env.windSpeedKph).toFixed(1)} km/h wind, ` : ''}${env.isDay ? 'daylight' : 'night'}.`
         : '';
-      const liveContextCopy = `${air?.usAqi == null ? '' : ` Air quality: US AQI ${Number(air.usAqi).toFixed(0)} (${titleCase(air.category || 'unknown')}).`}${seismic ? ` USGS context: ${Number(seismic.eventCount || 0)} M2.5+ event(s) within ${Number(seismic.radiusKm || 0).toFixed(0)} km.` : ''}`;
+      const liveContextCopy = ` Weather identity: ${weatherPhenomenon(result.environment)}.${air?.usAqi == null ? '' : ` Air quality: US AQI ${Number(air.usAqi).toFixed(0)} (${titleCase(air.category || 'unknown')}).`}${seismic ? ` USGS context: ${Number(seismic.eventCount || 0)} M2.5+ event(s) within ${Number(seismic.radiusKm || 0).toFixed(0)} km.` : ''}`;
       status.innerHTML = `<b>${escapeHtml(result.city.name)}${district} · ${result.buildings.length} mapped structures${maxHeight}</b><p>${result.source?.live ? `Current OpenStreetMap geometry is rendered from source-backed footprints/parts; height coverage ${heightCoverage || 'is shown in the stats panel'}.` : 'Provider request could not be completed; clearly marked local fallback geometry is being rendered.'}${currentContext}${liveContextCopy}</p><button class="secondary-button" data-action="reload-city-live">REFRESH OPEN DATA</button>`;
     }
     if (q('#geoProvenance')) {
