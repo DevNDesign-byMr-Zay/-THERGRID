@@ -522,3 +522,23 @@ test('v4 semantic overlays use camera-distance LOD while global nodes remain orb
   assert.match(layer, /area\.kind === 'water' \? 100_000 : 80_000/u);
   assert.match(layer, /Number\.POSITIVE_INFINITY/u);
 });
+
+test('v4 AIR toggle renders a source-driven AQI field only for live city context', async () => {
+  const [contract, service, layer, renderer, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/renderer/overlays/atmospheric-overlay.ts'),
+    text('apps/aethergrid-console/web/src/services/city-live-context.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/air-quality-layer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(contract, /AirQualityOverlaySnapshot/u);
+  assert.match(service, /airQualityToOverlay/u);
+  assert.match(layer, /ParticleSystem/u);
+  assert.match(layer, /current\.usAqi/u);
+  assert.match(layer, /current\.pm25UgM3/u);
+  assert.match(layer, /this\.#temporalMode === 'live'/u);
+  assert.match(renderer, /this\.#layerVisible\('air', true\)/u);
+  assert.match(app, /scope === 'city' && liveContext && temporal\.mode === 'live'/u);
+  assert.match(app, /airQuality=\{airQualityOverlay\}/u);
+});
