@@ -1409,17 +1409,32 @@
 
   function handleCityBuildingSelection(node) {
     const status = q('#cityMeshStatus');
+    const isPower = String(node.type || '').startsWith('power-');
+    const detail = isPower
+      ? `${titleCase(String(node.type).replace('power-', ''))}${node.voltage ? ` · ${Number(node.voltage).toLocaleString()} V` : ''}${node.operator ? ` · ${escapeHtml(node.operator)}` : ''}`
+      : `Building node · ${Number(node.heightM || 0).toFixed(1)} m high`;
     if (status) {
-      status.innerHTML = `<b>${escapeHtml(node.label || node.id)}</b><p>Building node · ${Number(node.heightM || 0).toFixed(1)} m high${node.osmId ? ` · OSM way ${escapeHtml(node.osmId)}` : ''}.</p>`;
+      status.innerHTML = `<b>${escapeHtml(node.label || node.id)}</b><p>${detail}${node.osmId ? ` · OSM ${escapeHtml(node.osmId)}` : ''}.</p>`;
     }
-    showToast('CITY BUILDING SELECTED', node.label || node.id);
+    showToast(isPower ? 'POWER ASSET SELECTED' : 'CITY BUILDING SELECTED', node.label || node.id);
   }
 
   function handleGlobalCitySelection(city) {
     if (!city) return;
     state.geospatial.selectedCityId = city.id;
     const select = q('#globalCitySelect');
-    if (select) select.value = city.id;
+    if (select) {
+      if (![...select.options].some((option) => option.value === city.id)) {
+        const option = document.createElement('option');
+        option.value = city.id;
+        option.textContent = `${city.name} · ${city.country || 'Custom coordinate'}`;
+        select.append(option);
+      }
+      select.value = city.id;
+    }
+    if (q('#globalPointName')) q('#globalPointName').value = city.name || 'Coordinate Explorer';
+    if (q('#globalPointLat')) q('#globalPointLat').value = Number(city.lat).toFixed(5);
+    if (q('#globalPointLon')) q('#globalPointLon').value = Number(city.lon).toFixed(5);
     qa('[data-global-city]').forEach((button) =>
       button.classList.toggle('active', button.dataset.globalCity === city.id),
     );
@@ -1428,7 +1443,7 @@
     if (q('#globalCoordinates')) q('#globalCoordinates').textContent = `${latLabel} · ${lonLabel}`;
     const status = q('#cityMeshStatus');
     if (status) {
-      status.innerHTML = `<b>${escapeHtml(city.name)} · ${escapeHtml(city.country)}</b><p>Real-coordinate world node selected. Descend into the city to request live building geometry.</p>`;
+      status.innerHTML = `<b>${escapeHtml(city.name)} · ${escapeHtml(city.country)}</b><p>Real-coordinate world node selected. Descend to request live buildings, roads and mapped power infrastructure.</p>`;
     }
   }
 
@@ -1585,8 +1600,40 @@
             ],
       };
     });
+    const powerAssets = Array.from({ length: 8 }, (_, index) => ({
+      id: `standalone-power-asset-${index + 1}`,
+      name: index % 3 === 0 ? `Fallback Substation ${index + 1}` : '',
+      powerType: index % 3 === 0 ? 'substation' : 'transformer',
+      voltage: index % 3 === 0 ? 138000 : 13800,
+      operator: '',
+      position: [(random() - 0.5) * 1200, (random() - 0.5) * 1200],
+    }));
+    const powerLines = Array.from({ length: 8 }, (_, index) => {
+      const horizontal = index % 2 === 0;
+      const offset = (random() - 0.5) * 1050;
+      return {
+        id: `standalone-power-line-${index + 1}`,
+        name: '',
+        powerType: index % 4 === 0 ? 'line' : 'minor_line',
+        voltage: index % 4 === 0 ? 138000 : 33000,
+        operator: '',
+        path: horizontal
+          ? [
+              [-700, offset],
+              [-180, offset + (random() - 0.5) * 70],
+              [280, offset + (random() - 0.5) * 70],
+              [700, offset],
+            ]
+          : [
+              [offset, -700],
+              [offset + (random() - 0.5) * 70, -180],
+              [offset + (random() - 0.5) * 70, 280],
+              [offset, 700],
+            ],
+      };
+    });
     return {
-      schemaVersion: 1,
+      schemaVersion: 2,
       city,
       source: {
         provider: 'standalone-local-fallback',
@@ -1595,7 +1642,42 @@
       },
       buildings,
       roads,
+      powerLines,
+      powerAssets,
     };
+  }
+
+  function updateGlobalGridStats(mesh) {
+    const stats = q('#globalGridStats');
+    if (!stats) return;
+    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span>`;
+  }
+
+  function applyCityMeshResult(result, status = q('#cityMeshStatus')) {
+    state.geospatial.cityMesh = result;
+    if (Array.isArray(result.activity)) state.activity = result.activity;
+    cityGrid?.loadCityMesh(result);
+    cityGrid?.setTime(q('#globalTimeSlider')?.value || state.settings.defaultHour);
+    setGlobalMode('city');
+    updateGlobalGridStats(result);
+    if (q('#geoSourceStatus')) {
+      q('#geoSourceStatus').textContent = result.source?.live
+        ? `LIVE OSM · ${result.buildings.length} BUILDINGS · ${(result.powerLines || []).length} POWER LINES`
+        : `LOCAL FALLBACK · ${result.buildings.length} BUILDINGS · ${(result.powerLines || []).length} POWER LINES`;
+    }
+    if (q('#geoAttribution')) {
+      q('#geoAttribution').textContent =
+        result.source?.attribution ||
+        'Live city geometry unavailable; using local fallback geometry.';
+    }
+    if (status) {
+      status.innerHTML = `<b>${escapeHtml(result.city.name)} · ${result.buildings.length} buildings · ${(result.roads || []).length} roads · ${(result.powerAssets || []).length} power assets</b><p>${result.source?.live ? 'Live OpenStreetMap building, road and power-infrastructure geometry is rendered as independent interactive 3D layers.' : 'Provider request could not be completed; clearly marked local fallback geometry is being rendered.'}</p><button class="secondary-button" data-action="reload-city-live">REFRESH LIVE GEOMETRY</button>`;
+    }
+    renderActivity();
+    showToast(
+      result.source?.live ? 'LIVE CITY + GRID LOADED' : 'CITY FALLBACK LOADED',
+      `${result.city.name} · ${result.buildings.length} buildings · ${(result.roads || []).length} roads · ${(result.powerLines || []).length} power lines · ${result.source?.provider}`,
+    );
   }
 
   async function loadLiveCity(cityId = state.geospatial.selectedCityId, { force = false } = {}) {
@@ -1611,40 +1693,80 @@
       const descent =
         city && globalGlobe ? globalGlobe.descendToCity(city, 720) : Promise.resolve();
       const [result] = await Promise.all([meshRequest, descent]);
-      state.geospatial.cityMesh = result;
-      if (Array.isArray(result.activity)) state.activity = result.activity;
-      cityGrid?.loadCityMesh(result);
-      setGlobalMode('city');
-      if (q('#geoSourceStatus')) {
-        q('#geoSourceStatus').textContent = result.source?.live
-          ? `LIVE OSM · ${result.buildings.length} BUILDINGS`
-          : `LOCAL FALLBACK · ${result.buildings.length} BUILDINGS`;
-      }
-      if (q('#geoAttribution')) {
-        q('#geoAttribution').textContent =
-          result.source?.attribution || 'Live city geometry unavailable; using local fallback geometry.';
-      }
-      if (status) {
-        status.innerHTML = `<b>${escapeHtml(result.city.name)} · ${result.buildings.length} buildings · ${(result.roads || []).length} roads</b><p>${result.source?.live ? 'Live OpenStreetMap building footprints and road topology are now rendered as interactive 3D wireframe geometry.' : 'Provider request could not be completed; clearly marked local fallback geometry is being rendered.'}</p><button class="secondary-button" data-action="reload-city-live">REFRESH LIVE GEOMETRY</button>`;
-      }
-      renderActivity();
-      showToast(
-        result.source?.live ? 'LIVE CITY LOADED' : 'CITY FALLBACK LOADED',
-        `${result.city.name} · ${result.buildings.length} buildings · ${(result.roads || []).length} roads · ${result.source?.provider}`,
-      );
+      applyCityMeshResult(result, status);
     } catch (error) {
       const fallbackCity =
         city || state.geospatial.cities.find((item) => item.id === cityId) || DEFAULT_GLOBAL_CITIES[0];
       const fallback = buildStandaloneCityMesh(fallbackCity);
-      state.geospatial.cityMesh = fallback;
-      cityGrid?.loadCityMesh(fallback);
-      setGlobalMode('city');
-      if (status) {
-        status.innerHTML = `<b>${escapeHtml(fallbackCity.name)} · standalone fallback</b><p>Live geometry could not be reached. Interactive 3D geometry remains available, but it is explicitly local fallback—not OpenStreetMap data.</p>`;
+      applyCityMeshResult(fallback, status);
+      if (q('#geoSourceStatus')) {
+        q('#geoSourceStatus').textContent = 'STANDALONE FALLBACK · NOT LIVE MAP DATA';
       }
-      if (q('#geoSourceStatus')) q('#geoSourceStatus').textContent = 'STANDALONE FALLBACK · NOT LIVE MAP DATA';
-      if (q('#geoAttribution')) q('#geoAttribution').textContent = fallback.source.attribution;
-      showToast('STANDALONE CITY MODE', error.message || 'Backend unavailable; rendering local fallback geometry.');
+      showToast(
+        'STANDALONE CITY MODE',
+        error.message || 'Backend unavailable; rendering local fallback geometry.',
+      );
+    }
+  }
+
+  async function loadCoordinateCity({ force = false } = {}) {
+    const name = q('#globalPointName')?.value.trim() || 'Coordinate Explorer';
+    const lat = Number(q('#globalPointLat')?.value);
+    const lon = Number(q('#globalPointLon')?.value);
+    const radiusM = Number(q('#globalPointRadius')?.value || 900);
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+      return showToast('COORDINATE ERROR', 'Latitude must be between -90 and 90.');
+    }
+    if (!Number.isFinite(lon) || lon < -180 || lon > 180) {
+      return showToast('COORDINATE ERROR', 'Longitude must be between -180 and 180.');
+    }
+    const city = {
+      id: `coord-${lat.toFixed(5)}-${lon.toFixed(5)}`,
+      name,
+      country: 'Custom coordinate',
+      lat,
+      lon,
+      radiusM,
+      custom: true,
+    };
+    state.geospatial.cities = [
+      city,
+      ...state.geospatial.cities.filter((item) => !item.custom && item.id !== city.id),
+    ];
+    globalGlobe?.setCities(state.geospatial.cities);
+    handleGlobalCitySelection(city);
+    const list = q('#globalCityList');
+    if (list) {
+      const existing = list.querySelector('[data-global-city-custom]');
+      existing?.remove();
+      list.insertAdjacentHTML(
+        'afterbegin',
+        `<button class="global-city-button active" data-global-city="${escapeHtml(city.id)}" data-global-city-custom="true"><b>${escapeHtml(city.name)}</b><small>Custom coordinate · ${city.lat.toFixed(4)}, ${city.lon.toFixed(4)}</small><em>ENTER</em></button>`,
+      );
+    }
+    const status = q('#cityMeshStatus');
+    if (status) {
+      status.innerHTML = `<b>Loading ${escapeHtml(name)}…</b><p>Requesting live buildings, roads and power infrastructure around ${lat.toFixed(5)}, ${lon.toFixed(5)}.</p>`;
+    }
+    try {
+      const query = new URLSearchParams({
+        lat: String(lat),
+        lon: String(lon),
+        name,
+        radiusM: String(radiusM),
+        ...(force ? { force: '1' } : {}),
+      });
+      const meshRequest = api(`./api/aethergrid/geospatial/point?${query.toString()}`);
+      const descent = globalGlobe ? globalGlobe.descendToCity(city, 720) : Promise.resolve();
+      const [result] = await Promise.all([meshRequest, descent]);
+      applyCityMeshResult(result, status);
+    } catch (error) {
+      const fallback = buildStandaloneCityMesh(city);
+      applyCityMeshResult(fallback, status);
+      if (q('#geoSourceStatus')) {
+        q('#geoSourceStatus').textContent = 'STANDALONE FALLBACK · NOT LIVE MAP DATA';
+      }
+      showToast('COORDINATE FALLBACK', error.message || 'Backend unavailable.');
     }
   }
 
@@ -1671,12 +1793,33 @@
     }),
   );
   q('[data-action="load-live-city"]')?.addEventListener('click', () => loadLiveCity());
+  q('[data-action="explore-coordinates"]')?.addEventListener('click', () =>
+    loadCoordinateCity(),
+  );
+  qa('[data-global-layer]').forEach((button) =>
+    button.addEventListener('click', () => {
+      cityGrid?.toggle(button.dataset.globalLayer);
+      button.classList.toggle('active');
+      showToast('CITY LAYER', `${titleCase(button.dataset.globalLayer)} updated.`);
+    }),
+  );
+  q('#globalTimeSlider')?.addEventListener('input', (event) => {
+    cityGrid?.setTime(event.target.value);
+    if (q('#globalTimeValue')) {
+      q('#globalTimeValue').textContent = formatHour(event.target.value);
+    }
+  });
   q('[data-global-action="reset"]')?.addEventListener('click', () => {
     globalGlobe?.reset();
     setGlobalMode('globe');
   });
   q('#cityMeshStatus')?.addEventListener('click', (event) => {
-    if (event.target.closest('[data-action="reload-city-live"]')) loadLiveCity(state.geospatial.selectedCityId, { force: true });
+    if (!event.target.closest('[data-action="reload-city-live"]')) return;
+    const selected = state.geospatial.cities.find(
+      (item) => item.id === state.geospatial.selectedCityId,
+    );
+    if (selected?.custom) loadCoordinateCity({ force: true });
+    else loadLiveCity(state.geospatial.selectedCityId, { force: true });
   });
 
   function updateClock() {
