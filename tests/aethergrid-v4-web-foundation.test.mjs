@@ -470,7 +470,10 @@ test('v4 operator profile persists real identity and bounded local avatar data',
 test('v4 world scope isolates global live context from selected-city overlays', async () => {
   const app = await text('apps/aethergrid-console/web/src/app/App.tsx');
 
-  assert.match(app, /scope === 'world'\s*\? \[worldOverlay\]/u);
+  assert.match(
+    app,
+    /scope === 'world'\s*\? \[worldOverlay, measurementOverlay\]/u,
+  );
   assert.match(
     app,
     /atmosphere=\{\s*scope === 'city' && temporal\.mode === 'live' \? atmosphere : null\s*\}/u,
@@ -1052,9 +1055,7 @@ test('v4 analysis workspace captures the 4d frame and routes measure clicks with
 });
 
 test('v4 frame comparison captures only temporally valid metrics and leaves missing fields missing', async () => {
-  const comparison = await text(
-    'apps/aethergrid-console/web/src/services/spatial-comparison.ts',
-  );
+  const comparison = await text('apps/aethergrid-console/web/src/services/spatial-comparison.ts');
 
   assert.match(comparison, /captureSpatialObservation/u);
   assert.match(comparison, /const live = input\.temporal\.mode === 'live'/u);
