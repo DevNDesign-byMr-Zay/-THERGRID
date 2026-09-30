@@ -20,6 +20,7 @@ const REQUIRED_FILES = Object.freeze([
   'profile-store.mjs',
   'geo-runtime.mjs',
   'city-environment-runtime.mjs',
+  'city-live-runtime.mjs',
   'terrain-runtime.mjs',
   'quantum-runtime.mjs',
   'app.json',
@@ -179,6 +180,12 @@ assert(/data-global-layer="infrastructure"/u.test(sourceHtml), 'runtime index.ht
 assert(/data-global-layer="terrain"/u.test(sourceHtml), 'runtime index.html must expose the live terrain layer toggle');
 assert(/id="globalTimeSlider"/u.test(sourceHtml), 'runtime index.html must expose the global 4D time index');
 assert(/data-action="city-live-now"/u.test(sourceHtml), 'runtime index.html must expose city live-time synchronization');
+assert(/data-global-layer="weather"/u.test(sourceHtml), 'runtime index.html must expose the live weather layer');
+assert(/data-global-layer="air"/u.test(sourceHtml), 'runtime index.html must expose the live air-quality layer');
+assert(/data-global-layer="seismic"/u.test(sourceHtml), 'runtime index.html must expose the live seismic layer');
+assert(/value="weather-readiness"/u.test(sourceHtml), 'runtime index.html must expose weather readiness analysis');
+assert(/value="air-quality-exposure"/u.test(sourceHtml), 'runtime index.html must expose air-quality exposure analysis');
+assert(/value="seismic-awareness"/u.test(sourceHtml), 'runtime index.html must expose seismic awareness analysis');
 assert(/id="settingTheme"/u.test(sourceHtml), 'runtime index.html must expose persistent appearance modes');
 assert(/id="profileForm"/u.test(sourceHtml), 'runtime index.html must expose the persistent operator profile form');
 assert(/id="quantumCircuit"/u.test(sourceHtml), 'runtime index.html must expose real quantum job controls');
@@ -221,6 +228,10 @@ assert(/terrainLines/u.test(standaloneHtml), 'standalone HTML must retain native
 assert(/roofFaces/u.test(standaloneHtml), 'standalone HTML must retain source-shaped roof geometry');
 assert(/resolvedTheme/u.test(standaloneHtml), 'standalone HTML must retain appearance mode logic');
 assert(/environmentHour/u.test(standaloneHtml), 'standalone HTML must retain live city time synchronization');
+assert(/setLiveActivity/u.test(standaloneHtml), 'standalone HTML must retain animated global live-activity rendering');
+assert(/weatherLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL wind geometry');
+assert(/airParticles/u.test(standaloneHtml), 'standalone HTML must retain native WebGL air-quality particles');
+assert(/seismicLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL seismic rings');
 payload.set('standalone.html', Buffer.from(standaloneHtml, 'utf8'));
 
 const inventory = [...payload.entries()]
@@ -252,7 +263,15 @@ payload.set(
           'live-open-city-environment',
           'city-local-live-time-sync',
           'light-dark-system-theme',
-          'skyline-data-quality'
+          'skyline-data-quality',
+          'live-air-quality',
+          'live-usgs-seismic',
+          'animated-weather-vectors',
+          'animated-precipitation',
+          'animated-air-quality-particles',
+          'animated-seismic-rings',
+          'animated-global-live-context',
+          'source-driven-city-use-cases'
         ],
         files: inventory,
       },
