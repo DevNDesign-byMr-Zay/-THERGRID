@@ -429,6 +429,58 @@ button {
   font-size: 11px;
 }
 
+
+.source-badge {
+  position: absolute;
+  left: 16px;
+  bottom: 56px;
+  z-index: 5;
+  max-width: min(420px, calc(100% - 32px));
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: rgba(5, 9, 15, 0.82);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+.source-badge span {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  color: #b9c9d7;
+}
+
+.source-badge small {
+  color: #65798c;
+  font-size: 8px;
+}
+
+.source-badge[data-source-state='live'] {
+  border-color: rgba(99, 255, 197, 0.34);
+}
+
+.source-badge[data-source-state='live'] span {
+  color: var(--success);
+}
+
+.source-badge[data-source-state='fallback'] {
+  border-color: rgba(245, 195, 112, 0.34);
+}
+
+.source-badge[data-source-state='fallback'] span {
+  color: #f0c477;
+}
+
+.source-badge[data-source-state='unavailable'] {
+  border-color: rgba(255, 112, 112, 0.34);
+}
+
+.source-badge[data-source-state='unavailable'] span {
+  color: #ff9494;
+}
+
 .scene-caption {
   position: absolute;
   right: 16px;
