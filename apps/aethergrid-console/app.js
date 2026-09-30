@@ -25,6 +25,12 @@
       region: 'New York Metro',
       view: 'live',
       scenario: 'peak-demand',
+      scenarioParameters: {
+        loadMultiplierPercent: 110,
+        renewableAvailabilityPercent: 100,
+        storageReservePercent: 18,
+        weatherRiskPercent: 20,
+      },
       mode: 'ADVISORY ONLY',
     },
     metrics: {
@@ -1199,30 +1205,83 @@
     'renewable-surge': 'High renewable availability with increased solar and wind contribution.',
     'storage-stress': 'Battery and storage reserve depletion with recovery requirements.',
     'weather-event': 'Spatial resilience review under a disruptive weather event.',
+    custom: 'Operator-defined load, renewable availability, storage reserve and weather-risk assumptions.',
   };
 
+  function currentCustomScenarioParameters() {
+    return {
+      loadMultiplierPercent: Number(q('#customLoad')?.value || 110),
+      renewableAvailabilityPercent: Number(q('#customRenewable')?.value || 100),
+      storageReservePercent: Number(q('#customStorage')?.value || 18),
+      weatherRiskPercent: Number(q('#customRisk')?.value || 20),
+    };
+  }
+
+  function syncCustomScenarioControls(parameters = state.system.scenarioParameters) {
+    const values = {
+      customLoad: parameters.loadMultiplierPercent,
+      customRenewable: parameters.renewableAvailabilityPercent,
+      customStorage: parameters.storageReservePercent,
+      customRisk: parameters.weatherRiskPercent,
+    };
+    for (const [id, value] of Object.entries(values)) {
+      const input = q(`#${id}`);
+      if (input) input.value = String(value);
+    }
+    if (q('#customLoadValue')) q('#customLoadValue').textContent = `${values.customLoad}%`;
+    if (q('#customRenewableValue')) q('#customRenewableValue').textContent = `${values.customRenewable}%`;
+    if (q('#customStorageValue')) q('#customStorageValue').textContent = `${values.customStorage}%`;
+    if (q('#customRiskValue')) q('#customRiskValue').textContent = `${values.customRisk}%`;
+  }
+
+  async function activateScenario(name, parameters = undefined) {
+    state.system.scenario = name;
+    state.system.view = 'scenario';
+    if (name === 'custom' && parameters) state.system.scenarioParameters = { ...parameters };
+    syncStateToUi();
+    if (q('#scenarioDetailTitle')) q('#scenarioDetailTitle').textContent = titleCase(name);
+    if (q('#scenarioDetailCopy')) q('#scenarioDetailCopy').textContent = scenarioDescriptions[name];
+    try {
+      mergeState(
+        await api('./api/aethergrid/scenario', {
+          method: 'POST',
+          body: JSON.stringify({ scenario: name, parameters }),
+        }),
+      );
+      syncCustomScenarioControls(state.system.scenarioParameters);
+    } catch {}
+    showToast('SCENARIO LOADED', titleCase(name));
+  }
+
   qa('[data-scenario]').forEach((button) =>
-    button.addEventListener('click', async () => {
-      state.system.scenario = button.dataset.scenario;
-      state.system.view = 'scenario';
-      syncStateToUi();
-      if (q('#scenarioDetailTitle')) q('#scenarioDetailTitle').textContent = titleCase(button.dataset.scenario);
-      if (q('#scenarioDetailCopy')) q('#scenarioDetailCopy').textContent = scenarioDescriptions[button.dataset.scenario];
-      try {
-        mergeState(
-          await api('./api/aethergrid/scenario', {
-            method: 'POST',
-            body: JSON.stringify({ scenario: button.dataset.scenario }),
-          }),
-        );
-      } catch {}
-      showToast('SCENARIO LOADED', titleCase(button.dataset.scenario));
-    }),
+    button.addEventListener('click', () =>
+      activateScenario(
+        button.dataset.scenario,
+        button.dataset.scenario === 'custom' ? currentCustomScenarioParameters() : undefined,
+      ),
+    ),
+  );
+
+  for (const [inputId, outputId] of [
+    ['customLoad', 'customLoadValue'],
+    ['customRenewable', 'customRenewableValue'],
+    ['customStorage', 'customStorageValue'],
+    ['customRisk', 'customRiskValue'],
+  ]) {
+    q(`#${inputId}`)?.addEventListener('input', (event) => {
+      q(`#${outputId}`).textContent = `${event.target.value}%`;
+    });
+  }
+
+  q('[data-action="apply-custom-scenario"]')?.addEventListener('click', () =>
+    activateScenario('custom', currentCustomScenarioParameters()),
   );
 
   q('[data-action="reset-scenario"]')?.addEventListener('click', () =>
-    q('[data-scenario="peak-demand"]')?.click(),
+    activateScenario('peak-demand'),
   );
+
+  syncCustomScenarioControls();
 
   const optimizationInputs = [
     ['costWeight', 'costWeightValue', (value) => String(value)],
