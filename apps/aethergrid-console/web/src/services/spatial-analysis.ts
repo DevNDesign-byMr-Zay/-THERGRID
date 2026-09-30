@@ -57,9 +57,12 @@ export function measureSpatialPoints(
   const bearingDegrees = normalizedBearing(degrees(Math.atan2(y, x)));
 
   const hasHeights =
-    Number.isFinite(start.heightMeters) && Number.isFinite(end.heightMeters);
+    typeof start.heightMeters === 'number' &&
+    Number.isFinite(start.heightMeters) &&
+    typeof end.heightMeters === 'number' &&
+    Number.isFinite(end.heightMeters);
   const elevationDeltaMeters = hasHeights
-    ? Number(end.heightMeters) - Number(start.heightMeters)
+    ? end.heightMeters! - start.heightMeters!
     : null;
   const slopePercent =
     elevationDeltaMeters != null && distanceMeters > 0.01
