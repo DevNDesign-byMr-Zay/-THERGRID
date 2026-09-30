@@ -574,3 +574,54 @@ test('v4 intelligence workspace tabs preserve mounted AI scenario quantum eviden
   assert.match(styles, /data-workspace='ai'/u);
   assert.match(styles, /data-workspace='evidence'/u);
 });
+
+test('v4 4d solar lighting responds to time and geographic target', async () => {
+  const [solar, lighting, renderer] = await Promise.all([
+    text('apps/aethergrid-console/web/src/renderer/solar-position.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/solar-lighting-controller.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
+  ]);
+
+  assert.match(solar, /solarStateAt/u);
+  assert.match(solar, /equationOfTime/u);
+  assert.match(solar, /declination/u);
+  assert.match(solar, /golden-hour/u);
+  assert.match(solar, /twilight/u);
+  assert.match(lighting, /JulianDate\.fromIso8601/u);
+  assert.match(lighting, /sky\.brightnessShift/u);
+  assert.match(lighting, /sky\.saturationShift/u);
+  assert.match(renderer, /new SolarLightingController/u);
+  assert.match(renderer, /this\.#solarLighting\?\.setTarget/u);
+  assert.match(renderer, /this\.#solarLighting\?\.setTime/u);
+});
+
+test('v4 camera descent exposes live phase and adaptive terrain building detail', async () => {
+  const [camera, renderer, viewport] = await Promise.all([
+    text('apps/aethergrid-console/web/src/renderer/cesium/camera-journey-controller.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
+    text('apps/aethergrid-console/web/src/components/SpatialViewport.tsx'),
+  ]);
+
+  assert.match(camera, /onPhase\?\./u);
+  assert.match(renderer, /terrainSse: 5\.2/u);
+  assert.match(renderer, /buildingSse: 30/u);
+  assert.match(renderer, /terrainSse: 1\.4/u);
+  assert.match(renderer, /buildingSse: 10/u);
+  assert.match(renderer, /maximumScreenSpaceError/u);
+  assert.match(renderer, /journeyPhase/u);
+  assert.match(renderer, /detailLevel/u);
+  assert.match(viewport, /SPATIAL TRANSITION/u);
+  assert.match(viewport, /journey-progress/u);
+  assert.match(viewport, /localSolarHour/u);
+});
+
+test('v4 viewport prevents duplicate initial camera descent while polling transition status', async () => {
+  const viewport = await text(
+    'apps/aethergrid-console/web/src/components/SpatialViewport.tsx'
+  );
+
+  assert.match(viewport, /lastJourneyKeyRef/u);
+  assert.match(viewport, /if \(lastJourneyKeyRef\.current === targetKey\) return/u);
+  assert.match(viewport, /setInterval\(\(\) => \{/u);
+  assert.match(viewport, /manager\.status\(\)/u);
+});
