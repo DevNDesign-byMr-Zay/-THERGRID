@@ -63,7 +63,7 @@ Deliver:
 - visible model/provider badges.
 
 ### Batch 4 — Holographic workspace
-Status: IN PROGRESS
+Status: COMPLETE
 
 Deliver:
 - full-screen spatial workspace;
@@ -75,7 +75,7 @@ Deliver:
 - exportable spatial scene data.
 
 ### Batch 5 — Quantum workspace
-Status: IN PROGRESS
+Status: COMPLETE
 
 Deliver:
 - objective selector;
@@ -87,7 +87,7 @@ Deliver:
 - visualization of objective landscape and selected candidate.
 
 ### Batch 6 — Evidence, scenarios and operator workflow
-Status: IN PROGRESS
+Status: COMPLETE
 
 Deliver:
 - scenario builder;
@@ -100,7 +100,7 @@ Deliver:
 - reproducibility metadata.
 
 ### Batch 7 — Packaging, launchers and regression gates
-Status: IN PROGRESS
+Status: FINAL VERIFICATION
 
 Deliver:
 - Windows PowerShell launcher;
@@ -175,3 +175,16 @@ Remaining before this roadmap is marked complete:
 - scenario editing/duplication instead of fixed scenario templates only;
 - expanded evidence drill-down with full receipts and agent contribution records;
 - final browser regression pass and distributable ZIP verification.
+
+
+## Batch completion checkpoint
+
+Batches 1–6 are now implemented in the maintained branch.
+
+- Holographic mode has its own WebGL renderer, direct node picking, projection modes, temporal modes, time comparison overlay, saved camera views, layer controls and scene export.
+- Quantum mode has real objectives, weighted controls, reserve constraints, deterministic classical-vs-experimental comparison, reliability scoring, history and evidence receipts.
+- Scenario mode supports templates, duplication, reset and a bounded custom scenario editor.
+- Evidence mode supports filtering, receipt drill-down, provider/model provenance, contribution receipts and a runtime audit timeline.
+- AI mode supports replaceable provider/model configuration, individual specialist execution and three-agent team orchestration.
+
+Batch 7 is limited to final release verification: all regression gates must pass at one immutable head commit, the CI-built ZIP must be inspected for required files and zero empty entries, and the verified branch is then merged to main.
