@@ -240,3 +240,19 @@ test('v4 spatial selection visibly highlights real features and can be cleared',
   assert.match(viewport, /manager\.selectFeature\(null\)/u);
   assert.match(app, /ESC TO CLEAR/u);
 });
+
+test('v4 provenance UI separates source time from retrieval age', async () => {
+  const [badge, freshness, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/components/DataSourceBadge.tsx'),
+    text('apps/aethergrid-console/web/src/utils/data-freshness.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(badge, /formatSourceTime/u);
+  assert.match(badge, /formatDataAge/u);
+  assert.match(badge, /FETCHED/u);
+  assert.match(freshness, /UNKNOWN AGE/u);
+  assert.match(freshness, /JUST NOW/u);
+  assert.match(app, /sourceTime=\{powerOverlay\?\.sourceTime\}/u);
+  assert.match(app, /FETCHED \{formatDataAge\(atmosphere\?\.fetchedAt\)\}/u);
+});
