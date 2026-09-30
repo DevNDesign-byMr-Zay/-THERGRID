@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "aethergrid.operator-console",
   "name": "ÆTHERGRID Operator Console",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "format": "html+pwa+node-app",
   "entrypoints": {
     "standaloneHtml": "standalone.html",
@@ -62,7 +62,10 @@
       "GET /api/aethergrid/city-operations/use-cases",
       "POST /api/aethergrid/city-operations/analyze",
       "GET /api/aethergrid/environment",
-      "GET /api/aethergrid/environment/runtime"
+      "GET /api/aethergrid/environment/runtime",
+      "GET /api/aethergrid/global-live",
+      "GET /api/aethergrid/city-live",
+      "GET /api/aethergrid/city-live/runtime"
     ]
   },
   "safety": {
@@ -150,7 +153,19 @@
     "relationBuildingGeometry": true,
     "skylineDataQualityReadout": true,
     "lightDarkSystemAppearance": true,
-    "citySpecificCameraFraming": true
+    "citySpecificCameraFraming": true,
+    "liveGlobalSeismicFeed": true,
+    "liveCityAirQuality": true,
+    "weatherVectorAnimation": true,
+    "precipitationAnimation": true,
+    "airQualityParticleAnimation": true,
+    "seismicPulseAnimation": true,
+    "globalAirQualityCityPulses": true,
+    "globalUtcSweep": true,
+    "sourceDrivenCityUseCaseAnimation": true,
+    "weatherReadinessUseCase": true,
+    "airQualityExposureUseCase": true,
+    "seismicAwarenessUseCase": true
   },
   "aiRuntime": {
     "providers": [
@@ -214,14 +229,22 @@
       "outage-impact",
       "emergency-access",
       "renewable-siting",
-      "load-growth"
+      "load-growth",
+      "weather-readiness",
+      "air-quality-exposure",
+      "seismic-awareness"
     ],
     "skylineFocusPresets": true,
     "maxSupportedBuildingHeightM": 1200,
     "relationBuildingGeometry": true,
     "sourceBackedRoofGeometry": true,
     "upstreamTimestampVisible": true,
-    "representativeBuildingLimit": 1400
+    "representativeBuildingLimit": 1400,
+    "liveAnimatedLayers": [
+      "weather",
+      "air",
+      "seismic"
+    ]
   },
   "quantumRuntime": {
     "module": "quantum-runtime.mjs",
@@ -285,5 +308,28 @@
       "system"
     ],
     "defaultAppearance": "dark"
+  },
+  "liveContextRuntime": {
+    "module": "city-live-runtime.mjs",
+    "providers": [
+      "open-meteo-air-quality",
+      "usgs-earthquake-feed",
+      "local-fallback"
+    ],
+    "globalEndpoint": "GET /api/aethergrid/global-live",
+    "cityEndpoint": "GET /api/aethergrid/city-live",
+    "runtimeEndpoint": "GET /api/aethergrid/city-live/runtime",
+    "airQualityVariables": [
+      "us_aqi",
+      "european_aqi",
+      "pm2_5",
+      "pm10",
+      "ozone",
+      "nitrogen_dioxide",
+      "dust",
+      "uv_index"
+    ],
+    "seismicFeed": "M2.5+ past day GeoJSON",
+    "browserSecrets": false
   }
 }
