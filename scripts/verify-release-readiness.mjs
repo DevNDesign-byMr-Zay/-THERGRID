@@ -35,7 +35,10 @@ const REQUIRED_FILES = Object.freeze([
   'apps/aethergrid-console/manifest.webmanifest',
   'apps/aethergrid-console/sw.js',
   'apps/aethergrid-console/README.md',
-  'apps/aethergrid-console/assets/dashboard-reference.webp',
+  'apps/aethergrid-console/assets/brand/aethergrid-logo.webp',
+  'apps/aethergrid-console/assets/brand/vaelon.webp',
+  'apps/aethergrid-console/assets/brand/auren.webp',
+  'apps/aethergrid-console/assets/brand/solvaer.webp',
   'docs/BRAND_ASSETS.md',
   'docs/OPERATOR_CONSOLE.md',
   'CHANGELOG.md',
@@ -399,49 +402,59 @@ async function main() {
   );
 
   const exactAethergridHtml = await text('apps/aethergrid-console/index.html');
+  const exactAethergridStyles = await text('apps/aethergrid-console/styles.css');
+  const exactAethergridJs = await text('apps/aethergrid-console/app.js');
+  const exactAethergridServer = await text('apps/aethergrid-console/server.mjs');
+  const exactAethergridPackager = await text('scripts/assemble-aethergrid-full-app.mjs');
   const exactAethergridApp = JSON.parse(await text('apps/aethergrid-console/app.json'));
   const exactAethergridUi = JSON.parse(await text('apps/aethergrid-console/ui.json'));
+
   assert(
-    /data:image\/webp;base64,/u.test(exactAethergridHtml) &&
-      /<style>[\s\S]+\.dashboard-stage/u.test(exactAethergridHtml) &&
-      /<script>[\s\S]+runOptimization/u.test(exactAethergridHtml) &&
-      !/href="\.\/styles\.css"/u.test(exactAethergridHtml) &&
-      !/src="\.\/app\.js"/u.test(exactAethergridHtml) &&
-      /data-action="run-optimization"/u.test(exactAethergridHtml) &&
-      /data-action="ai-chat"/u.test(exactAethergridHtml) &&
-      /data-action="search"/u.test(exactAethergridHtml) &&
-      /data-action="change-region"/u.test(exactAethergridHtml) &&
-      /data-action="metric-generation"/u.test(exactAethergridHtml) &&
-      /id="selectionGlow"/u.test(exactAethergridHtml) &&
-      /class="scanline"/u.test(exactAethergridHtml) &&
-      /id="gridEnergyCanvas"/u.test(exactAethergridHtml) &&
-      /id="hudClock"/u.test(exactAethergridHtml) &&
-      /id="streamState"/u.test(exactAethergridHtml),
-    'ÆTHERGRID standalone HTML must embed the approved canvas, live motion, and functional controls',
+    /<canvas id="spatialGrid"/u.test(exactAethergridHtml) &&
+      /id="timeSlider"/u.test(exactAethergridHtml) &&
+      /data-map-tool="buildings"/u.test(exactAethergridHtml) &&
+      /data-mode="holographic"/u.test(exactAethergridHtml) &&
+      /id="quantumCanvas"/u.test(exactAethergridHtml) &&
+      /id="scenarioChart"/u.test(exactAethergridHtml),
+    'ÆTHERGRID runtime HTML must expose real semantic controls and canvas surfaces',
   );
   assert(
-    exactAethergridApp.entrypoints?.standaloneHtml === 'index.html' &&
+    !/dashboard-reference/iu.test(exactAethergridHtml) &&
+      !/class="dashboard-reference"/u.test(exactAethergridHtml) &&
+      exactAethergridApp.visualContract?.runtimeUsesBackgroundReferenceImage === false &&
+      exactAethergridUi.runtimeUsesBackgroundReferenceImage === false,
+    'ÆTHERGRID runtime must not use the dashboard reference as a background image',
+  );
+  assert(
+    /class SpatialGrid4D/u.test(exactAethergridJs) &&
+      /attribute vec4 a_position/u.test(exactAethergridJs) &&
+      /gl\.drawArrays/u.test(exactAethergridJs) &&
+      /pointerdown/u.test(exactAethergridJs) &&
+      /wheel/u.test(exactAethergridJs) &&
+      /loadGraph\(graph\)/u.test(exactAethergridJs),
+    'ÆTHERGRID must keep native WebGL 4D geometry, interaction controls, and backend graph loading',
+  );
+  assert(
+    /#spatialGrid/u.test(exactAethergridStyles) &&
+      /\.map-card/u.test(exactAethergridStyles) &&
+      /\.quantum-canvas/u.test(exactAethergridStyles),
+    'ÆTHERGRID styles must target real runtime elements',
+  );
+  assert(
+    exactAethergridApp.entrypoints?.standaloneHtml === 'standalone.html' &&
+      exactAethergridApp.entrypoints?.webApp === 'index.html' &&
       exactAethergridApp.entrypoints?.backend === 'server.mjs' &&
-      exactAethergridApp.visualContract?.referenceViewport?.join('x') === '1536x1024' &&
-      exactAethergridApp.standalone?.selfContained === true &&
-      exactAethergridApp.standalone?.externalAssetsRequired === false &&
-      exactAethergridApp.standalone?.opensViaFileProtocol === true,
-    'ÆTHERGRID app manifest must guarantee a self-contained standalone HTML plus backend app',
+      exactAethergridApp.capabilities?.nativeWebGL4DGrid === true &&
+      exactAethergridApp.capabilities?.interactiveWireframeMap === true &&
+      exactAethergridUi.spatialModel?.renderEngine === 'native-webgl' &&
+      JSON.stringify(exactAethergridUi.spatialModel?.dimensions) ===
+        JSON.stringify(['x', 'y', 'z', 'time']),
+    'ÆTHERGRID manifests must describe the semantic WebGL 4D runtime',
   );
-  assert(
-    exactAethergridUi.referenceImage === 'assets/dashboard-reference.webp' &&
-      exactAethergridUi.interactiveCapabilities?.includes('run-optimization') &&
-      exactAethergridUi.interactiveCapabilities?.includes('ai-chat') &&
-      exactAethergridUi.interactiveCapabilities?.includes('region-switching') &&
-      exactAethergridUi.interactiveCapabilities?.includes('scenario-view') &&
-      exactAethergridUi.interactiveCapabilities?.includes('metric-drilldowns') &&
-      exactAethergridUi.motion?.idleBaselinePreserved === true,
-    'ÆTHERGRID UI contract must bind the approved reference canvas, live motion, and interactive capabilities',
-  );
-  const exactAethergridServer = await text('apps/aethergrid-console/server.mjs');
   for (const route of [
     '/api/aethergrid/telemetry',
     '/api/aethergrid/stream',
+    '/api/aethergrid/spatial',
     '/api/aethergrid/view',
     '/api/aethergrid/region',
     '/api/aethergrid/scenario',
@@ -455,6 +468,18 @@ async function main() {
       `ÆTHERGRID backend must preserve maintained route: ${route}`,
     );
   }
+  assert(
+    /dimensions: \['x', 'y', 'z', 'time'\]/u.test(exactAethergridServer) &&
+      /const spatialGraph = buildSpatialGraph\(\)/u.test(exactAethergridServer),
+    'ÆTHERGRID backend must build a time-indexed spatial graph',
+  );
+  assert(
+    /standalone\.html/u.test(exactAethergridPackager) &&
+      /runtime must not use a dashboard reference image/u.test(exactAethergridPackager) &&
+      /attribute vec4 a_position/u.test(exactAethergridPackager) &&
+      !/REQUIRED_FILES[\s\S]*assets\/dashboard-reference\.webp/u.test(exactAethergridPackager),
+    'ÆTHERGRID packager must generate standalone WebGL HTML without requiring the reference screenshot',
+  );
 
   const operatorConsole = await text('apps/operator-console/index.html');
   const operatorConsoleStyles = await text('apps/operator-console/styles.css');
