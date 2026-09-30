@@ -470,6 +470,8 @@ async function main() {
       exactAethergridApp.capabilities?.directWebGlNodePicking === true &&
       exactAethergridApp.capabilities?.customScenarioBuilder === true &&
       exactAethergridApp.capabilities?.weightedOptimizationControls === true &&
+      exactAethergridApp.capabilities?.evidenceDrillDown === true &&
+      exactAethergridApp.capabilities?.agentEvidenceReceipts === true &&
       exactAethergridApp.aiRuntime?.replaceableByConfiguration === true &&
       exactAethergridUi.workspaceRouting?.mode === 'exclusive-view' &&
       exactAethergridUi.spatialModel?.renderEngine === 'native-webgl' &&
@@ -481,6 +483,7 @@ async function main() {
     '/api/aethergrid/telemetry',
     '/api/aethergrid/stream',
     '/api/aethergrid/spatial',
+    '/api/aethergrid/evidence/',
     '/api/aethergrid/runtime',
     '/api/aethergrid/agents/',
     '/api/aethergrid/team',
