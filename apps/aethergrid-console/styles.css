@@ -156,3 +156,6 @@ body[data-motion="reduced"] *,body[data-motion="reduced"] *::before,body[data-mo
 .scenario-editor label{display:grid;gap:5px;font-size:7.8px;color:#a8c0df}.scenario-editor input[type="range"]{width:100%;accent-color:var(--cyan)}.scenario-editor output{color:#fff;font-weight:700}
 
 .evidence-json{margin:0;max-height:330px;overflow:auto;padding:13px;border:1px solid rgba(61,124,201,.28);border-radius:10px;background:#030c1c;color:#9ec7ef;font:11px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+
+.agent-runtime-line{margin-top:8px;padding-top:7px;border-top:1px solid rgba(82,145,220,.22);color:#79bfff;font:9px ui-monospace,SFMono-Regular,Consolas,monospace}
+.agent-contributions{margin-top:9px;border-top:1px solid rgba(82,145,220,.22);padding-top:8px}.agent-contributions summary{cursor:pointer;color:#8edfff;font-size:9px}.agent-contributions article{margin-top:8px;padding:9px;border:1px solid rgba(70,133,211,.25);border-radius:8px;background:rgba(3,13,31,.45)}.agent-contributions article b{display:block;font-size:9px}.agent-contributions article small{display:block;margin-top:2px;color:#739ac7;font-size:7px}.agent-contributions article p{margin:7px 0 0;color:#b8cbe3;font-size:8px;line-height:1.5}
