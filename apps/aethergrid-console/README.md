@@ -198,6 +198,25 @@ Two additional source-driven planning workflows are available:
 - **Green Infrastructure** combines mapped green-space geometry, built form and current heat/humidity/AQI context. It is not measured canopy cover, thermal comfort, public-health exposure or a siting directive.
 
 Material tinting is only used when source material/colour tags are present. Landmark emphasis requires a name plus a source-backed height at or above the greater of 70 m or the city sample's 95th-percentile height; it does not invent landmark identity.
+## v2.9 source-backed city identity
+
+v2.9 makes the loaded city itself more geographically recognizable by adding source-backed environmental and architectural context from the same bounded OpenStreetMap request.
+
+New mapped identity layers:
+- `natural=water` water areas and their `water=*` classification when present;
+- mapped river/canal/stream/tidal-channel centerlines;
+- `natural=coastline` shoreline geometry when present in the bounded sample;
+- mapped parks, gardens, nature reserves, grass/recreation areas, meadows, woods and grassland;
+- source-tagged building material/colour overlays for glass, masonry, metal and natural-material groups;
+- source-bound landmark emphasis for named buildings with source-backed heights at or above the city-specific P95/70 m threshold.
+
+The renderer exposes **WATER**, **GREEN**, and **LANDMARKS** as independent layers. These features remain different city-by-city because the geometry comes from the selected coordinate's map data; a local fallback does not invent rivers, parks, coastline or named landmarks.
+
+Two additional city operations use this mapped context:
+- **Flood Context** combines mapped water/coastline, terrain, precipitation, roads and infrastructure as a bounded attention surface. It does not model drainage, storm surge, river stage or inundation.
+- **Green Infrastructure** compares mapped green-space context with heat, humidity, AQI and built density as a screening proxy. It is not canopy measurement, public-health exposure or a siting directive.
+
+Material styling is also bounded: when OpenStreetMap does not provide `building:material`, `building:colour`, `roof:material` or `roof:colour`, ÆTHERGRID keeps the default city material instead of inventing a façade.
 ## Windows ZIP workflow
 
 After extracting the package:
