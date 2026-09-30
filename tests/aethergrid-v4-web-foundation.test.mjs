@@ -202,7 +202,6 @@ test('v4 appearance preserves dark light system preferences without provider cou
   assert.match(styles, /data-theme='light'/u);
 });
 
-
 test('v4 world search supports named cities and arbitrary real coordinates', async () => {
   const [app, powerService] = await Promise.all([
     text('apps/aethergrid-console/web/src/app/App.tsx'),
