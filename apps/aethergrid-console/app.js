@@ -369,7 +369,13 @@
       this.canvas = canvas;
       this.options = options;
       this.gl = canvas?.getContext('webgl', { antialias: true, alpha: true });
-      this.layers = { grid: true, routes: true, buildings: true, nodes: true };
+      this.layers = {
+        grid: true,
+        routes: true,
+        buildings: true,
+        infrastructure: true,
+        nodes: true,
+      };
       this.yaw = options.yaw ?? 0.74;
       this.pitch = options.pitch ?? 0.46;
       this.distance = options.distance ?? 20;
@@ -473,6 +479,8 @@
       const grid = [];
       const buildings = [];
       const routes = [];
+      const infrastructureLines = [];
+      const infrastructureNodes = [];
       const nodes = [];
       for (let n = -10; n <= 10; n += 1) {
         this.line(grid, [-10, 0, n], [10, 0, n], n * 0.21);
@@ -531,6 +539,8 @@
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
       this.geometry.routes = this.makeBuffer(routes);
+      this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
+      this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
       this.geometry.nodes = this.makeBuffer(nodes);
     }
 
@@ -540,6 +550,8 @@
       const grid = [];
       const buildings = [];
       const routes = [];
+      const infrastructureLines = [];
+      const infrastructureNodes = [];
       const nodes = [];
       for (let n = -10; n <= 10; n += 1) {
         this.line(grid, [-10, 0, n], [10, 0, n], n * 0.21);
@@ -587,6 +599,8 @@
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
       this.geometry.routes = this.makeBuffer(routes);
+      this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
+      this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
       this.geometry.nodes = this.makeBuffer(nodes);
     }
 
@@ -597,6 +611,8 @@
       const buildings = [];
       const nodes = [];
       const routes = [];
+      const infrastructureLines = [];
+      const infrastructureNodes = [];
       const radius = Math.max(200, Number(mesh.city?.radiusM || 900));
       const scale = 8.5 / radius;
 
@@ -650,9 +666,55 @@
         }
       });
 
+      (mesh.powerLines || []).forEach((line, lineIndex) => {
+        const path = (line.path || []).map(([x, z]) => [x * scale, z * scale]);
+        const lineHeight =
+          line.powerType === 'cable'
+            ? 0.055
+            : 0.12 + Math.min(0.22, Number(line.voltage || 0) / 1_000_000);
+        for (let index = 1; index < path.length; index += 1) {
+          const [ax, az] = path[index - 1];
+          const [bx, bz] = path[index];
+          this.line(
+            infrastructureLines,
+            [ax, lineHeight, az],
+            [bx, lineHeight, bz],
+            lineIndex * 0.19,
+          );
+        }
+      });
+
+      (mesh.powerAssets || []).forEach((asset, assetIndex) => {
+        const [x, z] = asset.position || [];
+        if (!Number.isFinite(Number(x)) || !Number.isFinite(Number(z))) return;
+        const height =
+          asset.powerType === 'plant'
+            ? 0.34
+            : asset.powerType === 'substation'
+              ? 0.24
+              : 0.16;
+        const node = {
+          id: asset.id,
+          label: asset.name || titleCase(asset.powerType || 'power asset'),
+          type: `power-${asset.powerType || 'asset'}`,
+          voltage: asset.voltage || null,
+          operator: asset.operator || '',
+          osmId: asset.osmId || null,
+          position: [Number(x) * scale, height, Number(z) * scale],
+        };
+        this.graphNodes.push(node);
+        this.vertex(
+          infrastructureNodes,
+          ...node.position,
+          assetIndex * 0.37 + Number(asset.voltage || 0) / 100000,
+        );
+      });
+
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
       this.geometry.routes = this.makeBuffer(routes);
+      this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
+      this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
       this.geometry.nodes = this.makeBuffer(nodes);
       this.selectedNode = null;
       if (this.selectionBuffer?.buffer) this.gl.deleteBuffer(this.selectionBuffer.buffer);
@@ -863,7 +925,23 @@
       const amplitude = temporalMotion * this.intensity;
       if (this.layers.grid) this.drawBuffer(this.geometry.grid, gl.LINES, [0.09, 0.42, 0.75, 0.42], 0.045 * amplitude);
       if (this.layers.buildings) this.drawBuffer(this.geometry.buildings, gl.LINES, [0.14, 0.64, 1, 0.55], 0.07 * amplitude);
-      if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [0.83, 0.36, 1, Math.min(1, 0.78 * trailBoost)], 0.11 * amplitude * trailBoost);
+      if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [0.67, 0.48, 0.98, Math.min(1, 0.64 * trailBoost)], 0.075 * amplitude * trailBoost);
+      if (this.layers.infrastructure) {
+        this.drawBuffer(
+          this.geometry.infrastructureLines,
+          gl.LINES,
+          [1, 0.61, 0.12, Math.min(1, 0.92 * trailBoost)],
+          0.15 * amplitude * trailBoost,
+        );
+        this.drawBuffer(
+          this.geometry.infrastructureNodes,
+          gl.POINTS,
+          [1, 0.82, 0.25, 1],
+          0.08 * amplitude,
+          1,
+          12,
+        );
+      }
       if (this.layers.nodes) this.drawBuffer(this.geometry.nodes, gl.POINTS, [0.22, 1, 0.84, 1], 0.08 * amplitude, 1, 9);
 
       if (this.compareEnabled) {
@@ -872,7 +950,23 @@
           (now - this.timeStart) * 0.00018 * temporalMotion;
         gl.uniform1f(this.loc.time, compareTemporal);
         if (this.layers.buildings) this.drawBuffer(this.geometry.buildings, gl.LINES, [1, 0.55, 0.18, 0.25], 0.055 * amplitude);
-        if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [1, 0.72, 0.24, 0.48], 0.085 * amplitude, 0, 1);
+        if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [1, 0.72, 0.24, 0.36], 0.06 * amplitude, 0, 1);
+        if (this.layers.infrastructure) {
+          this.drawBuffer(
+            this.geometry.infrastructureLines,
+            gl.LINES,
+            [1, 0.88, 0.32, 0.58],
+            0.1 * amplitude,
+          );
+          this.drawBuffer(
+            this.geometry.infrastructureNodes,
+            gl.POINTS,
+            [1, 0.9, 0.42, 0.9],
+            0.04 * amplitude,
+            1,
+            9,
+          );
+        }
         if (this.layers.nodes) this.drawBuffer(this.geometry.nodes, gl.POINTS, [1, 0.72, 0.24, 0.82], 0.05 * amplitude, 1, 7);
         gl.uniform1f(this.loc.time, temporal);
       }
