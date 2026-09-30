@@ -508,3 +508,40 @@ Flood Context uses mapped hydrologic geometry, terrain relief, current modeled p
 
 ### Fidelity boundary
 These layers improve geographic recognizability but remain only as complete as the underlying open map. Absence of a mapped feature is not evidence that the real-world feature does not exist. Material tint is tag-derived visualization, not photorealistic façade reconstruction.
+
+## Batch 15 — Source-backed water, green space, materials, and landmark identity
+
+Status: IMPLEMENTED / VERIFYING
+
+### City geography
+- bounded OpenStreetMap requests now include mapped water areas, waterways, coastline, parks and green-space features;
+- water/green geometry is projected into the same local metric frame as buildings, roads, terrain and mapped grid assets;
+- WATER and GREEN are independent native-WebGL layers;
+- local fallback geometry intentionally returns no synthetic water, coastline or green space.
+
+### Architectural identity
+- source `building:material`, `building:colour`, `roof:material` and `roof:colour` fields remain available to the renderer;
+- source-tagged façades are grouped into restrained glass, masonry, metal and natural-material overlays;
+- buildings without supported source tags stay on the neutral base material;
+- named buildings with source-backed height at or above max(70 m, city P95 height) receive a separate LANDMARKS edge-emphasis layer;
+- landmark emphasis does not invent names, heights, materials or landmark status for unmapped structures.
+
+### Planning workflows
+Twelve maintained city workflows now include:
+- Flood Context;
+- Green Infrastructure;
+- the ten existing v2.8 workflows.
+
+Flood Context combines mapped water/coastline geometry, terrain, precipitation, roads and infrastructure into a bounded attention proxy. It is not a hydrologic, drainage, surge, river-stage or inundation model. Green Infrastructure combines mapped green space with current heat/humidity/AQI and built density for screening only; it is not canopy measurement, health exposure analysis or a siting directive.
+
+### Verification requirements
+- geospatial tests must prove water area, waterway, coastline and park parsing from representative Overpass fixtures;
+- fallback tests must prove environmental geometry is not fabricated;
+- semantic HTML tests must require WATER, GREEN, LANDMARKS, Flood Context and Green Infrastructure controls;
+- WebGL source tests must require water/green faces and lines, landmark lines and all source-tagged material buffers;
+- city-operation tests must exercise all twelve workflows and expose mapped environmental counts in data-quality evidence;
+- packaging and release-readiness must require the v2.9 controls, buffers, manifest capabilities and source-tag query/parser contracts;
+- test, lint, typecheck, coverage, fresh-clone, container, quality/release-readiness, package and CodeQL gates remain mandatory.
+
+### Fidelity boundary
+v2.9 improves city distinctiveness by adding more source-backed context, not by inventing photorealism. Missing map tags remain missing. Water, coastline, parks, material identity and landmark emphasis are rendered only when their upstream geometry/metadata exists in the bounded source response.
