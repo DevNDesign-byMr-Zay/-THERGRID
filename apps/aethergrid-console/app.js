@@ -519,6 +519,8 @@
       const grid = [];
       const buildings = [];
       const buildingFaces = [];
+      const roofFaces = [];
+      const roofLines = [];
       const routes = [];
       const infrastructureLines = [];
       const infrastructureNodes = [];
@@ -596,6 +598,8 @@
       const grid = [];
       const buildings = [];
       const buildingFaces = [];
+      const roofFaces = [];
+      const roofLines = [];
       const routes = [];
       const infrastructureLines = [];
       const infrastructureNodes = [];
@@ -647,6 +651,8 @@
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
       this.geometry.buildingFaces = this.makeBuffer(buildingFaces);
+      this.geometry.roofFaces = this.makeBuffer(roofFaces);
+      this.geometry.roofLines = this.makeBuffer(roofLines);
       this.geometry.routes = this.makeBuffer(routes);
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
@@ -832,6 +838,8 @@
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
       this.geometry.buildingFaces = this.makeBuffer(buildingFaces);
+      this.geometry.roofFaces = this.makeBuffer(roofFaces);
+      this.geometry.roofLines = this.makeBuffer(roofLines);
       this.geometry.routes = this.makeBuffer(routes);
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
