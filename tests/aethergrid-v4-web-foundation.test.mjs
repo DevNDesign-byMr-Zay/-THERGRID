@@ -223,3 +223,21 @@ test('v4 coordinate navigation remains available on mobile', async () => {
   assert.match(mobile, /\.global-search \{\s*display: grid/u);
   assert.doesNotMatch(mobile, /\.global-search \{\s*display: none/u);
 });
+
+
+test('v4 spatial selection visibly highlights real features and can be cleared', async () => {
+  const [renderer, viewport, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
+    text('apps/aethergrid-console/web/src/components/SpatialViewport.tsx'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(renderer, /selectionIndicator: true/u);
+  assert.match(renderer, /#selectedTile/u);
+  assert.match(renderer, /picked\.color = Color\.fromCssColorString/u);
+  assert.match(renderer, /viewer\.selectedEntity = entity/u);
+  assert.match(renderer, /#clearSelection/u);
+  assert.match(viewport, /event\.key !== 'Escape'/u);
+  assert.match(viewport, /manager\.selectFeature\(null\)/u);
+  assert.match(app, /ESC TO CLEAR/u);
+});
