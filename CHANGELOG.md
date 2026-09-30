@@ -10,6 +10,7 @@
 
 ### Added
 
+- Added live elevation terrain sampling with a separate native-WebGL TERRAIN layer, bounded real-coordinate requests, visible provenance, and an explicit flat local fallback.
 - Added arbitrary latitude/longitude exploration in the GLOBAL workspace, including animated coordinate descent, bounded radius controls, and custom-coordinate city sessions.
 - Added live OpenStreetMap power-grid ingestion for mapped lines/cables, substations, plants, generators, and transformers with voltage/circuit/operator metadata when available.
 - Added independent city-layer controls for buildings, roads, power infrastructure, and asset nodes plus a dedicated 4D city time index.
