@@ -53,6 +53,28 @@ interface CityAreaFeature {
   footprint?: readonly (readonly [number, number])[];
 }
 
+export interface CityIdentitySummary {
+  district: string | null;
+  buildingCount: number;
+  maxHeightM: number;
+  p95HeightM: number;
+  medianHeightM: number;
+  sourceBackedHeightCoveragePercent: number;
+  buildingPartCount: number;
+  roofTaggedCount: number;
+  namedStructureCount: number;
+  tallStructureCount: number;
+  namedStructures: readonly {
+    id: string;
+    name: string;
+    heightM: number;
+    heightSource?: string | null;
+  }[];
+  upstreamTimestamp: string | null;
+  sourceProvider: string | null;
+  live: boolean;
+}
+
 interface CityMeshResponse {
   city: CityDescriptor;
   source?: {
@@ -69,6 +91,7 @@ interface CityMeshResponse {
   waterways?: readonly CityLinearWater[];
   coastlines?: readonly CityLinearWater[];
   greenAreas?: readonly CityAreaFeature[];
+  skylineProfile?: Partial<CityIdentitySummary>;
 }
 
 function localMetersToCoordinate(
@@ -243,12 +266,40 @@ export function cityMeshToSemanticOverlays(
 export interface CitySpatialBundle {
   power: SpatialOverlaySnapshot;
   semantics: readonly SpatialOverlaySnapshot[];
+  identity: CityIdentitySummary;
+}
+
+function cityIdentity(mesh: CityMeshResponse): CityIdentitySummary {
+  const profile = mesh.skylineProfile ?? {};
+  return {
+    district: profile.district ?? null,
+    buildingCount: Number(profile.buildingCount ?? 0),
+    maxHeightM: Number(profile.maxHeightM ?? 0),
+    p95HeightM: Number(profile.p95HeightM ?? 0),
+    medianHeightM: Number(profile.medianHeightM ?? 0),
+    sourceBackedHeightCoveragePercent: Number(profile.sourceBackedHeightCoveragePercent ?? 0),
+    buildingPartCount: Number(profile.buildingPartCount ?? 0),
+    roofTaggedCount: Number(profile.roofTaggedCount ?? 0),
+    namedStructureCount: Number(profile.namedStructureCount ?? 0),
+    tallStructureCount: Number(profile.tallStructureCount ?? 0),
+    namedStructures: Array.isArray(profile.namedStructures)
+      ? profile.namedStructures
+          .filter((item): item is NonNullable<CityIdentitySummary['namedStructures'][number]> =>
+            Boolean(item?.id && item?.name)
+          )
+          .slice(0, 12)
+      : [],
+    upstreamTimestamp: profile.upstreamTimestamp ?? mesh.source?.upstreamTimestamp ?? null,
+    sourceProvider: profile.sourceProvider ?? mesh.source?.provider ?? null,
+    live: profile.live ?? mesh.source?.live === true
+  };
 }
 
 export function cityMeshToSpatialBundle(mesh: CityMeshResponse): CitySpatialBundle {
   return {
     power: cityMeshToPowerOverlay(mesh),
-    semantics: cityMeshToSemanticOverlays(mesh)
+    semantics: cityMeshToSemanticOverlays(mesh),
+    identity: cityIdentity(mesh)
   };
 }
 
