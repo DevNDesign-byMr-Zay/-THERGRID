@@ -459,7 +459,7 @@ export function App() {
         scope === 'city' && powerOverlay
           ? powerOverlay.nodes.length + powerOverlay.edges.length
           : 0
-    } satisfies Record<string, number>;
+    } as Record<string, number>;
   }, [
     semanticOverlays,
     globalLive,
