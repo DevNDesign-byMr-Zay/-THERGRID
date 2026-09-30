@@ -27,6 +27,7 @@ import type {
   SpatialTarget,
   VisualMode
 } from '../renderer/spatial-renderer';
+import { solarStateAt } from '../renderer/solar-position';
 import {
   atmosphereToWindOverlay,
   loadCityEnvironment
@@ -175,6 +176,8 @@ export function App() {
   const [layers, setLayers] = useState<readonly LayerState[]>(INITIAL_LAYERS);
   const [selection, setSelection] = useState<SpatialFeatureSelection | null>(null);
   const [powerOverlay, setPowerOverlay] = useState<SpatialOverlaySnapshot | null>(null);
+  const [illuminationOverlay, setIlluminationOverlay] =
+    useState<SpatialOverlaySnapshot | null>(null);
   const [semanticOverlays, setSemanticOverlays] = useState<readonly SpatialOverlaySnapshot[]>([]);
   const [cityIdentity, setCityIdentity] = useState<CityIdentitySummary | null>(null);
   const [powerOverlayError, setPowerOverlayError] = useState<string | null>(null);
@@ -229,6 +232,7 @@ export function App() {
   useEffect(() => {
     const controller = new AbortController();
     setPowerOverlay(null);
+    setIlluminationOverlay(null);
     setSemanticOverlays([]);
     setCityIdentity(null);
     setPowerOverlayError(null);
@@ -254,6 +258,7 @@ export function App() {
     void spatialRequest
       .then((bundle) => {
         setPowerOverlay(bundle.power);
+        setIlluminationOverlay(bundle.illumination);
         setSemanticOverlays(bundle.semantics);
         setCityIdentity(bundle.identity);
       })
@@ -439,6 +444,21 @@ export function App() {
     ]
   );
 
+  const citySolar = useMemo(
+    () => solarStateAt(temporal.cursorIso, city.latitude, city.longitude),
+    [temporal.cursorIso, city.latitude, city.longitude]
+  );
+
+  const activeIllumination = useMemo(
+    () =>
+      scope === 'city' &&
+      illuminationOverlay &&
+      (citySolar.phase === 'twilight' || citySolar.phase === 'night')
+        ? illuminationOverlay
+        : null,
+    [scope, illuminationOverlay, citySolar.phase]
+  );
+
   const windOverlay = useMemo(
     () =>
       scope === 'city' && atmosphere && temporal.mode === 'live'
@@ -470,7 +490,13 @@ export function App() {
     () =>
       (scope === 'world'
         ? [worldOverlay]
-        : [...semanticOverlays, powerOverlay, windOverlay, seismicOverlay]
+        : [
+            ...semanticOverlays,
+            activeIllumination,
+            powerOverlay,
+            windOverlay,
+            seismicOverlay
+          ]
       ).filter(
         (snapshot): snapshot is SpatialOverlaySnapshot => Boolean(snapshot)
       ),
@@ -478,6 +504,7 @@ export function App() {
       scope,
       worldOverlay,
       semanticOverlays,
+      activeIllumination,
       powerOverlay,
       windOverlay,
       seismicOverlay
@@ -844,6 +871,16 @@ export function App() {
                 <li data-ready={!cityLoad.environment}>ATMOSPHERE</li>
                 <li data-ready={!cityLoad.liveContext}>LIVE CONTEXT</li>
               </ul>
+            </div>
+          ) : null}
+
+          {activeIllumination ? (
+            <div className="illumination-scene-badge">
+              <span>URBAN ILLUMINATION</span>
+              <strong>
+                {activeIllumination.nodes.length} MAPPED BUILDING POINTS
+              </strong>
+              <small>PRESENTATION ONLY · NOT MEASURED WINDOW LIGHTS</small>
             </div>
           ) : null}
 
