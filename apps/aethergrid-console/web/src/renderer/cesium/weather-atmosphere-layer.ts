@@ -1,9 +1,13 @@
 import {
+  BoxEmitter,
   Cartesian2,
   Cartesian3,
   CloudCollection,
   Color,
   Math as CesiumMath,
+  Particle,
+  ParticleSystem,
+  Transforms,
   Viewer
 } from 'cesium';
 
@@ -23,10 +27,56 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+const RAIN_IMAGE = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="24"><line x1="2" y1="1" x2="2" y2="23" stroke="white" stroke-width="1.6" stroke-linecap="round"/></svg>'
+)}`;
+
+const SNOW_IMAGE = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="4.5" fill="white"/></svg>'
+)}`;
+
+function weatherVelocity(
+  snapshot: AtmosphericOverlaySnapshot,
+  fallSpeedMetersPerSecond: number
+): (particle: Particle) => void {
+  const origin = Cartesian3.fromDegrees(
+    snapshot.coordinate.longitude,
+    snapshot.coordinate.latitude,
+    0
+  );
+  const up = Cartesian3.normalize(origin, new Cartesian3());
+  let east = Cartesian3.cross(Cartesian3.UNIT_Z, up, new Cartesian3());
+  if (Cartesian3.magnitudeSquared(east) < 1e-8) {
+    east = Cartesian3.cross(Cartesian3.UNIT_Y, up, east);
+  }
+  Cartesian3.normalize(east, east);
+  const north = Cartesian3.normalize(
+    Cartesian3.cross(up, east, new Cartesian3()),
+    new Cartesian3()
+  );
+
+  const meteorologicalFrom = snapshot.current?.windDirectionDegrees ?? 0;
+  const towardRadians = CesiumMath.toRadians((meteorologicalFrom + 180) % 360);
+  const windMetersPerSecond = Math.max(0, snapshot.current?.windSpeedKph ?? 0) / 3.6;
+  const wind = Cartesian3.add(
+    Cartesian3.multiplyByScalar(east, Math.sin(towardRadians) * windMetersPerSecond, new Cartesian3()),
+    Cartesian3.multiplyByScalar(north, Math.cos(towardRadians) * windMetersPerSecond, new Cartesian3()),
+    new Cartesian3()
+  );
+  const down = new Cartesian3();
+
+  return (particle: Particle) => {
+    Cartesian3.normalize(particle.position, down);
+    Cartesian3.multiplyByScalar(down, -fallSpeedMetersPerSecond, down);
+    Cartesian3.add(down, wind, particle.velocity);
+  };
+}
+
 export class WeatherAtmosphereLayer {
   #viewer: Viewer;
   #clouds: CloudCollection;
   #snapshot: AtmosphericOverlaySnapshot | null = null;
+  #precipitation: ParticleSystem | null = null;
   #visible = true;
   #baselineFog: FogBaseline;
 
@@ -47,6 +97,7 @@ export class WeatherAtmosphereLayer {
   apply(snapshot: AtmosphericOverlaySnapshot): void {
     this.#snapshot = snapshot;
     this.#rebuildClouds();
+    this.#rebuildPrecipitation();
     this.#applyFog();
     this.#viewer.scene.requestRender();
   }
@@ -54,6 +105,7 @@ export class WeatherAtmosphereLayer {
   setVisible(visible: boolean): void {
     this.#visible = visible;
     this.#clouds.show = visible;
+    if (this.#precipitation) this.#precipitation.show = visible;
     if (visible) this.#applyFog();
     else this.#restoreFog();
     this.#viewer.scene.requestRender();
@@ -80,6 +132,7 @@ export class WeatherAtmosphereLayer {
 
   destroy(): void {
     this.#restoreFog();
+    this.#removePrecipitation();
     if (!this.#clouds.isDestroyed()) {
       this.#viewer.scene.primitives.remove(this.#clouds);
       this.#clouds.destroy();
@@ -125,6 +178,55 @@ export class WeatherAtmosphereLayer {
     }
 
     this.#clouds.show = this.#visible;
+  }
+
+  #rebuildPrecipitation(): void {
+    this.#removePrecipitation();
+    const snapshot = this.#snapshot;
+    const current = snapshot?.current;
+    if (!snapshot || !current) return;
+
+    const phenomenon = weatherPhenomenon(snapshot);
+    const snow = phenomenon === 'snow';
+    const rain = phenomenon === 'rain' || phenomenon === 'thunderstorm';
+    if (!snow && !rain) return;
+
+    const precipitation = Math.max(0.1, current.precipitationMm ?? 0.1);
+    const emissionRate = snow
+      ? clamp(70 + precipitation * 90, 70, 420)
+      : clamp(130 + precipitation * 180, 130, 850);
+    const modelMatrix = Transforms.eastNorthUpToFixedFrame(
+      Cartesian3.fromDegrees(
+        snapshot.coordinate.longitude,
+        snapshot.coordinate.latitude,
+        1_700
+      )
+    );
+
+    this.#precipitation = new ParticleSystem({
+      show: this.#visible,
+      image: snow ? SNOW_IMAGE : RAIN_IMAGE,
+      imageSize: snow ? new Cartesian2(7, 7) : new Cartesian2(2, 18),
+      startColor: Color.WHITE.withAlpha(snow ? 0.78 : 0.62),
+      endColor: Color.WHITE.withAlpha(0.08),
+      startScale: snow ? 0.8 : 1,
+      endScale: snow ? 1.1 : 0.72,
+      particleLife: snow ? 5.5 : 2.8,
+      minimumSpeed: snow ? 4 : 18,
+      maximumSpeed: snow ? 9 : 32,
+      emissionRate,
+      emitter: new BoxEmitter(new Cartesian3(5_200, 5_200, 1_800)),
+      modelMatrix,
+      updateCallback: weatherVelocity(snapshot, snow ? 9 : 38)
+    });
+
+    this.#viewer.scene.primitives.add(this.#precipitation);
+  }
+
+  #removePrecipitation(): void {
+    if (!this.#precipitation) return;
+    this.#viewer.scene.primitives.remove(this.#precipitation);
+    this.#precipitation = null;
   }
 
   #applyFog(): void {
