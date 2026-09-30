@@ -175,12 +175,7 @@ test('geospatial coordinate explorer supports arbitrary valid world coordinates'
   assert.ok(mesh.powerLines.length >= 5);
   assert.ok(mesh.powerAssets.length >= 5);
   assert.equal(runtime.summary().supportsCustomCoordinates, true);
-  assert.deepEqual(runtime.summary().layers, [
-    'buildings',
-    'roads',
-    'power-lines',
-    'power-assets',
-  ]);
+  assert.deepEqual(runtime.summary().layers, ['buildings', 'roads', 'power-lines', 'power-assets']);
 
   await assert.rejects(
     runtime.pointMesh({ lat: 120, lon: 2.3522 }),
