@@ -139,7 +139,17 @@ test('IBM Quantum adapter submits jobs while keeping credentials private', async
 
     if (href === 'https://quantum.example.test/api/v1/backends') {
       return new Response(
-        JSON.stringify([{ name: 'ibm_test_qpu', status: 'online', pending_jobs: 2 }]),
+        JSON.stringify({
+          devices: [
+            {
+              name: 'ibm_test_qpu',
+              status: { name: 'online', reason: '' },
+              is_simulator: false,
+              qubits: 127,
+              queue_length: 2,
+            },
+          ],
+        }),
         { status: 200, headers: { 'content-type': 'application/json' } },
       );
     }
@@ -161,8 +171,9 @@ test('IBM Quantum adapter submits jobs while keeping credentials private', async
             {
               id: 'job-123',
               backend: 'ibm_test_qpu',
-              program_id: 'sampler',
-              status: 'Queued',
+              program: { id: 'sampler' },
+              state: { status: 'Queued', reason: '' },
+              created: '2026-09-30T00:00:00Z',
             },
           ],
         }),
@@ -170,10 +181,36 @@ test('IBM Quantum adapter submits jobs while keeping credentials private', async
       );
     }
     if (href === 'https://quantum.example.test/api/v1/jobs/job-123') {
-      return new Response(JSON.stringify({ id: 'job-123', status: 'Completed' }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({
+          id: 'job-123',
+          backend: 'ibm_test_qpu',
+          program: { id: 'sampler' },
+          state: { status: 'Completed', reason: '' },
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    }
+    if (href === 'https://quantum.example.test/api/v1/jobs/job-123/results') {
+      return new Response(
+        JSON.stringify({
+          results: [{ data: { c: { samples: ['0x0', '0x3'] } }, metadata: null }],
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    }
+    if (href === 'https://quantum.example.test/api/v1/jobs/job-123/metrics') {
+      return new Response(
+        JSON.stringify({
+          timestamps: {
+            created: '2026-09-30T00:00:00Z',
+            running: '2026-09-30T00:00:02Z',
+            finished: '2026-09-30T00:00:06Z',
+          },
+          usage: { qpu_charge_time_seconds: 4, status: 'complete' },
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
     }
     return new Response(JSON.stringify({ error: 'not found' }), { status: 404 });
   };
@@ -199,6 +236,10 @@ test('IBM Quantum adapter submits jobs while keeping credentials private', async
 
   const backends = await runtime.listBackends();
   assert.equal(backends.backends[0].name, 'ibm_test_qpu');
+  assert.equal(backends.backends[0].status, 'online');
+  assert.equal(backends.backends[0].simulator, false);
+  assert.equal(backends.backends[0].pendingJobs, 2);
+  assert.equal(backends.backends[0].qubits, 127);
 
   const submitted = await runtime.submitSampler({
     backend: 'ibm_test_qpu',
@@ -212,7 +253,18 @@ test('IBM Quantum adapter submits jobs while keeping credentials private', async
 
   const jobs = await runtime.listJobs();
   assert.equal(jobs.jobs[0].id, 'job-123');
-  assert.equal((await runtime.job('job-123')).status, 'Completed');
+  assert.equal(jobs.jobs[0].programId, 'sampler');
+  assert.equal(jobs.jobs[0].status, 'Queued');
+
+  const detail = await runtime.job('job-123');
+  assert.equal(detail.status, 'Completed');
+  assert.equal(detail.hardwareExecuted, true);
+
+  const results = await runtime.jobResults('job-123');
+  assert.deepEqual(results.result.results[0].data.c.samples, ['0x0', '0x3']);
+
+  const metrics = await runtime.jobMetrics('job-123');
+  assert.equal(metrics.metrics.usage.qpu_charge_time_seconds, 4);
 
   const iamRequests = requests.filter(
     (request) => request.href === 'https://iam.example.test/token',
