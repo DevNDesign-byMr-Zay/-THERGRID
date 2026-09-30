@@ -107,6 +107,74 @@ function parseOverpassRoads(payload, city) {
   return roads;
 }
 
+function parseOverpassPower(payload, city) {
+  const lines = [];
+  const assets = [];
+  const lineTypes = new Set(['line', 'minor_line', 'cable']);
+
+  for (const element of payload?.elements || []) {
+    const powerType = String(element.tags?.power || '');
+    if (!powerType) continue;
+
+    if (
+      element.type === 'way' &&
+      lineTypes.has(powerType) &&
+      Array.isArray(element.geometry) &&
+      element.geometry.length >= 2
+    ) {
+      const path = element.geometry
+        .map((point) => projectPoint(Number(point.lat), Number(point.lon), city))
+        .filter(([x, z]) => Number.isFinite(x) && Number.isFinite(z));
+      if (path.length >= 2) {
+        lines.push({
+          id: `osm-power-line-${element.id}`,
+          osmId: element.id,
+          name: String(element.tags?.name || ''),
+          powerType,
+          voltage: String(element.tags?.voltage || ''),
+          circuits: String(element.tags?.circuits || ''),
+          cables: String(element.tags?.cables || ''),
+          path,
+        });
+      }
+      if (lines.length >= 180) continue;
+    }
+
+    if (!['substation', 'generator', 'plant', 'transformer'].includes(powerType)) continue;
+
+    let lat = Number(element.lat);
+    let lon = Number(element.lon);
+    if (
+      (!Number.isFinite(lat) || !Number.isFinite(lon)) &&
+      Array.isArray(element.geometry) &&
+      element.geometry.length
+    ) {
+      const coordinates = element.geometry
+        .map((point) => [Number(point.lat), Number(point.lon)])
+        .filter(([pointLat, pointLon]) => Number.isFinite(pointLat) && Number.isFinite(pointLon));
+      if (coordinates.length) {
+        lat = coordinates.reduce((sum, point) => sum + point[0], 0) / coordinates.length;
+        lon = coordinates.reduce((sum, point) => sum + point[1], 0) / coordinates.length;
+      }
+    }
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    const [x, z] = projectPoint(lat, lon, city);
+    assets.push({
+      id: `osm-power-asset-${element.id}`,
+      osmId: element.id,
+      name: String(element.tags?.name || ''),
+      powerType,
+      voltage: String(element.tags?.voltage || ''),
+      operator: String(element.tags?.operator || ''),
+      source: String(element.tags?.source || ''),
+      position: [x, z],
+    });
+    if (assets.length >= 120) break;
+  }
+
+  return { lines, assets };
+}
+
 function fallbackRoads(city, count = 20) {
   let seed = createHash('sha256').update(`${city.id}:roads`).digest().readUInt32LE(0);
   const random = () => {
@@ -138,6 +206,33 @@ function fallbackRoads(city, count = 20) {
   });
 }
 
+function fallbackPower(city) {
+  let seed = createHash('sha256').update(`${city.id}:power`).digest().readUInt32LE(0);
+  const random = () => {
+    seed = (Math.imul(seed, 22695477) + 1) >>> 0;
+    return seed / 4294967296;
+  };
+  const assets = Array.from({ length: 6 }, (_, index) => ({
+    id: `fallback-power-asset-${index + 1}`,
+    name: '',
+    powerType: index < 2 ? 'substation' : 'transformer',
+    voltage: '',
+    operator: '',
+    source: '',
+    position: [(random() - 0.5) * 1100, (random() - 0.5) * 1100],
+  }));
+  const lines = assets.slice(1).map((asset, index) => ({
+    id: `fallback-power-line-${index + 1}`,
+    name: '',
+    powerType: 'line',
+    voltage: '',
+    circuits: '',
+    cables: '',
+    path: [assets[0].position, asset.position],
+  }));
+  return { lines, assets };
+}
+
 function validateEndpoint(value) {
   const url = new URL(value);
   if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Overpass URL must be HTTP(S)');
@@ -165,6 +260,7 @@ export function createGeoRuntime({
       endpoint: provider === 'osm-overpass' ? new URL(endpoint).origin : null,
       cacheTtlMs,
       attribution: '© OpenStreetMap contributors',
+      livePowerInfrastructure: true,
       cities: CITY_PRESETS,
     };
   }
@@ -186,12 +282,13 @@ export function createGeoRuntime({
         source: { provider: 'local-fallback', live: false, attribution: null },
         buildings: seededFallback(city),
         roads: fallbackRoads(city),
+        power: fallbackPower(city),
       };
     }
 
     try {
       const apiUrl = validateEndpoint(endpoint);
-      const query = `[out:json][timeout:25];(way["building"](around:${city.radiusM},${city.lat},${city.lon});way["highway"](around:${city.radiusM},${city.lat},${city.lon}););out tags geom;`;
+      const query = `[out:json][timeout:25];(way["building"](around:${city.radiusM},${city.lat},${city.lon});way["highway"](around:${city.radiusM},${city.lat},${city.lon});way["power"~"line|minor_line|cable|substation|plant|generator"](around:${city.radiusM},${city.lat},${city.lon});node["power"~"substation|generator|plant|transformer"](around:${city.radiusM},${city.lat},${city.lon}););out tags geom;`;
       const response = await fetchImpl(apiUrl, {
         method: 'POST',
         headers: {
@@ -206,6 +303,7 @@ export function createGeoRuntime({
       const payload = await response.json();
       const buildings = parseOverpassBuildings(payload, city);
       const roads = parseOverpassRoads(payload, city);
+      const power = parseOverpassPower(payload, city);
       if (buildings.length < 5) throw new Error('Overpass returned too few building footprints');
       const value = {
         schemaVersion: 1,
@@ -218,6 +316,7 @@ export function createGeoRuntime({
         },
         buildings,
         roads,
+        power,
       };
       cache.set(cityId, { cachedAt: now(), value });
       return value;
@@ -233,6 +332,7 @@ export function createGeoRuntime({
         },
         buildings: seededFallback(city),
         roads: fallbackRoads(city),
+        power: fallbackPower(city),
       };
     }
   }
