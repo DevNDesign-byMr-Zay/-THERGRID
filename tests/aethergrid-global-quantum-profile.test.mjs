@@ -6,10 +6,7 @@ import test from 'node:test';
 
 import { createGeoRuntime } from '../apps/aethergrid-console/geo-runtime.mjs';
 import { createProfileStore } from '../apps/aethergrid-console/profile-store.mjs';
-import {
-  API_VERSION,
-  createQuantumRuntime,
-} from '../apps/aethergrid-console/quantum-runtime.mjs';
+import { API_VERSION, createQuantumRuntime } from '../apps/aethergrid-console/quantum-runtime.mjs';
 
 test('operator profile persists sanitized local identity data without secrets', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'aethergrid-profile-'));
@@ -131,10 +128,10 @@ test('IBM Quantum adapter submits jobs while keeping credentials private', async
     requests.push({ href, options });
     if (href === 'https://iam.example.test/token') {
       assert.match(String(options.body), /apikey=test-api-key/u);
-      return new Response(
-        JSON.stringify({ access_token: 'test-bearer', expires_in: 3600 }),
-        { status: 200, headers: { 'content-type': 'application/json' } },
-      );
+      return new Response(JSON.stringify({ access_token: 'test-bearer', expires_in: 3600 }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
     }
     assert.equal(options.headers.authorization, 'Bearer test-bearer');
     assert.equal(options.headers['service-crn'], 'crn:test:quantum');
