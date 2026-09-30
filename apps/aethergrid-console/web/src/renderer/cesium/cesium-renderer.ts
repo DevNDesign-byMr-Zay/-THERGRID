@@ -197,7 +197,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#grid?.setVisualMode(mode);
     this.#degraded = result.degraded;
     this.#reason = result.reason;
-    if (this.#buildings) this.#buildings.show = this.#layerVisible('buildings', true);
+    if (this.#buildings) this.#buildings.show = this.#buildingsShouldShow();
   }
 
   applyOverlay(snapshot: SpatialOverlaySnapshot): void {
@@ -351,8 +351,18 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     const next = detail[phase];
     this.#detailLevel = next.level;
     viewer.scene.globe.maximumScreenSpaceError = next.terrainSse;
-    if (this.#buildings) this.#buildings.maximumScreenSpaceError = next.buildingSse;
+    if (this.#buildings) {
+      this.#buildings.maximumScreenSpaceError = next.buildingSse;
+      this.#buildings.show = this.#buildingsShouldShow();
+    }
     viewer.scene.requestRender();
+  }
+
+  #buildingsShouldShow(): boolean {
+    return (
+      this.#layerVisible('buildings', true) &&
+      (this.#detailLevel === 'city' || this.#detailLevel === 'district')
+    );
   }
 
   #requireViewer(): Viewer {
@@ -367,7 +377,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #applyLayerVisibility(): void {
     if (!this.#viewer) return;
     this.#viewer.scene.globe.show = this.#layerVisible('terrain', true);
-    if (this.#buildings) this.#buildings.show = this.#layerVisible('buildings', true);
+    if (this.#buildings) this.#buildings.show = this.#buildingsShouldShow();
     this.#grid?.setVisible(this.#layerVisible('grid', true));
     this.#weather?.setVisible(this.#layerVisible('weather', true));
     this.#airQuality?.setVisible(this.#layerVisible('air', true));
