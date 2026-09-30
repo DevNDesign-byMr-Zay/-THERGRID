@@ -5,6 +5,7 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { createAgentRuntime } from './ai-runtime.mjs';
+import { createCityEnvironmentRuntime } from './city-environment-runtime.mjs';
 import { createGeoRuntime } from './geo-runtime.mjs';
 import { createProfileStore } from './profile-store.mjs';
 import { createQuantumRuntime } from './quantum-runtime.mjs';
@@ -13,6 +14,7 @@ import { createTerrainRuntime } from './terrain-runtime.mjs';
 const root = fileURLToPath(new URL('./', import.meta.url));
 const port = Number(process.env.AETHERGRID_PORT || process.env.PORT || 8090);
 const agentRuntime = createAgentRuntime();
+const cityEnvironmentRuntime = createCityEnvironmentRuntime();
 const geoRuntime = createGeoRuntime();
 const quantumRuntime = createQuantumRuntime();
 const terrainRuntime = createTerrainRuntime();
@@ -454,6 +456,10 @@ const server = http.createServer(async (request, response) => {
           provider: geoRuntime.summary().provider,
           liveProviderConfigured: geoRuntime.summary().liveProviderConfigured,
         },
+        environmentRuntime: {
+          provider: cityEnvironmentRuntime.summary().provider,
+          liveProviderConfigured: cityEnvironmentRuntime.summary().liveProviderConfigured,
+        },
         quantumRuntime: {
           provider: quantumRuntime.summary().provider,
           configured: quantumRuntime.summary().configured,
@@ -514,6 +520,7 @@ const server = http.createServer(async (request, response) => {
         ...ai,
         ai,
         geospatial: geoRuntime.summary(),
+        environment: cityEnvironmentRuntime.summary(),
         terrain: terrainRuntime.summary(),
         quantum: quantumRuntime.summary(),
         profile: profileStore.safeSummary(),
@@ -552,13 +559,19 @@ const server = http.createServer(async (request, response) => {
       const baseMesh = await geoRuntime.cityMesh(cityId, {
         force: url.searchParams.get('force') === '1',
       });
-      const terrain = await terrainRuntime.sample({
-        lat: baseMesh.city.lat,
-        lon: baseMesh.city.lon,
-        radiusM: baseMesh.city.radiusM,
-        gridSize: 7,
-      });
-      const mesh = { ...baseMesh, terrain };
+      const [terrain, environment] = await Promise.all([
+        terrainRuntime.sample({
+          lat: baseMesh.city.lat,
+          lon: baseMesh.city.lon,
+          radiusM: baseMesh.city.radiusM,
+          gridSize: 7,
+        }),
+        cityEnvironmentRuntime.current({
+          lat: baseMesh.city.lat,
+          lon: baseMesh.city.lon,
+        }),
+      ]);
+      const mesh = { ...baseMesh, terrain, environment };
       activeCityMesh = mesh;
       state.externalContext.geospatial = {
         cityId: mesh.city.id,
@@ -572,11 +585,22 @@ const server = http.createServer(async (request, response) => {
         roads: (mesh.roads || []).length,
         powerLines: (mesh.powerLines || []).length,
         powerAssets: (mesh.powerAssets || []).length,
+        skyline: mesh.skylineProfile || null,
         terrain: {
           provider: mesh.terrain?.source?.provider || null,
           live: Boolean(mesh.terrain?.source?.live),
           minElevationM: mesh.terrain?.minElevationM ?? null,
           maxElevationM: mesh.terrain?.maxElevationM ?? null,
+        },
+        environment: {
+          provider: mesh.environment?.source?.provider || null,
+          live: Boolean(mesh.environment?.source?.live),
+          observedAt: mesh.environment?.source?.modelTime || mesh.environment?.current?.time || null,
+          temperatureC: mesh.environment?.current?.temperatureC ?? null,
+          cloudCoverPercent: mesh.environment?.current?.cloudCoverPercent ?? null,
+          precipitationMm: mesh.environment?.current?.precipitationMm ?? null,
+          isDay: mesh.environment?.current?.isDay ?? null,
+          windSpeedKph: mesh.environment?.current?.windSpeedKph ?? null,
         },
       };
       activity(
@@ -602,13 +626,19 @@ const server = http.createServer(async (request, response) => {
           force: url.searchParams.get('force') === '1',
         },
       );
-      const terrain = await terrainRuntime.sample({
-        lat: baseMesh.city.lat,
-        lon: baseMesh.city.lon,
-        radiusM: baseMesh.city.radiusM,
-        gridSize: 7,
-      });
-      const mesh = { ...baseMesh, terrain };
+      const [terrain, environment] = await Promise.all([
+        terrainRuntime.sample({
+          lat: baseMesh.city.lat,
+          lon: baseMesh.city.lon,
+          radiusM: baseMesh.city.radiusM,
+          gridSize: 7,
+        }),
+        cityEnvironmentRuntime.current({
+          lat: baseMesh.city.lat,
+          lon: baseMesh.city.lon,
+        }),
+      ]);
+      const mesh = { ...baseMesh, terrain, environment };
       activeCityMesh = mesh;
       state.externalContext.geospatial = {
         cityId: mesh.city.id,
@@ -622,11 +652,22 @@ const server = http.createServer(async (request, response) => {
         roads: (mesh.roads || []).length,
         powerLines: (mesh.powerLines || []).length,
         powerAssets: (mesh.powerAssets || []).length,
+        skyline: mesh.skylineProfile || null,
         terrain: {
           provider: mesh.terrain?.source?.provider || null,
           live: Boolean(mesh.terrain?.source?.live),
           minElevationM: mesh.terrain?.minElevationM ?? null,
           maxElevationM: mesh.terrain?.maxElevationM ?? null,
+        },
+        environment: {
+          provider: mesh.environment?.source?.provider || null,
+          live: Boolean(mesh.environment?.source?.live),
+          observedAt: mesh.environment?.source?.modelTime || mesh.environment?.current?.time || null,
+          temperatureC: mesh.environment?.current?.temperatureC ?? null,
+          cloudCoverPercent: mesh.environment?.current?.cloudCoverPercent ?? null,
+          precipitationMm: mesh.environment?.current?.precipitationMm ?? null,
+          isDay: mesh.environment?.current?.isDay ?? null,
+          windSpeedKph: mesh.environment?.current?.windSpeedKph ?? null,
         },
       };
       activity(
@@ -685,6 +726,18 @@ const server = http.createServer(async (request, response) => {
       state.evidence = state.evidence.slice(0, 24);
       activity(`City operation completed: ${analysis.useCase.label} for ${analysis.city.name}.`, 'city-operation');
       return json(response, 200, { analysis, evidence: record, externalContext: state.externalContext, activity: state.activity });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/environment') {
+      const environment = await cityEnvironmentRuntime.current({
+        lat: url.searchParams.get('lat'),
+        lon: url.searchParams.get('lon'),
+      });
+      return json(response, 200, environment);
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/environment/runtime') {
+      return json(response, 200, cityEnvironmentRuntime.summary());
     }
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/terrain') {
