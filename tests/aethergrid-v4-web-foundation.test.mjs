@@ -881,3 +881,19 @@ test('v4 live 4d clock advances automatically while non-live cursors remain inde
   assert.match(rail, /disabled=\{state\.mode === 'live'\}/u);
   assert.match(rail, /Live time advances automatically/u);
 });
+
+test('v4 thunderstorm presentation is source-bounded and explicitly synthetic in timing', async () => {
+  const [atmosphere, viewport] = await Promise.all([
+    text('apps/aethergrid-console/web/src/renderer/overlays/atmospheric-overlay.ts'),
+    text('apps/aethergrid-console/web/src/components/SpatialViewport.tsx'),
+  ]);
+
+  assert.match(atmosphere, /weatherPhenomenon\(snapshot\) !== 'thunderstorm'/u);
+  assert.match(atmosphere, /precipitationMm/u);
+  assert.match(atmosphere, /windGustsKph/u);
+  assert.match(atmosphere, /cadenceSeconds/u);
+  assert.match(atmosphere, /flashOpacity/u);
+  assert.match(viewport, /time\.mode === 'live'/u);
+  assert.match(viewport, /stormPresentation\(atmosphere, time\.iso\)/u);
+  assert.match(viewport, /SOURCE WEATHER · SYNTHETIC FLASH TIMING/u);
+});
