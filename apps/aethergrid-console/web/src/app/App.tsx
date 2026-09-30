@@ -375,6 +375,7 @@ export function App() {
       view: visualMode,
       temporalMode: temporal.mode,
       temporalCursor: temporal.cursorIso,
+      useCase: activeUseCase,
       coordinate:
         scope === 'world'
           ? {
@@ -423,6 +424,7 @@ export function App() {
       visualMode,
       temporal.mode,
       temporal.cursorIso,
+      activeUseCase,
       cityIdentity,
       selection,
       atmosphere,
@@ -763,6 +765,15 @@ export function App() {
             }
             error={scope === 'world' ? null : powerOverlayError}
           />
+
+          {activeUseCase ? (
+            <div className="use-case-scene-badge">
+              <span>OPERATION MODE</span>
+              <strong>
+                {USE_CASE_PRESETS.find((preset) => preset.id === activeUseCase)?.label}
+              </strong>
+            </div>
+          ) : null}
 
           <div className="scene-caption">
             <span>{scope === 'world' ? 'GLOBAL GOD’S-EYE' : city.name}</span>
