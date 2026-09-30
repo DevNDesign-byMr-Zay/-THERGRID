@@ -2,6 +2,41 @@
   const q = (selector, root = document) => root.querySelector(selector);
   const qa = (selector, root = document) => [...root.querySelectorAll(selector)];
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+  function bilinearTerrainElevation(terrain, xM, zM) {
+    const gridSize = Number(terrain?.gridSize || 0);
+    const radiusM = Number(terrain?.radiusM || 0);
+    const points = Array.isArray(terrain?.points) ? terrain.points : [];
+    if (
+      gridSize < 2 ||
+      radiusM <= 0 ||
+      points.length < gridSize * gridSize ||
+      !Number.isFinite(Number(xM)) ||
+      !Number.isFinite(Number(zM))
+    ) {
+      return 0;
+    }
+    const gridMax = gridSize - 1;
+    const gx = clamp(((Number(xM) + radiusM) / (radiusM * 2)) * gridMax, 0, gridMax);
+    const gz = clamp(((Number(zM) + radiusM) / (radiusM * 2)) * gridMax, 0, gridMax);
+    const x0 = Math.floor(gx);
+    const z0 = Math.floor(gz);
+    const x1 = Math.min(gridMax, x0 + 1);
+    const z1 = Math.min(gridMax, z0 + 1);
+    const tx = gx - x0;
+    const tz = gz - z0;
+    const elevationAt = (row, column) => {
+      const value = Number(points[row * gridSize + column]?.relativeElevationM);
+      return Number.isFinite(value) ? Math.max(0, value) : 0;
+    };
+    const e00 = elevationAt(z0, x0);
+    const e10 = elevationAt(z0, x1);
+    const e01 = elevationAt(z1, x0);
+    const e11 = elevationAt(z1, x1);
+    const top = e00 + (e10 - e00) * tx;
+    const bottom = e01 + (e11 - e01) * tx;
+    return top + (bottom - top) * tz;
+  }
   const SETTINGS_KEY = 'aethergrid.operator.settings.v2';
   const DEFAULT_GLOBAL_CITIES = Object.freeze([
     { id: 'new-york', name: 'New York', country: 'United States', district: 'Midtown Manhattan', lat: 40.7549, lon: -73.984, radiusM: 1600 },
@@ -774,6 +809,28 @@
       const seismicNodes = [];
       const radius = Math.max(200, Number(mesh.city?.radiusM || 900));
       const scale = 8.5 / radius;
+      const terrain = mesh.terrain;
+      const terrainGridReady =
+        Array.isArray(terrain?.points) &&
+        Number(terrain?.gridSize) >= 2 &&
+        terrain.points.length >= Number(terrain.gridSize) ** 2;
+      const terrainVerticalScale = scale * 1.65;
+      const terrainDatumY = terrainGridReady ? -0.06 : 0;
+      const terrainSurfaceYAtSource = (xM, zM) =>
+        terrainGridReady
+          ? terrainDatumY +
+            Math.min(
+              3.2,
+              bilinearTerrainElevation(terrain, Number(xM), Number(zM)) *
+                terrainVerticalScale,
+            )
+          : 0;
+      this.terrainConformance = {
+        active: terrainGridReady,
+        live: Boolean(terrain?.source?.live),
+        interpolation: terrain?.interpolation?.method || 'bilinear',
+        source: terrain?.source?.provider || 'none',
+      };
 
       for (let n = -10; n <= 10; n += 1) {
         this.line(grid, [-10, 0, n], [10, 0, n], n * 0.13);
@@ -790,23 +847,34 @@
         return null;
       };
       mesh.buildings.forEach((building, buildingIndex) => {
-        const footprint = (building.footprint || []).map(([x, z]) => [x * scale, z * scale]);
-        if (footprint.length < 3) return;
-        const openFootprint =
-          footprint.length > 3 &&
+        const sourceFootprint = (building.footprint || []).map(([x, z]) => [
+          Number(x),
+          Number(z),
+        ]);
+        if (sourceFootprint.length < 3) return;
+        const sourceOpenFootprint =
+          sourceFootprint.length > 3 &&
           Math.hypot(
-            footprint[0][0] - footprint.at(-1)[0],
-            footprint[0][1] - footprint.at(-1)[1],
-          ) < 0.001
-            ? footprint.slice(0, -1)
-            : footprint;
-        if (openFootprint.length < 3) return;
+            sourceFootprint[0][0] - sourceFootprint.at(-1)[0],
+            sourceFootprint[0][1] - sourceFootprint.at(-1)[1],
+          ) < 0.01
+            ? sourceFootprint.slice(0, -1)
+            : sourceFootprint;
+        if (sourceOpenFootprint.length < 3) return;
+        const openFootprint = sourceOpenFootprint.map(([x, z]) => [x * scale, z * scale]);
         const center = openFootprint
           .reduce((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0])
           .map((value) => value / openFootprint.length);
+        const sourceCenter = sourceOpenFootprint
+          .reduce((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0])
+          .map((value) => value / sourceOpenFootprint.length);
         cityCenters.push(center);
-        const baseHeight = Math.max(0, Number(building.minHeightM || 0) * scale);
-        const height = Math.max(baseHeight + 0.035, Number(building.heightM || 12) * scale);
+        const foundationY = terrainSurfaceYAtSource(sourceCenter[0], sourceCenter[1]);
+        const minHeightScene = Math.max(0, Number(building.minHeightM || 0) * scale);
+        const baseHeight = foundationY + minHeightScene;
+        const height =
+          foundationY +
+          Math.max(minHeightScene + 0.035, Number(building.heightM || 12) * scale);
         const roofHeight = clamp(Number(building.roofHeightM || 0) * scale, 0, Math.max(0, height - baseHeight));
         const supportedApexRoof = /^(pyramidal|hipped|conical|dome|onion)$/u.test(String(building.roofShape || ''));
         const wallTop = supportedApexRoof && roofHeight > 0 ? Math.max(baseHeight + 0.02, height - roofHeight) : height;
@@ -857,7 +925,13 @@
           Number(mesh.skylineProfile?.p95HeightM || 0),
         );
         const hasSourceName = Boolean(String(building.name || '').trim());
-        if (hasSourceName || Number(building.heightM || 0) >= skylineThresholdM) {
+        const sourceBackedHeight = !['inferred', 'synthetic-fallback'].includes(
+          String(building.heightSource || ''),
+        );
+        if (
+          hasSourceName ||
+          (sourceBackedHeight && Number(building.heightM || 0) >= skylineThresholdM)
+        ) {
           landmarkCandidates.push({
             id: building.id,
             label: String(building.name || `Tall structure ${buildingIndex + 1}`),
@@ -919,84 +993,119 @@
       });
       this.landmarkNodes = landmarkSelection;
 
-      const addAreaGeometry = (feature, lineTarget, faceTarget, y, phaseBase) => {
-        const footprint = (feature.footprint || []).map(([x, z]) => [
-          Number(x) * scale,
-          Number(z) * scale,
+      const addAreaGeometry = (
+        feature,
+        lineTarget,
+        faceTarget,
+        mode,
+        phaseBase,
+      ) => {
+        const sourceFootprint = (feature.footprint || []).map(([x, z]) => [
+          Number(x),
+          Number(z),
         ]);
-        if (footprint.length < 3) return;
-        const open =
-          footprint.length > 3 &&
+        if (sourceFootprint.length < 3) return;
+        const sourceOpen =
+          sourceFootprint.length > 3 &&
           Math.hypot(
-            footprint[0][0] - footprint.at(-1)[0],
-            footprint[0][1] - footprint.at(-1)[1],
-          ) < 0.001
-            ? footprint.slice(0, -1)
-            : footprint;
-        if (open.length < 3) return;
-        const center = open
+            sourceFootprint[0][0] - sourceFootprint.at(-1)[0],
+            sourceFootprint[0][1] - sourceFootprint.at(-1)[1],
+          ) < 0.01
+            ? sourceFootprint.slice(0, -1)
+            : sourceFootprint;
+        if (sourceOpen.length < 3) return;
+        const sourceCenter = sourceOpen
           .reduce((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0])
-          .map((value) => value / open.length);
-        const center3 = [center[0], y, center[1]];
-        for (let index = 0; index < open.length; index += 1) {
-          const a = [open[index][0], y, open[index][1]];
-          const b = [
-            open[(index + 1) % open.length][0],
-            y,
-            open[(index + 1) % open.length][1],
-          ];
+          .map((value) => value / sourceOpen.length);
+        const waterPlaneY =
+          mode === 'water'
+            ? Math.min(
+                ...sourceOpen.map(([x, z]) => terrainSurfaceYAtSource(x, z)),
+              ) + 0.012
+            : 0;
+        const point3 = ([x, z]) => [
+          x * scale,
+          mode === 'water' ? waterPlaneY : terrainSurfaceYAtSource(x, z) + 0.016,
+          z * scale,
+        ];
+        const center3 = [
+          sourceCenter[0] * scale,
+          mode === 'water'
+            ? waterPlaneY
+            : terrainSurfaceYAtSource(sourceCenter[0], sourceCenter[1]) + 0.016,
+          sourceCenter[1] * scale,
+        ];
+        for (let index = 0; index < sourceOpen.length; index += 1) {
+          const a = point3(sourceOpen[index]);
+          const b = point3(sourceOpen[(index + 1) % sourceOpen.length]);
           this.line(lineTarget, a, b, phaseBase + index * 0.03);
           this.triangle(faceTarget, a, b, center3, phaseBase + index * 0.02);
         }
       };
 
       (mesh.waterAreas || []).forEach((feature, index) =>
-        addAreaGeometry(feature, waterLines, waterFaces, 0.012, index * 0.19),
+        addAreaGeometry(feature, waterLines, waterFaces, 'water', index * 0.19),
       );
       (mesh.greenAreas || []).forEach((feature, index) =>
-        addAreaGeometry(feature, greenLines, greenFaces, 0.016, index * 0.23),
-      );
-      [...(mesh.waterways || []), ...(mesh.coastlines || [])].forEach(
-        (feature, lineIndex) => {
-          const path = (feature.path || []).map(([x, z]) => [
-            Number(x) * scale,
-            Number(z) * scale,
-          ]);
-          for (let index = 1; index < path.length; index += 1) {
-            const [ax, az] = path[index - 1];
-            const [bx, bz] = path[index];
-            this.line(
-              waterLines,
-              [ax, 0.022, az],
-              [bx, 0.022, bz],
-              lineIndex * 0.17 + index * 0.025,
-            );
-          }
-        },
+        addAreaGeometry(feature, greenLines, greenFaces, 'terrain', index * 0.23),
       );
 
+      (mesh.waterways || []).forEach((feature, lineIndex) => {
+        const sourcePath = (feature.path || []).map(([x, z]) => [Number(x), Number(z)]);
+        for (let index = 1; index < sourcePath.length; index += 1) {
+          const [ax, az] = sourcePath[index - 1];
+          const [bx, bz] = sourcePath[index];
+          this.line(
+            waterLines,
+            [ax * scale, terrainSurfaceYAtSource(ax, az) + 0.022, az * scale],
+            [bx * scale, terrainSurfaceYAtSource(bx, bz) + 0.022, bz * scale],
+            lineIndex * 0.17 + index * 0.025,
+          );
+        }
+      });
+
+      (mesh.coastlines || []).forEach((feature, lineIndex) => {
+        const sourcePath = (feature.path || []).map(([x, z]) => [Number(x), Number(z)]);
+        const coastlineY = terrainDatumY + 0.022;
+        for (let index = 1; index < sourcePath.length; index += 1) {
+          const [ax, az] = sourcePath[index - 1];
+          const [bx, bz] = sourcePath[index];
+          this.line(
+            waterLines,
+            [ax * scale, coastlineY, az * scale],
+            [bx * scale, coastlineY, bz * scale],
+            (mesh.waterways || []).length * 0.17 + lineIndex * 0.17 + index * 0.025,
+          );
+        }
+      });
+
       (mesh.roads || []).forEach((road, roadIndex) => {
-        const path = (road.path || []).map(([x, z]) => [x * scale, z * scale]);
-        for (let index = 1; index < path.length; index += 1) {
-          const [ax, az] = path[index - 1];
-          const [bx, bz] = path[index];
-          this.line(routes, [ax, 0.025, az], [bx, 0.025, bz], roadIndex * 0.07);
+        const sourcePath = (road.path || []).map(([x, z]) => [Number(x), Number(z)]);
+        for (let index = 1; index < sourcePath.length; index += 1) {
+          const [ax, az] = sourcePath[index - 1];
+          const [bx, bz] = sourcePath[index];
+          this.line(
+            routes,
+            [ax * scale, terrainSurfaceYAtSource(ax, az) + 0.025, az * scale],
+            [bx * scale, terrainSurfaceYAtSource(bx, bz) + 0.025, bz * scale],
+            roadIndex * 0.07,
+          );
         }
       });
 
       (mesh.powerLines || []).forEach((line, lineIndex) => {
-        const path = (line.path || []).map(([x, z]) => [x * scale, z * scale]);
+        const sourcePath = (line.path || []).map(([x, z]) => [Number(x), Number(z)]);
         const lineHeight =
           line.powerType === 'cable'
             ? 0.055
             : 0.12 + Math.min(0.22, Number(line.voltage || 0) / 1_000_000);
-        for (let index = 1; index < path.length; index += 1) {
-          const [ax, az] = path[index - 1];
-          const [bx, bz] = path[index];
+        for (let index = 1; index < sourcePath.length; index += 1) {
+          const [ax, az] = sourcePath[index - 1];
+          const [bx, bz] = sourcePath[index];
           this.line(
             infrastructureLines,
-            [ax, lineHeight, az],
-            [bx, lineHeight, bz],
+            [ax * scale, terrainSurfaceYAtSource(ax, az) + lineHeight, az * scale],
+            [bx * scale, terrainSurfaceYAtSource(bx, bz) + lineHeight, bz * scale],
             lineIndex * 0.19,
           );
         }
@@ -1018,7 +1127,11 @@
           voltage: asset.voltage || null,
           operator: asset.operator || '',
           osmId: asset.osmId || null,
-          position: [Number(x) * scale, height, Number(z) * scale],
+          position: [
+            Number(x) * scale,
+            terrainSurfaceYAtSource(Number(x), Number(z)) + height,
+            Number(z) * scale,
+          ],
         };
         this.graphNodes.push(node);
         this.vertex(
@@ -1028,14 +1141,12 @@
         );
       });
 
-      const terrain = mesh.terrain;
       if (terrain?.points?.length && Number(terrain.gridSize) >= 2) {
         const gridSize = Number(terrain.gridSize);
-        const verticalScale = scale * 1.65;
         const pointAt = (row, column) => terrain.points[row * gridSize + column];
         const vector = (point) => [
           Number(point.x) * scale,
-          -0.06 + Math.min(3.2, Number(point.relativeElevationM || 0) * verticalScale),
+          terrainSurfaceYAtSource(Number(point.x), Number(point.z)),
           Number(point.z) * scale,
         ];
         for (let row = 0; row < gridSize; row += 1) {
