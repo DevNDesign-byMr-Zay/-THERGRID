@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "aethergrid.operator-console",
   "name": "ÆTHERGRID Operator Console",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "format": "html+pwa+node-app",
   "entrypoints": {
     "standaloneHtml": "index.html",
@@ -26,10 +26,15 @@
     "apis": [
       "GET /api/aethergrid/health",
       "GET /api/aethergrid/state",
+      "GET /api/aethergrid/telemetry",
       "GET /api/aethergrid/evidence",
+      "POST /api/aethergrid/view",
+      "POST /api/aethergrid/region",
+      "POST /api/aethergrid/scenario",
       "POST /api/aethergrid/optimize",
       "POST /api/aethergrid/chat",
-      "POST /api/aethergrid/export"
+      "POST /api/aethergrid/export",
+      "POST /api/aethergrid/reset"
     ]
   },
   "safety": {
@@ -45,5 +50,17 @@
     "embeddedJavascript": true,
     "embeddedDashboardReference": true,
     "opensViaFileProtocol": true
+  },
+  "capabilities": {
+    "liveTelemetry": true,
+    "regionSwitching": true,
+    "scenarioSwitching": true,
+    "commandSearch": true,
+    "metricDrilldowns": true,
+    "holographicLayerControls": true,
+    "aiCollaboration": true,
+    "boundedOptimization": true,
+    "evidenceExport": true,
+    "localStandaloneFallback": true
   }
 }
