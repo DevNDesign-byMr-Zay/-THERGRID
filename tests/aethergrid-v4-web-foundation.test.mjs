@@ -939,7 +939,6 @@ test('v4 night illumination follows mapped building geometry with explicit prese
   assert.match(nativeRenderer, /#ffd37d/u);
 });
 
-
 test('v4 native failover preserves source-driven weather geometry and layer toggles', async () => {
   const nativeRenderer = await text(
     'apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts',
