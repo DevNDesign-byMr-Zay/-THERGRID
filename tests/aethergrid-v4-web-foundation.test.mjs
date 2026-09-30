@@ -919,3 +919,22 @@ test('v4 live wind field is source-backed spatial geometry shared by Cesium and 
   assert.match(nativeRenderer, /windEdge/u);
   assert.match(nativeRenderer, /#7de9ff/u);
 });
+
+test('v4 night illumination follows mapped building geometry with explicit presentation-only boundaries', async () => {
+  const [service, cesium, nativeRenderer, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/services/city-power-overlay.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(service, /cityMeshToIlluminationOverlay/u);
+  assert.match(service, /selected\.size >= 500/u);
+  assert.match(service, /presentationType: 'urban-illumination'/u);
+  assert.match(service, /measuredWindowLights: false/u);
+  assert.match(service, /measuredOccupancy: false/u);
+  assert.match(app, /citySolar\.phase === 'twilight' \|\| citySolar\.phase === 'night'/u);
+  assert.match(app, /PRESENTATION ONLY · NOT MEASURED WINDOW LIGHTS/u);
+  assert.match(cesium, /#ffd37d/u);
+  assert.match(nativeRenderer, /#ffd37d/u);
+});
