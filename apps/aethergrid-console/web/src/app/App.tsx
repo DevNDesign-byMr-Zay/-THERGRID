@@ -23,8 +23,8 @@ import {
   type CityLiveSnapshot
 } from '../services/city-live-context';
 import {
-  loadCityPowerOverlay,
-  loadCoordinatePowerOverlay
+  loadCitySpatialBundle,
+  loadCoordinateSpatialBundle
 } from '../services/city-power-overlay';
 import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
 
@@ -113,6 +113,9 @@ const CITY_TARGETS: readonly CityTarget[] = [
 const INITIAL_LAYERS: readonly LayerState[] = [
   { id: 'terrain', visible: true },
   { id: 'buildings', visible: true },
+  { id: 'roads', visible: true },
+  { id: 'water', visible: true },
+  { id: 'green', visible: true },
   { id: 'grid', visible: true },
   { id: 'weather', visible: true },
   { id: 'air', visible: true },
@@ -137,6 +140,7 @@ export function App() {
   const [layers, setLayers] = useState<readonly LayerState[]>(INITIAL_LAYERS);
   const [selection, setSelection] = useState<SpatialFeatureSelection | null>(null);
   const [powerOverlay, setPowerOverlay] = useState<SpatialOverlaySnapshot | null>(null);
+  const [semanticOverlays, setSemanticOverlays] = useState<readonly SpatialOverlaySnapshot[]>([]);
   const [powerOverlayError, setPowerOverlayError] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState('');
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -158,23 +162,27 @@ export function App() {
   useEffect(() => {
     const controller = new AbortController();
     setPowerOverlay(null);
+    setSemanticOverlays([]);
     setPowerOverlayError(null);
     setAtmosphere(null);
     setEnvironmentError(null);
     setLiveContext(null);
     setLiveContextError(null);
 
-    const powerRequest = city.custom
-      ? loadCoordinatePowerOverlay(
+    const spatialRequest = city.custom
+      ? loadCoordinateSpatialBundle(
           city.latitude,
           city.longitude,
           city.name,
           controller.signal
         )
-      : loadCityPowerOverlay(city.id, controller.signal);
+      : loadCitySpatialBundle(city.id, controller.signal);
 
-    void powerRequest
-      .then((snapshot) => setPowerOverlay(snapshot))
+    void spatialRequest
+      .then((bundle) => {
+        setPowerOverlay(bundle.power);
+        setSemanticOverlays(bundle.semantics);
+      })
       .catch((error) => {
         if (controller.signal.aborted) return;
         setPowerOverlayError(error instanceof Error ? error.message : String(error));
@@ -246,10 +254,11 @@ export function App() {
   );
 
   const activeOverlays = useMemo(
-    () => [powerOverlay, seismicOverlay].filter(
-      (snapshot): snapshot is SpatialOverlaySnapshot => Boolean(snapshot)
-    ),
-    [powerOverlay, seismicOverlay]
+    () =>
+      [...semanticOverlays, powerOverlay, seismicOverlay].filter(
+        (snapshot): snapshot is SpatialOverlaySnapshot => Boolean(snapshot)
+      ),
+    [semanticOverlays, powerOverlay, seismicOverlay]
   );
 
   const toggleLayer = (id: string) => {
