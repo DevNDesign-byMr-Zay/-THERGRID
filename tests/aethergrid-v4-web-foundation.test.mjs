@@ -340,3 +340,18 @@ test('v4 spatial AI dock calls real agent endpoints with scene context and recei
   assert.match(app, /cityIdentity/u);
   assert.match(app, /<AgentDock context=\{agentContext\}/u);
 });
+
+test('v4 intelligence rail remains usable as a tablet and mobile drawer', async () => {
+  const [app, styles] = await Promise.all([
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/app/app.css'),
+  ]);
+
+  assert.match(app, /aria-controls="aethergrid-intelligence-rail"/u);
+  assert.match(app, /setIntelOpen/u);
+  assert.match(app, /intel-rail open/u);
+  assert.match(styles, /\.intel-toggle \{/u);
+  assert.match(styles, /\.intel-rail\.open \{/u);
+  assert.match(styles, /transform: translateX\(105%\)/u);
+  assert.match(styles, /transform: translateY\(105%\)/u);
+});
