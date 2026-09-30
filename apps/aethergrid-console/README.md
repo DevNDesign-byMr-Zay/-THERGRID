@@ -182,21 +182,46 @@ Both operations remain advisory-only. Heat Stress is not WBGT or a clinical risk
 ## v2.9 source-backed city identity and semantic weather
 
 City twins now expose a source-backed identity layer instead of relying on skyline shape alone.
-
 For each loaded OpenStreetMap building sample, ÆTHERGRID derives:
 - named mapped structures, sorted by source-backed modeled height;
 - tall-structure count using the current sample's P95 skyline height with an 80 m floor;
 - max / P95 / median height, roof-tag coverage, building-part count and height-data coverage;
 - interactive LANDMARKS geometry that highlights named/tall structures without inventing missing landmark identity;
 - a CITY IDENTITY inspector that lets the operator select those source-backed anchors in the 3D scene.
-
 Weather rendering is now semantic rather than generic:
 - rain uses wind-drifted falling streaks;
 - modeled snow codes generate slower drifting snow particles;
 - fog codes or low modeled visibility generate a low-altitude fog field;
 - modeled thunderstorm codes add a bounded lightning-style pulse while rain continues independently.
-
 The thunderstorm pulse is **not** a detected lightning strike. Rain, snow and fog effects visualize current provider model context and are not street-level weather instrumentation.
+## v2.9 mapped city identity
+v2.9 makes city twins read as different places through additional source-backed OpenStreetMap geometry rather than city-specific decorative presets.
+When present in the live OSM response, the city scene now renders:
+- mapped water areas from `natural=water` / water-type tags;
+- linear rivers, canals, streams and tidal channels;
+- mapped coastline segments;
+- parks, gardens, reserves, grass/recreation/meadow areas, woods and grassland;
+- source-tagged building material/colour groups as restrained façade overlays;
+- named tall buildings with source-backed heights as landmark emphasis.
+WATER, GREEN and LANDMARKS are independent renderer layers. Live water and green geometry is never synthesized in fallback mode: if the upstream map request is unavailable, those layers remain empty instead of inventing a shoreline or park.
+Two additional source-driven planning workflows are available:
+- **Flood Context** combines mapped water/coastline geometry, terrain relief, current precipitation, roads and grid context. It is not an inundation, storm-surge, drainage or river-stage forecast.
+- **Green Infrastructure** combines mapped green-space geometry, built form and current heat/humidity/AQI context. It is not measured canopy cover, thermal comfort, public-health exposure or a siting directive.
+Material tinting is only used when source material/colour tags are present. Landmark emphasis requires a name plus a source-backed height at or above the greater of 70 m or the city sample's 95th-percentile height; it does not invent landmark identity.
+## v2.9 source-backed city identity
+v2.9 makes the loaded city itself more geographically recognizable by adding source-backed environmental and architectural context from the same bounded OpenStreetMap request.
+New mapped identity layers:
+- `natural=water` water areas and their `water=*` classification when present;
+- mapped river/canal/stream/tidal-channel centerlines;
+- `natural=coastline` shoreline geometry when present in the bounded sample;
+- mapped parks, gardens, nature reserves, grass/recreation areas, meadows, woods and grassland;
+- source-tagged building material/colour overlays for glass, masonry, metal and natural-material groups;
+- source-bound landmark emphasis for named buildings with source-backed heights at or above the city-specific P95/70 m threshold.
+The renderer exposes **WATER**, **GREEN**, and **LANDMARKS** as independent layers. These features remain different city-by-city because the geometry comes from the selected coordinate's map data; a local fallback does not invent rivers, parks, coastline or named landmarks.
+Two additional city operations use this mapped context:
+- **Flood Context** combines mapped water/coastline, terrain, precipitation, roads and infrastructure as a bounded attention surface. It does not model drainage, storm surge, river stage or inundation.
+- **Green Infrastructure** compares mapped green-space context with heat, humidity, AQI and built density as a screening proxy. It is not canopy measurement, public-health exposure or a siting directive.
+Material styling is also bounded: when OpenStreetMap does not provide `building:material`, `building:colour`, `roof:material` or `roof:colour`, ÆTHERGRID keeps the default city material instead of inventing a façade.
 ## Windows ZIP workflow
 
 After extracting the package:
