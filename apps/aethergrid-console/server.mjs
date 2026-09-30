@@ -293,8 +293,10 @@ const server = http.createServer(async (request, response) => {
     }
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
+      const ai = agentRuntime.summary();
       return json(response, 200, {
-        ai: agentRuntime.summary(),
+        ...ai,
+        ai,
         geospatial: geoRuntime.summary(),
         quantum: quantumRuntime.summary(),
         profile: profileStore.safeSummary(),
