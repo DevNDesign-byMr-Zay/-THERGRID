@@ -257,7 +257,8 @@ test('v4 provenance UI separates source time from retrieval age', async () => {
   assert.match(badge, /FETCHED/u);
   assert.match(freshness, /UNKNOWN AGE/u);
   assert.match(freshness, /JUST NOW/u);
-  assert.match(app, /sourceTime=\{powerOverlay\?\.sourceTime\}/u);
+  assert.match(app, /globalLive\?\.overlay\.sourceTime/u);
+  assert.match(app, /powerOverlay\?\.sourceTime/u);
   assert.match(app, /FETCHED \{formatDataAge\(atmosphere\?\.fetchedAt\)\}/u);
 });
 
