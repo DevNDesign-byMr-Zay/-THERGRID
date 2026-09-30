@@ -664,3 +664,15 @@ test('v4 solid building presentation responds to solar phase without affecting s
   assert.match(visual, /#e4a35b/u);
   assert.match(renderer, /setSolarPhase\(this\.#solar\.phase\)/u);
 });
+
+test('v4 city descent uses a true heading pitch range orbit around the geographic target', async () => {
+  const camera = await text(
+    'apps/aethergrid-console/web/src/renderer/cesium/camera-journey-controller.ts'
+  );
+
+  assert.match(camera, /BoundingSphere/u);
+  assert.match(camera, /HeadingPitchRange/u);
+  assert.match(camera, /flyToBoundingSphere/u);
+  assert.match(camera, /target\.heightMeters \?\? 0/u);
+  assert.match(camera, /stage\.destinationHeightMeters/u);
+});
