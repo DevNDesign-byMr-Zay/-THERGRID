@@ -81,7 +81,12 @@
     "animated-globe-city-descent",
     "quantum-job-results",
     "quantum-job-metrics",
-    "quantum-job-inspector"
+    "quantum-job-inspector",
+    "arbitrary-coordinate-explorer",
+    "live-osm-power-grid",
+    "independent-power-grid-layer",
+    "global-city-time-index",
+    "agent-external-context"
   ],
   "agents": [
     {
@@ -196,7 +201,11 @@
     "runtimeSummaryEndpoint": "GET /api/aethergrid/runtime",
     "individualEndpoint": "POST /api/aethergrid/agents/:id",
     "teamEndpoint": "POST /api/aethergrid/team",
-    "providerSecretsClientVisible": false
+    "providerSecretsClientVisible": false,
+    "externalContext": [
+      "geospatial-summary",
+      "quantum-job-summary"
+    ]
   },
   "scenarioModel": {
     "templates": [
@@ -283,7 +292,18 @@
     "providerFallback": "local procedural city geometry",
     "attribution": "© OpenStreetMap contributors",
     "liveRoadTopology": true,
-    "animatedCityDescent": true
+    "animatedCityDescent": true,
+    "arbitraryCoordinates": true,
+    "coordinateEndpoint": "GET /api/aethergrid/geospatial/point",
+    "livePowerGrid": true,
+    "powerLayerControls": true,
+    "temporalCityScrubbing": true,
+    "liveLayers": [
+      "buildings",
+      "roads",
+      "power-lines",
+      "power-assets"
+    ]
   },
   "profile": {
     "persistence": "backend local JSON with browser cache fallback",
