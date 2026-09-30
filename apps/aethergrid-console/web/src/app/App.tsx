@@ -1,14 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { SpatialViewport } from '../components/SpatialViewport';
 import { TemporalRail } from '../components/TemporalRail';
 import { useTemporalClock } from '../hooks/use-temporal-clock';
+import type { SpatialOverlaySnapshot } from '../renderer/overlays/spatial-overlay';
 import type {
   LayerState,
   SpatialFeatureSelection,
   SpatialTarget,
   VisualMode
 } from '../renderer/spatial-renderer';
+import { loadCityPowerOverlay } from '../services/city-power-overlay';
 
 interface CityTarget extends SpatialTarget {
   id: string;
@@ -52,6 +54,42 @@ const CITY_TARGETS: readonly CityTarget[] = [
     longitude: 55.2744,
     rangeMeters: 5_000,
     pitchDegrees: -32
+  },
+  {
+    id: 'singapore',
+    name: 'SINGAPORE',
+    district: 'Marina Bay / Downtown Core',
+    latitude: 1.2838,
+    longitude: 103.8515,
+    rangeMeters: 4_600,
+    pitchDegrees: -34
+  },
+  {
+    id: 'sao-paulo',
+    name: 'SÃO PAULO',
+    district: 'Paulista / Bela Vista',
+    latitude: -23.5614,
+    longitude: -46.6559,
+    rangeMeters: 4_800,
+    pitchDegrees: -35
+  },
+  {
+    id: 'lagos',
+    name: 'LAGOS',
+    district: 'Victoria Island / Eko Atlantic',
+    latitude: 6.4281,
+    longitude: 3.4219,
+    rangeMeters: 4_800,
+    pitchDegrees: -34
+  },
+  {
+    id: 'sydney',
+    name: 'SYDNEY',
+    district: 'CBD / Circular Quay',
+    latitude: -33.8651,
+    longitude: 151.2099,
+    rangeMeters: 4_700,
+    pitchDegrees: -34
   }
 ];
 
@@ -78,6 +116,8 @@ export function App() {
   const [visualMode, setVisualMode] = useState<VisualMode>('solid');
   const [layers, setLayers] = useState<readonly LayerState[]>(INITIAL_LAYERS);
   const [selection, setSelection] = useState<SpatialFeatureSelection | null>(null);
+  const [powerOverlay, setPowerOverlay] = useState<SpatialOverlaySnapshot | null>(null);
+  const [powerOverlayError, setPowerOverlayError] = useState<string | null>(null);
 
   const temporalInstant = useMemo(
     () => ({
@@ -88,6 +128,21 @@ export function App() {
     }),
     [temporal]
   );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setPowerOverlay(null);
+    setPowerOverlayError(null);
+
+    void loadCityPowerOverlay(city.id, controller.signal)
+      .then((snapshot) => setPowerOverlay(snapshot))
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        setPowerOverlayError(error instanceof Error ? error.message : String(error));
+      });
+
+    return () => controller.abort();
+  }, [city.id]);
 
   const toggleLayer = (id: string) => {
     setLayers((current) =>
@@ -186,8 +241,28 @@ export function App() {
             time={temporalInstant}
             layers={layers}
             visualMode={visualMode}
+            overlays={powerOverlay ? [powerOverlay] : []}
             onSelection={setSelection}
           />
+
+          <div className="source-badge" data-source-state={
+            powerOverlayError ? 'unavailable' : powerOverlay?.live ? 'live' : powerOverlay ? 'fallback' : 'loading'
+          }>
+            <span>
+              {powerOverlayError
+                ? 'POWER DATA UNAVAILABLE'
+                : powerOverlay?.live
+                  ? 'OSM POWER · LIVE SOURCE'
+                  : powerOverlay
+                    ? 'POWER · FALLBACK'
+                    : 'POWER · LOADING'}
+            </span>
+            <small>
+              {powerOverlayError
+                ? powerOverlayError
+                : powerOverlay?.attribution ?? 'Source state pending'}
+            </small>
+          </div>
 
           <div className="scene-caption">
             <span>{city.name}</span>
