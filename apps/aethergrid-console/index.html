@@ -121,7 +121,7 @@
 
         <section class="workspace-view" data-workspace="global" aria-labelledby="globalTitle">
           <div class="workspace-head">
-            <div><span class="eyebrow">GLOBAL / GOD'S-EYE SPATIAL GRID</span><h1 id="globalTitle">Planetary Grid & Live 3D Cities</h1><p>Orbit a real-coordinate global grid, select world cities, then descend into live OpenStreetMap building geometry rendered as interactive 3D wireframes.</p></div>
+            <div><span class="eyebrow">GLOBAL / GOD'S-EYE SPATIAL GRID</span><h1 id="globalTitle">Planetary Grid & Live 3D Cities</h1><p>Orbit a real-coordinate global grid, descend anywhere on Earth, and inspect live OpenStreetMap buildings, roads, substations, generation assets and transmission geometry as interactive 3D wireframes.</p></div>
             <div class="workspace-actions"><span class="pill" id="geoRuntimeBadge">GEO RUNTIME</span><button class="secondary-button" data-global-action="reset">RESET VIEW</button></div>
           </div>
           <div class="global-workspace">
@@ -131,6 +131,19 @@
                 <select id="globalCitySelect" aria-label="Select city"><option value="new-york">New York · United States</option></select>
                 <button class="primary-button" data-action="load-live-city">DESCEND INTO CITY</button>
               </div>
+              <div class="global-coordinate-bar">
+                <input id="globalPointName" value="Coordinate Explorer" maxlength="80" aria-label="Coordinate label" />
+                <label>LAT <input id="globalPointLat" type="number" min="-90" max="90" step="0.00001" value="40.71280" /></label>
+                <label>LON <input id="globalPointLon" type="number" min="-180" max="180" step="0.00001" value="-74.00600" /></label>
+                <label>RADIUS <select id="globalPointRadius"><option value="500">500 m</option><option value="900" selected>900 m</option><option value="1500">1.5 km</option><option value="2000">2 km</option></select></label>
+                <button class="secondary-button" data-action="explore-coordinates">EXPLORE COORDINATES</button>
+              </div>
+              <div class="global-layer-controls" aria-label="City 3D layers">
+                <button class="active" data-global-layer="buildings">BUILDINGS</button>
+                <button class="active" data-global-layer="routes">ROADS</button>
+                <button class="active" data-global-layer="infrastructure">POWER GRID</button>
+                <button class="active" data-global-layer="nodes">ASSET NODES</button>
+              </div>
               <canvas id="globalGlobe" aria-label="Interactive 3D global spatial grid with real city coordinates"></canvas>
               <canvas id="cityGrid" aria-label="Interactive 3D city building wireframe" hidden></canvas>
               <div class="global-hud">
@@ -138,6 +151,7 @@
                 <span id="globalScale">PLANETARY SCALE</span>
                 <span id="geoSourceStatus">REAL COORDINATES · CITY MESH ON DEMAND</span>
               </div>
+              <label class="time-control global-time"><span>4D TIME INDEX</span><input id="globalTimeSlider" type="range" min="0" max="24" step=".25" value="12" /><span id="globalTimeValue">12:00</span></label>
               <div class="global-attribution" id="geoAttribution">City geometry: © OpenStreetMap contributors when live provider is available.</div>
             </section>
             <aside class="global-side">
@@ -146,8 +160,12 @@
                 <div id="globalCityList" class="global-city-list"><div class="empty-state">Loading world cities…</div></div>
               </section>
               <section class="panel compact-panel">
-                <header class="panel-head"><div class="panel-title"><span class="badge">⌂</span><span><h3>CITY MESH</h3><small>Live building geometry</small></span></div></header>
-                <div class="inspector-body" id="cityMeshStatus"><b>New York selected</b><p>Choose DESCEND INTO CITY to fetch live building footprints and heights from the configured geospatial provider.</p></div>
+                <header class="panel-head"><div class="panel-title"><span class="badge">⌂</span><span><h3>CITY MESH</h3><small>Live spatial geometry</small></span></div></header>
+                <div class="inspector-body" id="cityMeshStatus"><b>New York selected</b><p>Choose DESCEND INTO CITY to fetch live building, road and power-grid geometry from the configured geospatial provider.</p></div>
+              </section>
+              <section class="panel compact-panel">
+                <header class="panel-head"><div class="panel-title"><span class="badge">⌁</span><span><h3>LIVE GRID ASSETS</h3><small>Mapped infrastructure</small></span></div></header>
+                <div class="context-list" id="globalGridStats"><span><b>Power Lines</b><em>—</em></span><span><b>Power Assets</b><em>—</em></span><span><b>Roads</b><em>—</em></span><span><b>Buildings</b><em>—</em></span></div>
               </section>
               <section class="panel compact-panel">
                 <header class="panel-head"><div class="panel-title"><span class="badge">▤</span><span><h3>DATA PROVENANCE</h3><small>Source transparency</small></span></div></header>
