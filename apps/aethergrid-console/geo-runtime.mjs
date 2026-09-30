@@ -77,6 +77,8 @@ const CITY_PRESETS = Object.freeze([
 
 const POWER_LINE_TYPES = new Set(['line', 'minor_line', 'cable']);
 const POWER_ASSET_TYPES = new Set(['substation', 'plant', 'generator', 'transformer']);
+const RAIL_LINE_TYPES = new Set(['rail', 'subway', 'light_rail', 'monorail', 'tram']);
+const RAIL_STOP_TYPES = new Set(['station', 'halt', 'tram_stop']);
 
 function parseMetricHeight(value) {
   const raw = String(value || '').trim().toLowerCase();
@@ -498,6 +500,16 @@ function parseOverpassBuildings(payload, city) {
   return representativeBuildings(buildings);
 }
 
+function parseLayer(value) {
+  const parsed = Number.parseInt(String(value ?? '0'), 10);
+  return Number.isFinite(parsed) ? Math.max(-5, Math.min(5, parsed)) : 0;
+}
+
+function activeTag(value) {
+  const normalized = String(value || '').toLowerCase();
+  return Boolean(normalized && !['no', 'false', '0'].includes(normalized));
+}
+
 function parseOverpassRoads(payload, city) {
   const roads = [];
   for (const element of payload?.elements || []) {
@@ -513,16 +525,81 @@ function parseOverpassRoads(payload, city) {
       .map((point) => projectPoint(Number(point.lat), Number(point.lon), city))
       .filter(([x, z]) => Number.isFinite(x) && Number.isFinite(z));
     if (path.length < 2) continue;
+    const lanes = Number.parseFloat(String(element.tags?.lanes || ''));
     roads.push({
       id: `osm-road-${element.id}`,
       osmId: element.id,
-      name: String(element.tags?.name || ''),
+      name: String(element.tags?.name || element.tags?.ref || ''),
+      ref: String(element.tags?.ref || ''),
       highwayType: String(element.tags.highway),
+      lanes: Number.isFinite(lanes) && lanes > 0 ? lanes : null,
+      widthM: parseMetricHeight(element.tags?.width),
+      surface: String(element.tags?.surface || ''),
+      maxspeed: String(element.tags?.maxspeed || ''),
+      layer: parseLayer(element.tags?.layer),
+      bridge: activeTag(element.tags?.bridge),
+      tunnel: activeTag(element.tags?.tunnel),
       path,
     });
-    if (roads.length >= 260) break;
+    if (roads.length >= 320) break;
   }
   return roads;
+}
+
+function parseOverpassTransit(payload, city) {
+  const transitLines = [];
+  const transitStops = [];
+  const seenStops = new Set();
+
+  for (const element of payload?.elements || []) {
+    const railway = String(element.tags?.railway || '');
+    if (
+      element.type === 'way' &&
+      RAIL_LINE_TYPES.has(railway) &&
+      Array.isArray(element.geometry) &&
+      element.geometry.length >= 2
+    ) {
+      const path = element.geometry
+        .map((point) => projectPoint(Number(point.lat), Number(point.lon), city))
+        .filter(([x, z]) => Number.isFinite(x) && Number.isFinite(z));
+      if (path.length >= 2 && transitLines.length < 220) {
+        transitLines.push({
+          id: `osm-transit-line-${element.id}`,
+          osmId: element.id,
+          name: String(element.tags?.name || element.tags?.ref || ''),
+          ref: String(element.tags?.ref || ''),
+          transitType: railway,
+          service: String(element.tags?.service || ''),
+          operator: String(element.tags?.operator || ''),
+          network: String(element.tags?.network || ''),
+          layer: parseLayer(element.tags?.layer),
+          bridge: activeTag(element.tags?.bridge),
+          tunnel: activeTag(element.tags?.tunnel),
+          path,
+        });
+      }
+    }
+
+    if (RAIL_STOP_TYPES.has(railway)) {
+      const coordinate = elementCoordinate(element);
+      const stopId = `${element.type}-${element.id}`;
+      if (!coordinate || seenStops.has(stopId) || transitStops.length >= 180) continue;
+      seenStops.add(stopId);
+      transitStops.push({
+        id: `osm-transit-stop-${stopId}`,
+        osmId: element.id,
+        osmType: element.type,
+        name: String(element.tags?.name || element.tags?.ref || ''),
+        transitType: railway,
+        stationType: String(element.tags?.station || ''),
+        network: String(element.tags?.network || ''),
+        operator: String(element.tags?.operator || ''),
+        position: projectPoint(coordinate[0], coordinate[1], city),
+      });
+    }
+  }
+
+  return { transitLines, transitStops };
 }
 
 function elementCoordinate(element) {
@@ -674,6 +751,8 @@ export function createGeoRuntime({
         'waterways',
         'coastline',
         'green-areas',
+        'rail-transit',
+        'transit-stations',
       ],
       skylineFields: ['height', 'est_height', 'building:levels', 'min_height', 'building:min_level', 'roof:shape', 'roof:height', 'roof:levels', 'building:material', 'building:colour', 'roof:material', 'roof:colour'],
       upstreamFreshness: 'OpenStreetMap replication-backed upstream state when queried',
@@ -690,7 +769,7 @@ export function createGeoRuntime({
       const buildings = seededFallback(city);
       const source = { provider: 'local-fallback', live: false, attribution: null };
       return {
-        schemaVersion: 4,
+        schemaVersion: 5,
         city,
         source,
         buildings,
@@ -700,6 +779,8 @@ export function createGeoRuntime({
         waterways: [],
         coastlines: [],
         greenAreas: [],
+        transitLines: [],
+        transitStops: [],
         ...power,
       };
     }
@@ -717,6 +798,8 @@ export function createGeoRuntime({
         `nwr["leisure"~"^(park|garden|nature_reserve)$"](around:${city.radiusM},${city.lat},${city.lon});` +
         `nwr["landuse"~"^(grass|recreation_ground|meadow)$"](around:${city.radiusM},${city.lat},${city.lon});` +
         `nwr["natural"~"^(wood|grassland)$"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `way["railway"~"^(rail|subway|light_rail|monorail|tram)$"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `nwr["railway"~"^(station|halt|tram_stop)$"](around:${city.radiusM},${city.lat},${city.lon});` +
         `way["power"~"^(line|minor_line|cable)$"](around:${city.radiusM},${city.lat},${city.lon});` +
         `nwr["power"~"^(substation|plant|generator|transformer)$"](around:${city.radiusM},${city.lat},${city.lon});` +
         `);out tags geom center;`;
@@ -736,6 +819,7 @@ export function createGeoRuntime({
       const roads = parseOverpassRoads(payload, city);
       const water = parseOverpassWater(payload, city);
       const greenAreas = parseOverpassGreen(payload, city);
+      const transit = parseOverpassTransit(payload, city);
       const power = parseOverpassPower(payload, city);
       if (buildings.length < 5) {
         throw new Error('Overpass returned too few building footprints');
@@ -749,7 +833,7 @@ export function createGeoRuntime({
         freshnessModel: 'OpenStreetMap upstream database at request time',
       };
       const value = {
-        schemaVersion: 4,
+        schemaVersion: 5,
         city,
         source,
         buildings,
@@ -757,6 +841,7 @@ export function createGeoRuntime({
         roads,
         ...water,
         greenAreas,
+        ...transit,
         ...power,
       };
       cache.set(cacheKey, { cachedAt: now(), value });
@@ -771,7 +856,7 @@ export function createGeoRuntime({
         error: error instanceof Error ? error.message : String(error),
       };
       return {
-        schemaVersion: 4,
+        schemaVersion: 5,
         city,
         source,
         buildings,
@@ -781,6 +866,8 @@ export function createGeoRuntime({
         waterways: [],
         coastlines: [],
         greenAreas: [],
+        transitLines: [],
+        transitStops: [],
         ...power,
       };
     }
