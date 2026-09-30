@@ -145,6 +145,19 @@
                 <button class="active" data-global-layer="terrain">TERRAIN</button>
                 <button class="active" data-global-layer="nodes">ASSET NODES</button>
               </div>
+              <div class="city-visual-controls" aria-label="City visual mode">
+                <span>VISUAL</span>
+                <button class="active" data-city-visual="solid">SOLID 3D</button>
+                <button data-city-visual="xray">X-RAY</button>
+                <button data-city-visual="operations">OPERATIONS</button>
+              </div>
+              <div class="city-transition-overlay" id="cityTransitionOverlay" hidden aria-live="polite">
+                <div class="city-transition-reticle" aria-hidden="true"><i></i><i></i><i></i></div>
+                <small>GLOBAL → CITY DIGITAL TWIN</small>
+                <b id="cityTransitionName">NEW YORK</b>
+                <div class="city-transition-progress"><i id="cityTransitionProgress"></i></div>
+                <span id="cityTransitionStage">Aligning coordinates…</span>
+              </div>
               <canvas id="globalGlobe" aria-label="Interactive 3D global spatial grid with real city coordinates"></canvas>
               <canvas id="cityGrid" aria-label="Interactive 3D city building wireframe" hidden></canvas>
               <div class="global-hud">
@@ -163,6 +176,15 @@
               <section class="panel compact-panel">
                 <header class="panel-head"><div class="panel-title"><span class="badge">⌂</span><span><h3>CITY MESH</h3><small>Live spatial geometry</small></span></div></header>
                 <div class="inspector-body" id="cityMeshStatus"><b>New York selected</b><p>Choose DESCEND INTO CITY to fetch live building, road and power-grid geometry from the configured geospatial provider.</p></div>
+              </section>
+              <section class="panel compact-panel city-operations-panel">
+                <header class="panel-head"><div class="panel-title"><span class="badge">◈</span><span><h3>CITY OPERATIONS</h3><small>Use the live 3D twin</small></span></div></header>
+                <div class="city-operation-controls">
+                  <label>USE CASE<select id="cityUseCaseSelect"><option value="grid-resilience">Grid Resilience</option><option value="outage-impact">Outage Impact</option><option value="emergency-access">Emergency Access</option><option value="renewable-siting">Renewable Siting</option><option value="load-growth">Load Growth</option></select></label>
+                  <button class="primary-button" data-action="run-city-use-case">RUN CITY ANALYSIS</button>
+                </div>
+                <div class="city-operation-result" id="cityUseCaseResult"><div class="empty-state">Load a live city, then run a use case to turn the 3D twin into an operational planning surface.</div></div>
+                <button class="secondary-button city-team-button" data-action="ask-city-team" disabled>ASK AI TEAM ABOUT THIS CITY</button>
               </section>
               <section class="panel compact-panel">
                 <header class="panel-head"><div class="panel-title"><span class="badge">⌁</span><span><h3>LIVE GRID ASSETS</h3><small>Mapped infrastructure</small></span></div></header>
@@ -254,7 +276,7 @@
 
         <section class="workspace-view" data-workspace="ai" aria-labelledby="aiTitle">
           <div class="workspace-head">
-            <div><span class="eyebrow">AI / MULTI-AGENT INTELLIGENCE</span><h1 id="aiTitle">Agent Collaboration Center</h1><p>Work with VÆLON, AUREN and SOLVÆR individually or ask the team to collaborate.</p></div>
+            <div><span class="eyebrow">AI / MULTI-AGENT INTELLIGENCE</span><h1 id="aiTitle">Agent Collaboration Center</h1><p>Each specialist now has an independent persistent chat thread. Work with VÆLON, AUREN and SOLVÆR separately, or use TEAM mode for coordinated synthesis.</p></div>
             <div class="workspace-actions"><span class="pill" id="aiRuntimeBadge">LOCAL FALLBACK</span></div>
           </div>
           <div class="ai-workspace">
@@ -268,7 +290,7 @@
               </div>
             </aside>
             <section class="panel agent-console">
-              <header class="panel-head"><div class="panel-title"><span class="badge">◉</span><span><h3 id="activeAgentTitle">TEAM MODE</h3><small id="activeAgentSubtitle">VÆLON + AUREN + SOLVÆR</small></span></div><button class="secondary-button" data-action="clear-chat">CLEAR</button></header>
+              <header class="panel-head agent-console-head"><div class="panel-title"><span class="badge">◉</span><span><h3 id="activeAgentTitle">TEAM MODE</h3><small id="activeAgentSubtitle">VÆLON + AUREN + SOLVÆR</small></span></div><div class="agent-thread-actions"><span class="thread-pill" id="agentThreadBadge">TEAM THREAD</span><button class="secondary-button" data-action="clear-chat">CLEAR THREAD</button></div></header>
               <div class="chat-log agent-chat-log" id="chatLog"><div class="chat-bubble system">Team mode ready. Ask for analysis, optimization, simulation evidence, or a combined recommendation.</div></div>
               <form class="chat-form" id="chatForm"><textarea id="chatInput" rows="3" placeholder="Ask the selected agent or team…"></textarea><button class="primary-button">SEND</button></form>
             </section>
