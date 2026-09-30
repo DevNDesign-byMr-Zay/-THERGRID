@@ -54,6 +54,7 @@ export function SpatialViewport({
   const journeyGenerationRef = useRef(0);
   const lastJourneyKeyRef = useRef<string | null>(null);
   const [status, setStatus] = useState<SpatialRendererStatus>(STARTING_STATUS);
+  const [switchingEngine, setSwitchingEngine] = useState(false);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -241,6 +242,29 @@ export function SpatialViewport({
     };
   }, [target, status.ready]);
 
+  const switchEngine = async (
+    engine: SpatialRendererStatus['engine']
+  ) => {
+    const manager = managerRef.current;
+    if (!manager || switchingEngine || status.engine === engine) return;
+
+    setSwitchingEngine(true);
+    try {
+      const next = await manager.use(engine);
+      setStatus(next);
+      await manager.flyTo(target);
+      setStatus(manager.status());
+    } catch (error) {
+      setStatus({
+        ...manager.status(),
+        degraded: true,
+        reason: error instanceof Error ? error.message : String(error)
+      });
+    } finally {
+      setSwitchingEngine(false);
+    }
+  };
+
   const phaseProgress: Record<string, number> = {
     global: 25,
     regional: 50,
@@ -263,6 +287,26 @@ export function SpatialViewport({
               : `${status.detailLevel?.toUpperCase() ?? 'STREAM'} · STREAMING`
             : 'INITIALIZING'}
         </small>
+        <div className="renderer-engine-switch" role="group" aria-label="Spatial renderer">
+          {[
+            ['cesium', 'CESIUM'],
+            ['native-webgl', 'NATIVE']
+          ].map(([engine, label]) => (
+            <button
+              type="button"
+              key={engine}
+              className={status.engine === engine ? 'active' : ''}
+              disabled={switchingEngine}
+              onClick={() =>
+                void switchEngine(
+                  engine as SpatialRendererStatus['engine']
+                )
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {status.busy ? (
