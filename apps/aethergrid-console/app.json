@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "aethergrid.operator-console",
   "name": "ÆTHERGRID Operator Console",
-  "version": "2.8.0",
+  "version": "2.9.0",
   "format": "html+pwa+node-app",
   "entrypoints": {
     "standaloneHtml": "standalone.html",
@@ -22,7 +22,10 @@
     "designReferenceRepositoryPath": "assets/dashboard-reference.webp",
     "designReferenceIncludedInRuntimePackage": false,
     "proceduralCityLightsRepresentOccupancy": false,
-    "proceduralCityLightsBasis": "mapped building geometry + daylight state"
+    "proceduralCityLightsBasis": "mapped building geometry + daylight state",
+    "sourceTaggedMaterialStyling": true,
+    "landmarkEmphasisIsSourceBound": true,
+    "environmentalGeometryFallbackInvented": false
   },
   "backend": {
     "runtime": "node>=22",
@@ -177,7 +180,16 @@
     "solarDaylightContext": true,
     "humidityPressureContext": true,
     "heatStressUseCase": true,
-    "visibilityOperationsUseCase": true
+    "visibilityOperationsUseCase": true,
+    "sourceBackedWaterAreas": true,
+    "sourceBackedWaterways": true,
+    "sourceBackedCoastlines": true,
+    "sourceBackedGreenAreas": true,
+    "sourceTaggedBuildingMaterialOverlays": true,
+    "sourceBackedLandmarkEmphasis": true,
+    "floodContextUseCase": true,
+    "greenInfrastructureUseCase": true,
+    "noInventedEnvironmentalGeometry": true
   },
   "aiRuntime": {
     "providers": [
@@ -227,7 +239,11 @@
       "power-lines",
       "power-assets",
       "terrain",
-      "roofs"
+      "roofs",
+      "water-areas",
+      "waterways",
+      "coastline",
+      "green-areas"
     ],
     "solidBuildingVolumes": true,
     "buildingParts": true,
@@ -246,7 +262,9 @@
       "air-quality-exposure",
       "seismic-awareness",
       "heat-stress",
-      "visibility-operations"
+      "visibility-operations",
+      "flood-context",
+      "green-infrastructure"
     ],
     "skylineFocusPresets": true,
     "maxSupportedBuildingHeightM": 1200,
@@ -259,8 +277,32 @@
       "air",
       "seismic",
       "clouds",
-      "illumination"
-    ]
+      "illumination",
+      "water",
+      "green",
+      "landmarks"
+    ],
+    "cityIdentity": {
+      "waterTags": [
+        "natural=water",
+        "water=*",
+        "waterway=river|canal|stream|tidal_channel",
+        "natural=coastline"
+      ],
+      "greenTags": [
+        "leisure=park|garden|nature_reserve",
+        "landuse=grass|recreation_ground|meadow",
+        "natural=wood|grassland"
+      ],
+      "buildingMaterialFields": [
+        "building:material",
+        "building:colour",
+        "roof:material",
+        "roof:colour"
+      ],
+      "landmarkRule": "named + source-backed height >= max(70m, city p95 height)",
+      "fallbackInventsWaterOrGreen": false
+    }
   },
   "quantumRuntime": {
     "module": "quantum-runtime.mjs",
