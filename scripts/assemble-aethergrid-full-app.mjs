@@ -181,11 +181,16 @@ assert(/data-global-layer="terrain"/u.test(sourceHtml), 'runtime index.html must
 assert(/id="globalTimeSlider"/u.test(sourceHtml), 'runtime index.html must expose the global 4D time index');
 assert(/data-action="city-live-now"/u.test(sourceHtml), 'runtime index.html must expose city live-time synchronization');
 assert(/data-global-layer="weather"/u.test(sourceHtml), 'runtime index.html must expose the live weather layer');
+assert(/data-global-layer="clouds"/u.test(sourceHtml), 'runtime index.html must expose the live cloud layer');
+assert(/data-global-layer="illumination"/u.test(sourceHtml), 'runtime index.html must expose the city-light layer');
 assert(/data-global-layer="air"/u.test(sourceHtml), 'runtime index.html must expose the live air-quality layer');
 assert(/data-global-layer="seismic"/u.test(sourceHtml), 'runtime index.html must expose the live seismic layer');
 assert(/value="weather-readiness"/u.test(sourceHtml), 'runtime index.html must expose weather readiness analysis');
 assert(/value="air-quality-exposure"/u.test(sourceHtml), 'runtime index.html must expose air-quality exposure analysis');
 assert(/value="seismic-awareness"/u.test(sourceHtml), 'runtime index.html must expose seismic awareness analysis');
+assert(/value="heat-stress"/u.test(sourceHtml), 'runtime index.html must expose heat-stress analysis');
+assert(/value="visibility-operations"/u.test(sourceHtml), 'runtime index.html must expose visibility analysis');
+assert(/id="globalSolarStatus"/u.test(sourceHtml), 'runtime index.html must expose solar-position status');
 assert(/id="settingTheme"/u.test(sourceHtml), 'runtime index.html must expose persistent appearance modes');
 assert(/id="profileForm"/u.test(sourceHtml), 'runtime index.html must expose the persistent operator profile form');
 assert(/id="quantumCircuit"/u.test(sourceHtml), 'runtime index.html must expose real quantum job controls');
@@ -230,6 +235,12 @@ assert(/resolvedTheme/u.test(standaloneHtml), 'standalone HTML must retain appea
 assert(/environmentHour/u.test(standaloneHtml), 'standalone HTML must retain live city time synchronization');
 assert(/setLiveActivity/u.test(standaloneHtml), 'standalone HTML must retain animated global live-activity rendering');
 assert(/weatherLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL wind geometry');
+assert(/cloudParticles/u.test(standaloneHtml), 'standalone HTML must retain native WebGL cloud geometry');
+assert(/cityLights/u.test(standaloneHtml), 'standalone HTML must retain procedural skyline light geometry');
+assert(/solarPosition/u.test(standaloneHtml), 'standalone HTML must retain solar-position calculation');
+assert(/updateSolarGeometry/u.test(standaloneHtml), 'standalone HTML must retain the live solar terminator');
+assert(/u_flow/u.test(standaloneHtml), 'standalone HTML must retain directional atmosphere flow');
+assert(/u_drop/u.test(standaloneHtml), 'standalone HTML must retain falling precipitation motion');
 assert(/airParticles/u.test(standaloneHtml), 'standalone HTML must retain native WebGL air-quality particles');
 assert(/seismicLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL seismic rings');
 payload.set('standalone.html', Buffer.from(standaloneHtml, 'utf8'));
@@ -271,7 +282,16 @@ payload.set(
           'animated-air-quality-particles',
           'animated-seismic-rings',
           'animated-global-live-context',
-          'source-driven-city-use-cases'
+          'source-driven-city-use-cases',
+          'real-time-solar-terminator',
+          'live-subsolar-point',
+          'night-side-city-illumination',
+          'wind-driven-cloud-deck',
+          'directional-precipitation-motion',
+          'procedural-skyline-lighting',
+          'solar-daylight-context',
+          'heat-stress-operation',
+          'visibility-operations'
         ],
         files: inventory,
       },
