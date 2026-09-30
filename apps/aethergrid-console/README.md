@@ -155,6 +155,30 @@ AETHERGRID_SEISMIC_PROVIDER=usgs
 AETHERGRID_USGS_EARTHQUAKE_URL=https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson
 AETHERGRID_SEISMIC_CACHE_TTL_MS=60000
 ```
+## v2.8 solar cycle and city identity
+
+ÆTHERGRID now gives the globe and city twins a real time-of-day identity instead of treating every scene as an always-on neon model.
+
+At planetary scale:
+- the subsolar coordinate is computed from current UTC using solar declination and equation-of-time terms;
+- the day/night terminator is rendered as a great circle orthogonal to the live sun vector;
+- a live sun point marks the subsolar location;
+- maintained city nodes on the night side receive a separate illumination pulse while AQI and seismic layers remain independently visible.
+
+Inside a city:
+- cloud-deck density derives from current cloud cover and moves with current modeled wind direction;
+- wind and air-quality particles drift directionally instead of only oscillating vertically;
+- precipitation falls cyclically while inheriting wind drift;
+- mapped building geometry generates procedural façade-light anchors that become prominent at night;
+- CITY LIGHTS and CLOUDS are independently toggleable layers.
+
+The city-light layer is a visualization of mapped geometry plus daylight state. It does **not** claim measured window occupancy, electricity use, or actual lights-on status for any building.
+
+Current environment context also includes modeled relative humidity, surface pressure, sunrise, sunset, daylight duration and sunshine duration when the provider returns them.
+
+Two additional bounded workflows use that context:
+- **Heat Stress** combines apparent temperature, humidity, UV and mapped built form. It is not WBGT or a clinical heat-risk assessment.
+- **Visibility Operations** combines modeled visibility, cloud, precipitation, AQI and mapped roads. It is not an aviation minimum, navigation clearance or traffic-safety guarantee.
 ## Windows ZIP workflow
 
 After extracting the package:
