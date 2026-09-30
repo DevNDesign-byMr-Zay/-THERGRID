@@ -471,7 +471,10 @@ test('v4 world scope isolates global live context from selected-city overlays', 
   const app = await text('apps/aethergrid-console/web/src/app/App.tsx');
 
   assert.match(app, /scope === 'world'\s*\? \[worldOverlay\]/u);
-  assert.match(app, /atmosphere=\{scope === 'city' \? atmosphere : null\}/u);
+  assert.match(
+    app,
+    /atmosphere=\{\s*scope === 'city' && temporal\.mode === 'live' \? atmosphere : null\s*\}/u,
+  );
   assert.match(app, /scope === 'world'\s*\? \{\s*latitude: 20,\s*longitude: 0/u);
   assert.match(app, /scope === 'city' && cityIdentity/u);
   assert.match(app, /scope === 'city' && atmosphere/u);
@@ -851,14 +854,8 @@ test('v4 temporal modes hide current-only environment feeds outside live time', 
     app,
     /atmosphere=\{\s*scope === 'city' && temporal\.mode === 'live' \? atmosphere : null\s*\}/u,
   );
-  assert.match(
-    app,
-    /environment:[\s\S]{0,180}temporal\.mode === 'live'/u,
-  );
-  assert.match(
-    app,
-    /liveContext:[\s\S]{0,180}temporal\.mode === 'live'/u,
-  );
+  assert.match(app, /environment:[\s\S]{0,180}temporal\.mode === 'live'/u);
+  assert.match(app, /liveContext:[\s\S]{0,180}temporal\.mode === 'live'/u);
   assert.match(app, /temporal\.mode !== 'live'[\s\S]{0,120}\? 0/u);
   assert.match(rail, /LIVE SOURCES/u);
   assert.match(rail, /STATIC MAP CONTEXT/u);
