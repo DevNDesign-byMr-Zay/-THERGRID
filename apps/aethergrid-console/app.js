@@ -1640,32 +1640,165 @@
   }
 
   async function loadRuntimeConfig() {
-    const container = q('#aiRuntimeSettings');
-    if (!container) return;
+    const aiContainer = q('#aiRuntimeSettings');
+    const geoContainer = q('#geoRuntimeSettings');
+    const quantumContainer = q('#quantumRuntimeSettings');
     try {
       const result = await api('./api/aethergrid/runtime');
       state.runtime = result;
-      const agents = result.agents || {};
-      container.innerHTML = `
-        <div class="runtime-status"><span class="status-dot"></span><div><b>${escapeHtml(result.mode || 'Provider runtime ready')}</b><small>Secrets remain server-side.</small></div></div>
-        ${Object.entries(agents)
-          .map(
-            ([name, config]) =>
-              `<div class="runtime-status"><span class="status-dot"></span><div><b>${escapeHtml(name)} · ${escapeHtml(config.provider || 'fallback')}</b><small>${escapeHtml(config.model || 'deterministic-local')} · ${escapeHtml(config.status || 'ready')}</small></div></div>`,
-          )
-          .join('')}
-      `;
+      state.geospatial.runtime = result.geospatial || null;
+      state.quantumRuntime = result.quantum || null;
+      const agents = result.agents || result.ai?.agents || {};
+      if (aiContainer) {
+        aiContainer.innerHTML = `
+          <div class="runtime-status"><span class="status-dot"></span><div><b>${escapeHtml(result.mode || result.ai?.mode || 'Provider runtime ready')}</b><small>Secrets remain server-side.</small></div></div>
+          ${Object.entries(agents)
+            .map(
+              ([name, config]) =>
+                `<div class="runtime-status"><span class="status-dot"></span><div><b>${escapeHtml(name)} · ${escapeHtml(config.provider || 'fallback')}</b><small>${escapeHtml(config.model || 'deterministic-local')} · ${escapeHtml(config.status || 'ready')}</small></div></div>`,
+            )
+            .join('')}
+        `;
+      }
       for (const [name, config] of Object.entries(agents)) {
         const badge = q(`[data-agent-runtime="${CSS.escape(name)}"]`);
         if (badge) badge.textContent = config.model || config.provider || 'READY';
       }
-      if (q('#aiRuntimeBadge')) q('#aiRuntimeBadge').textContent = result.liveProviders ? 'MODEL PROVIDERS READY' : 'LOCAL FALLBACK';
+      const liveProviders = Boolean(result.liveProviders ?? result.ai?.liveProviders);
+      if (q('#aiRuntimeBadge')) q('#aiRuntimeBadge').textContent = liveProviders ? 'MODEL PROVIDERS READY' : 'LOCAL FALLBACK';
+
+      if (geoContainer) {
+        const geo = result.geospatial || {};
+        geoContainer.innerHTML = `<div class="runtime-status"><span class="status-dot"></span><div><b>${escapeHtml(geo.provider || 'local')}</b><small>${geo.liveProviderConfigured ? 'Live city geometry provider configured' : 'Local geometry fallback'} · ${escapeHtml(geo.attribution || 'No external attribution')}</small></div></div>`;
+      }
+
+      if (quantumContainer) {
+        const quantum = result.quantum || {};
+        quantumContainer.innerHTML = `<div class="runtime-status"><span class="status-dot"></span><div><b>${escapeHtml(quantum.provider || 'local-simulator')}</b><small>${quantum.configured ? 'Configured' : 'Credentials or backend required'} · ${escapeHtml(quantum.defaultBackend || 'No default backend')}</small></div></div>`;
+      }
+      renderQuantumRuntime(result.quantum || {});
     } catch {
-      container.innerHTML =
-        '<div class="runtime-status"><span class="status-dot"></span><div><b>Standalone fallback</b><small>Start server.mjs to enable configured model providers.</small></div></div>';
+      if (aiContainer) {
+        aiContainer.innerHTML =
+          '<div class="runtime-status"><span class="status-dot"></span><div><b>Standalone fallback</b><small>Start server.mjs to enable configured model providers.</small></div></div>';
+      }
+      if (geoContainer) {
+        geoContainer.innerHTML =
+          '<div class="runtime-status"><span class="status-dot"></span><div><b>Standalone geospatial mode</b><small>Backend required for live OpenStreetMap city geometry.</small></div></div>';
+      }
+      if (quantumContainer) {
+        quantumContainer.innerHTML =
+          '<div class="runtime-status"><span class="status-dot"></span><div><b>Standalone quantum visualization</b><small>Backend required for local sampler or IBM Quantum submission.</small></div></div>';
+      }
       if (q('#aiRuntimeBadge')) q('#aiRuntimeBadge').textContent = 'LOCAL FALLBACK';
+      renderQuantumRuntime({ provider: 'standalone', configured: false });
     }
   }
+
+  function renderQuantumRuntime(runtime = {}) {
+    state.quantumRuntime = { ...(state.quantumRuntime || {}), ...runtime };
+    const provider = runtime.provider || 'local-simulator';
+    if (q('#quantumProviderBadge')) {
+      q('#quantumProviderBadge').textContent =
+        provider === 'ibm-quantum'
+          ? runtime.configured
+            ? 'IBM QUANTUM READY'
+            : 'IBM QUANTUM CONFIG NEEDED'
+          : provider === 'standalone'
+            ? 'STANDALONE'
+            : 'LOCAL SAMPLER';
+    }
+    const status = q('#quantumRuntimeStatus');
+    if (status) {
+      status.innerHTML = `<span class="status-dot"></span><div><b>${escapeHtml(provider)}</b><small>${runtime.hardwareExecution ? 'Real QPU submission enabled' : 'Local deterministic sampler'} · ${escapeHtml(runtime.defaultBackend || 'no backend selected')} · credentials never enter the browser</small></div>`;
+    }
+  }
+
+  async function loadQuantumBackends() {
+    const select = q('#quantumBackend');
+    try {
+      const result = await api('./api/aethergrid/quantum/backends');
+      const backends = Array.isArray(result.backends) ? result.backends : [];
+      if (select && backends.length) {
+        select.innerHTML = backends
+          .map(
+            (backend) =>
+              `<option value="${escapeHtml(backend.name)}">${escapeHtml(backend.name)} · ${escapeHtml(backend.status || 'available')}${backend.simulator ? ' · simulator' : ''}</option>`,
+          )
+          .join('');
+        if (state.quantumRuntime?.defaultBackend && backends.some((item) => item.name === state.quantumRuntime.defaultBackend)) {
+          select.value = state.quantumRuntime.defaultBackend;
+        }
+      }
+      showToast('QUANTUM BACKENDS', `${backends.length} backend${backends.length === 1 ? '' : 's'} available through ${result.provider}.`);
+    } catch (error) {
+      showToast('QUANTUM BACKENDS', error.message || 'Unable to load quantum backends.');
+    }
+  }
+
+  function renderQuantumJob(job) {
+    const container = q('#quantumJobResult');
+    if (!container || !job) return;
+    const distribution = job.distribution
+      ? Object.entries(job.distribution)
+          .map(([stateKey, count]) => `<dt>|${escapeHtml(stateKey)}⟩</dt><dd>${Number(count).toLocaleString()}</dd>`)
+          .join('')
+      : '';
+    container.innerHTML = `<div class="quantum-job-card"><b>${escapeHtml(job.id || 'Quantum job')}</b><code>${escapeHtml(job.provider || 'unknown')} / ${escapeHtml(job.backend || 'unknown')}</code><dl><dt>Status</dt><dd>${escapeHtml(job.status || 'unknown')}</dd><dt>Primitive</dt><dd>${escapeHtml(job.programId || 'sampler')}</dd><dt>Hardware Submitted</dt><dd>${job.hardwareSubmitted ? 'YES' : 'NO'}</dd><dt>Receipt</dt><dd>${escapeHtml((job.receipt || '').slice(0, 18))}…</dd>${distribution}</dl></div>`;
+  }
+
+  async function submitQuantumJob() {
+    const circuit = q('#quantumCircuit')?.value.trim();
+    const backend = q('#quantumBackend')?.value;
+    const shots = Number(q('#quantumShots')?.value || 1024);
+    if (!circuit) return showToast('QUANTUM JOB', 'OpenQASM circuit is required.');
+    if (q('#quantumProviderBadge')) q('#quantumProviderBadge').textContent = 'SUBMITTING…';
+    try {
+      const result = await api('./api/aethergrid/quantum/jobs', {
+        method: 'POST',
+        body: JSON.stringify({ circuit, backend, shots }),
+      });
+      renderQuantumJob(result.job);
+      if (result.evidence) {
+        state.evidence.unshift(result.evidence);
+        state.evidence = state.evidence.slice(0, 24);
+      }
+      if (Array.isArray(result.activity)) state.activity = result.activity;
+      renderEvidence();
+      renderQuantumRuntime(state.quantumRuntime || {});
+      showToast(
+        'QUANTUM JOB SUBMITTED',
+        `${result.job.provider} · ${result.job.backend} · ${result.job.status}`,
+      );
+      if (result.job.provider === 'ibm-quantum') loadQuantumJobs();
+    } catch (error) {
+      renderQuantumRuntime(state.quantumRuntime || {});
+      showToast('QUANTUM JOB FAILED', error.message || String(error));
+    }
+  }
+
+  async function loadQuantumJobs() {
+    const container = q('#quantumJobs');
+    if (!container) return;
+    try {
+      const result = await api('./api/aethergrid/quantum/jobs?limit=20');
+      const jobs = Array.isArray(result.jobs) ? result.jobs : [];
+      container.innerHTML = jobs.length
+        ? jobs
+            .map(
+              (job) =>
+                `<div class="history-row"><b>${escapeHtml(job.id || 'job')}</b><small>${escapeHtml(job.backend || 'backend')} · ${escapeHtml(job.programId || 'program')} · ${escapeHtml(job.status || 'unknown')}${job.created ? ` · ${escapeHtml(job.created)}` : ''}</small></div>`,
+            )
+            .join('')
+        : '<div class="empty-state">No remote jobs returned by the configured provider.</div>';
+    } catch (error) {
+      container.innerHTML = `<div class="empty-state">${escapeHtml(error.message || String(error))}</div>`;
+    }
+  }
+
+  q('[data-action="refresh-quantum-backends"]')?.addEventListener('click', loadQuantumBackends);
+  q('[data-action="submit-quantum-job"]')?.addEventListener('click', submitQuantumJob);
+  q('[data-action="refresh-quantum-jobs"]')?.addEventListener('click', loadQuantumJobs);
 
   qa('[data-map-tool]').forEach((button) =>
     button.addEventListener('click', () => {
