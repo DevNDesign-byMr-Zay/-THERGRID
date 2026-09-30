@@ -154,6 +154,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#visualMode = mode;
     if (!this.#visualController) return;
     const result = this.#visualController.apply(mode);
+    this.#grid?.setVisualMode(mode);
     this.#degraded = result.degraded;
     this.#reason = result.reason;
     if (this.#buildings) this.#buildings.show = this.#layerVisible('buildings', true);
