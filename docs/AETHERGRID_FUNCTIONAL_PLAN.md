@@ -153,7 +153,7 @@ A fresh ZIP is considered functional when:
 
 ## Current verified state
 
-Batches 1–10 are implemented in `main` and have passed the maintained verification gates.
+Batches 1–11 are implemented and required to pass the maintained verification gates before merge to `main`.
 
 - Grid, Global, Holographic, Quantum, AI, Scenarios, Evidence and Settings are distinct routed workspaces.
 - WebGL node picking, scenario editing/duplication, evidence drill-down, agent receipts, persistent settings/profile, global coordinate exploration, mapped grid infrastructure, terrain and quantum provider workflows are all present.
@@ -297,7 +297,7 @@ Status: COMPLETE
 
 ## Batch 11 — Solid live cities, operational use cases, and dedicated agent threads
 
-Status: IMPLEMENTED / VERIFYING
+Status: COMPLETE
 
 ### Solid live 3D cities
 - OSM building footprints are extruded into translucent WebGL triangle surfaces instead of wireframe-only shells;
