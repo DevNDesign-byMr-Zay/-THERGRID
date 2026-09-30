@@ -208,6 +208,45 @@
       this.hubs=hubs;
     }
 
+    loadGraph(graph) {
+      if (!graph?.nodes?.length || !graph?.routes?.length) return;
+      const gl = this.gl;
+      for (const item of Object.values(this.geometry)) {
+        if (item?.buffer) gl.deleteBuffer(item.buffer);
+      }
+      const grid=[], buildings=[], routes=[], nodes=[];
+      for (let n=-10;n<=10;n++) {
+        this.line(grid,[-10,0,n],[10,0,n],n*.21);
+        this.line(grid,[n,0,-10],[n,0,10],n*.23);
+      }
+      const nodeMap = new Map(graph.nodes.map((node) => [node.id, node]));
+      graph.structures?.forEach((item) => {
+        const x0=item.x-item.width,x1=item.x+item.width,z0=item.z-item.depth,z1=item.z+item.depth,h=item.height,p=item.temporalPhase||0;
+        [
+          [[x0,0,z0],[x1,0,z0]],[[x1,0,z0],[x1,0,z1]],[[x1,0,z1],[x0,0,z1]],[[x0,0,z1],[x0,0,z0]],
+          [[x0,h,z0],[x1,h,z0]],[[x1,h,z0],[x1,h,z1]],[[x1,h,z1],[x0,h,z1]],[[x0,h,z1],[x0,h,z0]],
+          [[x0,0,z0],[x0,h,z0]],[[x1,0,z0],[x1,h,z0]],[[x1,0,z1],[x1,h,z1]],[[x0,0,z1],[x0,h,z1]]
+        ].forEach(([a,b])=>this.line(buildings,a,b,p));
+      });
+      graph.nodes.forEach((node,index)=>{
+        const [x,y,z]=node.position; this.v(nodes,x,y,z,index*.91);
+      });
+      graph.routes.forEach((route,index)=>{
+        const a=nodeMap.get(route.from)?.position,b=nodeMap.get(route.to)?.position;if(!a||!b)return;
+        let prev=a;
+        for(let step=1;step<=22;step++){
+          const t=step/22,bow=Math.sin(t*Math.PI)*(.52+(index%3)*.15);
+          const cur=[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t+bow,a[2]+(b[2]-a[2])*t];
+          this.line(routes,prev,cur,(route.phase||0)+t*5);prev=cur;
+        }
+      });
+      this.geometry.grid=this.makeBuffer(grid);
+      this.geometry.buildings=this.makeBuffer(buildings);
+      this.geometry.routes=this.makeBuffer(routes);
+      this.geometry.nodes=this.makeBuffer(nodes);
+      this.hubs=graph.nodes.map((node)=>node.position);
+    }
+
     resize() {
       if (!this.gl) return;
       const dpr=Math.min(devicePixelRatio||1,2), rect=this.canvas.getBoundingClientRect();
@@ -311,7 +350,17 @@
   syncStateToUi();
 
   async function loadState(){
-    try{mergeState(await api('./api/aethergrid/state'));q('#streamReadout').textContent='LIVE STREAM'}catch{q('#streamReadout').textContent='LOCAL 4D SIM'}
+    try{
+      const [runtime,spatialGraph]=await Promise.all([
+        api('./api/aethergrid/state'),
+        api('./api/aethergrid/spatial?hour='+encodeURIComponent(q('#timeSlider').value))
+      ]);
+      mergeState(runtime);
+      spatial?.loadGraph(spatialGraph);
+      q('#streamReadout').textContent='LIVE 4D GRAPH';
+    }catch{
+      q('#streamReadout').textContent='LOCAL 4D SIM';
+    }
   }
   loadState();
 
