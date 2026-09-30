@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import { createAgentRuntime } from './ai-runtime.mjs';
 import { createCityEnvironmentRuntime } from './city-environment-runtime.mjs';
+import { createCityLiveRuntime } from './city-live-runtime.mjs';
 import { createGeoRuntime } from './geo-runtime.mjs';
 import { createProfileStore } from './profile-store.mjs';
 import { createQuantumRuntime } from './quantum-runtime.mjs';
@@ -15,6 +16,7 @@ const root = fileURLToPath(new URL('./', import.meta.url));
 const port = Number(process.env.AETHERGRID_PORT || process.env.PORT || 8090);
 const agentRuntime = createAgentRuntime();
 const cityEnvironmentRuntime = createCityEnvironmentRuntime();
+const cityLiveRuntime = createCityLiveRuntime();
 const geoRuntime = createGeoRuntime();
 const quantumRuntime = createQuantumRuntime();
 const terrainRuntime = createTerrainRuntime();
@@ -154,42 +156,74 @@ const CITY_USE_CASES = Object.freeze({
   'grid-resilience': Object.freeze({
     id: 'grid-resilience',
     label: 'Grid Resilience',
-    purpose: 'Inspect mapped electrical topology, terrain and built-environment context for resilience planning.',
-    indexLabel: 'Topology visibility index',
+    purpose: 'Combine mapped electrical topology with current weather, seismic and built-environment context for resilience planning.',
+    indexLabel: 'Resilience context index',
     agentLead: 'VÆLON',
-    recommendedLayers: ['grid', 'infrastructure', 'nodes', 'terrain', 'buildings'],
+    recommendedLayers: ['grid', 'infrastructure', 'nodes', 'terrain', 'buildings', 'weather', 'seismic'],
+    animationProfile: 'grid-flow',
   }),
   'outage-impact': Object.freeze({
     id: 'outage-impact',
     label: 'Outage Impact',
-    purpose: 'Estimate where dense built areas overlap mapped grid assets for bounded outage-planning review.',
+    purpose: 'Estimate where dense built areas overlap mapped grid assets while current weather and seismic conditions are visible.',
     indexLabel: 'Exposure proxy index',
     agentLead: 'SOLVÆR',
-    recommendedLayers: ['buildings', 'infrastructure', 'nodes', 'roads'],
+    recommendedLayers: ['buildings', 'infrastructure', 'nodes', 'roads', 'weather'],
+    animationProfile: 'exposure-pulse',
   }),
   'emergency-access': Object.freeze({
     id: 'emergency-access',
     label: 'Emergency Access',
-    purpose: 'Inspect road-network reach and terrain constraints around mapped infrastructure and dense structures.',
-    indexLabel: 'Access coverage index',
+    purpose: 'Inspect road-network reach, terrain and current precipitation/wind constraints around mapped infrastructure.',
+    indexLabel: 'Access context index',
     agentLead: 'AUREN',
-    recommendedLayers: ['roads', 'terrain', 'nodes', 'buildings'],
+    recommendedLayers: ['roads', 'terrain', 'nodes', 'buildings', 'weather'],
+    animationProfile: 'route-flow',
   }),
   'renewable-siting': Object.freeze({
     id: 'renewable-siting',
     label: 'Renewable Siting',
-    purpose: 'Surface built-form, terrain and nearby grid context for early-stage renewable siting exploration.',
-    indexLabel: 'Siting context index',
+    purpose: 'Combine built form, terrain, grid proximity and current wind/solar model context for early-stage resource exploration.',
+    indexLabel: 'Resource context index',
     agentLead: 'VÆLON',
-    recommendedLayers: ['terrain', 'buildings', 'infrastructure', 'nodes'],
+    recommendedLayers: ['terrain', 'buildings', 'infrastructure', 'nodes', 'weather'],
+    animationProfile: 'resource-flow',
   }),
   'load-growth': Object.freeze({
     id: 'load-growth',
     label: 'Load Growth',
-    purpose: 'Use mapped building mass and grid proximity as a planning proxy for future load-growth review.',
+    purpose: 'Use mapped building mass and grid proximity as a planning proxy while current atmospheric context remains visible.',
     indexLabel: 'Built-load proxy index',
     agentLead: 'AUREN',
     recommendedLayers: ['buildings', 'roads', 'infrastructure', 'nodes', 'grid'],
+    animationProfile: 'building-pulse',
+  }),
+  'weather-readiness': Object.freeze({
+    id: 'weather-readiness',
+    label: 'Weather Readiness',
+    purpose: 'Animate current wind, gust, precipitation, cloud and visibility context against the mapped city and grid.',
+    indexLabel: 'Weather attention index',
+    agentLead: 'SOLVÆR',
+    recommendedLayers: ['weather', 'roads', 'infrastructure', 'nodes', 'buildings', 'terrain'],
+    animationProfile: 'weather',
+  }),
+  'air-quality-exposure': Object.freeze({
+    id: 'air-quality-exposure',
+    label: 'Air Quality Exposure',
+    purpose: 'Visualize current modeled AQI and particulate context against building density and road topology.',
+    indexLabel: 'Air exposure context index',
+    agentLead: 'AUREN',
+    recommendedLayers: ['air', 'buildings', 'roads', 'nodes'],
+    animationProfile: 'air-quality',
+  }),
+  'seismic-awareness': Object.freeze({
+    id: 'seismic-awareness',
+    label: 'Seismic Awareness',
+    purpose: 'Place recent USGS M2.5+ events around the active city and compare their distance/magnitude with the built environment.',
+    indexLabel: 'Seismic attention index',
+    agentLead: 'SOLVÆR',
+    recommendedLayers: ['seismic', 'buildings', 'terrain', 'roads', 'infrastructure'],
+    animationProfile: 'seismic',
   }),
 });
 
@@ -266,6 +300,54 @@ function cityMeshMetrics(mesh) {
   };
 }
 
+function liveCitySignals(mesh) {
+  const environment = mesh?.environment?.current || {};
+  const air = mesh?.liveContext?.airQuality?.current || {};
+  const seismic = Array.isArray(mesh?.liveContext?.seismic?.events)
+    ? mesh.liveContext.seismic.events
+    : [];
+  const maxSeismicMagnitude = seismic.length
+    ? Math.max(...seismic.map((event) => Number(event.magnitude || 0)))
+    : 0;
+  const nearestSeismicKm = seismic.length
+    ? Math.min(...seismic.map((event) => Number(event.distanceKm || Infinity)))
+    : null;
+  return {
+    temperatureC: Number.isFinite(Number(environment.temperatureC))
+      ? Number(environment.temperatureC)
+      : null,
+    apparentTemperatureC: Number.isFinite(Number(environment.apparentTemperatureC))
+      ? Number(environment.apparentTemperatureC)
+      : null,
+    cloudCoverPercent: Number.isFinite(Number(environment.cloudCoverPercent))
+      ? Number(environment.cloudCoverPercent)
+      : null,
+    precipitationMm: Number.isFinite(Number(environment.precipitationMm))
+      ? Number(environment.precipitationMm)
+      : 0,
+    windSpeedKph: Number.isFinite(Number(environment.windSpeedKph))
+      ? Number(environment.windSpeedKph)
+      : 0,
+    windGustsKph: Number.isFinite(Number(environment.windGustsKph))
+      ? Number(environment.windGustsKph)
+      : 0,
+    shortwaveRadiationWm2: Number.isFinite(Number(environment.shortwaveRadiationWm2))
+      ? Number(environment.shortwaveRadiationWm2)
+      : null,
+    visibilityM: Number.isFinite(Number(environment.visibilityM))
+      ? Number(environment.visibilityM)
+      : null,
+    usAqi: Number.isFinite(Number(air.usAqi)) ? Number(air.usAqi) : null,
+    airCategory: air.category || 'unknown',
+    pm25UgM3: Number.isFinite(Number(air.pm25UgM3)) ? Number(air.pm25UgM3) : null,
+    pm10UgM3: Number.isFinite(Number(air.pm10UgM3)) ? Number(air.pm10UgM3) : null,
+    uvIndex: Number.isFinite(Number(air.uvIndex)) ? Number(air.uvIndex) : null,
+    seismicEventCount: seismic.length,
+    maxSeismicMagnitude,
+    nearestSeismicKm: Number.isFinite(nearestSeismicKm) ? Number(nearestSeismicKm.toFixed(1)) : null,
+  };
+}
+
 function analyzeCityUseCase(mesh, useCaseId) {
   const useCase = CITY_USE_CASES[useCaseId];
   if (!useCase) {
@@ -279,70 +361,147 @@ function analyzeCityUseCase(mesh, useCaseId) {
     throw error;
   }
   const metrics = cityMeshMetrics(mesh);
-  const densityRatio = metrics.sampledAreaKm2 > 0
-    ? metrics.footprintAreaM2 / (metrics.sampledAreaKm2 * 1_000_000)
-    : 0;
+  const liveSignals = liveCitySignals(mesh);
+  const densityRatio =
+    metrics.sampledAreaKm2 > 0
+      ? metrics.footprintAreaM2 / (metrics.sampledAreaKm2 * 1_000_000)
+      : 0;
   const builtMass = clampIndex(densityRatio * 420 + metrics.averageBuildingHeightM * 0.55);
   const roadCoverage = clampIndex(metrics.roadLengthKm * 4 + metrics.primaryRoadKm * 7);
-  const gridCoverage = clampIndex(metrics.powerLineKm * 7 + metrics.powerAssetCount * 5 + metrics.substations * 8);
+  const gridCoverage = clampIndex(
+    metrics.powerLineKm * 7 + metrics.powerAssetCount * 5 + metrics.substations * 8,
+  );
   const terrainComplexity = clampIndex(metrics.terrainReliefM * 1.4);
+  const weatherStress = clampIndex(
+    liveSignals.windSpeedKph * 0.6 +
+      liveSignals.windGustsKph * 0.8 +
+      liveSignals.precipitationMm * 14,
+  );
+  const airStress = clampIndex(liveSignals.usAqi ?? 0);
+  const seismicStress = clampIndex(
+    liveSignals.maxSeismicMagnitude * 12 +
+      (liveSignals.nearestSeismicKm == null
+        ? 0
+        : Math.max(0, 800 - liveSignals.nearestSeismicKm) / 12),
+  );
+  const solarSignal = clampIndex(
+    (liveSignals.shortwaveRadiationWm2 || 0) / 10 +
+      (100 - (liveSignals.cloudCoverPercent ?? 50)) * 0.25,
+  );
+
   let planningIndex = 0;
   let observations = [];
   if (useCaseId === 'grid-resilience') {
-    planningIndex = clampIndex(gridCoverage * 0.72 + roadCoverage * 0.18 + (100 - terrainComplexity) * 0.1);
+    planningIndex = clampIndex(
+      gridCoverage * 0.55 +
+        roadCoverage * 0.12 +
+        (100 - terrainComplexity) * 0.08 +
+        weatherStress * 0.17 +
+        seismicStress * 0.08,
+    );
     observations = [
-      `${metrics.powerLineKm.toFixed(1)} km of mapped power lines and ${metrics.powerAssetCount} mapped power assets are visible in the sampled area.`,
-      `${metrics.substations} mapped substations and ${metrics.highVoltageKm.toFixed(1)} km of ≥100 kV line geometry are available for topology review.`,
-      `Terrain relief across the sampled elevation grid is ${metrics.terrainReliefM.toFixed(0)} m.`,
+      `${metrics.powerLineKm.toFixed(1)} km of mapped power lines, ${metrics.powerAssetCount} mapped power assets and ${metrics.substations} substations are visible in the bounded sample.`,
+      `Current model context: wind ${liveSignals.windSpeedKph.toFixed(1)} km/h, gusts ${liveSignals.windGustsKph.toFixed(1)} km/h and precipitation ${liveSignals.precipitationMm.toFixed(1)} mm.`,
+      `${liveSignals.seismicEventCount} USGS M2.5+ event(s) are within the live seismic radius; this is context for review, not a failure prediction.`,
     ];
   } else if (useCaseId === 'outage-impact') {
-    planningIndex = clampIndex(builtMass * 0.58 + gridCoverage * 0.42);
+    planningIndex = clampIndex(
+      builtMass * 0.45 + gridCoverage * 0.35 + weatherStress * 0.15 + seismicStress * 0.05,
+    );
     observations = [
       `${metrics.buildingCount} mapped buildings represent approximately ${Math.round(metrics.estimatedFloorAreaM2).toLocaleString()} m² of estimated floor area.`,
-      `${metrics.powerAssetCount} mapped power assets overlap the same bounded city sample.`,
-      'The index is an exposure-planning proxy only; it does not assert customers affected or outage probability.',
+      `${metrics.powerAssetCount} mapped power assets overlap the same bounded city sample; current weather attention is ${weatherStress}/100.`,
+      'The index is an exposure-planning proxy only; it does not assert customers affected, component failure or outage probability.',
     ];
   } else if (useCaseId === 'emergency-access') {
-    planningIndex = clampIndex(roadCoverage * 0.76 + (100 - terrainComplexity) * 0.24);
+    planningIndex = clampIndex(
+      roadCoverage * 0.62 +
+        (100 - terrainComplexity) * 0.18 +
+        (100 - weatherStress) * 0.2,
+    );
     observations = [
       `${metrics.roadLengthKm.toFixed(1)} km of mapped road centerlines are available, including ${metrics.primaryRoadKm.toFixed(1)} km of major roads.`,
-      `Mapped terrain relief is ${metrics.terrainReliefM.toFixed(0)} m across the current sample.`,
-      'Road presence is not a live traffic, closure, routing, or emergency-response guarantee.',
+      `Current precipitation is ${liveSignals.precipitationMm.toFixed(1)} mm and gusts are ${liveSignals.windGustsKph.toFixed(1)} km/h; mapped terrain relief is ${metrics.terrainReliefM.toFixed(0)} m.`,
+      'Road presence and modeled weather are not live traffic, closure, routing or emergency-response guarantees.',
     ];
   } else if (useCaseId === 'renewable-siting') {
-    planningIndex = clampIndex((100 - builtMass) * 0.3 + gridCoverage * 0.45 + (100 - terrainComplexity) * 0.25);
+    planningIndex = clampIndex(
+      (100 - builtMass) * 0.2 +
+        gridCoverage * 0.35 +
+        (100 - terrainComplexity) * 0.15 +
+        solarSignal * 0.2 +
+        clampIndex(liveSignals.windSpeedKph * 3) * 0.1,
+    );
     observations = [
       `${metrics.generationAssets} mapped generation assets and ${metrics.powerLineKm.toFixed(1)} km of mapped power lines provide grid-context anchors.`,
-      `Mapped building footprint covers approximately ${(densityRatio * 100).toFixed(1)}% of the circular sample area.`,
-      'Resource quality, ownership, permitting, interconnection capacity and environmental constraints require separate authoritative datasets.',
+      `Current model resource snapshot: ${liveSignals.shortwaveRadiationWm2 == null ? 'solar radiation unavailable' : `${liveSignals.shortwaveRadiationWm2.toFixed(0)} W/m² shortwave radiation`}, ${liveSignals.cloudCoverPercent == null ? 'cloud unavailable' : `${liveSignals.cloudCoverPercent.toFixed(0)}% cloud`} and ${liveSignals.windSpeedKph.toFixed(1)} km/h wind.`,
+      'A current weather snapshot does not replace long-term resource assessment, ownership, permitting, interconnection or environmental studies.',
     ];
-  } else {
+  } else if (useCaseId === 'load-growth') {
     planningIndex = clampIndex(builtMass * 0.64 + roadCoverage * 0.16 + gridCoverage * 0.2);
     observations = [
       `${metrics.buildingCount} mapped buildings average ${metrics.averageBuildingHeightM.toFixed(1)} m in modeled height.`,
       `Estimated mapped floor area is ${Math.round(metrics.estimatedFloorAreaM2).toLocaleString()} m² inside the bounded sample.`,
       'This is a built-form planning proxy, not a utility load forecast or customer-demand measurement.',
     ];
+  } else if (useCaseId === 'weather-readiness') {
+    planningIndex = weatherStress;
+    observations = [
+      `Current weather model: wind ${liveSignals.windSpeedKph.toFixed(1)} km/h, gusts ${liveSignals.windGustsKph.toFixed(1)} km/h and precipitation ${liveSignals.precipitationMm.toFixed(1)} mm.`,
+      `Cloud cover is ${liveSignals.cloudCoverPercent == null ? 'unavailable' : `${liveSignals.cloudCoverPercent.toFixed(0)}%`} and visibility is ${liveSignals.visibilityM == null ? 'unavailable' : `${(liveSignals.visibilityM / 1000).toFixed(1)} km`}.`,
+      'The animated weather field represents current model conditions at the city coordinate, not street-level instrumentation.',
+    ];
+  } else if (useCaseId === 'air-quality-exposure') {
+    planningIndex = clampIndex(airStress * 0.7 + builtMass * 0.3);
+    observations = [
+      `Current modeled US AQI is ${liveSignals.usAqi == null ? 'unavailable' : liveSignals.usAqi.toFixed(0)} (${liveSignals.airCategory}).`,
+      `PM2.5 is ${liveSignals.pm25UgM3 == null ? 'unavailable' : `${liveSignals.pm25UgM3.toFixed(1)} µg/m³`} and PM10 is ${liveSignals.pm10UgM3 == null ? 'unavailable' : `${liveSignals.pm10UgM3.toFixed(1)} µg/m³`}.`,
+      `The atmospheric overlay is paired with ${metrics.buildingCount} mapped buildings and ${metrics.roadLengthKm.toFixed(1)} km of road geometry; it is not a block-level exposure measurement.`,
+    ];
+  } else {
+    planningIndex = clampIndex(seismicStress * 0.72 + builtMass * 0.18 + terrainComplexity * 0.1);
+    observations = [
+      `${liveSignals.seismicEventCount} USGS M2.5+ event(s) are inside the configured live radius around ${mesh.city.name}.`,
+      `Maximum listed magnitude is ${liveSignals.maxSeismicMagnitude.toFixed(1)}${liveSignals.nearestSeismicKm == null ? '' : ` and the nearest listed event is ${liveSignals.nearestSeismicKm.toFixed(0)} km away`}.`,
+      'USGS event pulses provide situational context only; they are not a structural-damage estimate, aftershock forecast or emergency directive.',
+    ];
   }
+
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     useCase,
     city: mesh.city,
     generatedAt: new Date().toISOString(),
-    planningIndex: { label: useCase.indexLabel, value: planningIndex, scale: '0-100 planning proxy' },
+    planningIndex: {
+      label: useCase.indexLabel,
+      value: planningIndex,
+      scale: '0-100 bounded planning/context proxy',
+    },
     metrics,
+    liveSignals,
     observations,
+    visualization: {
+      animationProfile: useCase.animationProfile,
+      recommendedLayers: useCase.recommendedLayers,
+      sourceDriven: true,
+    },
     dataQuality: {
       geometryProvider: mesh.source?.provider || 'unknown',
       liveGeometry: Boolean(mesh.source?.live),
       terrainProvider: mesh.terrain?.source?.provider || null,
       liveTerrain: Boolean(mesh.terrain?.source?.live),
-      limitations: 'Decision-support indicators are derived from the currently loaded bounded map sample and are not operational ground truth.',
+      weatherProvider: mesh.environment?.source?.provider || null,
+      liveWeather: Boolean(mesh.environment?.source?.live),
+      airQualityProvider: mesh.liveContext?.airQuality?.source?.provider || null,
+      liveAirQuality: Boolean(mesh.liveContext?.airQuality?.source?.live),
+      seismicProvider: mesh.liveContext?.seismic?.source?.provider || null,
+      liveSeismic: Boolean(mesh.liveContext?.seismic?.source?.live),
+      limitations:
+        'Decision-support indicators combine the currently loaded bounded map sample with current model/feed context and are not operational ground truth.',
     },
     advisoryOnly: true,
   };
 }
-
 
 const mime = {
   '.html': 'text/html; charset=utf-8',
@@ -460,6 +619,12 @@ const server = http.createServer(async (request, response) => {
           provider: cityEnvironmentRuntime.summary().provider,
           liveProviderConfigured: cityEnvironmentRuntime.summary().liveProviderConfigured,
         },
+        liveContextRuntime: {
+          airQualityProvider: cityLiveRuntime.summary().airQualityProvider,
+          seismicProvider: cityLiveRuntime.summary().seismicProvider,
+          liveAirQualityConfigured: cityLiveRuntime.summary().liveAirQualityConfigured,
+          liveSeismicConfigured: cityLiveRuntime.summary().liveSeismicConfigured,
+        },
         quantumRuntime: {
           provider: quantumRuntime.summary().provider,
           configured: quantumRuntime.summary().configured,
@@ -521,6 +686,7 @@ const server = http.createServer(async (request, response) => {
         ai,
         geospatial: geoRuntime.summary(),
         environment: cityEnvironmentRuntime.summary(),
+        liveContext: cityLiveRuntime.summary(),
         terrain: terrainRuntime.summary(),
         quantum: quantumRuntime.summary(),
         profile: profileStore.safeSummary(),
@@ -536,6 +702,13 @@ const server = http.createServer(async (request, response) => {
       const profile = await profileStore.save(input.profile || input);
       activity(`Operator profile updated for ${profile.displayName}.`, 'profile');
       return json(response, 200, { profile, activity: state.activity });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/global-live') {
+      const live = await cityLiveRuntime.globalSnapshot(geoRuntime.cities, {
+        force: url.searchParams.get('force') === '1',
+      });
+      return json(response, 200, live);
     }
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/geospatial/runtime') {
@@ -559,7 +732,7 @@ const server = http.createServer(async (request, response) => {
       const baseMesh = await geoRuntime.cityMesh(cityId, {
         force: url.searchParams.get('force') === '1',
       });
-      const [terrain, environment] = await Promise.all([
+      const [terrain, environment, liveContext] = await Promise.all([
         terrainRuntime.sample({
           lat: baseMesh.city.lat,
           lon: baseMesh.city.lon,
@@ -570,8 +743,14 @@ const server = http.createServer(async (request, response) => {
           lat: baseMesh.city.lat,
           lon: baseMesh.city.lon,
         }),
+        cityLiveRuntime.citySnapshot({
+          lat: baseMesh.city.lat,
+          lon: baseMesh.city.lon,
+          radiusKm: 1200,
+          force: url.searchParams.get('force') === '1',
+        }),
       ]);
-      const mesh = { ...baseMesh, terrain, environment };
+      const mesh = { ...baseMesh, terrain, environment, liveContext };
       activeCityMesh = mesh;
       state.externalContext.geospatial = {
         cityId: mesh.city.id,
@@ -601,6 +780,19 @@ const server = http.createServer(async (request, response) => {
           precipitationMm: mesh.environment?.current?.precipitationMm ?? null,
           isDay: mesh.environment?.current?.isDay ?? null,
           windSpeedKph: mesh.environment?.current?.windSpeedKph ?? null,
+          windGustsKph: mesh.environment?.current?.windGustsKph ?? null,
+          shortwaveRadiationWm2: mesh.environment?.current?.shortwaveRadiationWm2 ?? null,
+          visibilityM: mesh.environment?.current?.visibilityM ?? null,
+        },
+        liveContext: {
+          airQualityProvider: mesh.liveContext?.airQuality?.source?.provider || null,
+          liveAirQuality: Boolean(mesh.liveContext?.airQuality?.source?.live),
+          usAqi: mesh.liveContext?.airQuality?.current?.usAqi ?? null,
+          pm25UgM3: mesh.liveContext?.airQuality?.current?.pm25UgM3 ?? null,
+          seismicProvider: mesh.liveContext?.seismic?.source?.provider || null,
+          liveSeismic: Boolean(mesh.liveContext?.seismic?.source?.live),
+          seismicEventCount: mesh.liveContext?.seismic?.eventCount ?? 0,
+          maxSeismicMagnitude: mesh.liveContext?.seismic?.maxMagnitude ?? null,
         },
       };
       activity(
@@ -626,7 +818,7 @@ const server = http.createServer(async (request, response) => {
           force: url.searchParams.get('force') === '1',
         },
       );
-      const [terrain, environment] = await Promise.all([
+      const [terrain, environment, liveContext] = await Promise.all([
         terrainRuntime.sample({
           lat: baseMesh.city.lat,
           lon: baseMesh.city.lon,
@@ -637,8 +829,14 @@ const server = http.createServer(async (request, response) => {
           lat: baseMesh.city.lat,
           lon: baseMesh.city.lon,
         }),
+        cityLiveRuntime.citySnapshot({
+          lat: baseMesh.city.lat,
+          lon: baseMesh.city.lon,
+          radiusKm: 1200,
+          force: url.searchParams.get('force') === '1',
+        }),
       ]);
-      const mesh = { ...baseMesh, terrain, environment };
+      const mesh = { ...baseMesh, terrain, environment, liveContext };
       activeCityMesh = mesh;
       state.externalContext.geospatial = {
         cityId: mesh.city.id,
@@ -668,6 +866,19 @@ const server = http.createServer(async (request, response) => {
           precipitationMm: mesh.environment?.current?.precipitationMm ?? null,
           isDay: mesh.environment?.current?.isDay ?? null,
           windSpeedKph: mesh.environment?.current?.windSpeedKph ?? null,
+          windGustsKph: mesh.environment?.current?.windGustsKph ?? null,
+          shortwaveRadiationWm2: mesh.environment?.current?.shortwaveRadiationWm2 ?? null,
+          visibilityM: mesh.environment?.current?.visibilityM ?? null,
+        },
+        liveContext: {
+          airQualityProvider: mesh.liveContext?.airQuality?.source?.provider || null,
+          liveAirQuality: Boolean(mesh.liveContext?.airQuality?.source?.live),
+          usAqi: mesh.liveContext?.airQuality?.current?.usAqi ?? null,
+          pm25UgM3: mesh.liveContext?.airQuality?.current?.pm25UgM3 ?? null,
+          seismicProvider: mesh.liveContext?.seismic?.source?.provider || null,
+          liveSeismic: Boolean(mesh.liveContext?.seismic?.source?.live),
+          seismicEventCount: mesh.liveContext?.seismic?.eventCount ?? 0,
+          maxSeismicMagnitude: mesh.liveContext?.seismic?.maxMagnitude ?? null,
         },
       };
       activity(
@@ -726,6 +937,20 @@ const server = http.createServer(async (request, response) => {
       state.evidence = state.evidence.slice(0, 24);
       activity(`City operation completed: ${analysis.useCase.label} for ${analysis.city.name}.`, 'city-operation');
       return json(response, 200, { analysis, evidence: record, externalContext: state.externalContext, activity: state.activity });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/city-live') {
+      const live = await cityLiveRuntime.citySnapshot({
+        lat: url.searchParams.get('lat'),
+        lon: url.searchParams.get('lon'),
+        radiusKm: url.searchParams.get('radiusKm') || 1200,
+        force: url.searchParams.get('force') === '1',
+      });
+      return json(response, 200, live);
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/city-live/runtime') {
+      return json(response, 200, cityLiveRuntime.summary());
     }
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/environment') {
