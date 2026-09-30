@@ -1018,6 +1018,46 @@ button {
   transition: width 180ms ease;
 }
 
+
+.storm-illumination {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background:
+    radial-gradient(circle at 58% 22%, rgba(234, 242, 255, 0.9), transparent 18%),
+    linear-gradient(rgba(203, 221, 255, 0.22), rgba(166, 192, 238, 0.06));
+  mix-blend-mode: screen;
+  pointer-events: none;
+  transition: opacity 90ms linear;
+}
+
+.storm-presentation-label {
+  position: absolute;
+  left: 16px;
+  bottom: 58px;
+  z-index: 6;
+  display: grid;
+  gap: 2px;
+  padding: 7px 9px;
+  border: 1px solid rgba(167, 184, 225, 0.18);
+  border-radius: 7px;
+  background: rgba(6, 9, 18, 0.76);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+.storm-presentation-label strong {
+  color: #dce7ff;
+  font-size: 7px;
+  letter-spacing: 0.08em;
+}
+
+.storm-presentation-label span {
+  color: #72809b;
+  font-size: 5px;
+  letter-spacing: 0.06em;
+}
+
 .solar-status {
   position: absolute;
   right: 16px;
@@ -2987,5 +3027,12 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .journey-progress span {
     transition: none;
+  }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .storm-illumination {
+    display: none;
   }
 }
