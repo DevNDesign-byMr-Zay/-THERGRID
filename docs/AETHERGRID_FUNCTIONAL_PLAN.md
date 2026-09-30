@@ -100,7 +100,7 @@ Deliver:
 - reproducibility metadata.
 
 ### Batch 7 — Packaging, launchers and regression gates
-Status: FINAL VERIFICATION
+Status: COMPLETE
 
 Deliver:
 - Windows PowerShell launcher;
@@ -188,3 +188,14 @@ Batches 1–6 are now implemented in the maintained branch.
 - AI mode supports replaceable provider/model configuration, individual specialist execution and three-agent team orchestration.
 
 Batch 7 is limited to final release verification: all regression gates must pass at one immutable head commit, the CI-built ZIP must be inspected for required files and zero empty entries, and the verified branch is then merged to main.
+
+
+## Verified package checkpoint
+
+The CI-built functional application archive was inspected after the final release gates passed:
+
+- 22 regular files;
+- 0 empty files;
+- includes `standalone.html`, modular HTML/CSS/JS, Node backend, provider-neutral AI runtime, agent config, JSON manifests, brand assets, app-local environment example, PowerShell/CMD launchers, README, file inventory and SHA-256 sums;
+- the old dashboard screenshot is not required by the runtime package;
+- tests, lint, typecheck, coverage, fresh-clone smoke, container smoke, quality/release-readiness and CodeQL are required before merge.
