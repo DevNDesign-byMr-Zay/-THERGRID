@@ -571,6 +571,104 @@ button {
 }
 
 
+
+.bookmark-panel {
+  margin-bottom: 20px;
+}
+
+.bookmark-compose {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px;
+}
+
+.bookmark-compose input {
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 7px;
+  outline: 0;
+  color: #c5d5e0;
+  background: rgba(255, 255, 255, 0.016);
+  font-size: 7px;
+}
+
+.bookmark-compose input:focus {
+  border-color: rgba(112, 231, 255, 0.26);
+}
+
+.bookmark-compose button {
+  padding: 0 8px;
+  border: 1px solid rgba(112, 231, 255, 0.18);
+  border-radius: 7px;
+  color: #aeefff;
+  background: rgba(112, 231, 255, 0.045);
+  font-size: 6px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  cursor: pointer;
+}
+
+.bookmark-list {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+  max-height: 175px;
+  overflow: auto;
+}
+
+.bookmark-list > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 25px;
+  gap: 3px;
+}
+
+.bookmark-restore,
+.bookmark-remove {
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  color: #8195a5;
+  background: rgba(255, 255, 255, 0.012);
+  cursor: pointer;
+}
+
+.bookmark-restore {
+  min-width: 0;
+  padding: 7px;
+  text-align: left;
+}
+
+.bookmark-restore strong,
+.bookmark-restore small {
+  display: block;
+}
+
+.bookmark-restore strong {
+  overflow: hidden;
+  color: #9eb0be;
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bookmark-restore small {
+  margin-top: 3px;
+  color: #536a7d;
+  font-size: 5px;
+  letter-spacing: 0.05em;
+}
+
+.bookmark-remove {
+  color: #756f7b;
+  font-size: 14px;
+}
+
+.bookmark-list p {
+  margin: 6px 0 0;
+  color: #53697c;
+  font-size: 7px;
+}
+
 .use-case-presets {
   margin-bottom: 20px;
 }
