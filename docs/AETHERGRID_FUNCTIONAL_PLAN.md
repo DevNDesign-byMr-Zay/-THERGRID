@@ -565,3 +565,47 @@ Copernicus DEM GLO-90 / Open-Meteo elevation is used as visualization context, n
 - release-readiness must require the v3 terrain capabilities and non-survey-grade boundary;
 - all existing city identity, semantic weather, mapped geography, agent, quantum and safety gates remain mandatory;
 - test, lint, typecheck, coverage, fresh-clone smoke, container smoke, quality/release-readiness, package verification and CodeQL must pass on the exact merge head.
+
+
+## v4 spatial operator migration lane — frontend / renderer scope
+
+Status: IMPLEMENTED / VERIFYING ON DRAFT PR
+
+This lane is intentionally separate from provider/backend integration work. It migrates the operator experience to a typed renderer-neutral web surface without changing provider secrets, provider-adapter ownership, backend actuation boundaries, or the authority of source data.
+
+### Spatial renderer foundation
+- React/TypeScript operator web surface under `apps/aethergrid-console/web/`;
+- Cesium primary WGS84 globe/city renderer;
+- functional native WebGL failover using the same normalized spatial overlays;
+- Canvas2D only as the final local graphics fallback when WebGL is unavailable;
+- reversible CESIUM / NATIVE switching and visible failover reason;
+- one geographic target/camera contract across globe, region, city and district;
+- adaptive detail so expensive building rendering activates only at useful city/district scale.
+
+### Real 4D operator behavior
+- LIVE time advances automatically;
+- historical, forecast and scenario cursors remain independent;
+- solar elevation/azimuth is computed from the active 4D instant and geographic target;
+- current-only weather, AQI and seismic feeds are hidden outside LIVE mode until time-capable provider series exist;
+- the temporal rail states whether the operator is seeing LIVE SOURCES, STATIC MAP CONTEXT or MODELED + STATIC context.
+
+### Source-backed city motion and identity
+- source weather drives cloud cover, rain/snow, fog, wind drift and AQI particles;
+- modeled thunderstorm codes may trigger bounded presentation flashes, but flash timing is synthetic and never labeled as detected lightning;
+- current wind speed/direction/gusts generate a real geographic wind-vector overlay shared by both renderers;
+- mapped building footprints/heights generate capped nighttime illumination points tied to solar twilight/night state;
+- building illumination is presentation-only and is not measured occupancy, window state or utility demand;
+- mapped skyline geometry derives city-specific arrival framing;
+- roads, water, green space, power topology and recent seismic context remain separately attributed/selectable.
+
+### Operator workflow
+- explicit city-load readiness for geometry, atmosphere and live context;
+- operation-mode presets use only implemented layers;
+- selected entities expose layer/source timestamps and fallback/live provenance;
+- selected-entity analysis can prefill AUREN while leaving submission under operator control;
+- saved views persist scope, target, layers, visual mode, operation mode and 4D cursor locally;
+- restoring a local view never silently re-submits a backend scenario;
+- scenario mode preserves a dim source baseline beneath the brighter modeled network effect and labels source vs modeled state.
+
+### Verification boundary
+The v4 migration is not considered the maintained release merely because the draft UI builds. Promotion requires the dedicated v4 web typecheck/build plus the repository test, lint/format, coverage, fresh-clone, container, quality/release-readiness and CodeQL gates on the exact merge head. Provider/backend work that is not implemented in this lane must not be advertised as complete here.
