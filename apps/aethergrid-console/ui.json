@@ -123,7 +123,15 @@
     "procedural-skyline-lighting",
     "solar-daylight-context",
     "heat-stress-operation",
-    "visibility-operations"
+    "visibility-operations",
+    "source-backed-water-areas",
+    "source-backed-waterways",
+    "source-backed-coastline",
+    "source-backed-green-areas",
+    "source-tagged-building-material-overlays",
+    "source-backed-landmark-emphasis",
+    "flood-context-use-case",
+    "green-infrastructure-use-case"
   ],
   "agents": [
     {
@@ -383,7 +391,9 @@
         "air-quality-exposure",
         "seismic-awareness",
         "heat-stress",
-        "visibility-operations"
+        "visibility-operations",
+        "flood-context",
+        "green-infrastructure"
       ],
       "advisoryOnly": true
     },
@@ -428,7 +438,10 @@
         "air",
         "seismic",
         "clouds",
-        "illumination"
+        "illumination",
+        "water",
+        "green",
+        "landmarks"
       ]
     },
     "globeAnimations": [
@@ -454,6 +467,14 @@
       "terminator": "computed from current UTC solar declination/equation of time",
       "cityLights": "procedural mapped-geometry visualization",
       "occupancyClaim": false
+    },
+    "cityIdentity": {
+      "mappedWater": true,
+      "mappedGreenSpace": true,
+      "mappedCoastline": true,
+      "sourceTaggedBuildingMaterials": true,
+      "sourceBoundLandmarkEmphasis": true,
+      "noSyntheticWaterOrGreenFallback": true
     }
   },
   "profile": {
@@ -471,5 +492,6 @@
     ],
     "maxGridSize": 9,
     "serverSideCredentials": true
-  }
+  },
+  "version": "2.9.0"
 }
