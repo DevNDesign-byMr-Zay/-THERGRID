@@ -524,6 +524,8 @@ async function main() {
       exactAethergridApp.capabilities?.independentTerrainLayer === true &&
       exactAethergridApp.capabilities?.terrainFallback === true &&
       exactAethergridApp.capabilities?.liveAgentExternalContext === true &&
+      exactAethergridApp.capabilities?.liveElevationTerrain === true &&
+      exactAethergridApp.capabilities?.terrainWireframeLayer === true &&
       exactAethergridApp.aiRuntime?.replaceableByConfiguration === true &&
       Array.isArray(exactAethergridApp.aiRuntime?.externalContext) &&
       exactAethergridApp.aiRuntime.externalContext.includes('geospatial-summary') &&
@@ -626,6 +628,14 @@ async function main() {
       /supportsCustomCoordinates: true/u.test(aethergridGeoRuntime) &&
       /cache/u.test(aethergridGeoRuntime),
     'ÆTHERGRID geospatial runtime must keep on-demand OpenStreetMap building, road and power-grid geometry with arbitrary coordinate support',
+  );
+  assert(
+    /api\.open-meteo\.com\/v1\/elevation/u.test(aethergridTerrainRuntime) &&
+      /Copernicus DEM GLO-90/u.test(aethergridTerrainRuntime) &&
+      /maxPointsPerRequest: provider === 'open-meteo' \? 100/u.test(aethergridTerrainRuntime) &&
+      /flat-local-fallback/u.test(aethergridTerrainRuntime) &&
+      /credentialsExposed: false/u.test(aethergridTerrainRuntime),
+    'ÆTHERGRID terrain runtime must keep live elevation sampling, attribution, bounded requests and explicit fallback',
   );
   assert(
     /Open-Meteo Elevation/u.test(aethergridTerrainRuntime) &&
