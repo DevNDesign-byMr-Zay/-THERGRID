@@ -146,6 +146,7 @@
                 <button class="active" data-global-layer="weather">WEATHER</button>
                 <button class="active" data-global-layer="clouds">CLOUDS</button>
                 <button class="active" data-global-layer="illumination">CITY LIGHTS</button>
+                <button class="active" data-global-layer="landmarks">LANDMARKS</button>
                 <button class="active" data-global-layer="air">AIR</button>
                 <button class="active" data-global-layer="seismic">SEISMIC</button>
                 <button class="active" data-global-layer="nodes">ASSET NODES</button>
@@ -182,6 +183,10 @@
               <section class="panel compact-panel">
                 <header class="panel-head"><div class="panel-title"><span class="badge">⌂</span><span><h3>CITY MESH</h3><small>Live spatial geometry</small></span></div></header>
                 <div class="inspector-body" id="cityMeshStatus"><b>New York selected</b><p>Choose DESCEND INTO CITY to fetch live building, road and power-grid geometry from the configured geospatial provider.</p></div>
+              </section>
+              <section class="panel compact-panel">
+                <header class="panel-head"><div class="panel-title"><span class="badge">⌖</span><span><h3>CITY IDENTITY</h3><small>Source-backed skyline anchors</small></span></div></header>
+                <div class="city-identity" id="cityIdentity"><div class="empty-state">Load a city to extract named and tall mapped structures, skyline profile, terrain character and current weather identity.</div></div>
               </section>
               <section class="panel compact-panel city-operations-panel">
                 <header class="panel-head"><div class="panel-title"><span class="badge">◈</span><span><h3>CITY OPERATIONS</h3><small>Use the live 3D twin</small></span></div></header>
