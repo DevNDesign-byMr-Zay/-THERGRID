@@ -6,10 +6,7 @@ import test from 'node:test';
 
 import { createGeoRuntime } from '../apps/aethergrid-console/geo-runtime.mjs';
 import { createProfileStore } from '../apps/aethergrid-console/profile-store.mjs';
-import {
-  API_VERSION,
-  createQuantumRuntime,
-} from '../apps/aethergrid-console/quantum-runtime.mjs';
+import { API_VERSION, createQuantumRuntime } from '../apps/aethergrid-console/quantum-runtime.mjs';
 import { createTerrainRuntime } from '../apps/aethergrid-console/terrain-runtime.mjs';
 
 test('operator profile persists sanitized local identity data without secrets', async () => {
@@ -179,12 +176,7 @@ test('geospatial coordinate explorer supports arbitrary valid world coordinates'
   assert.ok(mesh.powerLines.length >= 5);
   assert.ok(mesh.powerAssets.length >= 5);
   assert.equal(runtime.summary().supportsCustomCoordinates, true);
-  assert.deepEqual(runtime.summary().layers, [
-    'buildings',
-    'roads',
-    'power-lines',
-    'power-assets',
-  ]);
+  assert.deepEqual(runtime.summary().layers, ['buildings', 'roads', 'power-lines', 'power-assets']);
 
   await assert.rejects(
     runtime.pointMesh({ lat: 120, lon: 2.3522 }),
@@ -192,9 +184,7 @@ test('geospatial coordinate explorer supports arbitrary valid world coordinates'
   );
 });
 
-test(
-  'terrain runtime samples real-coordinate elevation grids through a provider adapter',
-  async () => {
+test('terrain runtime samples real-coordinate elevation grids through a provider adapter', async () => {
   let requestUrl = '';
   const runtime = createTerrainRuntime({
     env: {
@@ -232,13 +222,10 @@ test(
   assert.equal(terrain.points[0].relativeElevationM, 0);
   assert.match(terrain.source.attribution, /Open-Meteo/u);
   assert.equal(runtime.summary().credentialsExposed, false);
-    assert.equal(runtime.summary().resolutionMeters, 90);
-  },
-);
+  assert.equal(runtime.summary().resolutionMeters, 90);
+});
 
-test(
-  'terrain runtime degrades explicitly to a flat local surface when elevation is unavailable',
-  async () => {
+test('terrain runtime degrades explicitly to a flat local surface when elevation is unavailable', async () => {
   const runtime = createTerrainRuntime({
     env: {
       AETHERGRID_TERRAIN_PROVIDER: 'open-meteo',
@@ -256,9 +243,8 @@ test(
   assert.equal(terrain.source.provider, 'flat-local-fallback');
   assert.equal(terrain.points.length, 49);
   assert.ok(terrain.points.every((point) => point.relativeElevationM === 0));
-    assert.match(terrain.source.error, /Elevation HTTP 503/u);
-  },
-);
+  assert.match(terrain.source.error, /Elevation HTTP 503/u);
+});
 
 test('terrain runtime samples attributed elevation and preserves flat fallback', async () => {
   const fetchImpl = async (url) => {
@@ -325,13 +311,10 @@ test('IBM Quantum adapter submits jobs while keeping credentials private', async
     requests.push({ href, options });
     if (href === 'https://iam.example.test/token') {
       assert.match(String(options.body), /apikey=test-api-key/u);
-      return new Response(
-        JSON.stringify({ access_token: 'test-bearer', expires_in: 3600 }),
-        {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        },
-      );
+      return new Response(JSON.stringify({ access_token: 'test-bearer', expires_in: 3600 }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
     }
     assert.equal(options.headers.authorization, 'Bearer test-bearer');
     assert.equal(options.headers['service-crn'], 'crn:test:quantum');
@@ -460,8 +443,7 @@ test('IBM Quantum adapter submits jobs while keeping credentials private', async
 
   const estimator = await runtime.submitEstimator({
     backend: 'ibm_test_qpu',
-    circuit:
-      'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; h q[0]; cx q[0], q[1];',
+    circuit: 'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; h q[0]; cx q[0], q[1];',
     observable: 'ZZ',
   });
   assert.equal(estimator.id, 'job-estimator-456');
