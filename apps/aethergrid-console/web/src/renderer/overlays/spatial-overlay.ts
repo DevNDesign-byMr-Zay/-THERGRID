@@ -12,9 +12,13 @@ export type OverlayEdgeKind =
   | 'transmission'
   | 'distribution'
   | 'route'
+  | 'waterway'
+  | 'coastline'
   | 'flow'
   | 'dependency'
   | 'impact';
+
+export type OverlayAreaKind = 'water' | 'green';
 
 export interface OverlayCoordinate {
   latitude: number;
@@ -49,6 +53,17 @@ export interface SpatialOverlayEdge {
   properties?: Readonly<Record<string, unknown>>;
 }
 
+export interface SpatialOverlayArea {
+  id: string;
+  kind: OverlayAreaKind;
+  positions: readonly OverlayCoordinate[];
+  label?: string;
+  intensity?: number;
+  validFrom?: string | null;
+  validTo?: string | null;
+  properties?: Readonly<Record<string, unknown>>;
+}
+
 export interface SpatialOverlaySnapshot {
   id: string;
   layerId: string;
@@ -61,6 +76,7 @@ export interface SpatialOverlaySnapshot {
   attribution?: string | null;
   nodes: readonly SpatialOverlayNode[];
   edges: readonly SpatialOverlayEdge[];
+  areas?: readonly SpatialOverlayArea[];
 }
 
 export function isActiveAt(
