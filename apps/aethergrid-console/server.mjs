@@ -52,8 +52,10 @@ const state = {
   optimization: {
     currentCost: 12480,
     candidateCost: 10230,
+    classicalCandidateCost: 11790,
     emissionsReduction: 24.3,
     renewableUtilizationGain: 16.7,
+    reliabilityScore: 90.0,
     runCount: 0,
     history: [],
   },
@@ -381,8 +383,10 @@ const server = http.createServer(async (request, response) => {
       };
       state.optimization.currentCost = 12480;
       state.optimization.candidateCost = 10230;
+      state.optimization.classicalCandidateCost = 11790;
       state.optimization.emissionsReduction = 24.3;
       state.optimization.renewableUtilizationGain = 16.7;
+      state.optimization.reliabilityScore = 90.0;
       activity('Operator review state reset to the New York Metro live baseline.', 'reset');
       return json(response, 200, { state: snapshot() });
     }
@@ -490,9 +494,11 @@ const server = http.createServer(async (request, response) => {
 
       state.optimization.runCount += 1;
       state.optimization.currentCost = Math.round(currentCost);
+      state.optimization.classicalCandidateCost = classicalCandidateCost;
       state.optimization.candidateCost = candidateCost;
       state.optimization.emissionsReduction = emissionsReduction;
       state.optimization.renewableUtilizationGain = renewableUtilizationGain;
+      state.optimization.reliabilityScore = reliabilityScore;
 
       const completedAt = new Date().toISOString();
       const run = {
