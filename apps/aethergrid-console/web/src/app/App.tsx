@@ -1020,6 +1020,24 @@ export function App() {
             </div>
           ) : null}
 
+          {measurement ? (
+            <div className="measurement-scene-badge">
+              <span>SPATIAL MEASUREMENT</span>
+              <strong>
+                {measurement.distanceMeters >= 1000
+                  ? `${(measurement.distanceMeters / 1000).toFixed(2)} km`
+                  : `${measurement.distanceMeters.toFixed(1)} m`}
+                {' · '}
+                {measurement.bearingDegrees.toFixed(1)}°
+              </strong>
+              <small>
+                {measurement.precision === 'terrain-aware'
+                  ? 'DEPTH-SURFACE POINTS'
+                  : 'GEODESIC / PROJECTED POINTS'}
+              </small>
+            </div>
+          ) : null}
+
           {activeIllumination ? (
             <div className="illumination-scene-badge">
               <span>URBAN ILLUMINATION</span>
