@@ -6,6 +6,8 @@ import {
   CustomDataSource,
   Entity,
   PointGraphics,
+  PolygonGraphics,
+  PolygonHierarchy,
   PolylineGraphics,
   Viewer
 } from 'cesium';
@@ -13,6 +15,7 @@ import {
 import {
   isActiveAt,
   overlayIntensity,
+  type SpatialOverlayArea,
   type SpatialOverlayEdge,
   type SpatialOverlayNode,
   type SpatialOverlaySnapshot
@@ -66,6 +69,16 @@ function nodeEntity(node: SpatialOverlayNode): Entity {
   });
 }
 
+function edgeColor(edge: SpatialOverlayEdge, intensity: number): Color {
+  if (edge.kind === 'waterway' || edge.kind === 'coastline') {
+    return Color.fromCssColorString('#48cfff').withAlpha(0.42 + intensity * 0.4);
+  }
+  if (edge.kind === 'route') {
+    return Color.fromCssColorString('#a6b8c8').withAlpha(0.26 + intensity * 0.34);
+  }
+  return colorForIntensity(intensity, 0.35 + intensity * 0.5);
+}
+
 function edgeEntity(edge: SpatialOverlayEdge): Entity {
   const intensity = overlayIntensity(edge.intensity);
   return new Entity({
@@ -76,9 +89,16 @@ function edgeEntity(edge: SpatialOverlayEdge): Entity {
         coordinate(edge.from),
         coordinate(edge.to)
       ]),
-      width: 1.4 + intensity * 2.8,
-      material: new ColorMaterialProperty(colorForIntensity(intensity, 0.35 + intensity * 0.5)),
-      clampToGround: false
+      width:
+        edge.kind === 'coastline'
+          ? 2.6
+          : edge.kind === 'waterway'
+            ? 2.2
+            : edge.kind === 'route'
+              ? 1.1 + intensity * 1.4
+              : 1.4 + intensity * 2.8,
+      material: new ColorMaterialProperty(edgeColor(edge, intensity)),
+      clampToGround: edge.kind === 'route' || edge.kind === 'waterway' || edge.kind === 'coastline'
     }),
     properties: {
       overlayKind: edge.kind,
@@ -89,12 +109,39 @@ function edgeEntity(edge: SpatialOverlayEdge): Entity {
   });
 }
 
+function areaEntity(area: SpatialOverlayArea): Entity {
+  const positions = area.positions.map((position) => coordinate(position));
+  const water = area.kind === 'water';
+  return new Entity({
+    id: area.id,
+    name: area.label ?? area.id,
+    polygon: new PolygonGraphics({
+      hierarchy: new ConstantProperty(new PolygonHierarchy(positions)),
+      material: new ColorMaterialProperty(
+        water
+          ? Color.fromCssColorString('#2eb9e8').withAlpha(0.22)
+          : Color.fromCssColorString('#59d99a').withAlpha(0.18)
+      ),
+      outline: true,
+      outlineColor: water
+        ? Color.fromCssColorString('#70ddff').withAlpha(0.45)
+        : Color.fromCssColorString('#83e8b7').withAlpha(0.34),
+      perPositionHeight: true
+    }),
+    properties: {
+      overlayKind: area.kind,
+      ...area.properties
+    }
+  });
+}
+
 export class NetworkOverlayLayer {
   #viewer: Viewer;
   #source = new CustomDataSource('aethergrid-network-overlay');
   #snapshot: SpatialOverlaySnapshot | null = null;
   #nodeEntities = new Map<string, Entity>();
   #edgeEntities = new Map<string, Entity>();
+  #areaEntities = new Map<string, Entity>();
   #visible = true;
 
   constructor(viewer: Viewer) {
@@ -107,6 +154,8 @@ export class NetworkOverlayLayer {
     this.#source.entities.removeAll();
     this.#nodeEntities.clear();
     this.#edgeEntities.clear();
+    this.#areaEntities.clear();
+    this.#areaEntities.clear();
 
     for (const node of snapshot.nodes) {
       const entity = this.#source.entities.add(nodeEntity(node));
@@ -115,6 +164,11 @@ export class NetworkOverlayLayer {
     for (const edge of snapshot.edges) {
       const entity = this.#source.entities.add(edgeEntity(edge));
       this.#edgeEntities.set(edge.id, entity);
+    }
+    for (const area of snapshot.areas ?? []) {
+      if (area.positions.length < 3) continue;
+      const entity = this.#source.entities.add(areaEntity(area));
+      this.#areaEntities.set(area.id, entity);
     }
 
     this.#source.show = this.#visible;
@@ -138,6 +192,10 @@ export class NetworkOverlayLayer {
     for (const edge of snapshot.edges) {
       const entity = this.#edgeEntities.get(edge.id);
       if (entity) entity.show = isActiveAt(edge, isoTime);
+    }
+    for (const area of snapshot.areas ?? []) {
+      const entity = this.#areaEntities.get(area.id);
+      if (entity) entity.show = isActiveAt(area, isoTime);
     }
 
     if (this.#visible) this.#viewer.scene.requestRender();
