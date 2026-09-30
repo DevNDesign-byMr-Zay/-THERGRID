@@ -13,6 +13,8 @@ import {
   Viewer
 } from 'cesium';
 
+import type { SpatialScenarioVisual, TemporalInstant } from '../spatial-renderer';
+
 import {
   isActiveAt,
   overlayIntensity,
@@ -124,6 +126,36 @@ function edgeColor(edge: SpatialOverlayEdge, intensity: number): Color {
   return colorForIntensity(intensity, 0.35 + intensity * 0.5);
 }
 
+function edgeWidth(edge: SpatialOverlayEdge, intensity: number): number {
+  return edge.kind === 'coastline'
+    ? 2.6
+    : edge.kind === 'waterway'
+      ? 2.2
+      : edge.kind === 'route'
+        ? 1.1 + intensity * 1.4
+        : 1.4 + intensity * 2.8;
+}
+
+function scenarioColor(
+  scenario: SpatialScenarioVisual,
+  intensity: number,
+  alpha: number
+): Color {
+  if (scenario.renewableBias > 0.25) {
+    return Color.fromCssColorString('#63ffc5').withAlpha(alpha);
+  }
+  if (scenario.weatherRisk > 0.55) {
+    return Color.fromCssColorString('#ff7f6b').withAlpha(alpha);
+  }
+  if (scenario.storageStress > 0.45) {
+    return Color.fromCssColorString('#f2aa62').withAlpha(alpha);
+  }
+  if (scenario.stressFactor > 1.06) {
+    return Color.fromCssColorString('#ffbd73').withAlpha(alpha);
+  }
+  return colorForIntensity(intensity, alpha);
+}
+
 function edgeEntity(edge: SpatialOverlayEdge): Entity {
   const intensity = overlayIntensity(edge.intensity);
   return new Entity({
@@ -134,14 +166,7 @@ function edgeEntity(edge: SpatialOverlayEdge): Entity {
         coordinate(edge.from),
         coordinate(edge.to)
       ]),
-      width:
-        edge.kind === 'coastline'
-          ? 2.6
-          : edge.kind === 'waterway'
-            ? 2.2
-            : edge.kind === 'route'
-              ? 1.1 + intensity * 1.4
-              : 1.4 + intensity * 2.8,
+      width: edgeWidth(edge, intensity),
       material: new ColorMaterialProperty(edgeColor(edge, intensity)),
       distanceDisplayCondition: new ConstantProperty(
         new DistanceDisplayCondition(0, edgeFarDistance(edge))
@@ -206,7 +231,6 @@ export class NetworkOverlayLayer {
     this.#nodeEntities.clear();
     this.#edgeEntities.clear();
     this.#areaEntities.clear();
-    this.#areaEntities.clear();
 
     for (const node of snapshot.nodes) {
       const entity = this.#source.entities.add(nodeEntity(node));
@@ -232,21 +256,77 @@ export class NetworkOverlayLayer {
     this.#viewer.scene.requestRender();
   }
 
-  setTime(isoTime: string): void {
+  setTime(time: TemporalInstant): void {
     const snapshot = this.#snapshot;
     if (!snapshot) return;
 
+    const scenario =
+      time.mode === 'scenario' ? time.scenarioVisual ?? null : null;
+    const timestamp = Date.parse(time.iso);
+    const temporalPhase = Number.isFinite(timestamp)
+      ? timestamp / 1000
+      : 0;
+
     for (const node of snapshot.nodes) {
       const entity = this.#nodeEntities.get(node.id);
-      if (entity) entity.show = isActiveAt(node, isoTime);
+      if (!entity) continue;
+
+      entity.show = isActiveAt(node, time.iso);
+      const point = entity.point;
+      if (!point) continue;
+
+      const intensity = overlayIntensity(node.intensity);
+      const baseSize = 5 + intensity * 7;
+      const powerNode =
+        node.kind === 'generation' ||
+        node.kind === 'substation' ||
+        node.kind === 'asset';
+
+      if (scenario && powerNode) {
+        const pulse = 0.5 + 0.5 * Math.sin(temporalPhase * 0.32 + intensity * 5.1);
+        const stressBoost = Math.max(0, scenario.stressFactor - 1);
+        point.pixelSize = new ConstantProperty(
+          baseSize * (1 + stressBoost * 0.9 + pulse * 0.14)
+        );
+        point.color = new ConstantProperty(
+          scenarioColor(scenario, intensity, 0.88 + pulse * 0.1)
+        );
+      } else {
+        point.pixelSize = new ConstantProperty(baseSize);
+        point.color = new ConstantProperty(nodeColor(node));
+      }
     }
+
     for (const edge of snapshot.edges) {
       const entity = this.#edgeEntities.get(edge.id);
-      if (entity) entity.show = isActiveAt(edge, isoTime);
+      if (!entity) continue;
+
+      entity.show = isActiveAt(edge, time.iso);
+      const polyline = entity.polyline;
+      if (!polyline) continue;
+
+      const intensity = overlayIntensity(edge.intensity);
+      const powerEdge =
+        edge.kind === 'transmission' || edge.kind === 'distribution';
+
+      if (scenario && powerEdge) {
+        const pulse = 0.5 + 0.5 * Math.sin(temporalPhase * 0.38 + intensity * 6.3);
+        const stressBoost = Math.max(0, scenario.stressFactor - 1);
+        polyline.width = new ConstantProperty(
+          edgeWidth(edge, intensity) * (1 + stressBoost * 1.4 + pulse * 0.22)
+        );
+        polyline.material = new ColorMaterialProperty(
+          scenarioColor(scenario, intensity, 0.5 + pulse * 0.35)
+        );
+      } else {
+        polyline.width = new ConstantProperty(edgeWidth(edge, intensity));
+        polyline.material = new ColorMaterialProperty(edgeColor(edge, intensity));
+      }
     }
+
     for (const area of snapshot.areas ?? []) {
       const entity = this.#areaEntities.get(area.id);
-      if (entity) entity.show = isActiveAt(area, isoTime);
+      if (entity) entity.show = isActiveAt(area, time.iso);
     }
 
     if (this.#visible) this.#viewer.scene.requestRender();
