@@ -2310,19 +2310,161 @@
     showToast('REGION CHANGED', state.system.region);
   });
 
-  q('[data-action="profile"]')?.addEventListener('click', () =>
-    openPanel(
-      'OPERATOR',
-      'Profile',
-      '<div class="detail-card"><h3>IM · Operator Session</h3><p>Access to Grid, Holographic, Quantum, AI, Scenario, Evidence and Settings workspaces. Authority remains advisory-only.</p></div>',
-    ),
-  );
+  const PROFILE_CACHE_KEY = 'aethergrid.operator.profile.v1';
+  const profileDialog = q('#profileDialog');
+
+  function applyProfile(profile = {}) {
+    state.profile = { ...state.profile, ...profile };
+    const initials = (state.profile.initials || 'OP').slice(0, 4).toUpperCase();
+    const buttonInitials = q('#profileInitials');
+    const buttonAvatar = q('#profileAvatarButton');
+    if (buttonInitials) {
+      buttonInitials.textContent = initials;
+      buttonInitials.hidden = Boolean(state.profile.avatarDataUrl);
+    }
+    if (buttonAvatar) {
+      buttonAvatar.hidden = !state.profile.avatarDataUrl;
+      if (state.profile.avatarDataUrl) buttonAvatar.src = state.profile.avatarDataUrl;
+      else buttonAvatar.removeAttribute('src');
+    }
+
+    const previewInitials = q('#profileAvatarPreviewInitials');
+    const previewImage = q('#profileAvatarPreviewImage');
+    if (previewInitials) {
+      previewInitials.textContent = initials;
+      previewInitials.hidden = Boolean(state.profile.avatarDataUrl);
+    }
+    if (previewImage) {
+      previewImage.hidden = !state.profile.avatarDataUrl;
+      if (state.profile.avatarDataUrl) previewImage.src = state.profile.avatarDataUrl;
+      else previewImage.removeAttribute('src');
+    }
+
+    const fields = {
+      profileDisplayName: state.profile.displayName,
+      profileInitialsInput: initials,
+      profileTitle: state.profile.title,
+      profileOrganization: state.profile.organization,
+      profileHomeRegion: state.profile.homeRegion,
+      profileTimezone: state.profile.timezone,
+      profileBio: state.profile.bio,
+    };
+    for (const [id, value] of Object.entries(fields)) {
+      const input = q(`#${id}`);
+      if (input) input.value = value || '';
+    }
+    if (q('#profilePersistStatus')) {
+      q('#profilePersistStatus').textContent = state.profile.updatedAt
+        ? `SAVED · ${new Date(state.profile.updatedAt).toLocaleString()}`
+        : 'LOCAL PROFILE';
+    }
+  }
+
+  async function loadProfile() {
+    let cached = null;
+    try {
+      cached = JSON.parse(localStorage.getItem(PROFILE_CACHE_KEY) || 'null');
+    } catch {}
+    if (cached) applyProfile(cached);
+    try {
+      const result = await api('./api/aethergrid/profile');
+      if (result.profile) {
+        applyProfile(result.profile);
+        localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(result.profile));
+      }
+    } catch {}
+  }
+
+  function profilePayload() {
+    return {
+      ...state.profile,
+      displayName: q('#profileDisplayName')?.value.trim() || 'Operator',
+      initials: q('#profileInitialsInput')?.value.trim().toUpperCase() || 'OP',
+      title: q('#profileTitle')?.value.trim() || 'ÆTHERGRID Operator',
+      organization: q('#profileOrganization')?.value.trim() || '',
+      homeRegion: q('#profileHomeRegion')?.value.trim() || 'New York Metro',
+      timezone: q('#profileTimezone')?.value.trim() || Intl.DateTimeFormat().resolvedOptions().timeZone,
+      bio: q('#profileBio')?.value.trim() || '',
+      avatarDataUrl: state.profile.avatarDataUrl || '',
+    };
+  }
+
+  async function saveProfile(profile) {
+    let saved = { ...profile, updatedAt: new Date().toISOString() };
+    try {
+      const result = await api('./api/aethergrid/profile', {
+        method: 'PUT',
+        body: JSON.stringify({ profile }),
+      });
+      if (result.profile) saved = result.profile;
+      if (Array.isArray(result.activity)) state.activity = result.activity;
+    } catch {}
+    localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(saved));
+    applyProfile(saved);
+    renderActivity();
+    showToast('PROFILE SAVED', `${saved.displayName} · ${saved.title}`);
+    return saved;
+  }
+
+  async function resizeProfileAvatar(file) {
+    if (!file || !file.type.startsWith('image/')) throw new Error('Choose an image file.');
+    if (file.size > 8_000_000) throw new Error('Avatar image must be under 8 MB.');
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error || new Error('Unable to read image.'));
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(file);
+    });
+    const image = await new Promise((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error('Unable to decode image.'));
+      element.src = dataUrl;
+    });
+    const size = Math.min(image.naturalWidth, image.naturalHeight);
+    const sx = (image.naturalWidth - size) / 2;
+    const sy = (image.naturalHeight - size) / 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const context = canvas.getContext('2d');
+    context.drawImage(image, sx, sy, size, size, 0, 0, 256, 256);
+    return canvas.toDataURL('image/webp', 0.78);
+  }
+
+  q('[data-action="profile"]')?.addEventListener('click', () => {
+    applyProfile(state.profile);
+    profileDialog?.showModal();
+  });
+
+  q('#profileAvatarInput')?.addEventListener('change', async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      state.profile.avatarDataUrl = await resizeProfileAvatar(file);
+      applyProfile(state.profile);
+      showToast('AVATAR READY', 'Profile avatar resized to 256×256 and ready to save.');
+    } catch (error) {
+      showToast('AVATAR ERROR', error.message || String(error));
+    } finally {
+      event.target.value = '';
+    }
+  });
+
+  q('#profileForm')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await saveProfile(profilePayload());
+    profileDialog?.close();
+  });
 
   loadSettings();
   bindSettings();
   switchWorkspace(initialWorkspace(), { persist: false });
   syncStateToUi();
   loadState();
+  loadProfile();
+  loadGlobalRuntime();
+  loadQuantumBackends();
   configureTelemetry();
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
