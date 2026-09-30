@@ -51,6 +51,7 @@ export function SpatialViewport({
   const hostRef = useRef<HTMLDivElement | null>(null);
   const managerRef = useRef<RendererManager | null>(null);
   const overlayIdsRef = useRef<Set<string>>(new Set());
+  const journeyGenerationRef = useRef(0);
   const [status, setStatus] = useState<SpatialRendererStatus>(STARTING_STATUS);
 
   useEffect(() => {
@@ -80,8 +81,19 @@ export function SpatialViewport({
       if (atmosphere) manager.applyAtmosphere(atmosphere);
       if (airQuality) manager.applyAirQuality(airQuality);
       overlayIdsRef.current = new Set(overlays.map((snapshot) => snapshot.layerId));
-      await manager.flyTo(target);
-      if (!cancelled) setStatus(manager.status());
+      const generation = ++journeyGenerationRef.current;
+      const journey = manager.flyTo(target);
+      setStatus(manager.status());
+      const poll = globalThis.setInterval(() => {
+        if (!cancelled && generation === journeyGenerationRef.current) {
+          setStatus(manager.status());
+        }
+      }, 120);
+      await journey;
+      globalThis.clearInterval(poll);
+      if (!cancelled && generation === journeyGenerationRef.current) {
+        setStatus(manager.status());
+      }
     })().catch((error) => {
       if (cancelled) return;
       setStatus({
@@ -144,6 +156,7 @@ export function SpatialViewport({
     const manager = managerRef.current;
     if (!manager || !status.ready) return;
     manager.setTime(time);
+    setStatus(manager.status());
   }, [time, status.ready]);
 
   useEffect(() => {
@@ -175,18 +188,83 @@ export function SpatialViewport({
   useEffect(() => {
     const manager = managerRef.current;
     if (!manager || !status.ready) return;
-    void manager.flyTo(target);
+
+    const generation = ++journeyGenerationRef.current;
+    const journey = manager.flyTo(target);
+    setStatus(manager.status());
+    const poll = globalThis.setInterval(() => {
+      if (generation === journeyGenerationRef.current) {
+        setStatus(manager.status());
+      }
+    }, 120);
+
+    void journey
+      .catch((error) => {
+        setStatus({
+          ...manager.status(),
+          degraded: true,
+          reason: error instanceof Error ? error.message : String(error)
+        });
+      })
+      .finally(() => {
+        globalThis.clearInterval(poll);
+        if (generation === journeyGenerationRef.current) {
+          setStatus(manager.status());
+        }
+      });
+
+    return () => {
+      globalThis.clearInterval(poll);
+    };
   }, [target, status.ready]);
 
+  const phaseProgress: Record<string, number> = {
+    global: 25,
+    regional: 50,
+    city: 75,
+    district: 100,
+    idle: 100
+  };
+
   return (
-    <div className="spatial-shell">
+    <div className="spatial-shell" data-solar-phase={status.solar?.phase ?? 'unknown'}>
       <div className="spatial-canvas" ref={hostRef} aria-label="ÆTHERGRID 4D spatial viewport" />
       <div className="spatial-grid-overlay" aria-hidden="true" />
       <div className="viewport-status">
         <span className={status.ready ? 'status-dot live' : 'status-dot'} />
         <strong>{status.engine === 'cesium' ? 'CESIUM WORLD' : 'NATIVE FALLBACK'}</strong>
-        <small>{status.ready ? (status.degraded ? 'DEGRADED' : 'STREAMING') : 'INITIALIZING'}</small>
+        <small>
+          {status.ready
+            ? status.degraded
+              ? 'DEGRADED'
+              : `${status.detailLevel?.toUpperCase() ?? 'STREAM'} · STREAMING`
+            : 'INITIALIZING'}
+        </small>
       </div>
+
+      {status.busy ? (
+        <div className="journey-status" data-phase={status.journeyPhase ?? 'global'}>
+          <div>
+            <span>SPATIAL TRANSITION</span>
+            <strong>{(status.journeyPhase ?? 'global').toUpperCase()}</strong>
+          </div>
+          <div className="journey-progress" aria-hidden="true">
+            <span
+              style={{
+                width: `${phaseProgress[status.journeyPhase ?? 'global'] ?? 0}%`
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {status.solar ? (
+        <div className="solar-status" data-phase={status.solar.phase}>
+          <span>{status.solar.phase.replace('-', ' ').toUpperCase()}</span>
+          <strong>{status.solar.elevationDegrees.toFixed(1)}°</strong>
+          <small>{status.solar.localSolarHour.toFixed(1)}h SOLAR</small>
+        </div>
+      ) : null}
       {status.reason ? <div className="viewport-warning">{status.reason}</div> : null}
     </div>
   );
