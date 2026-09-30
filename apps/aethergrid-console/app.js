@@ -2209,11 +2209,11 @@
             : 'IBM QUANTUM CONFIG NEEDED'
           : provider === 'standalone'
             ? 'STANDALONE'
-            : 'LOCAL SAMPLER';
+            : 'LOCAL PRIMITIVES';
     }
     const status = q('#quantumRuntimeStatus');
     if (status) {
-      status.innerHTML = `<span class="status-dot"></span><div><b>${escapeHtml(provider)}</b><small>${runtime.hardwareExecution ? 'Real QPU submission enabled' : 'Local deterministic sampler'} · ${escapeHtml(runtime.defaultBackend || 'no backend selected')} · credentials never enter the browser</small></div>`;
+      status.innerHTML = `<span class="status-dot"></span><div><b>${escapeHtml(provider)}</b><small>${runtime.hardwareExecution ? 'Real IBM Quantum primitive submission enabled' : 'Local deterministic Sampler + bounded analytic Estimator'} · ${escapeHtml(runtime.defaultBackend || 'no backend selected')} · credentials never enter the browser</small></div>`;
     }
   }
 
@@ -2244,22 +2244,31 @@
     if (!container || !job) return;
     const distribution = job.distribution
       ? Object.entries(job.distribution)
-          .map(([stateKey, count]) => `<dt>|${escapeHtml(stateKey)}⟩</dt><dd>${Number(count).toLocaleString()}</dd>`)
+          .map(
+            ([stateKey, count]) =>
+              `<dt>|${escapeHtml(stateKey)}⟩</dt><dd>${Number(count).toLocaleString()}</dd>`,
+          )
           .join('')
       : '';
-    container.innerHTML = `<div class="quantum-job-card"><b>${escapeHtml(job.id || 'Quantum job')}</b><code>${escapeHtml(job.provider || 'unknown')} / ${escapeHtml(job.backend || 'unknown')}</code><dl><dt>Status</dt><dd>${escapeHtml(job.status || 'unknown')}</dd><dt>Primitive</dt><dd>${escapeHtml(job.programId || 'sampler')}</dd><dt>Hardware Submitted</dt><dd>${job.hardwareSubmitted ? 'YES' : 'NO'}</dd><dt>Receipt</dt><dd>${escapeHtml((job.receipt || '').slice(0, 18))}…</dd>${distribution}</dl></div>`;
+    const estimator =
+      job.programId === 'estimator'
+        ? `<dt>Observable</dt><dd>${escapeHtml(typeof job.observable === 'string' ? job.observable : JSON.stringify(job.observable || ''))}</dd><dt>Expectation</dt><dd>${Number.isFinite(Number(job.expectationValue)) ? Number(job.expectationValue).toFixed(6) : 'Pending remote result'}</dd>${job.approximation ? `<dt>Local Mode</dt><dd>${escapeHtml(job.approximation)}</dd>` : ''}`
+        : '';
+    container.innerHTML = `<div class="quantum-job-card"><b>${escapeHtml(job.id || 'Quantum job')}</b><code>${escapeHtml(job.provider || 'unknown')} / ${escapeHtml(job.backend || 'unknown')}</code><dl><dt>Status</dt><dd>${escapeHtml(job.status || 'unknown')}</dd><dt>Primitive</dt><dd>${escapeHtml(job.programId || 'sampler')}</dd><dt>Hardware Submitted</dt><dd>${job.hardwareSubmitted ? 'YES' : 'NO'}</dd><dt>Receipt</dt><dd>${escapeHtml((job.receipt || '').slice(0, 18))}…</dd>${estimator}${distribution}</dl></div>`;
   }
 
   async function submitQuantumJob() {
+    const primitive = q('#quantumPrimitive')?.value || 'sampler';
     const circuit = q('#quantumCircuit')?.value.trim();
     const backend = q('#quantumBackend')?.value;
     const shots = Number(q('#quantumShots')?.value || 1024);
+    const observable = q('#quantumObservable')?.value.trim() || 'ZZ';
     if (!circuit) return showToast('QUANTUM JOB', 'OpenQASM circuit is required.');
     if (q('#quantumProviderBadge')) q('#quantumProviderBadge').textContent = 'SUBMITTING…';
     try {
       const result = await api('./api/aethergrid/quantum/jobs', {
         method: 'POST',
-        body: JSON.stringify({ circuit, backend, shots }),
+        body: JSON.stringify({ primitive, circuit, backend, shots, observable }),
       });
       renderQuantumJob(result.job);
       if (result.evidence) {
@@ -2271,7 +2280,7 @@
       renderQuantumRuntime(state.quantumRuntime || {});
       showToast(
         'QUANTUM JOB SUBMITTED',
-        `${result.job.provider} · ${result.job.backend} · ${result.job.status}`,
+        `${String(result.job.programId || primitive).toUpperCase()} · ${result.job.provider} · ${result.job.backend} · ${result.job.status}`,
       );
       if (result.job.provider === 'ibm-quantum') loadQuantumJobs();
     } catch (error) {
@@ -2336,6 +2345,31 @@
       container.innerHTML = `<div class="empty-state">${escapeHtml(error.message || String(error))}</div>`;
     }
   }
+
+  function syncQuantumPrimitiveControls({ replaceCircuit = false } = {}) {
+    const primitive = q('#quantumPrimitive')?.value || 'sampler';
+    const shotsRow = q('#quantumShotsRow');
+    const observableRow = q('#quantumObservableRow');
+    const circuit = q('#quantumCircuit');
+    const submit = q('[data-action="submit-quantum-job"]');
+    if (shotsRow) shotsRow.hidden = primitive !== 'sampler';
+    if (observableRow) observableRow.hidden = primitive !== 'estimator';
+    if (submit) {
+      submit.textContent =
+        primitive === 'estimator' ? 'SUBMIT ESTIMATOR JOB' : 'SUBMIT SAMPLER JOB';
+    }
+    if (replaceCircuit && circuit) {
+      circuit.value =
+        primitive === 'estimator'
+          ? 'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; h q[0]; cx q[0], q[1];'
+          : 'OPENQASM 3.0; include "stdgates.inc"; bit[2] c; h $0; cx $0, $1; c[0] = measure $0; c[1] = measure $1;';
+    }
+  }
+
+  q('#quantumPrimitive')?.addEventListener('change', () =>
+    syncQuantumPrimitiveControls({ replaceCircuit: true }),
+  );
+  syncQuantumPrimitiveControls();
 
   q('[data-action="refresh-quantum-backends"]')?.addEventListener(
     'click',
