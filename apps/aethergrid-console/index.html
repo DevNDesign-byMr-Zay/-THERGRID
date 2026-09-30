@@ -298,15 +298,23 @@ button,input{font:inherit}
     )} · ${Number(serverState.metrics?.loadMw || 2410).toLocaleString()} MW</span>`;
   }
 
-  function nudgeStandaloneTelemetry() {
-    if (location.protocol !== 'file:') return;
-    const metrics = serverState.metrics;
-    const tick = Math.sin(Date.now() / 8000);
-    metrics.generationMw = Math.round(2130 + tick * 17);
-    metrics.loadMw = Math.round(2410 + Math.cos(Date.now() / 9500) * 21);
-    metrics.renewablePercent = Number((46.8 + Math.sin(Date.now() / 12000) * 1.2).toFixed(1));
-    metrics.storageMw = Math.round(590 + Math.cos(Date.now() / 10000) * 9);
-    updateTelemetryBadge();
+  async function refreshTelemetry() {
+    if (document.hidden) return;
+    if (location.protocol === 'file:') {
+      const metrics = serverState.metrics;
+      const tick = Math.sin(Date.now() / 8000);
+      metrics.generationMw = Math.round(2130 + tick * 17);
+      metrics.loadMw = Math.round(2410 + Math.cos(Date.now() / 9500) * 21);
+      metrics.renewablePercent = Number((46.8 + Math.sin(Date.now() / 12000) * 1.2).toFixed(1));
+      metrics.storageMw = Math.round(590 + Math.cos(Date.now() / 10000) * 9);
+      updateTelemetryBadge();
+      return;
+    }
+    try {
+      const telemetry = await api('./api/aethergrid/telemetry');
+      mergeState({ metrics: telemetry.metrics, system: telemetry.system });
+      updateTelemetryBadge();
+    } catch {}
   }
 
   function activateHotspot(button) {
@@ -809,7 +817,11 @@ button,input{font:inherit}
 
   function initEffects() {
     if (telemetryTimer) clearInterval(telemetryTimer);
-    telemetryTimer = setInterval(nudgeStandaloneTelemetry, 2600);
+    telemetryTimer = setInterval(refreshTelemetry, 3200);
+    refreshTelemetry();
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) refreshTelemetry();
+    });
     const first = q('.hotspot[data-action="overview"]');
     if (first) activateHotspot(first);
   }
