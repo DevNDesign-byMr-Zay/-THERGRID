@@ -101,9 +101,19 @@ function voltageIntensity(voltage: number | null | undefined): number {
 }
 
 
-function sourceFields(mesh: CityMeshResponse) {
-  const source = sourceFields(mesh);
-  const eventTime = source.eventTime;
+interface OverlaySourceFields {
+  eventTime: string;
+  sourceTime: string | null;
+  fetchedAt: string | null;
+  live: boolean;
+  stale: boolean;
+  fallback: boolean;
+  attribution: string | null;
+}
+
+function sourceFields(mesh: CityMeshResponse): OverlaySourceFields {
+  const source = mesh.source ?? {};
+  const eventTime = source.fetchedAt ?? new Date().toISOString();
   return {
     eventTime,
     sourceTime: source.upstreamTimestamp ?? null,
@@ -258,8 +268,8 @@ async function cityMeshRequest(
 }
 
 export function cityMeshToPowerOverlay(mesh: CityMeshResponse): SpatialOverlaySnapshot {
-  const source = mesh.source ?? {};
-  const eventTime = source.fetchedAt ?? new Date().toISOString();
+  const source = sourceFields(mesh);
+  const eventTime = source.eventTime;
 
   const nodes: SpatialOverlayNode[] = (mesh.powerAssets ?? [])
     .filter((asset) => Array.isArray(asset.position) && asset.position.length >= 2)
