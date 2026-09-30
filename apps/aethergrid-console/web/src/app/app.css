@@ -624,6 +624,205 @@ button {
 
 
 
+
+.quantum-panel {
+  display: grid;
+  gap: 9px;
+  padding: 13px;
+  border: 1px solid rgba(99, 127, 255, 0.16);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(99, 127, 255, 0.1), transparent 42%),
+    linear-gradient(145deg, rgba(16, 23, 35, 0.8), rgba(7, 11, 18, 0.86));
+}
+
+.quantum-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.quantum-head small,
+.quantum-head strong {
+  display: block;
+}
+
+.quantum-head small {
+  color: #63748a;
+  font-size: 8px;
+  letter-spacing: 0.13em;
+}
+
+.quantum-head strong {
+  margin-top: 3px;
+  font: 600 11px ui-monospace, "SFMono-Regular", Consolas, monospace;
+  letter-spacing: 0.08em;
+}
+
+.quantum-head em {
+  padding: 4px 6px;
+  border-radius: 5px;
+  font-size: 6px;
+  font-style: normal;
+  letter-spacing: 0.1em;
+}
+
+.quantum-head em.hardware {
+  color: #b7adff;
+  background: rgba(155, 124, 255, 0.1);
+}
+
+.quantum-head em.simulator {
+  color: #77d9ff;
+  background: rgba(112, 231, 255, 0.07);
+}
+
+.quantum-runtime-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+
+.quantum-runtime-grid span {
+  padding: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.014);
+}
+
+.quantum-runtime-grid small,
+.quantum-runtime-grid strong {
+  display: block;
+}
+
+.quantum-runtime-grid small {
+  color: #596c80;
+  font-size: 6px;
+}
+
+.quantum-runtime-grid strong {
+  margin-top: 3px;
+  color: #a9b9c7;
+  font-size: 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quantum-backend {
+  display: grid;
+  gap: 4px;
+  color: #667b8e;
+  font-size: 7px;
+  letter-spacing: 0.09em;
+}
+
+.quantum-backend select {
+  width: 100%;
+  padding: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 7px;
+  color: #bdcbd6;
+  background: #090e17;
+  font-size: 7px;
+}
+
+.quantum-backend-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.quantum-backend-meta span {
+  padding: 3px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 4px;
+  color: #63788c;
+  font-size: 6px;
+}
+
+.quantum-run {
+  min-height: 34px;
+  border: 1px solid rgba(112, 231, 255, 0.24);
+  border-radius: 7px;
+  color: #aeeeff;
+  background: rgba(112, 231, 255, 0.055);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  cursor: pointer;
+}
+
+.quantum-run.hardware {
+  border-color: rgba(155, 124, 255, 0.34);
+  color: #d8d1ff;
+  background: rgba(155, 124, 255, 0.09);
+}
+
+.quantum-run:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.quantum-job-state {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 8px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.quantum-job-state span {
+  color: #74899b;
+  font-size: 7px;
+  letter-spacing: 0.08em;
+}
+
+.quantum-job-state strong {
+  color: #c4d4df;
+  font-size: 7px;
+}
+
+.quantum-job-state small,
+.quantum-job-state code {
+  color: #5e7386;
+  font-size: 6px;
+}
+
+.quantum-history summary {
+  color: #667d90;
+  font-size: 7px;
+  cursor: pointer;
+}
+
+.quantum-history div {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 5px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.035);
+  font-size: 6px;
+}
+
+.quantum-history div span {
+  color: #71869a;
+}
+
+.quantum-history div strong {
+  color: #a8bac8;
+}
+
+.quantum-history div small {
+  color: #607588;
+}
+
+.quantum-history p {
+  color: #607588;
+  font-size: 7px;
+}
+
 .agent-dock {
   display: grid;
   gap: 9px;
@@ -1267,7 +1466,8 @@ button {
 :root[data-theme='light'] .weather-card,
 :root[data-theme='light'] .live-context-card,
 :root[data-theme='light'] .identity-card,
-:root[data-theme='light'] .agent-dock {
+:root[data-theme='light'] .agent-dock,
+:root[data-theme='light'] .quantum-panel {
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.8), rgba(234, 241, 247, 0.8));
 }
 
@@ -1457,4 +1657,10 @@ button {
 :root[data-theme='light'] .agent-compose textarea {
   color: #253849;
   background: rgba(255, 255, 255, 0.66);
+}
+
+
+:root[data-theme='light'] .quantum-backend select {
+  color: #2a3c4c;
+  background: rgba(255, 255, 255, 0.75);
 }
