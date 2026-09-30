@@ -999,3 +999,56 @@ test('v4 documentation and promotion gates describe only implemented spatial cap
   assert.match(nativeRenderer, /implements SpatialRenderer/u);
   assert.match(clock, /#liveTimer/u);
 });
+
+test('v4 surface picking is renderer-neutral and labels terrain versus projection precision', async () => {
+  const [contract, cesium, nativeRenderer, manager] = await Promise.all([
+    text('apps/aethergrid-console/web/src/renderer/spatial-renderer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/renderer-manager.ts'),
+  ]);
+
+  assert.match(contract, /interface SpatialSurfacePoint/u);
+  assert.match(contract, /'depth-surface'/u);
+  assert.match(contract, /'native-projection'/u);
+  assert.match(contract, /pickSurface\(point: SpatialPickPoint\)/u);
+  assert.match(cesium, /scene\.pickPosition/u);
+  assert.match(cesium, /scene\.globe\.pick/u);
+  assert.match(cesium, /camera\.pickEllipsoid/u);
+  assert.match(nativeRenderer, /source: 'native-projection'/u);
+  assert.match(manager, /return this\.#current\.pickSurface\(point\)/u);
+});
+
+test('v4 measurement computes geodesic distance bearing and optional elevation without inventing native height', async () => {
+  const analysis = await text(
+    'apps/aethergrid-console/web/src/services/spatial-analysis.ts',
+  );
+
+  assert.match(analysis, /EARTH_RADIUS_METERS/u);
+  assert.match(analysis, /measureSpatialPoints/u);
+  assert.match(analysis, /bearingDegrees/u);
+  assert.match(analysis, /elevationDeltaMeters/u);
+  assert.match(analysis, /slopePercent/u);
+  assert.match(analysis, /threeDimensionalDistanceMeters/u);
+  assert.match(analysis, /ellipsoid-or-projection/u);
+  assert.match(analysis, /layerId: 'analysis'/u);
+  assert.match(analysis, /ÆTHERGRID operator geodesic measurement/u);
+});
+
+test('v4 analysis workspace captures the 4d frame and routes measure clicks without breaking inspect mode', async () => {
+  const [viewport, app, panel] = await Promise.all([
+    text('apps/aethergrid-console/web/src/components/SpatialViewport.tsx'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/components/SpatialAnalysisPanel.tsx'),
+  ]);
+
+  assert.match(viewport, /interactionModeRef\.current === 'measure'/u);
+  assert.match(viewport, /\.pickSurface\(screen\)/u);
+  assert.match(viewport, /\.pick\(screen\)/u);
+  assert.match(app, /measurementFrame/u);
+  assert.match(app, /setMeasurementFrame\(\{ \.\.\.temporalInstant \}\)/u);
+  assert.match(app, /measurementToOverlay\(measurement, measurementFrame\)/u);
+  assert.match(app, /\['context', 'CONTEXT'\],[\s\S]*\['analysis', 'ANALYSIS'\]/u);
+  assert.match(panel, /Native fallback cannot claim terrain elevation/u);
+  assert.match(panel, /CLEAR MEASUREMENT/u);
+});
