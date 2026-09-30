@@ -529,6 +529,65 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     return base;
   }
 
+  #airGeometry(): NativeWeatherGeometry {
+    if (
+      this.#time.mode !== 'live' ||
+      !this.#layerVisible('air', true) ||
+      !this.#airQuality?.current ||
+      this.#airQuality.current.usAqi == null
+    ) {
+      return { lines: [], points: [] };
+    }
+
+    const current = this.#airQuality.current;
+    const aqi = Math.max(0, current.usAqi);
+    const pm25 = Math.max(0, current.pm25UgM3 ?? 0);
+    const intensity = clamp(Math.max(aqi / 220, pm25 / 80), 0.08, 1);
+    const categoryColor =
+      current.category === 'good'
+        ? '#72e6b8'
+        : current.category === 'moderate'
+          ? '#e4d06c'
+          : current.category === 'unhealthy-sensitive'
+            ? '#e7a461'
+            : current.category === 'unhealthy'
+              ? '#e1766f'
+              : current.category === 'very-unhealthy'
+                ? '#a678d0'
+                : current.category === 'hazardous'
+                  ? '#a96078'
+                  : '#9fb3c3';
+
+    const timestamp = Date.parse(this.#time.iso);
+    const seconds = Number.isFinite(timestamp) ? timestamp / 1000 : 0;
+    const windFrom = current.windDirectionDegrees ?? 0;
+    const toward = ((windFrom + 180) * Math.PI) / 180;
+    const speed = Math.max(0, current.windSpeedKph ?? 0);
+    const driftX = Math.sin(toward) * speed * 0.00012;
+    const driftY = Math.cos(toward) * speed * 0.00005;
+    const count = Math.round(22 + intensity * 86);
+    const points: NativeWeatherPoint[] = [];
+
+    for (let index = 0; index < count; index += 1) {
+      const seedX = deterministicUnit(index, 21.41);
+      const seedY = deterministicUnit(index, 27.13);
+      const depth = deterministicUnit(index, 31.79);
+      const x = wrapNdc(seedX * 2 - 1 + seconds * driftX);
+      const y = clamp(
+        -0.65 + seedY * 1.32 + seconds * driftY,
+        -0.94,
+        0.82
+      );
+      points.push({
+        position: [x, y],
+        color: rgba(categoryColor, 0.025 + intensity * (0.08 + depth * 0.1)),
+        size: 2.2 + intensity * 3.4 + depth * 2.2
+      });
+    }
+
+    return { lines: [], points };
+  }
+
   #weatherGeometry(): NativeWeatherGeometry {
     if (
       this.#time.mode !== 'live' ||
@@ -687,6 +746,18 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
       }
     }
     for (const point of weather.points) {
+      pointPositions.push(point.position[0], point.position[1]);
+      pointColors.push(
+        point.color.r,
+        point.color.g,
+        point.color.b,
+        point.color.a
+      );
+      pointSizes.push(point.size);
+    }
+
+    const air = this.#airGeometry();
+    for (const point of air.points) {
       pointPositions.push(point.position[0], point.position[1]);
       pointColors.push(
         point.color.r,
@@ -917,6 +988,20 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
       context.stroke();
     }
     for (const point of weather.points) {
+      context.fillStyle = css(point.color);
+      context.beginPath();
+      context.arc(
+        ((point.position[0] + 1) / 2) * width,
+        ((1 - point.position[1]) / 2) * height,
+        Math.max(1, point.size / 2),
+        0,
+        Math.PI * 2
+      );
+      context.fill();
+    }
+
+    const air = this.#airGeometry();
+    for (const point of air.points) {
       context.fillStyle = css(point.color);
       context.beginPath();
       context.arc(
