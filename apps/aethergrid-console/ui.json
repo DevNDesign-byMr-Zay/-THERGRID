@@ -96,7 +96,6 @@
   ],
   "runtimeComposition": "semantic-dom-native-webgl",
   "runtimeUsesBackgroundReferenceImage": false,
-  "designReference": "assets/dashboard-reference.webp",
   "spatialModel": {
     "dimensions": [
       "x",
@@ -115,5 +114,7 @@
     ],
     "backendEndpoint": "GET /api/aethergrid/spatial",
     "backgroundImageRequired": false
-  }
+  },
+  "designReferenceRepositoryPath": "assets/dashboard-reference.webp",
+  "designReferenceIncludedInRuntimePackage": false
 }
