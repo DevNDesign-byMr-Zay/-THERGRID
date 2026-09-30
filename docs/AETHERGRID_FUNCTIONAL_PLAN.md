@@ -268,7 +268,7 @@ Status: IMPLEMENTED / VERIFYING
 
 ## Batch 10 — Terrain-aware spatial intelligence
 
-Status: IMPLEMENTED / VERIFYING
+Status: COMPLETE
 
 ### Live elevation
 - provider-neutral `terrain-runtime.mjs`;
@@ -294,3 +294,38 @@ Status: IMPLEMENTED / VERIFYING
 - weather and renewable-resource overlays behind separately attributed adapters;
 - hosted multi-user authentication/session boundary;
 - additional quantum providers and richer result visualizations.
+
+## Batch 11 — Solid live cities, operational use cases, and dedicated agent threads
+
+Status: IMPLEMENTED / VERIFYING
+
+### Solid live 3D cities
+- OSM building footprints are extruded into translucent WebGL triangle surfaces instead of wireframe-only shells;
+- wireframe edges remain available for readable topology and X-ray review;
+- OSM building:part and minimum-height metadata are retained when present;
+- SOLID 3D, X-RAY and OPERATIONS visual modes change real renderer behavior;
+- globe selection performs a cinematic planetary descent and a second local city fly-in while geometry/terrain load.
+
+### Operational city use cases
+- Grid Resilience;
+- Outage Impact;
+- Emergency Access;
+- Renewable Siting;
+- Load Growth.
+
+Each workflow analyzes the currently loaded bounded city mesh, returns transparent map-derived metrics and a 0–100 planning proxy, recommends renderer layers, creates an evidence receipt, and adds the result to bounded AI context. These indicators are decision-support proxies, not operational truth or physical actuation.
+
+### Dedicated AI chats
+- TEAM, VÆLON, AUREN and SOLVÆR each retain an independent browser-side conversation thread;
+- the active thread sends only a bounded recent history window to its existing provider-neutral backend route;
+- selecting another agent changes to that agent's own transcript instead of reusing the shared log;
+- city-operation context can be handed to TEAM mode for coordinated specialist review;
+- provider configuration remains replaceable and secrets remain server-side.
+
+### Verification requirements
+- semantic HTML must expose the cinematic transition, visual modes, city-use-case controls and thread state;
+- native WebGL source must contain solid city triangle geometry in addition to wireframe topology;
+- geospatial tests must prove building-part and minimum-height parsing;
+- city-operation tests must prove all five workflows stay bounded and advisory-only;
+- agent-thread UI must preserve separate history while backend agent/team routes remain unchanged;
+- all pre-existing tests, coverage, lint, typecheck, smoke, release-readiness, package and CodeQL gates must remain green.
