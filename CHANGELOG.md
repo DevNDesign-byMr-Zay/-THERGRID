@@ -10,6 +10,12 @@
 
 ### Added
 
+- Added arbitrary latitude/longitude exploration in the GLOBAL workspace, including animated coordinate descent, bounded radius controls, and custom-coordinate city sessions.
+- Added live OpenStreetMap power-grid ingestion for mapped lines/cables, substations, plants, generators, and transformers with voltage/circuit/operator metadata when available.
+- Added independent city-layer controls for buildings, roads, power infrastructure, and asset nodes plus a dedicated 4D city time index.
+- Added bounded geospatial and quantum external-context summaries to VÆLON, AUREN, SOLVÆR, and TEAM requests without exposing provider credentials or actuation authority.
+- Strengthened the full-app ZIP and release-readiness gates so coordinate controls, live power-grid parsing, shared agent context, and standalone power topology cannot disappear silently.
+
 - Added a native-WebGL **GLOBAL** God's-eye workspace with real latitude/longitude city nodes, orbit/zoom selection, and a city-descent workflow.
 - Added on-demand OpenStreetMap Overpass building-footprint ingestion with attribution, request caching, height/level extraction, metric projection, explicit live-vs-fallback provenance, and interactive 3D wireframe city rendering.
 - Added a persistent operator profile with editable identity fields, local JSON persistence, browser cache fallback, and client-side 256×256 avatar resizing.
