@@ -147,6 +147,7 @@ export function App() {
   const [powerOverlayError, setPowerOverlayError] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState('');
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [intelOpen, setIntelOpen] = useState(false);
   const [atmosphere, setAtmosphere] = useState<AtmosphericOverlaySnapshot | null>(null);
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
   const [liveContext, setLiveContext] = useState<CityLiveSnapshot | null>(null);
@@ -359,6 +360,15 @@ export function App() {
 
         <div className="topbar-actions">
           <button
+            className="intel-toggle"
+            type="button"
+            aria-expanded={intelOpen}
+            aria-controls="aethergrid-intelligence-rail"
+            onClick={() => setIntelOpen((open) => !open)}
+          >
+            INTEL
+          </button>
+          <button
             className="appearance-button"
             type="button"
             onClick={appearance.cycle}
@@ -472,7 +482,16 @@ export function App() {
           </div>
         </section>
 
-        <aside className="intel-rail">
+        <aside
+          id="aethergrid-intelligence-rail"
+          className={intelOpen ? 'intel-rail open' : 'intel-rail'}
+        >
+          <div className="intel-mobile-head">
+            <span>INTELLIGENCE</span>
+            <button type="button" onClick={() => setIntelOpen(false)} aria-label="Close intelligence drawer">
+              ×
+            </button>
+          </div>
           <section className="identity-card">
             <div className="identity-head">
               <span>
