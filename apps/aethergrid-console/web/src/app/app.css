@@ -603,6 +603,77 @@ button {
 }
 
 
+
+.live-context-card {
+  padding: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255, 123, 99, 0.07), transparent 34%),
+    linear-gradient(145deg, rgba(16, 23, 35, 0.76), rgba(7, 11, 18, 0.82));
+}
+
+.live-context-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.live-context-head small,
+.live-context-head strong {
+  display: block;
+}
+
+.live-context-head small {
+  color: #5f7286;
+  font-size: 8px;
+  letter-spacing: 0.14em;
+}
+
+.live-context-head strong {
+  margin-top: 3px;
+  font: 600 11px ui-monospace, "SFMono-Regular", Consolas, monospace;
+  letter-spacing: 0.1em;
+}
+
+.live-context-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.live-context-metrics span {
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.045);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.live-context-metrics small,
+.live-context-metrics strong {
+  display: block;
+}
+
+.live-context-metrics small {
+  color: #596d81;
+  font-size: 7px;
+  letter-spacing: 0.12em;
+}
+
+.live-context-metrics strong {
+  margin-top: 4px;
+  color: #d7e8f3;
+  font-size: 9px;
+}
+
+.live-context-card p {
+  margin: 10px 0 0;
+  color: #718496;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
 .weather-card {
   padding: 13px;
   border: 1px solid rgba(255, 255, 255, 0.055);
@@ -876,7 +947,8 @@ button {
 
 :root[data-theme='light'] .intel-card,
 :root[data-theme='light'] .selection-card,
-:root[data-theme='light'] .weather-card {
+:root[data-theme='light'] .weather-card,
+:root[data-theme='light'] .live-context-card {
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.8), rgba(234, 241, 247, 0.8));
 }
 
