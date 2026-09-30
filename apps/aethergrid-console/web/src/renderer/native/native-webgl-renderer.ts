@@ -1,6 +1,7 @@
-import type {
-  AirQualityOverlaySnapshot,
-  AtmosphericOverlaySnapshot
+import {
+  weatherPhenomenon,
+  type AirQualityOverlaySnapshot,
+  type AtmosphericOverlaySnapshot
 } from '../overlays/atmospheric-overlay';
 import type {
   OverlayCoordinate,
@@ -27,6 +28,23 @@ interface Rgba {
   g: number;
   b: number;
   a: number;
+}
+
+interface NativeWeatherLine {
+  from: readonly [number, number];
+  to: readonly [number, number];
+  color: Rgba;
+}
+
+interface NativeWeatherPoint {
+  position: readonly [number, number];
+  color: Rgba;
+  size: number;
+}
+
+interface NativeWeatherGeometry {
+  lines: readonly NativeWeatherLine[];
+  points: readonly NativeWeatherPoint[];
 }
 
 interface ProjectedFeature {
@@ -97,6 +115,18 @@ function layerColor(layerId: string, kind = ''): Rgba {
 
 function normalizeLongitudeDelta(longitude: number): number {
   return ((longitude + 540) % 360) - 180;
+}
+
+function fractional(value: number): number {
+  return value - Math.floor(value);
+}
+
+function deterministicUnit(index: number, salt: number): number {
+  return fractional(Math.sin(index * 12.9898 + salt * 78.233) * 43_758.5453);
+}
+
+function wrapNdc(value: number): number {
+  return ((((value + 1) % 2) + 2) % 2) - 1;
 }
 
 function pointSegmentDistance(
@@ -497,6 +527,109 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     return base;
   }
 
+  #weatherGeometry(): NativeWeatherGeometry {
+    if (
+      this.#time.mode !== 'live' ||
+      !this.#layerVisible('weather', true) ||
+      !this.#atmosphere?.current
+    ) {
+      return { lines: [], points: [] };
+    }
+
+    const current = this.#atmosphere.current;
+    const phenomenon = weatherPhenomenon(this.#atmosphere);
+    const timestamp = Date.parse(this.#time.iso);
+    const seconds = Number.isFinite(timestamp) ? timestamp / 1000 : 0;
+    const cloudCover = clamp(current.cloudCoverPercent ?? 0, 0, 100);
+    const precipitation = Math.max(0, current.precipitationMm ?? 0);
+    const windSpeed = Math.max(0, current.windSpeedKph ?? 0);
+    const windFrom = current.windDirectionDegrees ?? 0;
+    const windToward = ((windFrom + 180) * Math.PI) / 180;
+    const windX = Math.sin(windToward);
+    const windY = Math.cos(windToward);
+
+    const lines: NativeWeatherLine[] = [];
+    const points: NativeWeatherPoint[] = [];
+
+    const cloudCount = Math.round((cloudCover / 100) * 72);
+    const cloudDrift = seconds * Math.min(80, windSpeed) * 0.00016;
+    for (let index = 0; index < cloudCount; index += 1) {
+      const seedX = deterministicUnit(index, 3.17);
+      const seedY = deterministicUnit(index, 8.41);
+      const depth = deterministicUnit(index, 5.73);
+      const x = wrapNdc(seedX * 2 - 1 + cloudDrift * windX);
+      const y = clamp(0.2 + seedY * 0.72 + cloudDrift * windY * 0.18, -0.95, 0.96);
+      points.push({
+        position: [x, y],
+        color: rgba('#c4d0db', 0.05 + (cloudCover / 100) * 0.16),
+        size: 5 + depth * 13
+      });
+    }
+
+    const precipitationActive =
+      precipitation > 0.02 &&
+      (phenomenon === 'rain' ||
+        phenomenon === 'snow' ||
+        phenomenon === 'thunderstorm' ||
+        phenomenon === 'mixed');
+    if (precipitationActive) {
+      const count = Math.round(18 + clamp(precipitation / 8, 0, 1) * 90);
+      const snow = phenomenon === 'snow';
+      const fallRate = snow ? 0.045 : 0.13;
+      const windLean = clamp(windSpeed / 85, 0, 0.7) * windX;
+
+      for (let index = 0; index < count; index += 1) {
+        const seedX = deterministicUnit(index, 2.11);
+        const seedY = deterministicUnit(index, 7.91);
+        const phase = fractional(seedY + seconds * fallRate);
+        const y = 1 - phase * 2;
+        const x = wrapNdc(
+          seedX * 2 - 1 +
+            seconds * windLean * (snow ? 0.002 : 0.0035) +
+            (snow ? Math.sin(seconds * 0.7 + index) * 0.025 : 0)
+        );
+
+        if (snow) {
+          points.push({
+            position: [x, y],
+            color: rgba('#e8f4ff', 0.42 + clamp(precipitation / 8, 0, 1) * 0.3),
+            size: 2.2 + deterministicUnit(index, 4.13) * 3
+          });
+        } else {
+          const length = 0.045 + clamp(precipitation / 8, 0, 1) * 0.07;
+          lines.push({
+            from: [x, y],
+            to: [
+              clamp(x + windLean * length * 0.75, -1.08, 1.08),
+              clamp(y - length, -1.08, 1.08)
+            ],
+            color: rgba(
+              '#9ddcff',
+              0.22 + clamp(precipitation / 8, 0, 1) * 0.42
+            )
+          });
+        }
+      }
+    }
+
+    if (phenomenon === 'fog') {
+      const visibility = Math.max(250, current.visibilityM ?? 10_000);
+      const fogStrength = 1 - clamp(visibility / 10_000, 0, 1);
+      const fogCount = Math.round(24 + fogStrength * 54);
+      for (let index = 0; index < fogCount; index += 1) {
+        const x = deterministicUnit(index, 11.23) * 2 - 1;
+        const y = -0.82 + deterministicUnit(index, 13.37) * 0.62;
+        points.push({
+          position: [x, y],
+          color: rgba('#b9c8d2', 0.05 + fogStrength * 0.16),
+          size: 8 + deterministicUnit(index, 17.81) * 18
+        });
+      }
+    }
+
+    return { lines, points };
+  }
+
   #collectGeometry(): {
     linePositions: number[];
     lineColors: number[];
@@ -532,6 +665,34 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
           lineColors.push(grid.r, grid.g, grid.b, grid.a);
         }
       }
+    }
+
+    const weather = this.#weatherGeometry();
+    for (const line of weather.lines) {
+      linePositions.push(
+        line.from[0],
+        line.from[1],
+        line.to[0],
+        line.to[1]
+      );
+      for (let repeat = 0; repeat < 2; repeat += 1) {
+        lineColors.push(
+          line.color.r,
+          line.color.g,
+          line.color.b,
+          line.color.a
+        );
+      }
+    }
+    for (const point of weather.points) {
+      pointPositions.push(point.position[0], point.position[1]);
+      pointColors.push(
+        point.color.r,
+        point.color.g,
+        point.color.b,
+        point.color.a
+      );
+      pointSizes.push(point.size);
     }
 
     for (const snapshot of this.#overlays.values()) {
@@ -852,6 +1013,35 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
           distance: number;
         }
       | null = null;
+
+    const weather = this.#weatherGeometry();
+    context.lineCap = 'round';
+    for (const line of weather.lines) {
+      context.strokeStyle = css(line.color);
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(
+        ((line.from[0] + 1) / 2) * width,
+        ((1 - line.from[1]) / 2) * height
+      );
+      context.lineTo(
+        ((line.to[0] + 1) / 2) * width,
+        ((1 - line.to[1]) / 2) * height
+      );
+      context.stroke();
+    }
+    for (const point of weather.points) {
+      context.fillStyle = css(point.color);
+      context.beginPath();
+      context.arc(
+        ((point.position[0] + 1) / 2) * width,
+        ((1 - point.position[1]) / 2) * height,
+        Math.max(1, point.size / 2),
+        0,
+        Math.PI * 2
+      );
+      context.fill();
+    }
 
     for (const snapshot of this.#overlays.values()) {
       if (!this.#layerVisible(snapshot.layerId, true)) continue;
