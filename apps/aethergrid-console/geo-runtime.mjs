@@ -73,7 +73,7 @@ const CITY_PRESETS = Object.freeze([
     lon: 151.2099,
     radiusM: 1700,
   },
-])
+]);
 
 const POWER_LINE_TYPES = new Set(['line', 'minor_line', 'cable']);
 const POWER_ASSET_TYPES = new Set(['substation', 'plant', 'generator', 'transformer']);
@@ -102,10 +102,6 @@ function heightProfile(tags = {}, id = 'building') {
   }
   const hash = createHash('sha256').update(String(id)).digest();
   return { heightM: 8 + (hash[0] / 255) * 34, source: 'inferred' };
-}
-
-function numericHeight(tags = {}, id = 'building') {
-  return heightProfile(tags, id).heightM;
 }
 
 function numericMinHeight(tags = {}) {
