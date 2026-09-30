@@ -35,3 +35,11 @@ jobs:
 
       - name: Build v4 spatial application
         run: npm run build
+
+      - name: Retain v4 spatial application bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: aethergrid-v4-web-${{ github.sha }}
+          path: apps/aethergrid-console/web/dist/
+          if-no-files-found: error
+          retention-days: 14
