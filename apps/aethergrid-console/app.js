@@ -1250,6 +1250,31 @@
     showToast('SPATIAL NODE SELECTED', node.label || node.id);
   }
 
+  function handleCityBuildingSelection(node) {
+    const status = q('#cityMeshStatus');
+    if (status) {
+      status.innerHTML = `<b>${escapeHtml(node.label || node.id)}</b><p>Building node · ${Number(node.heightM || 0).toFixed(1)} m high${node.osmId ? ` · OSM way ${escapeHtml(node.osmId)}` : ''}.</p>`;
+    }
+    showToast('CITY BUILDING SELECTED', node.label || node.id);
+  }
+
+  function handleGlobalCitySelection(city) {
+    if (!city) return;
+    state.geospatial.selectedCityId = city.id;
+    const select = q('#globalCitySelect');
+    if (select) select.value = city.id;
+    qa('[data-global-city]').forEach((button) =>
+      button.classList.toggle('active', button.dataset.globalCity === city.id),
+    );
+    const latLabel = `${Math.abs(Number(city.lat)).toFixed(4)}° ${Number(city.lat) >= 0 ? 'N' : 'S'}`;
+    const lonLabel = `${Math.abs(Number(city.lon)).toFixed(4)}° ${Number(city.lon) >= 0 ? 'E' : 'W'}`;
+    if (q('#globalCoordinates')) q('#globalCoordinates').textContent = `${latLabel} · ${lonLabel}`;
+    const status = q('#cityMeshStatus');
+    if (status) {
+      status.innerHTML = `<b>${escapeHtml(city.name)} · ${escapeHtml(city.country)}</b><p>Real-coordinate world node selected. Descend into the city to request live building geometry.</p>`;
+    }
+  }
+
   const spatial = new SpatialGrid4D(q('#spatialGrid'), {
     readoutId: 'cameraReadout',
     onSelectNode: handleSpatialSelection,
@@ -1260,8 +1285,141 @@
     distance: 18,
     onSelectNode: handleSpatialSelection,
   });
+  const globalGlobe = new GlobalGlobe3D(q('#globalGlobe'), {
+    onSelectCity: handleGlobalCitySelection,
+    onEnterCity: (city) => loadLiveCity(city.id),
+  });
+  const cityGrid = new SpatialGrid4D(q('#cityGrid'), {
+    yaw: 0.86,
+    pitch: 0.62,
+    distance: 18,
+    onSelectNode: handleCityBuildingSelection,
+  });
+  cityGrid.autoRotate = false;
   const quantumSurface = new WaveSurface(q('#quantumCanvas'));
   const scenarioChart = new ScenarioChart(q('#scenarioChart'));
+
+  function setGlobalMode(mode) {
+    const globeCanvas = q('#globalGlobe');
+    const cityCanvas = q('#cityGrid');
+    const cityMode = mode === 'city';
+    if (globeCanvas) globeCanvas.hidden = cityMode;
+    if (cityCanvas) cityCanvas.hidden = !cityMode;
+    qa('[data-global-mode]').forEach((button) =>
+      button.classList.toggle('active', button.dataset.globalMode === mode),
+    );
+    if (q('#globalScale')) q('#globalScale').textContent = cityMode ? 'CITY SCALE' : 'PLANETARY SCALE';
+    requestAnimationFrame(() => {
+      globalGlobe?.resize();
+      cityGrid?.resize();
+    });
+  }
+
+  async function loadGlobalRuntime() {
+    const list = q('#globalCityList');
+    const select = q('#globalCitySelect');
+    try {
+      const result = await api('./api/aethergrid/geospatial/cities');
+      state.geospatial.runtime = result.runtime;
+      state.geospatial.cities = Array.isArray(result.cities) ? result.cities : [];
+      globalGlobe?.setCities(state.geospatial.cities);
+      if (select) {
+        select.innerHTML = state.geospatial.cities
+          .map(
+            (city) =>
+              `<option value="${escapeHtml(city.id)}">${escapeHtml(city.name)} · ${escapeHtml(city.country)}</option>`,
+          )
+          .join('');
+        select.value = state.geospatial.selectedCityId;
+      }
+      if (list) {
+        list.innerHTML = state.geospatial.cities
+          .map(
+            (city) =>
+              `<button class="global-city-button${city.id === state.geospatial.selectedCityId ? ' active' : ''}" data-global-city="${escapeHtml(city.id)}"><b>${escapeHtml(city.name)}</b><small>${escapeHtml(city.country)} · ${Number(city.lat).toFixed(2)}, ${Number(city.lon).toFixed(2)}</small><em>ENTER</em></button>`,
+          )
+          .join('');
+      }
+      const provider = result.runtime?.provider || 'local';
+      if (q('#geoRuntimeBadge')) q('#geoRuntimeBadge').textContent = provider === 'osm-overpass' ? 'LIVE OSM READY' : 'LOCAL GEO';
+      if (q('#geoProvenance')) {
+        q('#geoProvenance').innerHTML = `<span><b>Provider</b><em>${escapeHtml(provider)}</em></span><span><b>Attribution</b><em>${escapeHtml(result.runtime?.attribution || 'Local')}</em></span><span><b>Cache</b><em>${Math.round(Number(result.runtime?.cacheTtlMs || 0) / 60000)} min</em></span><span><b>Actuation</b><em>Disabled</em></span>`;
+      }
+      const selected = state.geospatial.cities.find((city) => city.id === state.geospatial.selectedCityId);
+      if (selected) globalGlobe?.focusCity(selected);
+    } catch {
+      if (q('#geoRuntimeBadge')) q('#geoRuntimeBadge').textContent = 'STANDALONE GEO';
+      if (list) list.innerHTML = '<div class="empty-state">Start the Node backend to load the real-coordinate global city registry.</div>';
+    }
+  }
+
+  async function loadLiveCity(cityId = state.geospatial.selectedCityId, { force = false } = {}) {
+    const city = state.geospatial.cities.find((item) => item.id === cityId);
+    if (city) handleGlobalCitySelection(city);
+    const status = q('#cityMeshStatus');
+    if (status) status.innerHTML = `<b>Loading ${escapeHtml(city?.name || cityId)}…</b><p>Requesting building footprints and heights from the configured geospatial provider.</p>`;
+    if (q('#geoSourceStatus')) q('#geoSourceStatus').textContent = 'LOADING CITY GEOMETRY';
+    try {
+      const result = await api(
+        `./api/aethergrid/geospatial/city/${encodeURIComponent(cityId)}${force ? '?force=1' : ''}`,
+      );
+      state.geospatial.cityMesh = result;
+      if (Array.isArray(result.activity)) state.activity = result.activity;
+      cityGrid?.loadCityMesh(result);
+      setGlobalMode('city');
+      if (q('#geoSourceStatus')) {
+        q('#geoSourceStatus').textContent = result.source?.live
+          ? `LIVE OSM · ${result.buildings.length} BUILDINGS`
+          : `LOCAL FALLBACK · ${result.buildings.length} BUILDINGS`;
+      }
+      if (q('#geoAttribution')) {
+        q('#geoAttribution').textContent =
+          result.source?.attribution || 'Live city geometry unavailable; using local fallback geometry.';
+      }
+      if (status) {
+        status.innerHTML = `<b>${escapeHtml(result.city.name)} · ${result.buildings.length} buildings</b><p>${result.source?.live ? 'Live OpenStreetMap footprints are now rendered as 3D wireframe geometry.' : 'Provider request could not be completed; clearly marked local fallback geometry is being rendered.'}</p><button class="secondary-button" data-action="reload-city-live">REFRESH LIVE GEOMETRY</button>`;
+      }
+      renderActivity();
+      showToast(
+        result.source?.live ? 'LIVE CITY LOADED' : 'CITY FALLBACK LOADED',
+        `${result.city.name} · ${result.buildings.length} buildings · ${result.source?.provider}`,
+      );
+    } catch (error) {
+      if (status) status.innerHTML = `<b>City load failed</b><p>${escapeHtml(error.message || String(error))}</p>`;
+      if (q('#geoSourceStatus')) q('#geoSourceStatus').textContent = 'CITY LOAD FAILED';
+    }
+  }
+
+  q('#globalCitySelect')?.addEventListener('change', (event) => {
+    const city = state.geospatial.cities.find((item) => item.id === event.target.value);
+    if (city) globalGlobe?.focusCity(city);
+  });
+  q('#globalCityList')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-global-city]');
+    if (!button) return;
+    const city = state.geospatial.cities.find((item) => item.id === button.dataset.globalCity);
+    if (city) {
+      globalGlobe?.focusCity(city);
+      loadLiveCity(city.id);
+    }
+  });
+  qa('[data-global-mode]').forEach((button) =>
+    button.addEventListener('click', () => {
+      if (button.dataset.globalMode === 'city' && !state.geospatial.cityMesh) {
+        loadLiveCity();
+      } else {
+        setGlobalMode(button.dataset.globalMode);
+      }
+    }),
+  );
+  q('[data-action="load-live-city"]')?.addEventListener('click', () => loadLiveCity());
+  q('[data-global-action="reset"]')?.addEventListener('click', () => {
+    globalGlobe?.reset();
+    setGlobalMode('globe');
+  });
+  q('#cityMeshStatus')?.addEventListener('click', (event) => {
+    if (event.target.closest('[data-action="reload-city-live"]')) loadLiveCity(state.geospatial.selectedCityId, { force: true });
+  });
 
   function updateClock() {
     const now = new Date();
