@@ -9,6 +9,11 @@
 - Added scheduled dependency-freshness evidence without automatic dependency mutation.
 
 ### Added
+- Added bilinear terrain interpolation for city placement using the bounded local-meter elevation grid.
+- Added terrain-anchored building foundations plus per-vertex DEM draping for roads, mapped waterways, green space, power lines and grid-asset markers.
+- Added level mapped-water presentation planes and bounded-datum coastline placement so water does not visibly warp over terrain.
+- Added DEM DRAPED / FLAT FALLBACK readouts to GLOBAL statistics, CITY IDENTITY and provenance.
+- Added explicit non-survey-grade terrain fidelity contracts and package/release gates so interpolated DEM placement cannot be represented as LiDAR, cadastral or engineering-grade elevation.
 - Added source-backed OpenStreetMap water areas, waterways and coastline alongside the existing source-backed skyline identity.
 - Added mapped parks and green-space geometry with independent WATER and GREEN city-layer controls.
 - Added source-tagged façade material tint groups while preserving the existing named/tall landmark-anchor system.
