@@ -206,6 +206,37 @@ function edgeEntity(
   });
 }
 
+function scenarioGhostEntity(
+  edge: SpatialOverlayEdge,
+  provenance: Readonly<Record<string, unknown>>
+): Entity {
+  const intensity = overlayIntensity(edge.intensity);
+  return new Entity({
+    id: `${edge.id}:source-baseline`,
+    name: `${edge.label ?? edge.id} · source baseline`,
+    show: false,
+    polyline: new PolylineGraphics({
+      positions: new ConstantProperty([
+        coordinate(edge.from),
+        coordinate(edge.to)
+      ]),
+      width: Math.max(1, edgeWidth(edge, intensity) * 0.72),
+      material: new ColorMaterialProperty(
+        Color.fromCssColorString('#91a0ad').withAlpha(0.24)
+      ),
+      distanceDisplayCondition: new ConstantProperty(
+        new DistanceDisplayCondition(0, edgeFarDistance(edge))
+      ),
+      clampToGround: false
+    }),
+    properties: {
+      overlayKind: 'scenario-baseline',
+      sourceEdgeId: edge.id,
+      ...provenance
+    }
+  });
+}
+
 function areaEntity(
   area: SpatialOverlayArea,
   provenance: Readonly<Record<string, unknown>>
@@ -245,6 +276,7 @@ export class NetworkOverlayLayer {
   #snapshot: SpatialOverlaySnapshot | null = null;
   #nodeEntities = new Map<string, Entity>();
   #edgeEntities = new Map<string, Entity>();
+  #scenarioGhostEntities = new Map<string, Entity>();
   #areaEntities = new Map<string, Entity>();
   #visible = true;
 
@@ -258,6 +290,7 @@ export class NetworkOverlayLayer {
     this.#source.entities.removeAll();
     this.#nodeEntities.clear();
     this.#edgeEntities.clear();
+    this.#scenarioGhostEntities.clear();
     this.#areaEntities.clear();
 
     const provenance = provenanceProperties(snapshot);
@@ -269,6 +302,16 @@ export class NetworkOverlayLayer {
     for (const edge of snapshot.edges) {
       const entity = this.#source.entities.add(edgeEntity(edge, provenance));
       this.#edgeEntities.set(edge.id, entity);
+
+      if (
+        snapshot.layerId === 'energy' &&
+        (edge.kind === 'transmission' || edge.kind === 'distribution')
+      ) {
+        const ghost = this.#source.entities.add(
+          scenarioGhostEntity(edge, provenance)
+        );
+        this.#scenarioGhostEntities.set(edge.id, ghost);
+      }
     }
     for (const area of snapshot.areas ?? []) {
       if (area.positions.length < 3) continue;
@@ -339,6 +382,14 @@ export class NetworkOverlayLayer {
       const powerEdge =
         edge.kind === 'transmission' || edge.kind === 'distribution';
 
+      const ghost = this.#scenarioGhostEntities.get(edge.id);
+      if (ghost) {
+        ghost.show =
+          Boolean(scenario) &&
+          entity.show &&
+          isActiveAt(edge, time.iso);
+      }
+
       if (scenario && powerEdge) {
         const pulse = 0.5 + 0.5 * Math.sin(temporalPhase * 0.38 + intensity * 6.3);
         const stressBoost = Math.max(0, scenario.stressFactor - 1);
@@ -387,5 +438,7 @@ export class NetworkOverlayLayer {
     this.#snapshot = null;
     this.#nodeEntities.clear();
     this.#edgeEntities.clear();
+    this.#scenarioGhostEntities.clear();
+    this.#areaEntities.clear();
   }
 }
