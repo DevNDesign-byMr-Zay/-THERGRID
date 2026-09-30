@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
+import { createCityEnvironmentRuntime } from '../apps/aethergrid-console/city-environment-runtime.mjs';
 import { createGeoRuntime } from '../apps/aethergrid-console/geo-runtime.mjs';
 import { createProfileStore } from '../apps/aethergrid-console/profile-store.mjs';
 import { API_VERSION, createQuantumRuntime } from '../apps/aethergrid-console/quantum-runtime.mjs';
@@ -44,20 +45,22 @@ test('operator profile persists sanitized local identity data without secrets', 
 test('live geospatial runtime converts and caches Overpass city geometry', async () => {
   let calls = 0;
   const geometry = [
-    { lat: 40.7127, lon: -74.0061 },
-    { lat: 40.7127, lon: -74.0059 },
-    { lat: 40.7129, lon: -74.0059 },
-    { lat: 40.7129, lon: -74.0061 },
-    { lat: 40.7127, lon: -74.0061 },
+    { lat: 40.7548, lon: -73.9841 },
+    { lat: 40.7548, lon: -73.9839 },
+    { lat: 40.7550, lon: -73.9839 },
+    { lat: 40.7550, lon: -73.9841 },
+    { lat: 40.7548, lon: -73.9841 },
   ];
   const fetchImpl = async (url, options) => {
     calls += 1;
     assert.equal(String(url), 'https://example.test/overpass');
     assert.equal(options.method, 'POST');
     assert.match(String(options.headers['user-agent']), /AETHERGRID/u);
-    assert.match(options.body.get('data'), /way\["building:part"\]/u);
+    assert.match(options.body.get('data'), /nwr\["building:part"\]/u);
+    assert.match(options.body.get('data'), /nwr\["building"\]/u);
     return new Response(
       JSON.stringify({
+        osm3s: { timestamp_osm_base: '2026-09-30T06:30:00Z' },
         elements: [
           ...Array.from({ length: 8 }, (_, index) => ({
             type: 'way',
@@ -76,6 +79,37 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
               lat: point.lat + 0.0011,
               lon: point.lon + 0.0011,
             })),
+          },
+          {
+            type: 'way',
+            id: 1600,
+            tags: {
+              building: 'yes',
+              name: 'Skyline Tower',
+              height: '828',
+              'building:material': 'glass',
+              'roof:shape': 'pyramidal',
+              'roof:height': '20',
+            },
+            geometry: geometry.map((point) => ({
+              lat: point.lat + 0.0015,
+              lon: point.lon + 0.0015,
+            })),
+          },
+          {
+            type: 'relation',
+            id: 1700,
+            tags: { building: 'yes', name: 'Relation Building', height: '310 ft' },
+            members: [
+              {
+                type: 'way',
+                role: 'outer',
+                geometry: geometry.map((point) => ({
+                  lat: point.lat + 0.0018,
+                  lon: point.lon + 0.0018,
+                })),
+              },
+            ],
           },
           {
             type: 'way',
@@ -98,8 +132,8 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
           {
             type: 'node',
             id: 4001,
-            lat: 40.71282,
-            lon: -74.00598,
+            lat: 40.75492,
+            lon: -73.98398,
             tags: {
               power: 'substation',
               name: 'Test Substation',
@@ -148,6 +182,20 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
   assert.equal(first.powerAssets[0].voltage, 138000);
   assert.ok(first.powerAssets[0].position.every(Number.isFinite));
   assert.equal(first.source.attribution, '© OpenStreetMap contributors');
+  assert.equal(first.source.upstreamTimestamp, '2026-09-30T06:30:00Z');
+  assert.equal(first.skylineProfile.maxHeightM, 828);
+  assert.ok(first.skylineProfile.sourceBackedHeightCoveragePercent > 0);
+  const skylineTower = first.buildings.find((building) => building.name === 'Skyline Tower');
+  assert.ok(skylineTower);
+  assert.equal(skylineTower.heightM, 828);
+  assert.equal(skylineTower.heightSource, 'height');
+  assert.equal(skylineTower.roofShape, 'pyramidal');
+  assert.equal(skylineTower.roofHeightM, 20);
+  assert.equal(skylineTower.buildingMaterial, 'glass');
+  const relationBuilding = first.buildings.find((building) => building.name === 'Relation Building');
+  assert.ok(relationBuilding);
+  assert.equal(relationBuilding.osmType, 'relation');
+  assert.ok(Math.abs(relationBuilding.heightM - 94.488) < 0.01);
 
   const second = await runtime.cityMesh('new-york');
   assert.equal(second, first);
@@ -169,6 +217,8 @@ test('geospatial provider failure degrades explicitly to local fallback geometry
   assert.ok(mesh.roads.length >= 10);
   assert.ok(mesh.powerLines.length >= 5);
   assert.ok(mesh.powerAssets.length >= 5);
+  assert.equal(mesh.skylineProfile.live, false);
+  assert.equal(mesh.skylineProfile.sourceBackedHeightCoveragePercent, 0);
 });
 
 test('geospatial coordinate explorer supports arbitrary valid world coordinates', async () => {
@@ -193,6 +243,7 @@ test('geospatial coordinate explorer supports arbitrary valid world coordinates'
   assert.deepEqual(runtime.summary().layers, [
     'buildings',
     'building-parts',
+    'roofs',
     'roads',
     'power-lines',
     'power-assets',
@@ -202,6 +253,64 @@ test('geospatial coordinate explorer supports arbitrary valid world coordinates'
     runtime.pointMesh({ lat: 120, lon: 2.3522 }),
     /latitude must be between -90 and 90/u,
   );
+});
+
+test('city environment runtime maps current open weather context without credentials', async () => {
+  let requestUrl = '';
+  const runtime = createCityEnvironmentRuntime({
+    env: {
+      AETHERGRID_ENVIRONMENT_PROVIDER: 'open-meteo',
+      AETHERGRID_OPEN_METEO_URL: 'https://weather.example.test/v1/forecast',
+    },
+    fetchImpl: async (url) => {
+      requestUrl = String(url);
+      const parsed = new URL(requestUrl);
+      assert.equal(parsed.searchParams.get('latitude'), '25.1972');
+      assert.equal(parsed.searchParams.get('longitude'), '55.2744');
+      assert.match(parsed.searchParams.get('current'), /cloud_cover/u);
+      assert.match(parsed.searchParams.get('current'), /is_day/u);
+      return new Response(
+        JSON.stringify({
+          latitude: 25.1972,
+          longitude: 55.2744,
+          timezone: 'Asia/Dubai',
+          utc_offset_seconds: 14400,
+          current: {
+            time: '2026-09-30T10:30',
+            interval: 900,
+            temperature_2m: 34.1,
+            apparent_temperature: 37.8,
+            weather_code: 1,
+            cloud_cover: 18,
+            is_day: 1,
+            precipitation: 0,
+            wind_speed_10m: 12.4,
+            wind_direction_10m: 305,
+          },
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    },
+  });
+
+  const environment = await runtime.current({ lat: 25.1972, lon: 55.2744 });
+  assert.match(requestUrl, /^https:\/\/weather\.example\.test\/v1\/forecast\?/u);
+  assert.equal(environment.source.live, true);
+  assert.equal(environment.source.provider, 'Open-Meteo');
+  assert.equal(environment.timezone, 'Asia/Dubai');
+  assert.equal(environment.current.temperatureC, 34.1);
+  assert.equal(environment.current.cloudCoverPercent, 18);
+  assert.equal(environment.current.isDay, true);
+  assert.equal(environment.current.windSpeedKph, 12.4);
+  assert.equal(runtime.summary().credentialsExposed, false);
+
+  const fallback = createCityEnvironmentRuntime({
+    env: { AETHERGRID_ENVIRONMENT_PROVIDER: 'local-fallback' },
+  });
+  const local = await fallback.current({ lat: 35.6896, lon: 139.6917 });
+  assert.equal(local.source.live, false);
+  assert.equal(local.source.provider, 'local-environment-fallback');
+  assert.equal(local.current, null);
 });
 
 test('terrain runtime samples real-coordinate elevation grids through a provider adapter', async () => {
