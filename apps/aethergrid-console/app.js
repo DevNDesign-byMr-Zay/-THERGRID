@@ -1728,7 +1728,7 @@
         list.innerHTML = state.geospatial.cities
           .map(
             (city) =>
-              `<button class="global-city-button${city.id === state.geospatial.selectedCityId ? ' active' : ''}" data-global-city="${escapeHtml(city.id)}"><b>${escapeHtml(city.name)}</b><small>${escapeHtml(city.country)} · ${Number(city.lat).toFixed(2)}, ${Number(city.lon).toFixed(2)}</small><em>ENTER</em></button>`,
+              `<button class="global-city-button${city.id === state.geospatial.selectedCityId ? ' active' : ''}" data-global-city="${escapeHtml(city.id)}"><b>${escapeHtml(city.name)}</b><small>${escapeHtml(city.district || city.country)} · ${Number(city.lat).toFixed(2)}, ${Number(city.lon).toFixed(2)}</small><em>ENTER</em></button>`,
           )
           .join('');
       }
@@ -1755,7 +1755,7 @@
         list.innerHTML = state.geospatial.cities
           .map(
             (city) =>
-              `<button class="global-city-button${city.id === state.geospatial.selectedCityId ? ' active' : ''}" data-global-city="${escapeHtml(city.id)}"><b>${escapeHtml(city.name)}</b><small>${escapeHtml(city.country)} · ${Number(city.lat).toFixed(2)}, ${Number(city.lon).toFixed(2)}</small><em>ENTER</em></button>`,
+              `<button class="global-city-button${city.id === state.geospatial.selectedCityId ? ' active' : ''}" data-global-city="${escapeHtml(city.id)}"><b>${escapeHtml(city.name)}</b><small>${escapeHtml(city.district || city.country)} · ${Number(city.lat).toFixed(2)}, ${Number(city.lon).toFixed(2)}</small><em>ENTER</em></button>`,
           )
           .join('');
       }
@@ -1895,11 +1895,25 @@
     const stats = q('#globalGridStats');
     if (!stats) return;
     const terrain = mesh.terrain;
+    const skyline = mesh.skylineProfile || {};
+    const environment = mesh.environment?.current || null;
     const elevation =
       terrain && Number.isFinite(Number(terrain.minElevationM)) && Number.isFinite(Number(terrain.maxElevationM))
         ? `${Math.round(Number(terrain.minElevationM))}–${Math.round(Number(terrain.maxElevationM))} m`
         : '—';
-    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
+    const skylineMax = Number.isFinite(Number(skyline.maxHeightM)) && Number(skyline.maxHeightM) > 0
+      ? `${Number(skyline.maxHeightM).toFixed(0)} m`
+      : '—';
+    const p95 = Number.isFinite(Number(skyline.p95HeightM)) && Number(skyline.p95HeightM) > 0
+      ? `${Number(skyline.p95HeightM).toFixed(0)} m`
+      : '—';
+    const heightCoverage = Number.isFinite(Number(skyline.sourceBackedHeightCoveragePercent))
+      ? `${Number(skyline.sourceBackedHeightCoveragePercent).toFixed(0)}%`
+      : '—';
+    const weather = environment
+      ? `${Number.isFinite(environment.temperatureC) ? `${Number(environment.temperatureC).toFixed(1)}°C` : 'current'} · ${Number.isFinite(environment.cloudCoverPercent) ? `${Number(environment.cloudCoverPercent).toFixed(0)}% cloud` : environment.isDay ? 'day' : 'night'}`
+      : '—';
+    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Skyline Max</b><em>${skylineMax}</em></span><span><b>P95 Height</b><em>${p95}</em></span><span><b>Height Data</b><em>${heightCoverage}</em></span><span><b>Weather</b><em>${weather}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
   }
 
   function showCityTransition(city, stage = 'Aligning global coordinate…', progress = 8) {
@@ -1925,7 +1939,11 @@
     state.geospatial.cityMesh = result;
     if (Array.isArray(result.activity)) state.activity = result.activity;
     cityGrid?.loadCityMesh(result);
-    cityGrid?.setTime(q('#globalTimeSlider')?.value || state.settings.defaultHour);
+    const liveHour = environmentHour(result.environment);
+    const initialHour = liveHour ?? Number(q('#globalTimeSlider')?.value || state.settings.defaultHour);
+    cityGrid?.setTime(initialHour);
+    if (q('#globalTimeSlider')) q('#globalTimeSlider').value = String(initialHour);
+    if (q('#globalTimeValue')) q('#globalTimeValue').textContent = formatHour(initialHour);
     cityGrid?.setCityVisualMode('solid');
     qa('[data-city-visual]').forEach((button) => button.classList.toggle('active', button.dataset.cityVisual === 'solid'));
     state.geospatial.activeUseCase = null;
@@ -1947,13 +1965,25 @@
       const attributions = [
         result.source?.attribution,
         result.terrain?.source?.attribution,
+        result.environment?.source?.attribution,
       ].filter(Boolean);
       q('#geoAttribution').textContent =
         attributions.join(' · ') ||
         'Live city geometry unavailable; using local fallback geometry.';
     }
     if (status) {
-      status.innerHTML = `<b>${escapeHtml(result.city.name)} · ${result.buildings.length} buildings · ${(result.roads || []).length} roads · ${(result.powerAssets || []).length} power assets</b><p>${result.source?.live ? 'Live OpenStreetMap building, road and power-infrastructure geometry is rendered as independent interactive 3D layers.' : 'Provider request could not be completed; clearly marked local fallback geometry is being rendered.'}</p><button class="secondary-button" data-action="reload-city-live">REFRESH LIVE GEOMETRY</button>`;
+      const skyline = result.skylineProfile || {};
+      const env = result.environment?.current || null;
+      const district = result.city?.district ? ` · ${escapeHtml(result.city.district)}` : '';
+      const maxHeight = Number.isFinite(Number(skyline.maxHeightM)) ? ` · max ${Number(skyline.maxHeightM).toFixed(0)} m` : '';
+      const heightCoverage = Number.isFinite(Number(skyline.sourceBackedHeightCoveragePercent)) ? ` · ${Number(skyline.sourceBackedHeightCoveragePercent).toFixed(0)}% source-backed heights` : '';
+      const currentContext = env ? ` Current environment: ${Number.isFinite(env.temperatureC) ? `${Number(env.temperatureC).toFixed(1)}°C, ` : ''}${Number.isFinite(env.cloudCoverPercent) ? `${Number(env.cloudCoverPercent).toFixed(0)}% cloud, ` : ''}${env.isDay ? 'daylight' : 'night'}.` : '';
+      status.innerHTML = `<b>${escapeHtml(result.city.name)}${district} · ${result.buildings.length} mapped structures${maxHeight}</b><p>${result.source?.live ? `Current OpenStreetMap geometry is rendered from source-backed footprints/parts; height coverage ${heightCoverage || 'is shown in the stats panel'}.` : 'Provider request could not be completed; clearly marked local fallback geometry is being rendered.'}${currentContext}</p><button class="secondary-button" data-action="reload-city-live">REFRESH OPEN DATA</button>`;
+    }
+    if (q('#geoProvenance')) {
+      const upstream = result.source?.upstreamTimestamp || result.source?.fetchedAt || 'unavailable';
+      const weatherAt = result.environment?.source?.modelTime || result.environment?.current?.time || 'unavailable';
+      q('#geoProvenance').innerHTML = `<span><b>Geometry</b><em>${escapeHtml(result.source?.provider || 'local')}</em></span><span><b>OSM State</b><em>${escapeHtml(upstream)}</em></span><span><b>Environment</b><em>${escapeHtml(result.environment?.source?.provider || 'local')}</em></span><span><b>Observed</b><em>${escapeHtml(weatherAt)}</em></span><span><b>Height Coverage</b><em>${Number(result.skylineProfile?.sourceBackedHeightCoveragePercent || 0).toFixed(0)}%</em></span><span><b>Actuation</b><em>Disabled</em></span>`;
     }
     renderActivity();
     showToast(
@@ -2190,12 +2220,26 @@
       input.focus();
     }
   });
+  function syncCityLiveNow() {
+    const environment = state.geospatial.cityMesh?.environment;
+    const hour = environmentHour(environment);
+    if (hour == null) {
+      showToast('LIVE TIME UNAVAILABLE', 'Load a backend-connected city with current environment data first.');
+      return;
+    }
+    cityGrid?.setTime(hour);
+    if (q('#globalTimeSlider')) q('#globalTimeSlider').value = String(hour);
+    if (q('#globalTimeValue')) q('#globalTimeValue').textContent = formatHour(hour);
+    showToast('LIVE CITY TIME', `${state.geospatial.cityMesh?.city?.name || 'City'} · ${formatHour(hour)} local model time`);
+  }
+
   q('#globalTimeSlider')?.addEventListener('input', (event) => {
     cityGrid?.setTime(event.target.value);
     if (q('#globalTimeValue')) {
       q('#globalTimeValue').textContent = formatHour(event.target.value);
     }
   });
+  q('[data-action="city-live-now"]')?.addEventListener('click', syncCityLiveNow);
   q('[data-global-action="reset"]')?.addEventListener('click', () => {
     globalGlobe?.reset();
     setGlobalMode('globe');
