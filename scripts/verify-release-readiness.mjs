@@ -742,7 +742,7 @@ async function main() {
       /agent-config\.mjs/u.test(exactAethergridPackager) &&
       /ai-runtime\.mjs/u.test(exactAethergridPackager) &&
       /city-environment-runtime\.mjs/u.test(exactAethergridPackager) &&
-      /id=\"settingTheme\"/u.test(exactAethergridPackager) &&
+      /id="settingTheme"/u.test(exactAethergridPackager) &&
       /city-live-now/u.test(exactAethergridPackager),
     'ÆTHERGRID packager must generate standalone WebGL HTML and complete backend/launcher runtime without the reference screenshot',
   );
