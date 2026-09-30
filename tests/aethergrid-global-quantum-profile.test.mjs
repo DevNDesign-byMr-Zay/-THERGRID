@@ -139,22 +139,31 @@ test('IBM Quantum adapter authenticates, discovers backends, submits sampler job
       assert.equal(body.backend, 'ibm_test_qpu');
       assert.equal(body.params.version, 2);
       assert.match(body.params.pubs[0][0], /^OPENQASM 3\.0;/u);
-      return new Response(
-        JSON.stringify({ id: 'job-123', status: 'Queued' }),
-        { status: 200, headers: { 'content-type': 'application/json' } },
-      );
+      return new Response(JSON.stringify({ id: 'job-123', status: 'Queued' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
     }
     if (href === 'https://quantum.example.test/api/v1/jobs?limit=20') {
       return new Response(
-        JSON.stringify({ jobs: [{ id: 'job-123', backend: 'ibm_test_qpu', program_id: 'sampler', status: 'Queued' }] }),
+        JSON.stringify({
+          jobs: [
+            {
+              id: 'job-123',
+              backend: 'ibm_test_qpu',
+              program_id: 'sampler',
+              status: 'Queued',
+            },
+          ],
+        }),
         { status: 200, headers: { 'content-type': 'application/json' } },
       );
     }
     if (href === 'https://quantum.example.test/api/v1/jobs/job-123') {
-      return new Response(
-        JSON.stringify({ id: 'job-123', status: 'Completed' }),
-        { status: 200, headers: { 'content-type': 'application/json' } },
-      );
+      return new Response(JSON.stringify({ id: 'job-123', status: 'Completed' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
     }
     return new Response(JSON.stringify({ error: 'not found' }), { status: 404 });
   };
@@ -181,7 +190,10 @@ test('IBM Quantum adapter authenticates, discovers backends, submits sampler job
   const backends = await runtime.listBackends();
   assert.equal(backends.backends[0].name, 'ibm_test_qpu');
 
-  const submitted = await runtime.submitSampler({ backend: 'ibm_test_qpu', shots: 2048 });
+  const submitted = await runtime.submitSampler({
+    backend: 'ibm_test_qpu',
+    shots: 2048,
+  });
   assert.equal(submitted.id, 'job-123');
   assert.equal(submitted.provider, 'ibm-quantum');
   assert.equal(submitted.hardwareSubmitted, true);
@@ -192,12 +204,16 @@ test('IBM Quantum adapter authenticates, discovers backends, submits sampler job
   assert.equal(jobs.jobs[0].id, 'job-123');
   assert.equal((await runtime.job('job-123')).status, 'Completed');
 
-  const iamRequests = requests.filter((request) => request.href === 'https://iam.example.test/token');
+  const iamRequests = requests.filter(
+    (request) => request.href === 'https://iam.example.test/token',
+  );
   assert.equal(iamRequests.length, 1, 'IAM token should be cached across provider calls');
 });
 
 test('local quantum sampler remains usable with no cloud credentials', async () => {
-  const runtime = createQuantumRuntime({ env: { AETHERGRID_QUANTUM_PROVIDER: 'local-simulator' } });
+  const runtime = createQuantumRuntime({
+    env: { AETHERGRID_QUANTUM_PROVIDER: 'local-simulator' },
+  });
   const result = await runtime.submitSampler({ shots: 1000 });
   assert.equal(result.provider, 'local-simulator');
   assert.equal(result.status, 'COMPLETED');
