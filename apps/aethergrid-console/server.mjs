@@ -9,6 +9,7 @@ import { createGeoRuntime } from './geo-runtime.mjs';
 import { createProfileStore } from './profile-store.mjs';
 import { createQuantumRuntime } from './quantum-runtime.mjs';
 import { createTerrainRuntime } from './terrain-runtime.mjs';
+import { createTerrainRuntime } from './terrain-runtime.mjs';
 
 const root = fileURLToPath(new URL('./', import.meta.url));
 const port = Number(process.env.AETHERGRID_PORT || process.env.PORT || 8090);
@@ -354,9 +355,16 @@ const server = http.createServer(async (request, response) => {
       const cityId = decodeURIComponent(
         url.pathname.slice('/api/aethergrid/geospatial/city/'.length),
       );
-      const mesh = await geoRuntime.cityMesh(cityId, {
+      const baseMesh = await geoRuntime.cityMesh(cityId, {
         force: url.searchParams.get('force') === '1',
       });
+      const terrain = await terrainRuntime.sample({
+        lat: baseMesh.city.lat,
+        lon: baseMesh.city.lon,
+        radiusM: baseMesh.city.radiusM,
+        gridSize: 7,
+      });
+      const mesh = { ...baseMesh, terrain };
       state.externalContext.geospatial = {
         cityId: mesh.city.id,
         name: mesh.city.name,
@@ -369,6 +377,12 @@ const server = http.createServer(async (request, response) => {
         roads: (mesh.roads || []).length,
         powerLines: (mesh.powerLines || []).length,
         powerAssets: (mesh.powerAssets || []).length,
+        terrain: {
+          provider: mesh.terrain?.source?.provider || null,
+          live: Boolean(mesh.terrain?.source?.live),
+          minElevationM: mesh.terrain?.minElevationM ?? null,
+          maxElevationM: mesh.terrain?.maxElevationM ?? null,
+        },
       };
       activity(
         `Geospatial city mesh loaded: ${mesh.city.name} via ${mesh.source.provider} (${mesh.buildings.length} buildings, ${(mesh.powerLines || []).length} power lines, ${(mesh.powerAssets || []).length} power assets).`,
@@ -382,7 +396,7 @@ const server = http.createServer(async (request, response) => {
     }
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/geospatial/point') {
-      const mesh = await geoRuntime.pointMesh(
+      const baseMesh = await geoRuntime.pointMesh(
         {
           lat: url.searchParams.get('lat'),
           lon: url.searchParams.get('lon'),
@@ -393,6 +407,13 @@ const server = http.createServer(async (request, response) => {
           force: url.searchParams.get('force') === '1',
         },
       );
+      const terrain = await terrainRuntime.sample({
+        lat: baseMesh.city.lat,
+        lon: baseMesh.city.lon,
+        radiusM: baseMesh.city.radiusM,
+        gridSize: 7,
+      });
+      const mesh = { ...baseMesh, terrain };
       state.externalContext.geospatial = {
         cityId: mesh.city.id,
         name: mesh.city.name,
@@ -405,6 +426,12 @@ const server = http.createServer(async (request, response) => {
         roads: (mesh.roads || []).length,
         powerLines: (mesh.powerLines || []).length,
         powerAssets: (mesh.powerAssets || []).length,
+        terrain: {
+          provider: mesh.terrain?.source?.provider || null,
+          live: Boolean(mesh.terrain?.source?.live),
+          minElevationM: mesh.terrain?.minElevationM ?? null,
+          maxElevationM: mesh.terrain?.maxElevationM ?? null,
+        },
       };
       activity(
         `Coordinate mesh loaded: ${mesh.city.lat.toFixed(5)}, ${mesh.city.lon.toFixed(5)} via ${mesh.source.provider}.`,
@@ -443,6 +470,23 @@ const server = http.createServer(async (request, response) => {
         externalContext: state.externalContext,
         activity: state.activity,
       });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/terrain/runtime') {
+      return json(response, 200, terrainRuntime.summary());
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/terrain/sample') {
+      return json(
+        response,
+        200,
+        await terrainRuntime.sample({
+          lat: url.searchParams.get('lat'),
+          lon: url.searchParams.get('lon'),
+          radiusM: url.searchParams.get('radiusM') || 900,
+          gridSize: url.searchParams.get('gridSize') || 7,
+        }),
+      );
     }
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/quantum/runtime') {
