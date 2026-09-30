@@ -12,6 +12,7 @@ import { ScenarioPanel } from '../components/ScenarioPanel';
 import { RuntimeDiagnosticsPanel } from '../components/RuntimeDiagnosticsPanel';
 import { SpatialViewport } from '../components/SpatialViewport';
 import { TemporalRail } from '../components/TemporalRail';
+import { ViewBookmarksPanel } from '../components/ViewBookmarksPanel';
 import { useAppearance } from '../hooks/use-appearance';
 import { useOperatorShortcuts } from '../hooks/use-operator-shortcuts';
 import { useTemporalClock } from '../hooks/use-temporal-clock';
@@ -44,6 +45,7 @@ import {
   type CityIdentitySummary
 } from '../services/city-power-overlay';
 import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
+import type { SpatialViewBookmark } from '../services/view-bookmarks';
 import {
   USE_CASE_PRESETS,
   type UseCaseId,
@@ -522,6 +524,76 @@ export function App() {
     liveContext,
     powerOverlay
   ]);
+
+  const currentBookmark = useMemo(
+    () => ({
+      scope,
+      target:
+        scope === 'world'
+          ? {
+              ...sceneTarget,
+              id: 'world',
+              name: 'GLOBAL',
+              district: 'God’s-eye live world'
+            }
+          : {
+              ...city,
+              headingDegrees: sceneTarget.headingDegrees,
+              journey: sceneTarget.journey
+            },
+      visualMode,
+      temporalMode: temporal.mode,
+      cursorIso: temporal.cursorIso,
+      scenarioId: temporal.scenarioId,
+      scenarioVisual,
+      useCase: activeUseCase,
+      layers
+    }),
+    [
+      scope,
+      sceneTarget,
+      city,
+      visualMode,
+      temporal.mode,
+      temporal.cursorIso,
+      temporal.scenarioId,
+      scenarioVisual,
+      activeUseCase,
+      layers
+    ]
+  );
+
+  const restoreBookmark = (bookmark: SpatialViewBookmark) => {
+    setScope(bookmark.scope);
+    setVisualMode(bookmark.visualMode);
+    setLayers(bookmark.layers.map((layer) => ({ ...layer })));
+    setActiveUseCase(bookmark.useCase);
+    setScenarioVisual(bookmark.scenarioVisual ?? null);
+
+    if (bookmark.scope === 'city') {
+      setCity({
+        id: bookmark.target.id || 'saved-coordinate',
+        name: bookmark.target.name || 'SAVED VIEW',
+        district: bookmark.target.district || 'Saved spatial target',
+        latitude: bookmark.target.latitude,
+        longitude: bookmark.target.longitude,
+        rangeMeters: bookmark.target.rangeMeters,
+        heightMeters: bookmark.target.heightMeters,
+        headingDegrees: bookmark.target.headingDegrees,
+        pitchDegrees: bookmark.target.pitchDegrees,
+        custom: bookmark.target.custom === true
+      });
+    }
+
+    if (bookmark.temporalMode === 'live') {
+      clock.goLive();
+    } else if (bookmark.temporalMode === 'scenario') {
+      clock.setMode('scenario', bookmark.scenarioId ?? null);
+      clock.scrub(bookmark.cursorIso, 'scenario');
+    } else {
+      clock.scrub(bookmark.cursorIso, bookmark.temporalMode);
+    }
+  };
 
   const applyUseCase = (preset: UseCasePreset) => {
     setScope('city');
