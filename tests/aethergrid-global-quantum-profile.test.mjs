@@ -7,6 +7,7 @@ import test from 'node:test';
 import { createGeoRuntime } from '../apps/aethergrid-console/geo-runtime.mjs';
 import { createProfileStore } from '../apps/aethergrid-console/profile-store.mjs';
 import { API_VERSION, createQuantumRuntime } from '../apps/aethergrid-console/quantum-runtime.mjs';
+import { createTerrainRuntime } from '../apps/aethergrid-console/terrain-runtime.mjs';
 
 test('operator profile persists sanitized local identity data without secrets', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'aethergrid-profile-'));
@@ -72,6 +73,30 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
             tags: { highway: 'primary', name: 'Test Avenue' },
             geometry: geometry.slice(0, 3),
           },
+          {
+            type: 'way',
+            id: 3001,
+            tags: {
+              power: 'line',
+              name: 'Test Transmission',
+              voltage: '138000',
+              operator: 'Grid Test',
+              circuits: '2',
+            },
+            geometry: geometry.slice(0, 3),
+          },
+          {
+            type: 'node',
+            id: 4001,
+            lat: 40.71282,
+            lon: -74.00598,
+            tags: {
+              power: 'substation',
+              name: 'Test Substation',
+              voltage: '138000;33000',
+              operator: 'Grid Test',
+            },
+          },
         ],
       }),
       { status: 200, headers: { 'content-type': 'application/json' } },
@@ -99,6 +124,15 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
   assert.equal(first.roads[0].name, 'Test Avenue');
   assert.equal(first.roads[0].highwayType, 'primary');
   assert.ok(first.roads[0].path.length >= 2);
+  assert.equal(first.powerLines.length, 1);
+  assert.equal(first.powerLines[0].name, 'Test Transmission');
+  assert.equal(first.powerLines[0].voltage, 138000);
+  assert.equal(first.powerLines[0].circuits, 2);
+  assert.equal(first.powerAssets.length, 1);
+  assert.equal(first.powerAssets[0].name, 'Test Substation');
+  assert.equal(first.powerAssets[0].powerType, 'substation');
+  assert.equal(first.powerAssets[0].voltage, 138000);
+  assert.ok(first.powerAssets[0].position.every(Number.isFinite));
   assert.equal(first.source.attribution, '© OpenStreetMap contributors');
 
   const second = await runtime.cityMesh('new-york');
@@ -119,6 +153,155 @@ test('geospatial provider failure degrades explicitly to local fallback geometry
   assert.equal(mesh.source.provider, 'local-fallback');
   assert.ok(mesh.buildings.length >= 100);
   assert.ok(mesh.roads.length >= 10);
+  assert.ok(mesh.powerLines.length >= 5);
+  assert.ok(mesh.powerAssets.length >= 5);
+});
+
+test('geospatial coordinate explorer supports arbitrary valid world coordinates', async () => {
+  const runtime = createGeoRuntime({
+    env: { AETHERGRID_GEO_PROVIDER: 'local-fallback' },
+  });
+  const mesh = await runtime.pointMesh({
+    lat: 48.8566,
+    lon: 2.3522,
+    name: 'Paris Coordinate',
+    radiusM: 1500,
+  });
+  assert.equal(mesh.city.custom, true);
+  assert.equal(mesh.city.name, 'Paris Coordinate');
+  assert.equal(mesh.city.lat, 48.8566);
+  assert.equal(mesh.city.lon, 2.3522);
+  assert.equal(mesh.city.radiusM, 1500);
+  assert.ok(mesh.buildings.length >= 100);
+  assert.ok(mesh.powerLines.length >= 5);
+  assert.ok(mesh.powerAssets.length >= 5);
+  assert.equal(runtime.summary().supportsCustomCoordinates, true);
+  assert.deepEqual(runtime.summary().layers, ['buildings', 'roads', 'power-lines', 'power-assets']);
+
+  await assert.rejects(
+    runtime.pointMesh({ lat: 120, lon: 2.3522 }),
+    /latitude must be between -90 and 90/u,
+  );
+});
+
+test('terrain runtime samples real-coordinate elevation grids through a provider adapter', async () => {
+  let requestUrl = '';
+  const runtime = createTerrainRuntime({
+    env: {
+      AETHERGRID_TERRAIN_PROVIDER: 'open-meteo',
+      AETHERGRID_ELEVATION_URL: 'https://elevation.example.test/v1/elevation',
+    },
+    fetchImpl: async (url) => {
+      requestUrl = String(url);
+      const parsed = new URL(requestUrl);
+      const count = parsed.searchParams.get('latitude').split(',').length;
+      assert.equal(count, 25);
+      assert.equal(parsed.searchParams.get('longitude').split(',').length, 25);
+      return new Response(
+        JSON.stringify({
+          elevation: Array.from({ length: count }, (_, index) => 30 + index * 0.5),
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    },
+  });
+
+  const terrain = await runtime.sample({
+    lat: 40.7128,
+    lon: -74.006,
+    radiusM: 900,
+    gridSize: 5,
+  });
+  assert.match(requestUrl, /^https:\/\/elevation\.example\.test\/v1\/elevation\?/u);
+  assert.equal(terrain.source.live, true);
+  assert.equal(terrain.source.provider, 'Open-Meteo Elevation');
+  assert.equal(terrain.gridSize, 5);
+  assert.equal(terrain.points.length, 25);
+  assert.equal(terrain.minElevationM, 30);
+  assert.equal(terrain.maxElevationM, 42);
+  assert.equal(terrain.points[0].relativeElevationM, 0);
+  assert.match(terrain.source.attribution, /Open-Meteo/u);
+  assert.equal(runtime.summary().credentialsExposed, false);
+  assert.equal(runtime.summary().resolutionMeters, 90);
+});
+
+test('terrain runtime degrades explicitly to a flat local surface when elevation is unavailable', async () => {
+  const runtime = createTerrainRuntime({
+    env: {
+      AETHERGRID_TERRAIN_PROVIDER: 'open-meteo',
+      AETHERGRID_ELEVATION_URL: 'https://elevation.example.test/v1/elevation',
+    },
+    fetchImpl: async () => new Response('unavailable', { status: 503 }),
+  });
+  const terrain = await runtime.sample({
+    lat: 35.6762,
+    lon: 139.6503,
+    radiusM: 900,
+    gridSize: 7,
+  });
+  assert.equal(terrain.source.live, false);
+  assert.equal(terrain.source.provider, 'flat-local-fallback');
+  assert.equal(terrain.points.length, 49);
+  assert.ok(terrain.points.every((point) => point.relativeElevationM === 0));
+  assert.match(terrain.source.error, /Elevation HTTP 503/u);
+});
+
+test('terrain runtime samples attributed elevation and preserves flat fallback', async () => {
+  const fetchImpl = async (url) => {
+    const parsed = new URL(String(url));
+    assert.equal(parsed.origin, 'https://elevation.example.test');
+    const latitudes = parsed.searchParams.get('latitude').split(',');
+    const longitudes = parsed.searchParams.get('longitude').split(',');
+    assert.equal(latitudes.length, 25);
+    assert.equal(longitudes.length, 25);
+    return new Response(
+      JSON.stringify({
+        elevation: Array.from({ length: 25 }, (_, index) => 12 + (index % 5) * 3),
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
+  };
+
+  const runtime = createTerrainRuntime({
+    env: {
+      AETHERGRID_TERRAIN_PROVIDER: 'open-meteo',
+      AETHERGRID_ELEVATION_URL: 'https://elevation.example.test/v1/elevation',
+    },
+    fetchImpl,
+  });
+
+  const summary = runtime.summary();
+  assert.equal(summary.provider, 'open-meteo');
+  assert.equal(summary.credentialsExposed, false);
+  assert.match(summary.attribution, /Copernicus DEM GLO-90/u);
+
+  const terrain = await runtime.sample({
+    lat: 40.7128,
+    lon: -74.006,
+    radiusM: 900,
+    gridSize: 5,
+  });
+  assert.equal(terrain.source.live, true);
+  assert.equal(terrain.source.provider, 'Open-Meteo Elevation');
+  assert.equal(terrain.gridSize, 5);
+  assert.equal(terrain.points.length, 25);
+  assert.equal(terrain.minElevationM, 12);
+  assert.equal(terrain.maxElevationM, 24);
+  assert.ok(terrain.points.every((point) => Number.isFinite(point.relativeElevationM)));
+
+  const fallback = createTerrainRuntime({
+    env: { AETHERGRID_TERRAIN_PROVIDER: 'flat-local' },
+  });
+  const flat = await fallback.sample({
+    lat: 51.5074,
+    lon: -0.1278,
+    radiusM: 500,
+    gridSize: 3,
+  });
+  assert.equal(flat.source.provider, 'flat-local-fallback');
+  assert.equal(flat.source.live, false);
+  assert.equal(flat.points.length, 9);
+  assert.ok(flat.points.every((point) => point.elevationM === 0));
 });
 
 test('IBM Quantum adapter submits jobs while keeping credentials private', async () => {
@@ -155,10 +338,17 @@ test('IBM Quantum adapter submits jobs while keeping credentials private', async
     }
     if (href === 'https://quantum.example.test/api/v1/jobs' && options.method === 'POST') {
       const body = JSON.parse(options.body);
-      assert.equal(body.program_id, 'sampler');
       assert.equal(body.backend, 'ibm_test_qpu');
       assert.equal(body.params.version, 2);
       assert.match(body.params.pubs[0][0], /^OPENQASM 3\.0;/u);
+      if (body.program_id === 'estimator') {
+        assert.equal(body.params.pubs[0][1], 'ZZ');
+        return new Response(JSON.stringify({ id: 'job-estimator-456', status: 'Queued' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+      assert.equal(body.program_id, 'sampler');
       return new Response(JSON.stringify({ id: 'job-123', status: 'Queued' }), {
         status: 200,
         headers: { 'content-type': 'application/json' },
@@ -251,6 +441,19 @@ test('IBM Quantum adapter submits jobs while keeping credentials private', async
   assert.equal(submitted.hardwareExecuted, false);
   assert.match(submitted.receipt, /^[a-f0-9]{64}$/u);
 
+  const estimator = await runtime.submitEstimator({
+    backend: 'ibm_test_qpu',
+    circuit: 'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; h q[0]; cx q[0], q[1];',
+    observable: 'ZZ',
+  });
+  assert.equal(estimator.id, 'job-estimator-456');
+  assert.equal(estimator.provider, 'ibm-quantum');
+  assert.equal(estimator.programId, 'estimator');
+  assert.equal(estimator.observable, 'ZZ');
+  assert.equal(estimator.hardwareSubmitted, true);
+  assert.equal(estimator.hardwareExecuted, false);
+  assert.match(estimator.receipt, /^[a-f0-9]{64}$/u);
+
   const jobs = await runtime.listJobs();
   assert.equal(jobs.jobs[0].id, 'job-123');
   assert.equal(jobs.jobs[0].programId, 'sampler');
@@ -281,5 +484,23 @@ test('local quantum sampler remains usable with no cloud credentials', async () 
   assert.equal(result.status, 'COMPLETED');
   assert.equal(result.hardwareExecuted, false);
   assert.equal(result.distribution['00'] + result.distribution['11'], 1000);
+  assert.match(result.receipt, /^[a-f0-9]{64}$/u);
+});
+
+test('local quantum estimator provides a bounded analytic fallback with explicit provenance', async () => {
+  const runtime = createQuantumRuntime({
+    env: { AETHERGRID_QUANTUM_PROVIDER: 'local-simulator' },
+  });
+  const result = await runtime.submitEstimator({
+    circuit: 'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; h q[0]; cx q[0], q[1];',
+    observable: 'ZZ',
+  });
+  assert.equal(result.provider, 'local-simulator');
+  assert.equal(result.programId, 'estimator');
+  assert.equal(result.status, 'COMPLETED');
+  assert.equal(result.observable, 'ZZ');
+  assert.equal(result.expectationValue, 1);
+  assert.equal(result.hardwareExecuted, false);
+  assert.equal(result.approximation, 'bounded-local-analytic-demo');
   assert.match(result.receipt, /^[a-f0-9]{64}$/u);
 });

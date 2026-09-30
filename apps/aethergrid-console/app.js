@@ -369,7 +369,14 @@
       this.canvas = canvas;
       this.options = options;
       this.gl = canvas?.getContext('webgl', { antialias: true, alpha: true });
-      this.layers = { grid: true, routes: true, buildings: true, nodes: true };
+      this.layers = {
+        grid: true,
+        routes: true,
+        buildings: true,
+        infrastructure: true,
+        terrain: true,
+        nodes: true,
+      };
       this.yaw = options.yaw ?? 0.74;
       this.pitch = options.pitch ?? 0.46;
       this.distance = options.distance ?? 20;
@@ -473,6 +480,9 @@
       const grid = [];
       const buildings = [];
       const routes = [];
+      const infrastructureLines = [];
+      const infrastructureNodes = [];
+      const terrainLines = [];
       const nodes = [];
       for (let n = -10; n <= 10; n += 1) {
         this.line(grid, [-10, 0, n], [10, 0, n], n * 0.21);
@@ -531,6 +541,9 @@
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
       this.geometry.routes = this.makeBuffer(routes);
+      this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
+      this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
+      this.geometry.terrain = this.makeBuffer(terrainLines);
       this.geometry.nodes = this.makeBuffer(nodes);
     }
 
@@ -540,6 +553,9 @@
       const grid = [];
       const buildings = [];
       const routes = [];
+      const infrastructureLines = [];
+      const infrastructureNodes = [];
+      const terrainLines = [];
       const nodes = [];
       for (let n = -10; n <= 10; n += 1) {
         this.line(grid, [-10, 0, n], [10, 0, n], n * 0.21);
@@ -587,6 +603,9 @@
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
       this.geometry.routes = this.makeBuffer(routes);
+      this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
+      this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
+      this.geometry.terrain = this.makeBuffer(terrainLines);
       this.geometry.nodes = this.makeBuffer(nodes);
     }
 
@@ -597,6 +616,9 @@
       const buildings = [];
       const nodes = [];
       const routes = [];
+      const infrastructureLines = [];
+      const infrastructureNodes = [];
+      const terrainLines = [];
       const radius = Math.max(200, Number(mesh.city?.radiusM || 900));
       const scale = 8.5 / radius;
 
@@ -650,9 +672,90 @@
         }
       });
 
+      (mesh.powerLines || []).forEach((line, lineIndex) => {
+        const path = (line.path || []).map(([x, z]) => [x * scale, z * scale]);
+        const lineHeight =
+          line.powerType === 'cable'
+            ? 0.055
+            : 0.12 + Math.min(0.22, Number(line.voltage || 0) / 1_000_000);
+        for (let index = 1; index < path.length; index += 1) {
+          const [ax, az] = path[index - 1];
+          const [bx, bz] = path[index];
+          this.line(
+            infrastructureLines,
+            [ax, lineHeight, az],
+            [bx, lineHeight, bz],
+            lineIndex * 0.19,
+          );
+        }
+      });
+
+      (mesh.powerAssets || []).forEach((asset, assetIndex) => {
+        const [x, z] = asset.position || [];
+        if (!Number.isFinite(Number(x)) || !Number.isFinite(Number(z))) return;
+        const height =
+          asset.powerType === 'plant'
+            ? 0.34
+            : asset.powerType === 'substation'
+              ? 0.24
+              : 0.16;
+        const node = {
+          id: asset.id,
+          label: asset.name || titleCase(asset.powerType || 'power asset'),
+          type: `power-${asset.powerType || 'asset'}`,
+          voltage: asset.voltage || null,
+          operator: asset.operator || '',
+          osmId: asset.osmId || null,
+          position: [Number(x) * scale, height, Number(z) * scale],
+        };
+        this.graphNodes.push(node);
+        this.vertex(
+          infrastructureNodes,
+          ...node.position,
+          assetIndex * 0.37 + Number(asset.voltage || 0) / 100000,
+        );
+      });
+
+      const terrain = mesh.terrain;
+      if (terrain?.points?.length && Number(terrain.gridSize) >= 2) {
+        const gridSize = Number(terrain.gridSize);
+        const verticalScale = scale * 1.65;
+        const pointAt = (row, column) => terrain.points[row * gridSize + column];
+        const vector = (point) => [
+          Number(point.x) * scale,
+          -0.06 + Math.min(3.2, Number(point.relativeElevationM || 0) * verticalScale),
+          Number(point.z) * scale,
+        ];
+        for (let row = 0; row < gridSize; row += 1) {
+          for (let column = 0; column < gridSize; column += 1) {
+            const current = pointAt(row, column);
+            if (!current) continue;
+            if (column + 1 < gridSize) {
+              this.line(
+                terrainLines,
+                vector(current),
+                vector(pointAt(row, column + 1)),
+                row * 0.17 + column * 0.09,
+              );
+            }
+            if (row + 1 < gridSize) {
+              this.line(
+                terrainLines,
+                vector(current),
+                vector(pointAt(row + 1, column)),
+                row * 0.11 + column * 0.13,
+              );
+            }
+          }
+        }
+      }
+
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
       this.geometry.routes = this.makeBuffer(routes);
+      this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
+      this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
+      this.geometry.terrain = this.makeBuffer(terrainLines);
       this.geometry.nodes = this.makeBuffer(nodes);
       this.selectedNode = null;
       if (this.selectionBuffer?.buffer) this.gl.deleteBuffer(this.selectionBuffer.buffer);
@@ -861,9 +964,33 @@
         (now - this.timeStart) * 0.00035 * temporalMotion;
       gl.uniform1f(this.loc.time, temporal);
       const amplitude = temporalMotion * this.intensity;
+      if (this.layers.terrain) {
+        this.drawBuffer(
+          this.geometry.terrain,
+          gl.LINES,
+          [0.18, 0.78, 0.62, 0.42],
+          0.025 * amplitude,
+        );
+      }
       if (this.layers.grid) this.drawBuffer(this.geometry.grid, gl.LINES, [0.09, 0.42, 0.75, 0.42], 0.045 * amplitude);
       if (this.layers.buildings) this.drawBuffer(this.geometry.buildings, gl.LINES, [0.14, 0.64, 1, 0.55], 0.07 * amplitude);
-      if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [0.83, 0.36, 1, Math.min(1, 0.78 * trailBoost)], 0.11 * amplitude * trailBoost);
+      if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [0.67, 0.48, 0.98, Math.min(1, 0.64 * trailBoost)], 0.075 * amplitude * trailBoost);
+      if (this.layers.infrastructure) {
+        this.drawBuffer(
+          this.geometry.infrastructureLines,
+          gl.LINES,
+          [1, 0.61, 0.12, Math.min(1, 0.92 * trailBoost)],
+          0.15 * amplitude * trailBoost,
+        );
+        this.drawBuffer(
+          this.geometry.infrastructureNodes,
+          gl.POINTS,
+          [1, 0.82, 0.25, 1],
+          0.08 * amplitude,
+          1,
+          12,
+        );
+      }
       if (this.layers.nodes) this.drawBuffer(this.geometry.nodes, gl.POINTS, [0.22, 1, 0.84, 1], 0.08 * amplitude, 1, 9);
 
       if (this.compareEnabled) {
@@ -872,7 +999,23 @@
           (now - this.timeStart) * 0.00018 * temporalMotion;
         gl.uniform1f(this.loc.time, compareTemporal);
         if (this.layers.buildings) this.drawBuffer(this.geometry.buildings, gl.LINES, [1, 0.55, 0.18, 0.25], 0.055 * amplitude);
-        if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [1, 0.72, 0.24, 0.48], 0.085 * amplitude, 0, 1);
+        if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [1, 0.72, 0.24, 0.36], 0.06 * amplitude, 0, 1);
+        if (this.layers.infrastructure) {
+          this.drawBuffer(
+            this.geometry.infrastructureLines,
+            gl.LINES,
+            [1, 0.88, 0.32, 0.58],
+            0.1 * amplitude,
+          );
+          this.drawBuffer(
+            this.geometry.infrastructureNodes,
+            gl.POINTS,
+            [1, 0.9, 0.42, 0.9],
+            0.04 * amplitude,
+            1,
+            9,
+          );
+        }
         if (this.layers.nodes) this.drawBuffer(this.geometry.nodes, gl.POINTS, [1, 0.72, 0.24, 0.82], 0.05 * amplitude, 1, 7);
         gl.uniform1f(this.loc.time, temporal);
       }
@@ -1315,17 +1458,32 @@
 
   function handleCityBuildingSelection(node) {
     const status = q('#cityMeshStatus');
+    const isPower = String(node.type || '').startsWith('power-');
+    const detail = isPower
+      ? `${titleCase(String(node.type).replace('power-', ''))}${node.voltage ? ` · ${Number(node.voltage).toLocaleString()} V` : ''}${node.operator ? ` · ${escapeHtml(node.operator)}` : ''}`
+      : `Building node · ${Number(node.heightM || 0).toFixed(1)} m high`;
     if (status) {
-      status.innerHTML = `<b>${escapeHtml(node.label || node.id)}</b><p>Building node · ${Number(node.heightM || 0).toFixed(1)} m high${node.osmId ? ` · OSM way ${escapeHtml(node.osmId)}` : ''}.</p>`;
+      status.innerHTML = `<b>${escapeHtml(node.label || node.id)}</b><p>${detail}${node.osmId ? ` · OSM ${escapeHtml(node.osmId)}` : ''}.</p>`;
     }
-    showToast('CITY BUILDING SELECTED', node.label || node.id);
+    showToast(isPower ? 'POWER ASSET SELECTED' : 'CITY BUILDING SELECTED', node.label || node.id);
   }
 
   function handleGlobalCitySelection(city) {
     if (!city) return;
     state.geospatial.selectedCityId = city.id;
     const select = q('#globalCitySelect');
-    if (select) select.value = city.id;
+    if (select) {
+      if (![...select.options].some((option) => option.value === city.id)) {
+        const option = document.createElement('option');
+        option.value = city.id;
+        option.textContent = `${city.name} · ${city.country || 'Custom coordinate'}`;
+        select.append(option);
+      }
+      select.value = city.id;
+    }
+    if (q('#globalPointName')) q('#globalPointName').value = city.name || 'Coordinate Explorer';
+    if (q('#globalPointLat')) q('#globalPointLat').value = Number(city.lat).toFixed(5);
+    if (q('#globalPointLon')) q('#globalPointLon').value = Number(city.lon).toFixed(5);
     qa('[data-global-city]').forEach((button) =>
       button.classList.toggle('active', button.dataset.globalCity === city.id),
     );
@@ -1334,7 +1492,7 @@
     if (q('#globalCoordinates')) q('#globalCoordinates').textContent = `${latLabel} · ${lonLabel}`;
     const status = q('#cityMeshStatus');
     if (status) {
-      status.innerHTML = `<b>${escapeHtml(city.name)} · ${escapeHtml(city.country)}</b><p>Real-coordinate world node selected. Descend into the city to request live building geometry.</p>`;
+      status.innerHTML = `<b>${escapeHtml(city.name)} · ${escapeHtml(city.country)}</b><p>Real-coordinate world node selected. Descend to request live buildings, roads and mapped power infrastructure.</p>`;
     }
   }
 
@@ -1491,8 +1649,54 @@
             ],
       };
     });
+    const powerAssets = Array.from({ length: 8 }, (_, index) => ({
+      id: `standalone-power-asset-${index + 1}`,
+      name: index % 3 === 0 ? `Fallback Substation ${index + 1}` : '',
+      powerType: index % 3 === 0 ? 'substation' : 'transformer',
+      voltage: index % 3 === 0 ? 138000 : 13800,
+      operator: '',
+      position: [(random() - 0.5) * 1200, (random() - 0.5) * 1200],
+    }));
+    const powerLines = Array.from({ length: 8 }, (_, index) => {
+      const horizontal = index % 2 === 0;
+      const offset = (random() - 0.5) * 1050;
+      return {
+        id: `standalone-power-line-${index + 1}`,
+        name: '',
+        powerType: index % 4 === 0 ? 'line' : 'minor_line',
+        voltage: index % 4 === 0 ? 138000 : 33000,
+        operator: '',
+        path: horizontal
+          ? [
+              [-700, offset],
+              [-180, offset + (random() - 0.5) * 70],
+              [280, offset + (random() - 0.5) * 70],
+              [700, offset],
+            ]
+          : [
+              [offset, -700],
+              [offset + (random() - 0.5) * 70, -180],
+              [offset + (random() - 0.5) * 70, 280],
+              [offset, 700],
+            ],
+      };
+    });
+    const terrainGridSize = 7;
+    const terrainPoints = [];
+    for (let row = 0; row < terrainGridSize; row += 1) {
+      for (let column = 0; column < terrainGridSize; column += 1) {
+        const x = -city.radiusM + (column / (terrainGridSize - 1)) * city.radiusM * 2;
+        const z = -city.radiusM + (row / (terrainGridSize - 1)) * city.radiusM * 2;
+        terrainPoints.push({
+          x,
+          z,
+          elevationM: 0,
+          relativeElevationM: 0,
+        });
+      }
+    }
     return {
-      schemaVersion: 1,
+      schemaVersion: 2,
       city,
       source: {
         provider: 'standalone-local-fallback',
@@ -1501,7 +1705,77 @@
       },
       buildings,
       roads,
+      powerLines,
+      powerAssets,
+      terrain: {
+        source: {
+          provider: 'flat-local-fallback',
+          live: false,
+          attribution: null,
+        },
+        gridSize: terrainGridSize,
+        minElevationM: 0,
+        maxElevationM: 0,
+        points: terrainPoints,
+      },
     };
+  }
+
+  function updateGlobalGridStats(mesh) {
+    const stats = q('#globalGridStats');
+    if (!stats) return;
+    const terrain = mesh.terrain;
+    const elevation =
+      terrain && Number.isFinite(Number(terrain.minElevationM)) && Number.isFinite(Number(terrain.maxElevationM))
+        ? `${Math.round(Number(terrain.minElevationM))}–${Math.round(Number(terrain.maxElevationM))} m`
+        : '—';
+    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
+  }
+
+  function applyCityMeshResult(result, status = q('#cityMeshStatus')) {
+    state.geospatial.cityMesh = result;
+    if (Array.isArray(result.activity)) state.activity = result.activity;
+    cityGrid?.loadCityMesh(result);
+    cityGrid?.setTime(q('#globalTimeSlider')?.value || state.settings.defaultHour);
+    setGlobalMode('city');
+    updateGlobalGridStats(result);
+    if (q('#geoSourceStatus')) {
+      q('#geoSourceStatus').textContent = result.source?.live
+        ? `LIVE OSM · ${result.buildings.length} BUILDINGS · ${(result.powerLines || []).length} POWER LINES`
+        : `LOCAL FALLBACK · ${result.buildings.length} BUILDINGS · ${(result.powerLines || []).length} POWER LINES`;
+    }
+    if (q('#geoAttribution')) {
+      const attributions = [
+        result.source?.attribution,
+        result.terrain?.source?.attribution,
+      ].filter(Boolean);
+      q('#geoAttribution').textContent =
+        attributions.join(' · ') ||
+        'Live city geometry unavailable; using local fallback geometry.';
+    }
+    if (status) {
+      status.innerHTML = `<b>${escapeHtml(result.city.name)} · ${result.buildings.length} buildings · ${(result.roads || []).length} roads · ${(result.powerAssets || []).length} power assets</b><p>${result.source?.live ? 'Live OpenStreetMap building, road and power-infrastructure geometry is rendered as independent interactive 3D layers.' : 'Provider request could not be completed; clearly marked local fallback geometry is being rendered.'}</p><button class="secondary-button" data-action="reload-city-live">REFRESH LIVE GEOMETRY</button>`;
+    }
+    renderActivity();
+    showToast(
+      result.source?.live ? 'LIVE CITY + GRID LOADED' : 'CITY FALLBACK LOADED',
+      `${result.city.name} · ${result.buildings.length} buildings · ${(result.roads || []).length} roads · ${(result.powerLines || []).length} power lines · ${result.source?.provider}`,
+    );
+  }
+
+  async function loadTerrainFor(city) {
+    if (!city) return null;
+    const query = new URLSearchParams({
+      lat: String(city.lat),
+      lon: String(city.lon),
+      radiusM: String(city.radiusM || 900),
+      gridSize: '7',
+    });
+    try {
+      return await api(`./api/aethergrid/terrain?${query.toString()}`);
+    } catch {
+      return null;
+    }
   }
 
   async function loadLiveCity(cityId = state.geospatial.selectedCityId, { force = false } = {}) {
@@ -1514,43 +1788,87 @@
       const meshRequest = api(
         `./api/aethergrid/geospatial/city/${encodeURIComponent(cityId)}${force ? '?force=1' : ''}`,
       );
+      const terrainRequest = loadTerrainFor(city);
       const descent =
         city && globalGlobe ? globalGlobe.descendToCity(city, 720) : Promise.resolve();
-      const [result] = await Promise.all([meshRequest, descent]);
-      state.geospatial.cityMesh = result;
-      if (Array.isArray(result.activity)) state.activity = result.activity;
-      cityGrid?.loadCityMesh(result);
-      setGlobalMode('city');
-      if (q('#geoSourceStatus')) {
-        q('#geoSourceStatus').textContent = result.source?.live
-          ? `LIVE OSM · ${result.buildings.length} BUILDINGS`
-          : `LOCAL FALLBACK · ${result.buildings.length} BUILDINGS`;
-      }
-      if (q('#geoAttribution')) {
-        q('#geoAttribution').textContent =
-          result.source?.attribution || 'Live city geometry unavailable; using local fallback geometry.';
-      }
-      if (status) {
-        status.innerHTML = `<b>${escapeHtml(result.city.name)} · ${result.buildings.length} buildings · ${(result.roads || []).length} roads</b><p>${result.source?.live ? 'Live OpenStreetMap building footprints and road topology are now rendered as interactive 3D wireframe geometry.' : 'Provider request could not be completed; clearly marked local fallback geometry is being rendered.'}</p><button class="secondary-button" data-action="reload-city-live">REFRESH LIVE GEOMETRY</button>`;
-      }
-      renderActivity();
-      showToast(
-        result.source?.live ? 'LIVE CITY LOADED' : 'CITY FALLBACK LOADED',
-        `${result.city.name} · ${result.buildings.length} buildings · ${(result.roads || []).length} roads · ${result.source?.provider}`,
-      );
+      const [result, terrain] = await Promise.all([meshRequest, terrainRequest, descent]);
+      if (terrain) result.terrain = terrain;
+      applyCityMeshResult(result, status);
     } catch (error) {
       const fallbackCity =
         city || state.geospatial.cities.find((item) => item.id === cityId) || DEFAULT_GLOBAL_CITIES[0];
       const fallback = buildStandaloneCityMesh(fallbackCity);
-      state.geospatial.cityMesh = fallback;
-      cityGrid?.loadCityMesh(fallback);
-      setGlobalMode('city');
-      if (status) {
-        status.innerHTML = `<b>${escapeHtml(fallbackCity.name)} · standalone fallback</b><p>Live geometry could not be reached. Interactive 3D geometry remains available, but it is explicitly local fallback—not OpenStreetMap data.</p>`;
+      applyCityMeshResult(fallback, status);
+      if (q('#geoSourceStatus')) {
+        q('#geoSourceStatus').textContent = 'STANDALONE FALLBACK · NOT LIVE MAP DATA';
       }
-      if (q('#geoSourceStatus')) q('#geoSourceStatus').textContent = 'STANDALONE FALLBACK · NOT LIVE MAP DATA';
-      if (q('#geoAttribution')) q('#geoAttribution').textContent = fallback.source.attribution;
-      showToast('STANDALONE CITY MODE', error.message || 'Backend unavailable; rendering local fallback geometry.');
+      showToast(
+        'STANDALONE CITY MODE',
+        error.message || 'Backend unavailable; rendering local fallback geometry.',
+      );
+    }
+  }
+
+  async function loadCoordinateCity({ force = false } = {}) {
+    const name = q('#globalPointName')?.value.trim() || 'Coordinate Explorer';
+    const lat = Number(q('#globalPointLat')?.value);
+    const lon = Number(q('#globalPointLon')?.value);
+    const radiusM = Number(q('#globalPointRadius')?.value || 900);
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+      return showToast('COORDINATE ERROR', 'Latitude must be between -90 and 90.');
+    }
+    if (!Number.isFinite(lon) || lon < -180 || lon > 180) {
+      return showToast('COORDINATE ERROR', 'Longitude must be between -180 and 180.');
+    }
+    const city = {
+      id: `coord-${lat.toFixed(5)}-${lon.toFixed(5)}`,
+      name,
+      country: 'Custom coordinate',
+      lat,
+      lon,
+      radiusM,
+      custom: true,
+    };
+    state.geospatial.cities = [
+      city,
+      ...state.geospatial.cities.filter((item) => !item.custom && item.id !== city.id),
+    ];
+    globalGlobe?.setCities(state.geospatial.cities);
+    handleGlobalCitySelection(city);
+    const list = q('#globalCityList');
+    if (list) {
+      const existing = list.querySelector('[data-global-city-custom]');
+      existing?.remove();
+      list.insertAdjacentHTML(
+        'afterbegin',
+        `<button class="global-city-button active" data-global-city="${escapeHtml(city.id)}" data-global-city-custom="true"><b>${escapeHtml(city.name)}</b><small>Custom coordinate · ${city.lat.toFixed(4)}, ${city.lon.toFixed(4)}</small><em>ENTER</em></button>`,
+      );
+    }
+    const status = q('#cityMeshStatus');
+    if (status) {
+      status.innerHTML = `<b>Loading ${escapeHtml(name)}…</b><p>Requesting live buildings, roads and power infrastructure around ${lat.toFixed(5)}, ${lon.toFixed(5)}.</p>`;
+    }
+    try {
+      const query = new URLSearchParams({
+        lat: String(lat),
+        lon: String(lon),
+        name,
+        radiusM: String(radiusM),
+        ...(force ? { force: '1' } : {}),
+      });
+      const meshRequest = api(`./api/aethergrid/geospatial/point?${query.toString()}`);
+      const terrainRequest = loadTerrainFor(city);
+      const descent = globalGlobe ? globalGlobe.descendToCity(city, 720) : Promise.resolve();
+      const [result, terrain] = await Promise.all([meshRequest, terrainRequest, descent]);
+      if (terrain) result.terrain = terrain;
+      applyCityMeshResult(result, status);
+    } catch (error) {
+      const fallback = buildStandaloneCityMesh(city);
+      applyCityMeshResult(fallback, status);
+      if (q('#geoSourceStatus')) {
+        q('#geoSourceStatus').textContent = 'STANDALONE FALLBACK · NOT LIVE MAP DATA';
+      }
+      showToast('COORDINATE FALLBACK', error.message || 'Backend unavailable.');
     }
   }
 
@@ -1577,12 +1895,33 @@
     }),
   );
   q('[data-action="load-live-city"]')?.addEventListener('click', () => loadLiveCity());
+  q('[data-action="explore-coordinates"]')?.addEventListener('click', () =>
+    loadCoordinateCity(),
+  );
+  qa('[data-global-layer]').forEach((button) =>
+    button.addEventListener('click', () => {
+      cityGrid?.toggle(button.dataset.globalLayer);
+      button.classList.toggle('active');
+      showToast('CITY LAYER', `${titleCase(button.dataset.globalLayer)} updated.`);
+    }),
+  );
+  q('#globalTimeSlider')?.addEventListener('input', (event) => {
+    cityGrid?.setTime(event.target.value);
+    if (q('#globalTimeValue')) {
+      q('#globalTimeValue').textContent = formatHour(event.target.value);
+    }
+  });
   q('[data-global-action="reset"]')?.addEventListener('click', () => {
     globalGlobe?.reset();
     setGlobalMode('globe');
   });
   q('#cityMeshStatus')?.addEventListener('click', (event) => {
-    if (event.target.closest('[data-action="reload-city-live"]')) loadLiveCity(state.geospatial.selectedCityId, { force: true });
+    if (!event.target.closest('[data-action="reload-city-live"]')) return;
+    const selected = state.geospatial.cities.find(
+      (item) => item.id === state.geospatial.selectedCityId,
+    );
+    if (selected?.custom) loadCoordinateCity({ force: true });
+    else loadLiveCity(state.geospatial.selectedCityId, { force: true });
   });
 
   function updateClock() {
@@ -1870,11 +2209,11 @@
             : 'IBM QUANTUM CONFIG NEEDED'
           : provider === 'standalone'
             ? 'STANDALONE'
-            : 'LOCAL SAMPLER';
+            : 'LOCAL PRIMITIVES';
     }
     const status = q('#quantumRuntimeStatus');
     if (status) {
-      status.innerHTML = `<span class="status-dot"></span><div><b>${escapeHtml(provider)}</b><small>${runtime.hardwareExecution ? 'Real QPU submission enabled' : 'Local deterministic sampler'} · ${escapeHtml(runtime.defaultBackend || 'no backend selected')} · credentials never enter the browser</small></div>`;
+      status.innerHTML = `<span class="status-dot"></span><div><b>${escapeHtml(provider)}</b><small>${runtime.hardwareExecution ? 'Real IBM Quantum primitive submission enabled' : 'Local deterministic Sampler + bounded analytic Estimator'} · ${escapeHtml(runtime.defaultBackend || 'no backend selected')} · credentials never enter the browser</small></div>`;
     }
   }
 
@@ -1905,22 +2244,31 @@
     if (!container || !job) return;
     const distribution = job.distribution
       ? Object.entries(job.distribution)
-          .map(([stateKey, count]) => `<dt>|${escapeHtml(stateKey)}⟩</dt><dd>${Number(count).toLocaleString()}</dd>`)
+          .map(
+            ([stateKey, count]) =>
+              `<dt>|${escapeHtml(stateKey)}⟩</dt><dd>${Number(count).toLocaleString()}</dd>`,
+          )
           .join('')
       : '';
-    container.innerHTML = `<div class="quantum-job-card"><b>${escapeHtml(job.id || 'Quantum job')}</b><code>${escapeHtml(job.provider || 'unknown')} / ${escapeHtml(job.backend || 'unknown')}</code><dl><dt>Status</dt><dd>${escapeHtml(job.status || 'unknown')}</dd><dt>Primitive</dt><dd>${escapeHtml(job.programId || 'sampler')}</dd><dt>Hardware Submitted</dt><dd>${job.hardwareSubmitted ? 'YES' : 'NO'}</dd><dt>Receipt</dt><dd>${escapeHtml((job.receipt || '').slice(0, 18))}…</dd>${distribution}</dl></div>`;
+    const estimator =
+      job.programId === 'estimator'
+        ? `<dt>Observable</dt><dd>${escapeHtml(typeof job.observable === 'string' ? job.observable : JSON.stringify(job.observable || ''))}</dd><dt>Expectation</dt><dd>${Number.isFinite(Number(job.expectationValue)) ? Number(job.expectationValue).toFixed(6) : 'Pending remote result'}</dd>${job.approximation ? `<dt>Local Mode</dt><dd>${escapeHtml(job.approximation)}</dd>` : ''}`
+        : '';
+    container.innerHTML = `<div class="quantum-job-card"><b>${escapeHtml(job.id || 'Quantum job')}</b><code>${escapeHtml(job.provider || 'unknown')} / ${escapeHtml(job.backend || 'unknown')}</code><dl><dt>Status</dt><dd>${escapeHtml(job.status || 'unknown')}</dd><dt>Primitive</dt><dd>${escapeHtml(job.programId || 'sampler')}</dd><dt>Hardware Submitted</dt><dd>${job.hardwareSubmitted ? 'YES' : 'NO'}</dd><dt>Receipt</dt><dd>${escapeHtml((job.receipt || '').slice(0, 18))}…</dd>${estimator}${distribution}</dl></div>`;
   }
 
   async function submitQuantumJob() {
+    const primitive = q('#quantumPrimitive')?.value || 'sampler';
     const circuit = q('#quantumCircuit')?.value.trim();
     const backend = q('#quantumBackend')?.value;
     const shots = Number(q('#quantumShots')?.value || 1024);
+    const observable = q('#quantumObservable')?.value.trim() || 'ZZ';
     if (!circuit) return showToast('QUANTUM JOB', 'OpenQASM circuit is required.');
     if (q('#quantumProviderBadge')) q('#quantumProviderBadge').textContent = 'SUBMITTING…';
     try {
       const result = await api('./api/aethergrid/quantum/jobs', {
         method: 'POST',
-        body: JSON.stringify({ circuit, backend, shots }),
+        body: JSON.stringify({ primitive, circuit, backend, shots, observable }),
       });
       renderQuantumJob(result.job);
       if (result.evidence) {
@@ -1932,7 +2280,7 @@
       renderQuantumRuntime(state.quantumRuntime || {});
       showToast(
         'QUANTUM JOB SUBMITTED',
-        `${result.job.provider} · ${result.job.backend} · ${result.job.status}`,
+        `${String(result.job.programId || primitive).toUpperCase()} · ${result.job.provider} · ${result.job.backend} · ${result.job.status}`,
       );
       if (result.job.provider === 'ibm-quantum') loadQuantumJobs();
     } catch (error) {
@@ -1997,6 +2345,31 @@
       container.innerHTML = `<div class="empty-state">${escapeHtml(error.message || String(error))}</div>`;
     }
   }
+
+  function syncQuantumPrimitiveControls({ replaceCircuit = false } = {}) {
+    const primitive = q('#quantumPrimitive')?.value || 'sampler';
+    const shotsRow = q('#quantumShotsRow');
+    const observableRow = q('#quantumObservableRow');
+    const circuit = q('#quantumCircuit');
+    const submit = q('[data-action="submit-quantum-job"]');
+    if (shotsRow) shotsRow.hidden = primitive !== 'sampler';
+    if (observableRow) observableRow.hidden = primitive !== 'estimator';
+    if (submit) {
+      submit.textContent =
+        primitive === 'estimator' ? 'SUBMIT ESTIMATOR JOB' : 'SUBMIT SAMPLER JOB';
+    }
+    if (replaceCircuit && circuit) {
+      circuit.value =
+        primitive === 'estimator'
+          ? 'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; h q[0]; cx q[0], q[1];'
+          : 'OPENQASM 3.0; include "stdgates.inc"; bit[2] c; h $0; cx $0, $1; c[0] = measure $0; c[1] = measure $1;';
+    }
+  }
+
+  q('#quantumPrimitive')?.addEventListener('change', () =>
+    syncQuantumPrimitiveControls({ replaceCircuit: true }),
+  );
+  syncQuantumPrimitiveControls();
 
   q('[data-action="refresh-quantum-backends"]')?.addEventListener(
     'click',

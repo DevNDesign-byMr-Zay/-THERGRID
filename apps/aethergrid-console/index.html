@@ -121,7 +121,7 @@
 
         <section class="workspace-view" data-workspace="global" aria-labelledby="globalTitle">
           <div class="workspace-head">
-            <div><span class="eyebrow">GLOBAL / GOD'S-EYE SPATIAL GRID</span><h1 id="globalTitle">Planetary Grid & Live 3D Cities</h1><p>Orbit a real-coordinate global grid, select world cities, then descend into live OpenStreetMap building geometry rendered as interactive 3D wireframes.</p></div>
+            <div><span class="eyebrow">GLOBAL / GOD'S-EYE SPATIAL GRID</span><h1 id="globalTitle">Planetary Grid & Live 3D Cities</h1><p>Orbit a real-coordinate global grid, descend anywhere on Earth, and inspect live OpenStreetMap buildings, roads, substations, generation assets and transmission geometry as interactive 3D wireframes.</p></div>
             <div class="workspace-actions"><span class="pill" id="geoRuntimeBadge">GEO RUNTIME</span><button class="secondary-button" data-global-action="reset">RESET VIEW</button></div>
           </div>
           <div class="global-workspace">
@@ -131,6 +131,20 @@
                 <select id="globalCitySelect" aria-label="Select city"><option value="new-york">New York · United States</option></select>
                 <button class="primary-button" data-action="load-live-city">DESCEND INTO CITY</button>
               </div>
+              <div class="global-coordinate-bar">
+                <input id="globalPointName" value="Coordinate Explorer" maxlength="80" aria-label="Coordinate label" />
+                <label>LAT <input id="globalPointLat" type="number" min="-90" max="90" step="0.00001" value="40.71280" /></label>
+                <label>LON <input id="globalPointLon" type="number" min="-180" max="180" step="0.00001" value="-74.00600" /></label>
+                <label>RADIUS <select id="globalPointRadius"><option value="500">500 m</option><option value="900" selected>900 m</option><option value="1500">1.5 km</option><option value="2000">2 km</option></select></label>
+                <button class="secondary-button" data-action="explore-coordinates">EXPLORE COORDINATES</button>
+              </div>
+              <div class="global-layer-controls" aria-label="City 3D layers">
+                <button class="active" data-global-layer="buildings">BUILDINGS</button>
+                <button class="active" data-global-layer="routes">ROADS</button>
+                <button class="active" data-global-layer="infrastructure">POWER GRID</button>
+                <button class="active" data-global-layer="terrain">TERRAIN</button>
+                <button class="active" data-global-layer="nodes">ASSET NODES</button>
+              </div>
               <canvas id="globalGlobe" aria-label="Interactive 3D global spatial grid with real city coordinates"></canvas>
               <canvas id="cityGrid" aria-label="Interactive 3D city building wireframe" hidden></canvas>
               <div class="global-hud">
@@ -138,6 +152,7 @@
                 <span id="globalScale">PLANETARY SCALE</span>
                 <span id="geoSourceStatus">REAL COORDINATES · CITY MESH ON DEMAND</span>
               </div>
+              <label class="time-control global-time"><span>4D TIME INDEX</span><input id="globalTimeSlider" type="range" min="0" max="24" step=".25" value="12" /><span id="globalTimeValue">12:00</span></label>
               <div class="global-attribution" id="geoAttribution">City geometry: © OpenStreetMap contributors when live provider is available.</div>
             </section>
             <aside class="global-side">
@@ -146,8 +161,12 @@
                 <div id="globalCityList" class="global-city-list"><div class="empty-state">Loading world cities…</div></div>
               </section>
               <section class="panel compact-panel">
-                <header class="panel-head"><div class="panel-title"><span class="badge">⌂</span><span><h3>CITY MESH</h3><small>Live building geometry</small></span></div></header>
-                <div class="inspector-body" id="cityMeshStatus"><b>New York selected</b><p>Choose DESCEND INTO CITY to fetch live building footprints and heights from the configured geospatial provider.</p></div>
+                <header class="panel-head"><div class="panel-title"><span class="badge">⌂</span><span><h3>CITY MESH</h3><small>Live spatial geometry</small></span></div></header>
+                <div class="inspector-body" id="cityMeshStatus"><b>New York selected</b><p>Choose DESCEND INTO CITY to fetch live building, road and power-grid geometry from the configured geospatial provider.</p></div>
+              </section>
+              <section class="panel compact-panel">
+                <header class="panel-head"><div class="panel-title"><span class="badge">⌁</span><span><h3>LIVE GRID ASSETS</h3><small>Mapped infrastructure</small></span></div></header>
+                <div class="context-list" id="globalGridStats"><span><b>Power Lines</b><em>—</em></span><span><b>Power Assets</b><em>—</em></span><span><b>Roads</b><em>—</em></span><span><b>Buildings</b><em>—</em></span><span><b>Elevation</b><em>—</em></span></div>
               </section>
               <section class="panel compact-panel">
                 <header class="panel-head"><div class="panel-title"><span class="badge">▤</span><span><h3>DATA PROVENANCE</h3><small>Source transparency</small></span></div></header>
@@ -212,11 +231,13 @@
             <section class="panel run-history-panel"><header class="panel-head"><div class="panel-title"><span class="badge">▤</span><span><h3>RUN HISTORY</h3><small>Receipts & comparisons</small></span></div></header><div id="optimizationHistory" class="history-list"><div class="empty-state">No optimization run in this session yet.</div></div></section>
 
             <section class="panel quantum-provider-panel">
-              <header class="panel-head"><div class="panel-title"><span class="badge">Q</span><span><h3>QUANTUM COMPUTE RUNTIME</h3><small>Local sampler or real IBM Quantum QPU submission</small></span></div><span class="pill" id="quantumProviderBadge">LOADING</span></header>
+              <header class="panel-head"><div class="panel-title"><span class="badge">Q</span><span><h3>QUANTUM COMPUTE RUNTIME</h3><small>Local primitives or real IBM Quantum Sampler / Estimator submission</small></span></div><span class="pill" id="quantumProviderBadge">LOADING</span></header>
               <div class="quantum-provider-grid">
                 <div class="quantum-job-controls">
+                  <label>Primitive<select id="quantumPrimitive"><option value="sampler">Sampler V2</option><option value="estimator">Estimator V2</option></select></label>
                   <label>Backend<select id="quantumBackend"><option value="aethergrid-local-sampler">aethergrid-local-sampler</option></select></label>
-                  <label>Shots<input id="quantumShots" type="number" min="1" max="100000" value="1024" /></label>
+                  <label id="quantumShotsRow">Shots<input id="quantumShots" type="number" min="1" max="100000" value="1024" /></label>
+                  <label id="quantumObservableRow" hidden>Pauli Observable<input id="quantumObservable" type="text" value="ZZ" maxlength="64" placeholder="ZZ" /></label>
                   <label>OpenQASM 3 Circuit<textarea id="quantumCircuit" rows="7">OPENQASM 3.0; include "stdgates.inc"; bit[2] c; h $0; cx $0, $1; c[0] = measure $0; c[1] = measure $1;</textarea></label>
                   <div class="quantum-job-actions"><button class="secondary-button" data-action="refresh-quantum-backends">REFRESH BACKENDS</button><button class="primary-button" data-action="submit-quantum-job">SUBMIT SAMPLER JOB</button></div>
                 </div>

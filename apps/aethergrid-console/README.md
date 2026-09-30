@@ -144,3 +144,64 @@ AETHERGRID_IBM_QUANTUM_BACKEND=<backend name>
 ```
 
 The browser never receives the API key or IAM bearer token. Submitting a job is not treated as proof that QPU execution completed; the evidence record distinguishes submission from completed hardware execution.
+
+## Global grid intelligence v2
+
+The GLOBAL workspace now goes beyond preset city descent.
+
+Operators can enter any valid latitude/longitude pair and request an on-demand local spatial mesh around that coordinate. In backend-connected mode, the geospatial runtime asks the configured OpenStreetMap Overpass endpoint for:
+
+- building footprints and available height/level metadata;
+- roads/highways;
+- mapped power lines, minor lines, and cables;
+- mapped substations, plants, generators, and transformers.
+
+Each source category remains an independent WebGL layer. Buildings, roads, the power grid, and asset nodes can be toggled without replacing the scene with a raster map. The city renderer also has its own time index so the same x/y/z geometry can be reviewed as a 4D presentation surface.
+
+The custom coordinate route is:
+
+```text
+GET /api/aethergrid/geospatial/point?lat=<latitude>&lon=<longitude>&radiusM=<250-2000>&name=<label>
+```
+
+OpenStreetMap data remains attribution-bound and operator-triggered. If the live provider is unavailable, the app shows deterministic local fallback geometry and labels it as fallback.
+
+## Agent external context
+
+VÆLON, AUREN, SOLVÆR, and TEAM requests now receive a bounded external-context summary containing the most recently loaded geospatial scene and quantum job state. The AI runtime receives counts, provider identity, coordinate/region context, job identity/status, and evidence receipts—not provider secrets or unrestricted infrastructure authority.
+
+This means an agent can reason about what the operator actually loaded in GLOBAL or QUANTUM without silently controlling those systems. Physical actuation remains disabled.
+
+## Live elevation terrain
+
+The GLOBAL city renderer can request a bounded elevation grid for the active coordinate and render it as a separate native-WebGL terrain wireframe beneath the city/power layers.
+
+The maintained provider adapter is `open-meteo`, with an explicit `flat-local` fallback. Configure it with:
+
+```text
+AETHERGRID_TERRAIN_PROVIDER=open-meteo
+AETHERGRID_ELEVATION_URL=https://api.open-meteo.com/v1/elevation
+AETHERGRID_OPEN_METEO_API_KEY=
+```
+
+The terrain request is limited to a 3×3–9×9 grid, which remains within the provider adapter's bounded request contract. Elevation provenance is shown separately from OpenStreetMap provenance. The standalone HTML keeps a flat local terrain surface so the TERRAIN control remains functional without network access.
+
+Deployment owners are responsible for using provider access and licensing that fits their deployment, including commercial usage where applicable.
+
+## Terrain and elevation layer
+
+The GLOBAL city renderer now supports a real terrain layer in addition to buildings, roads and mapped power infrastructure.
+
+Backend-connected mode uses the provider-neutral `terrain-runtime.mjs`. The default live adapter samples elevation through Open-Meteo's Elevation API, which exposes Copernicus DEM GLO-90 elevation data. Sampling is bounded to a small 3×3 through 9×9 grid around the operator-selected coordinate. The resulting elevation points are projected into the same local metric frame as the city geometry and rendered as native WebGL terrain wireframes.
+
+The terrain layer can be toggled independently with **TERRAIN**. It does not replace the city with a raster or screenshot.
+
+Configuration:
+
+```text
+AETHERGRID_TERRAIN_PROVIDER=open-meteo
+AETHERGRID_ELEVATION_URL=https://api.open-meteo.com/v1/elevation
+AETHERGRID_OPEN_METEO_API_KEY=
+```
+
+When the live elevation provider is unavailable, the renderer uses a clearly labeled flat local fallback. Terrain source attribution is shown alongside OpenStreetMap attribution. Terrain summaries may be passed to the AI team as bounded context, but no terrain or AI path grants physical actuation authority.

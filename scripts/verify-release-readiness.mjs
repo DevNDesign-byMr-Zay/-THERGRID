@@ -34,6 +34,7 @@ const REQUIRED_FILES = Object.freeze([
   'apps/aethergrid-console/ai-runtime.mjs',
   'apps/aethergrid-console/profile-store.mjs',
   'apps/aethergrid-console/geo-runtime.mjs',
+  'apps/aethergrid-console/terrain-runtime.mjs',
   'apps/aethergrid-console/quantum-runtime.mjs',
   'apps/aethergrid-console/app.json',
   'apps/aethergrid-console/ui.json',
@@ -427,6 +428,12 @@ async function main() {
       /data-workspace="global"/u.test(exactAethergridHtml) &&
       /id="globalGlobe"/u.test(exactAethergridHtml) &&
       /id="cityGrid"/u.test(exactAethergridHtml) &&
+      /id="globalPointLat"/u.test(exactAethergridHtml) &&
+      /id="globalPointLon"/u.test(exactAethergridHtml) &&
+      /id="globalTimeSlider"/u.test(exactAethergridHtml) &&
+      /data-global-layer="infrastructure"/u.test(exactAethergridHtml) &&
+      /data-global-layer="terrain"/u.test(exactAethergridHtml) &&
+      /id="globalGridStats"/u.test(exactAethergridHtml) &&
       /data-workspace="holographic"/u.test(exactAethergridHtml) &&
       /data-workspace="quantum"/u.test(exactAethergridHtml) &&
       /data-workspace="ai"/u.test(exactAethergridHtml) &&
@@ -463,6 +470,11 @@ async function main() {
       /pickNode\(clientX, clientY\)/u.test(exactAethergridJs) &&
       /activateScenario\(name, parameters/u.test(exactAethergridJs) &&
       /async function loadLiveCity/u.test(exactAethergridJs) &&
+      /async function loadCoordinateCity/u.test(exactAethergridJs) &&
+      /infrastructureLines/u.test(exactAethergridJs) &&
+      /terrainLines/u.test(exactAethergridJs) &&
+      /loadTerrainFor/u.test(exactAethergridJs) &&
+      /powerAssets/u.test(exactAethergridJs) &&
       /descendToCity\(city, durationMs/u.test(exactAethergridJs) &&
       /async function submitQuantumJob/u.test(exactAethergridJs) &&
       /async function loadQuantumJobDetail/u.test(exactAethergridJs) &&
@@ -504,8 +516,27 @@ async function main() {
       exactAethergridApp.capabilities?.quantumJobMetrics === true &&
       exactAethergridApp.capabilities?.liveOpenStreetMapRoadTopology === true &&
       exactAethergridApp.capabilities?.animatedGlobeCityDescent === true &&
+      exactAethergridApp.capabilities?.arbitraryCoordinateExplorer === true &&
+      exactAethergridApp.capabilities?.liveOpenStreetMapPowerGrid === true &&
+      exactAethergridApp.capabilities?.independentPowerGridLayer === true &&
+      exactAethergridApp.capabilities?.globalTemporalCityScrubbing === true &&
+      exactAethergridApp.capabilities?.liveTerrainElevation === true &&
+      exactAethergridApp.capabilities?.independentTerrainLayer === true &&
+      exactAethergridApp.capabilities?.terrainFallback === true &&
+      exactAethergridApp.capabilities?.liveAgentExternalContext === true &&
+      exactAethergridApp.capabilities?.liveElevationTerrain === true &&
+      exactAethergridApp.capabilities?.terrainWireframeLayer === true &&
       exactAethergridApp.aiRuntime?.replaceableByConfiguration === true &&
+      Array.isArray(exactAethergridApp.aiRuntime?.externalContext) &&
+      exactAethergridApp.aiRuntime.externalContext.includes('geospatial-summary') &&
+      exactAethergridApp.aiRuntime.externalContext.includes('quantum-job-summary') &&
       exactAethergridApp.geospatialRuntime?.liveFetchOnExplicitOperatorAction === true &&
+      exactAethergridApp.geospatialRuntime?.supportsCustomCoordinates === true &&
+      exactAethergridApp.geospatialRuntime?.livePowerLineGeometry === true &&
+      exactAethergridApp.geospatialRuntime?.livePowerAssetGeometry === true &&
+      exactAethergridApp.geospatialRuntime?.layers?.includes('terrain') &&
+      exactAethergridApp.terrainRuntime?.module === 'terrain-runtime.mjs' &&
+      exactAethergridApp.terrainRuntime?.credentialsExposedToBrowser === false &&
       exactAethergridApp.quantumRuntime?.ibmApiVersion === '2026-04-15' &&
       exactAethergridUi.workspaceRouting?.mode === 'exclusive-view' &&
       exactAethergridUi.spatialModel?.renderEngine === 'native-webgl' &&
@@ -522,6 +553,9 @@ async function main() {
     '/api/aethergrid/profile',
     '/api/aethergrid/geospatial/cities',
     '/api/aethergrid/geospatial/city/',
+    '/api/aethergrid/geospatial/point',
+    '/api/aethergrid/terrain',
+    '/api/aethergrid/terrain/runtime',
     '/api/aethergrid/quantum/runtime',
     '/api/aethergrid/quantum/backends',
     '/api/aethergrid/quantum/jobs',
@@ -545,10 +579,18 @@ async function main() {
       /const spatialGraph = buildSpatialGraph\(\)/u.test(exactAethergridServer),
     'ÆTHERGRID backend must build a time-indexed spatial graph',
   );
+  assert(
+    /function agentContext\(input = \{\}\)/u.test(exactAethergridServer) &&
+      /externalContext: \{/u.test(exactAethergridServer) &&
+      /geospatial: state\.externalContext\.geospatial/u.test(exactAethergridServer) &&
+      /quantum: state\.externalContext\.quantum/u.test(exactAethergridServer),
+    'ÆTHERGRID agent requests must receive bounded geospatial and quantum runtime context',
+  );
   const aethergridAgentConfig = await text('apps/aethergrid-console/agent-config.mjs');
   const aethergridAiRuntime = await text('apps/aethergrid-console/ai-runtime.mjs');
   const aethergridProfileStore = await text('apps/aethergrid-console/profile-store.mjs');
   const aethergridGeoRuntime = await text('apps/aethergrid-console/geo-runtime.mjs');
+  const aethergridTerrainRuntime = await text('apps/aethergrid-console/terrain-runtime.mjs');
   const aethergridQuantumRuntime = await text('apps/aethergrid-console/quantum-runtime.mjs');
   assert(
     /openai-compatible/u.test(aethergridAgentConfig) &&
@@ -578,9 +620,30 @@ async function main() {
       /© OpenStreetMap contributors/u.test(aethergridGeoRuntime) &&
       /way\["building"\]/u.test(aethergridGeoRuntime) &&
       /way\["highway"\]/u.test(aethergridGeoRuntime) &&
+      /way\["power"~"\^\(line\|minor_line\|cable\)\$"\]/u.test(aethergridGeoRuntime) &&
+      /substation\|plant\|generator\|transformer/u.test(aethergridGeoRuntime) &&
       /parseOverpassRoads/u.test(aethergridGeoRuntime) &&
+      /parseOverpassPower/u.test(aethergridGeoRuntime) &&
+      /async function pointMesh/u.test(aethergridGeoRuntime) &&
+      /supportsCustomCoordinates: true/u.test(aethergridGeoRuntime) &&
       /cache/u.test(aethergridGeoRuntime),
-    'ÆTHERGRID geospatial runtime must keep on-demand OpenStreetMap building geometry and attribution',
+    'ÆTHERGRID geospatial runtime must keep on-demand OpenStreetMap building, road and power-grid geometry with arbitrary coordinate support',
+  );
+  assert(
+    /api\.open-meteo\.com\/v1\/elevation/u.test(aethergridTerrainRuntime) &&
+      /Copernicus DEM GLO-90/u.test(aethergridTerrainRuntime) &&
+      /maxPointsPerRequest: provider === 'open-meteo' \? 100/u.test(aethergridTerrainRuntime) &&
+      /flat-local-fallback/u.test(aethergridTerrainRuntime) &&
+      /credentialsExposed: false/u.test(aethergridTerrainRuntime),
+    'ÆTHERGRID terrain runtime must keep live elevation sampling, attribution, bounded requests and explicit fallback',
+  );
+  assert(
+    /Open-Meteo Elevation/u.test(aethergridTerrainRuntime) &&
+      /Copernicus DEM GLO-90/u.test(aethergridTerrainRuntime) &&
+      /flat-local-fallback/u.test(aethergridTerrainRuntime) &&
+      /credentialsExposed: false/u.test(aethergridTerrainRuntime) &&
+      /gridSize/u.test(aethergridTerrainRuntime),
+    'ÆTHERGRID terrain runtime must keep attributed elevation sampling and explicit flat fallback',
   );
   assert(
     /2026-04-15/u.test(aethergridQuantumRuntime) &&
@@ -619,6 +682,8 @@ async function main() {
       /AETHERGRID_OLLAMA_BASE_URL=/u.test(aethergridAppEnv) &&
       /AETHERGRID_GEO_PROVIDER=osm-overpass/u.test(aethergridAppEnv) &&
       /AETHERGRID_OVERPASS_URL=/u.test(aethergridAppEnv) &&
+      /AETHERGRID_TERRAIN_PROVIDER=open-meteo/u.test(aethergridAppEnv) &&
+      /AETHERGRID_ELEVATION_URL=/u.test(aethergridAppEnv) &&
       /AETHERGRID_QUANTUM_PROVIDER=local-simulator/u.test(aethergridAppEnv) &&
       /AETHERGRID_IBM_QUANTUM_API_KEY=/u.test(aethergridAppEnv) &&
       /AETHERGRID_IBM_QUANTUM_SERVICE_CRN=/u.test(aethergridAppEnv),

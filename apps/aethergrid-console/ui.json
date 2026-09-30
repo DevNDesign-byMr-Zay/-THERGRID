@@ -81,7 +81,17 @@
     "animated-globe-city-descent",
     "quantum-job-results",
     "quantum-job-metrics",
-    "quantum-job-inspector"
+    "quantum-job-inspector",
+    "arbitrary-coordinate-explorer",
+    "live-osm-power-grid",
+    "independent-power-grid-layer",
+    "global-city-time-index",
+    "agent-external-context",
+    "live-elevation-terrain",
+    "terrain-wireframe-layer",
+    "live-terrain-elevation",
+    "independent-terrain-layer",
+    "terrain-fallback"
   ],
   "agents": [
     {
@@ -196,7 +206,11 @@
     "runtimeSummaryEndpoint": "GET /api/aethergrid/runtime",
     "individualEndpoint": "POST /api/aethergrid/agents/:id",
     "teamEndpoint": "POST /api/aethergrid/team",
-    "providerSecretsClientVisible": false
+    "providerSecretsClientVisible": false,
+    "externalContext": [
+      "geospatial-summary",
+      "quantum-job-summary"
+    ]
   },
   "scenarioModel": {
     "templates": [
@@ -283,12 +297,39 @@
     "providerFallback": "local procedural city geometry",
     "attribution": "© OpenStreetMap contributors",
     "liveRoadTopology": true,
-    "animatedCityDescent": true
+    "animatedCityDescent": true,
+    "arbitraryCoordinates": true,
+    "coordinateEndpoint": "GET /api/aethergrid/geospatial/point",
+    "livePowerGrid": true,
+    "powerLayerControls": true,
+    "temporalCityScrubbing": true,
+    "liveLayers": [
+      "buildings",
+      "roads",
+      "power-lines",
+      "power-assets",
+      "terrain"
+    ],
+    "liveTerrain": true,
+    "terrainProvider": "Open-Meteo Elevation / Copernicus DEM GLO-90",
+    "terrainLayerControl": true,
+    "terrainEndpoint": "GET /api/aethergrid/terrain",
+    "liveTerrainElevation": true
   },
   "profile": {
     "persistence": "backend local JSON with browser cache fallback",
     "editable": true,
     "avatar": true,
     "avatarMaxEncodedBytes": 180000
+  },
+  "terrainRuntime": {
+    "providerEndpoint": "GET /api/aethergrid/terrain/runtime",
+    "sampleEndpoint": "GET /api/aethergrid/terrain",
+    "providers": [
+      "open-meteo",
+      "flat-local"
+    ],
+    "maxGridSize": 9,
+    "serverSideCredentials": true
   }
 }

@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "aethergrid.operator-console",
   "name": "ÆTHERGRID Operator Console",
-  "version": "2.2.0",
+  "version": "2.4.0",
   "format": "html+pwa+node-app",
   "entrypoints": {
     "standaloneHtml": "standalone.html",
@@ -41,8 +41,10 @@
       "GET /api/aethergrid/quantum/backends",
       "GET /api/aethergrid/quantum/runtime",
       "GET /api/aethergrid/geospatial/city/:id",
+      "GET /api/aethergrid/geospatial/point",
       "GET /api/aethergrid/geospatial/cities",
       "GET /api/aethergrid/geospatial/runtime",
+      "GET /api/aethergrid/terrain",
       "PUT /api/aethergrid/profile",
       "GET /api/aethergrid/profile",
       "POST /api/aethergrid/view",
@@ -55,7 +57,8 @@
       "POST /api/aethergrid/export",
       "POST /api/aethergrid/reset",
       "GET /api/aethergrid/quantum/jobs/:id/results",
-      "GET /api/aethergrid/quantum/jobs/:id/metrics"
+      "GET /api/aethergrid/quantum/jobs/:id/metrics",
+      "GET /api/aethergrid/terrain/runtime"
     ]
   },
   "safety": {
@@ -119,7 +122,17 @@
     "liveOpenStreetMapRoadTopology": true,
     "animatedGlobeCityDescent": true,
     "quantumJobResults": true,
-    "quantumJobMetrics": true
+    "quantumJobMetrics": true,
+    "arbitraryCoordinateExplorer": true,
+    "liveOpenStreetMapPowerGrid": true,
+    "independentPowerGridLayer": true,
+    "globalTemporalCityScrubbing": true,
+    "liveAgentExternalContext": true,
+    "liveElevationTerrain": true,
+    "terrainWireframeLayer": true,
+    "liveTerrainElevation": true,
+    "independentTerrainLayer": true,
+    "terrainFallback": true
   },
   "aiRuntime": {
     "providers": [
@@ -137,7 +150,11 @@
     ],
     "secretsExposedToBrowser": false,
     "fallback": "deterministic-local",
-    "replaceableByConfiguration": true
+    "replaceableByConfiguration": true,
+    "externalContext": [
+      "geospatial-summary",
+      "quantum-job-summary"
+    ]
   },
   "geospatialRuntime": {
     "module": "geo-runtime.mjs",
@@ -151,7 +168,17 @@
     "liveFetchOnExplicitOperatorAction": true,
     "cacheEnabled": true,
     "liveRoadTopology": true,
-    "animatedCityDescent": true
+    "animatedCityDescent": true,
+    "supportsCustomCoordinates": true,
+    "livePowerLineGeometry": true,
+    "livePowerAssetGeometry": true,
+    "layers": [
+      "buildings",
+      "roads",
+      "power-lines",
+      "power-assets",
+      "terrain"
+    ]
   },
   "quantumRuntime": {
     "module": "quantum-runtime.mjs",
@@ -174,5 +201,16 @@
     "persistence": "local-json",
     "avatarResizeClientSide": true,
     "secrets": false
+  },
+  "terrainRuntime": {
+    "module": "terrain-runtime.mjs",
+    "providers": [
+      "open-meteo",
+      "flat-local"
+    ],
+    "sourceModel": "Copernicus DEM GLO-90 via Open-Meteo",
+    "maxSampleGrid": 9,
+    "credentialsExposedToBrowser": false,
+    "explicitOperatorFetch": true
   }
 }

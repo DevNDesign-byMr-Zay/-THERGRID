@@ -240,3 +240,87 @@ Status: IMPLEMENTED / VERIFYING
 - IBM job-result visualization and estimator workflows;
 - additional quantum providers behind the same adapter contract;
 - authenticated multi-user profile/session system for hosted deployments.
+
+## Batch 9 — Global grid intelligence and shared agent context
+
+Status: IMPLEMENTED / VERIFYING
+
+### Arbitrary coordinate exploration
+- operator-entered latitude/longitude;
+- bounded 250 m–2 km local radius;
+- custom coordinate nodes injected into the live globe session;
+- animated globe-to-coordinate descent;
+- same interactive city WebGL renderer used by preset cities.
+
+### Real mapped grid layers
+- live OpenStreetMap building footprints;
+- live road topology;
+- live mapped power line / minor-line / cable geometry;
+- live mapped substation / plant / generator / transformer assets;
+- independent BUILDINGS / ROADS / POWER GRID / ASSET NODES controls;
+- power metadata such as voltage, circuits and operator preserved when present;
+- deterministic local fallback power topology for standalone/offline mode;
+- visible source attribution and fallback state.
+
+### Live terrain elevation
+- bounded real-coordinate elevation sampling through a replaceable terrain adapter;
+- Open-Meteo elevation provider backed by Copernicus DEM GLO-90;
+- independent TERRAIN layer in the city renderer;
+- visible min/max elevation summary and terrain provenance;
+- flat local fallback in standalone/offline mode;
+- terrain provider credentials remain server-side.
+
+### 4D city review
+- city renderer retains x/y/z geometry plus time-phase animation;
+- GLOBAL workspace exposes a dedicated 24-hour time index;
+- time affects spatial animation without altering source provenance.
+
+### Shared agent context
+- last loaded geospatial summary becomes bounded AI context;
+- last quantum submission/result state becomes bounded AI context;
+- individual agents and team synthesis receive the same external-context envelope;
+- credentials, bearer tokens, and actuation authority never enter that envelope.
+
+### Verification requirements
+- parser tests cover OSM buildings, roads, power lines and power assets;
+- custom coordinate validation is tested;
+- standalone fallback contains buildings, roads and power topology;
+- HTML/app manifests advertise the new controls and routes;
+- ZIP assembly fails if coordinate or power-grid controls disappear;
+- release-readiness fails if the live power parser, coordinate endpoint, or agent context disappears.
+
+### Next expansion
+- transmission/asset relationship graph inference from source topology;
+- weather/renewables overlays behind separately attributed adapters;
+- hosted multi-user authentication/session boundary;
+- additional quantum providers behind the provider-neutral runtime;
+- richer quantum result charts and estimator workflows.
+
+## Batch 10 — Terrain-aware spatial intelligence
+
+Status: IMPLEMENTED / VERIFYING
+
+### Live elevation
+- provider-neutral `terrain-runtime.mjs`;
+- default Open-Meteo Elevation adapter;
+- Copernicus DEM GLO-90 attribution;
+- bounded 3×3–9×9 elevation sampling around selected coordinates;
+- local metric projection aligned with city geometry;
+- independent TERRAIN WebGL layer;
+- elevation min/max readout in GLOBAL workspace;
+- explicit flat-local fallback when the provider cannot be reached.
+
+### Packaging and safety
+- terrain runtime is a required non-empty ZIP file;
+- standalone HTML retains terrain controls and native WebGL terrain code;
+- provider credentials remain server-side;
+- runtime summary never serializes terrain API secrets;
+- terrain context passed to agents is bounded to source/readout metadata;
+- physical actuation and infrastructure dispatch remain disabled.
+
+### Next expansion
+- terrain-aware building base elevation and transmission-line draping;
+- relationship graph inference across mapped substations, lines and generation assets;
+- weather and renewable-resource overlays behind separately attributed adapters;
+- hosted multi-user authentication/session boundary;
+- additional quantum providers and richer result visualizations.

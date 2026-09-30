@@ -8,12 +8,14 @@ import { createAgentRuntime } from './ai-runtime.mjs';
 import { createGeoRuntime } from './geo-runtime.mjs';
 import { createProfileStore } from './profile-store.mjs';
 import { createQuantumRuntime } from './quantum-runtime.mjs';
+import { createTerrainRuntime } from './terrain-runtime.mjs';
 
 const root = fileURLToPath(new URL('./', import.meta.url));
 const port = Number(process.env.AETHERGRID_PORT || process.env.PORT || 8090);
 const agentRuntime = createAgentRuntime();
 const geoRuntime = createGeoRuntime();
 const quantumRuntime = createQuantumRuntime();
+const terrainRuntime = createTerrainRuntime();
 const profileStore = createProfileStore({
   dataDir: process.env.AETHERGRID_DATA_DIR || join(root, '.aethergrid-data'),
 });
@@ -94,6 +96,10 @@ const state = {
     { id: 'renewable-integration', title: 'Renewable Integration Study', age: '2 hours', status: 'VERIFIED' },
   ],
   activity: [],
+  externalContext: {
+    geospatial: null,
+    quantum: null,
+  },
 };
 
 function buildSpatialGraph() {
@@ -199,6 +205,21 @@ function snapshot() {
   };
 }
 
+function agentContext(input = {}) {
+  return {
+    ...input,
+    region: input.region || state.system.region,
+    scenario: input.scenario || state.system.scenario,
+    view: input.view || state.system.view,
+    metrics: input.metrics || state.metrics,
+    externalContext: {
+      geospatial: state.externalContext.geospatial,
+      quantum: state.externalContext.quantum,
+    },
+    authority: 'advisory-only',
+  };
+}
+
 function telemetryTick() {
   const now = Date.now();
   state.metrics.generationMw = Math.round(2130 + Math.sin(now / 8200) * 18);
@@ -298,6 +319,7 @@ const server = http.createServer(async (request, response) => {
         ...ai,
         ai,
         geospatial: geoRuntime.summary(),
+        terrain: terrainRuntime.summary(),
         quantum: quantumRuntime.summary(),
         profile: profileStore.safeSummary(),
       });
@@ -332,17 +354,125 @@ const server = http.createServer(async (request, response) => {
       const cityId = decodeURIComponent(
         url.pathname.slice('/api/aethergrid/geospatial/city/'.length),
       );
-      const mesh = await geoRuntime.cityMesh(cityId, {
+      const baseMesh = await geoRuntime.cityMesh(cityId, {
         force: url.searchParams.get('force') === '1',
       });
+      const terrain = await terrainRuntime.sample({
+        lat: baseMesh.city.lat,
+        lon: baseMesh.city.lon,
+        radiusM: baseMesh.city.radiusM,
+        gridSize: 7,
+      });
+      const mesh = { ...baseMesh, terrain };
+      state.externalContext.geospatial = {
+        cityId: mesh.city.id,
+        name: mesh.city.name,
+        lat: mesh.city.lat,
+        lon: mesh.city.lon,
+        radiusM: mesh.city.radiusM,
+        source: mesh.source.provider,
+        live: Boolean(mesh.source.live),
+        buildings: mesh.buildings.length,
+        roads: (mesh.roads || []).length,
+        powerLines: (mesh.powerLines || []).length,
+        powerAssets: (mesh.powerAssets || []).length,
+        terrain: {
+          provider: mesh.terrain?.source?.provider || null,
+          live: Boolean(mesh.terrain?.source?.live),
+          minElevationM: mesh.terrain?.minElevationM ?? null,
+          maxElevationM: mesh.terrain?.maxElevationM ?? null,
+        },
+      };
       activity(
-        `Geospatial city mesh loaded: ${mesh.city.name} via ${mesh.source.provider} (${mesh.buildings.length} buildings).`,
+        `Geospatial city mesh loaded: ${mesh.city.name} via ${mesh.source.provider} (${mesh.buildings.length} buildings, ${(mesh.powerLines || []).length} power lines, ${(mesh.powerAssets || []).length} power assets).`,
         'geospatial',
       );
       return json(response, 200, {
         ...mesh,
+        externalContext: state.externalContext,
         activity: state.activity,
       });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/geospatial/point') {
+      const baseMesh = await geoRuntime.pointMesh(
+        {
+          lat: url.searchParams.get('lat'),
+          lon: url.searchParams.get('lon'),
+          name: url.searchParams.get('name') || 'Coordinate Explorer',
+          radiusM: url.searchParams.get('radiusM') || 900,
+        },
+        {
+          force: url.searchParams.get('force') === '1',
+        },
+      );
+      const terrain = await terrainRuntime.sample({
+        lat: baseMesh.city.lat,
+        lon: baseMesh.city.lon,
+        radiusM: baseMesh.city.radiusM,
+        gridSize: 7,
+      });
+      const mesh = { ...baseMesh, terrain };
+      state.externalContext.geospatial = {
+        cityId: mesh.city.id,
+        name: mesh.city.name,
+        lat: mesh.city.lat,
+        lon: mesh.city.lon,
+        radiusM: mesh.city.radiusM,
+        source: mesh.source.provider,
+        live: Boolean(mesh.source.live),
+        buildings: mesh.buildings.length,
+        roads: (mesh.roads || []).length,
+        powerLines: (mesh.powerLines || []).length,
+        powerAssets: (mesh.powerAssets || []).length,
+        terrain: {
+          provider: mesh.terrain?.source?.provider || null,
+          live: Boolean(mesh.terrain?.source?.live),
+          minElevationM: mesh.terrain?.minElevationM ?? null,
+          maxElevationM: mesh.terrain?.maxElevationM ?? null,
+        },
+      };
+      activity(
+        `Coordinate mesh loaded: ${mesh.city.lat.toFixed(5)}, ${mesh.city.lon.toFixed(5)} via ${mesh.source.provider}.`,
+        'geospatial',
+      );
+      return json(response, 200, {
+        ...mesh,
+        externalContext: state.externalContext,
+        activity: state.activity,
+      });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/terrain') {
+      const terrain = await terrainRuntime.sample({
+        lat: url.searchParams.get('lat'),
+        lon: url.searchParams.get('lon'),
+        radiusM: url.searchParams.get('radiusM') || 900,
+        gridSize: url.searchParams.get('gridSize') || 7,
+      });
+      state.externalContext.geospatial = {
+        ...(state.externalContext.geospatial || {}),
+        terrain: {
+          provider: terrain.source.provider,
+          live: Boolean(terrain.source.live),
+          minElevationM: terrain.minElevationM,
+          maxElevationM: terrain.maxElevationM,
+          gridSize: terrain.gridSize,
+        },
+      };
+      activity(
+        `Terrain sample loaded via ${terrain.source.provider} (${terrain.gridSize}×${terrain.gridSize}, ${terrain.minElevationM}–${terrain.maxElevationM} m).`,
+        'terrain',
+      );
+      return json(response, 200, {
+        ...terrain,
+        externalContext: state.externalContext,
+        activity: state.activity,
+      });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/terrain/runtime') {
+      return json(response, 200, terrainRuntime.summary());
     }
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/quantum/runtime') {
@@ -379,14 +509,25 @@ const server = http.createServer(async (request, response) => {
 
     if (request.method === 'POST' && url.pathname === '/api/aethergrid/quantum/jobs') {
       const input = await body(request);
-      const result = await quantumRuntime.submitSampler({
-        circuit: input.circuit,
-        backend: input.backend,
-        shots: input.shots,
-      });
+      const primitive = String(input.primitive || 'sampler').toLowerCase();
+      if (!['sampler', 'estimator'].includes(primitive)) {
+        return json(response, 400, { error: 'unsupported_quantum_primitive' });
+      }
+      const result =
+        primitive === 'estimator'
+          ? await quantumRuntime.submitEstimator({
+              circuit: input.circuit,
+              backend: input.backend,
+              observable: input.observable,
+            })
+          : await quantumRuntime.submitSampler({
+              circuit: input.circuit,
+              backend: input.backend,
+              shots: input.shots,
+            });
       const record = {
         id: result.receipt.slice(0, 16),
-        title: `Quantum Job: ${result.backend}`,
+        title: `Quantum ${String(result.programId || primitive).toUpperCase()}: ${result.backend}`,
         type: 'QUANTUM_JOB',
         age: 'just now',
         status: result.status === 'COMPLETED' ? 'VERIFIED' : 'PENDING',
@@ -395,6 +536,12 @@ const server = http.createServer(async (request, response) => {
           provider: result.provider,
           backend: result.backend,
           programId: result.programId,
+          observable: result.observable || null,
+          expectationValue:
+            Number.isFinite(Number(result.expectationValue))
+              ? Number(result.expectationValue)
+              : null,
+          approximation: result.approximation || null,
           status: result.status,
           hardwareSubmitted: Boolean(result.hardwareSubmitted),
           hardwareExecuted: Boolean(result.hardwareExecuted),
@@ -404,8 +551,23 @@ const server = http.createServer(async (request, response) => {
       };
       state.evidence.unshift(record);
       state.evidence = state.evidence.slice(0, 24);
+      state.externalContext.quantum = {
+        jobId: result.id,
+        provider: result.provider,
+        backend: result.backend,
+        programId: result.programId,
+        observable: result.observable || null,
+        expectationValue:
+          Number.isFinite(Number(result.expectationValue))
+            ? Number(result.expectationValue)
+            : null,
+        status: result.status,
+        hardwareSubmitted: Boolean(result.hardwareSubmitted),
+        hardwareExecuted: Boolean(result.hardwareExecuted),
+        receipt: result.receipt,
+      };
       activity(
-        `Quantum sampler job ${result.id} submitted through ${result.provider}/${result.backend}; status ${result.status}.`,
+        `Quantum ${result.programId || primitive} job ${result.id} submitted through ${result.provider}/${result.backend}; status ${result.status}.`,
         'quantum',
       );
       return json(response, 200, {
@@ -708,14 +870,7 @@ const server = http.createServer(async (request, response) => {
       const agentId = decodeURIComponent(encodedId);
       const result = await agentRuntime.runAgent(agentId, {
         message: input.message,
-        context: {
-          ...input.context,
-          region: input.context?.region || state.system.region,
-          scenario: input.context?.scenario || state.system.scenario,
-          view: input.context?.view || state.system.view,
-          metrics: input.context?.metrics || state.metrics,
-          authority: 'advisory-only',
-        },
+        context: agentContext(input.context),
         history: Array.isArray(input.history) ? input.history : [],
       });
       activity(
@@ -754,14 +909,7 @@ const server = http.createServer(async (request, response) => {
       const input = await body(request);
       const result = await agentRuntime.runTeam({
         message: input.message,
-        context: {
-          ...input.context,
-          region: input.context?.region || state.system.region,
-          scenario: input.context?.scenario || state.system.scenario,
-          view: input.context?.view || state.system.view,
-          metrics: input.context?.metrics || state.metrics,
-          authority: 'advisory-only',
-        },
+        context: agentContext(input.context),
         history: Array.isArray(input.history) ? input.history : [],
       });
       activity(
@@ -807,23 +955,11 @@ const server = http.createServer(async (request, response) => {
         requestedAgent === 'TEAM'
           ? await agentRuntime.runTeam({
               message: input.message,
-              context: {
-                region: state.system.region,
-                scenario: state.system.scenario,
-                view: state.system.view,
-                metrics: state.metrics,
-                authority: 'advisory-only',
-              },
+              context: agentContext(input.context),
             })
           : await agentRuntime.runAgent(requestedAgent, {
               message: input.message,
-              context: {
-                region: state.system.region,
-                scenario: state.system.scenario,
-                view: state.system.view,
-                metrics: state.metrics,
-                authority: 'advisory-only',
-              },
+              context: agentContext(input.context),
             });
       activity(`AI collaboration completed for ${requestedAgent}.`, 'ai');
       return json(response, 200, {
