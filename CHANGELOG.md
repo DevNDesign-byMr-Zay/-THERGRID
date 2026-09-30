@@ -10,6 +10,13 @@
 
 ### Added
 
+- Added a source-driven live globe layer with an animated atmosphere shell, UTC sweep, current AQI-coded city pulses, and recent USGS M2.5+ seismic pulses.
+- Added native-WebGL city weather vectors, precipitation streaks, AQI-driven atmospheric particles, and directional seismic rings built from the active city's current feed context.
+- Added a provider-neutral live-context runtime for Open-Meteo Air Quality / CAMS and the USGS past-day earthquake GeoJSON feed, with explicit fallback state and bounded seismic caching.
+- Expanded current weather context with wind gusts, shortwave radiation, and visibility for animation and planning context.
+- Added Weather Readiness, Air Quality Exposure, and Seismic Awareness workflows and upgraded existing city operations to use relevant current feed signals while remaining evidence-bound and advisory-only.
+- Added independent WEATHER, AIR, and SEISMIC layer controls plus live-source provenance and feed status throughout the GLOBAL workspace.
+
 - Added skyline-focused presets for New York, London, Tokyo, Dubai, Singapore, São Paulo, Lagos, and Sydney so city descent targets recognizable urban cores instead of generic centroids.
 - Expanded OpenStreetMap city parsing to ways plus relation outer geometry, source-backed height/estimated-height/level metadata, minimum heights, roof metadata, materials/colours, and visible upstream timestamps.
 - Removed the former 450 m building-height flattening ceiling, added supported native-WebGL roof geometry, and added city-specific camera framing derived from mapped footprint distribution and skyline height.
