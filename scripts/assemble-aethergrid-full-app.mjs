@@ -171,6 +171,10 @@ assert(/data-workspace-target="holographic"/u.test(sourceHtml), 'runtime index.h
 assert(/data-workspace="settings"/u.test(sourceHtml), 'runtime index.html must include a real settings workspace');
 assert(/data-workspace="global"/u.test(sourceHtml), 'runtime index.html must include the global 3D workspace');
 assert(/id="globalGlobe"/u.test(sourceHtml), 'runtime index.html must expose the real global WebGL canvas');
+assert(/id="globalPointLat"/u.test(sourceHtml), 'runtime index.html must expose arbitrary latitude controls');
+assert(/id="globalPointLon"/u.test(sourceHtml), 'runtime index.html must expose arbitrary longitude controls');
+assert(/data-global-layer="infrastructure"/u.test(sourceHtml), 'runtime index.html must expose the live power-grid layer toggle');
+assert(/id="globalTimeSlider"/u.test(sourceHtml), 'runtime index.html must expose the global 4D time index');
 assert(/id="profileForm"/u.test(sourceHtml), 'runtime index.html must expose the persistent operator profile form');
 assert(/id="quantumCircuit"/u.test(sourceHtml), 'runtime index.html must expose real quantum job controls');
 assert(/data-agent="TEAM"/u.test(sourceHtml), 'runtime index.html must expose team-agent mode');
@@ -198,6 +202,10 @@ assert(!/assets\/brand\//u.test(standaloneHtml), 'standalone HTML must embed bra
 assert(/attribute vec4 a_position/u.test(standaloneHtml), 'standalone HTML must embed the native 4D WebGL shader');
 assert(/data-workspace="holographic"/u.test(standaloneHtml), 'standalone HTML must retain routed workspaces');
 assert(/id="settingDefaultWorkspace"/u.test(standaloneHtml), 'standalone HTML must retain functional settings controls');
+assert(/id="globalPointLat"/u.test(standaloneHtml), 'standalone HTML must retain coordinate exploration controls');
+assert(/data-global-layer="infrastructure"/u.test(standaloneHtml), 'standalone HTML must retain the power-grid layer control');
+assert(/async function loadCoordinateCity/u.test(standaloneHtml), 'standalone HTML must retain coordinate explorer behavior');
+assert(/infrastructureLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL power-grid geometry');
 payload.set('standalone.html', Buffer.from(standaloneHtml, 'utf8'));
 
 const inventory = [...payload.entries()]
@@ -216,6 +224,14 @@ payload.set(
         format: 'semantic-html-native-webgl-and-node-app',
         standaloneHtml: 'standalone.html',
         backgroundReferenceImageUsedAtRuntime: false,
+        runtimeCapabilities: [
+          'native-webgl-4d-grid',
+          'global-coordinate-explorer',
+          'live-osm-buildings-roads-power-grid',
+          'replaceable-ai-agents',
+          'ibm-quantum-compute-adapter',
+          'persistent-operator-profile'
+        ],
         files: inventory,
       },
       null,
