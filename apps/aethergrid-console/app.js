@@ -622,10 +622,12 @@
         }
 
         if (buildingIndex < 80 && (building.name || buildingIndex % 8 === 0)) {
-          const center = footprint.reduce(
-            (acc, point) => [acc[0] + point[0], acc[1] + point[1]],
-            [0, 0],
-          ).map((value) => value / footprint.length);
+          const center = footprint
+            .reduce(
+              (acc, point) => [acc[0] + point[0], acc[1] + point[1]],
+              [0, 0],
+            )
+            .map((value) => value / footprint.length);
           const node = {
             id: building.id,
             label: building.name || `Building ${buildingIndex + 1}`,
@@ -636,6 +638,15 @@
           };
           this.graphNodes.push(node);
           this.vertex(nodes, ...node.position, phase);
+        }
+      });
+
+      (mesh.roads || []).forEach((road, roadIndex) => {
+        const path = (road.path || []).map(([x, z]) => [x * scale, z * scale]);
+        for (let index = 1; index < path.length; index += 1) {
+          const [ax, az] = path[index - 1];
+          const [bx, bz] = path[index];
+          this.line(routes, [ax, 0.025, az], [bx, 0.025, bz], roadIndex * 0.07);
         }
       });
 
@@ -1045,16 +1056,58 @@
       this.distance = 11.5;
     }
 
-    focusCity(city) {
-      if (!city) return;
+    cityCameraTarget(city) {
+      return {
+        yaw: -((Number(city.lon) * Math.PI) / 180) - Math.PI / 2,
+        pitch: clamp((Number(city.lat) * Math.PI) / 180, -1.05, 1.05),
+      };
+    }
+
+    markCitySelected(city) {
       this.selectedCity = city;
-      this.yaw = -((Number(city.lon) * Math.PI) / 180) - Math.PI / 2;
-      this.pitch = clamp((Number(city.lat) * Math.PI) / 180, -1.05, 1.05);
-      this.distance = 8.2;
       if (this.selectedBuffer?.buffer) this.gl.deleteBuffer(this.selectedBuffer.buffer);
       const position = city.position || this.spherePoint(Number(city.lat), Number(city.lon), 4.12);
       this.selectedBuffer = this.makeBuffer(position);
       this.options.onSelectCity?.(city);
+    }
+
+    focusCity(city) {
+      if (!city) return;
+      const target = this.cityCameraTarget(city);
+      this.yaw = target.yaw;
+      this.pitch = target.pitch;
+      this.distance = 8.2;
+      this.markCitySelected(city);
+    }
+
+    descendToCity(city, durationMs = 700) {
+      if (!city) return Promise.resolve();
+      const start = {
+        yaw: this.yaw,
+        pitch: this.pitch,
+        distance: this.distance,
+      };
+      const target = this.cityCameraTarget(city);
+      this.markCitySelected(city);
+      return new Promise((resolve) => {
+        const startedAt = performance.now();
+        const tick = (now) => {
+          const raw = clamp((now - startedAt) / durationMs, 0, 1);
+          const t = 1 - Math.pow(1 - raw, 3);
+          this.yaw = start.yaw + (target.yaw - start.yaw) * t;
+          this.pitch = start.pitch + (target.pitch - start.pitch) * t;
+          this.distance = start.distance + (5.65 - start.distance) * t;
+          if (raw < 1 && !state.settings.reducedMotion) requestAnimationFrame(tick);
+          else {
+            this.yaw = target.yaw;
+            this.pitch = target.pitch;
+            this.distance = 5.65;
+            resolve();
+          }
+        };
+        if (state.settings.reducedMotion) tick(startedAt + durationMs);
+        else requestAnimationFrame(tick);
+      });
     }
 
     projectCity(city) {
@@ -1415,6 +1468,29 @@
         ],
       };
     });
+    const roads = Array.from({ length: 18 }, (_, index) => {
+      const horizontal = index % 2 === 0;
+      const offset = (random() - 0.5) * 1250;
+      const wobble = (random() - 0.5) * 80;
+      return {
+        id: `standalone-road-${index + 1}`,
+        name: '',
+        highwayType: index % 4 === 0 ? 'primary' : 'residential',
+        path: horizontal
+          ? [
+              [-720, offset],
+              [-250, offset + wobble],
+              [250, offset - wobble],
+              [720, offset],
+            ]
+          : [
+              [offset, -720],
+              [offset + wobble, -250],
+              [offset - wobble, 250],
+              [offset, 720],
+            ],
+      };
+    });
     return {
       schemaVersion: 1,
       city,
@@ -1424,6 +1500,7 @@
         attribution: 'Live OpenStreetMap geometry requires the Node backend.',
       },
       buildings,
+      roads,
     };
   }
 
@@ -1434,9 +1511,12 @@
     if (status) status.innerHTML = `<b>Loading ${escapeHtml(city?.name || cityId)}…</b><p>Requesting building footprints and heights from the configured geospatial provider.</p>`;
     if (q('#geoSourceStatus')) q('#geoSourceStatus').textContent = 'LOADING CITY GEOMETRY';
     try {
-      const result = await api(
+      const meshRequest = api(
         `./api/aethergrid/geospatial/city/${encodeURIComponent(cityId)}${force ? '?force=1' : ''}`,
       );
+      const descent =
+        city && globalGlobe ? globalGlobe.descendToCity(city, 720) : Promise.resolve();
+      const [result] = await Promise.all([meshRequest, descent]);
       state.geospatial.cityMesh = result;
       if (Array.isArray(result.activity)) state.activity = result.activity;
       cityGrid?.loadCityMesh(result);
@@ -1451,12 +1531,12 @@
           result.source?.attribution || 'Live city geometry unavailable; using local fallback geometry.';
       }
       if (status) {
-        status.innerHTML = `<b>${escapeHtml(result.city.name)} · ${result.buildings.length} buildings</b><p>${result.source?.live ? 'Live OpenStreetMap footprints are now rendered as 3D wireframe geometry.' : 'Provider request could not be completed; clearly marked local fallback geometry is being rendered.'}</p><button class="secondary-button" data-action="reload-city-live">REFRESH LIVE GEOMETRY</button>`;
+        status.innerHTML = `<b>${escapeHtml(result.city.name)} · ${result.buildings.length} buildings · ${(result.roads || []).length} roads</b><p>${result.source?.live ? 'Live OpenStreetMap building footprints and road topology are now rendered as interactive 3D wireframe geometry.' : 'Provider request could not be completed; clearly marked local fallback geometry is being rendered.'}</p><button class="secondary-button" data-action="reload-city-live">REFRESH LIVE GEOMETRY</button>`;
       }
       renderActivity();
       showToast(
         result.source?.live ? 'LIVE CITY LOADED' : 'CITY FALLBACK LOADED',
-        `${result.city.name} · ${result.buildings.length} buildings · ${result.source?.provider}`,
+        `${result.city.name} · ${result.buildings.length} buildings · ${(result.roads || []).length} roads · ${result.source?.provider}`,
       );
     } catch (error) {
       const fallbackCity =
