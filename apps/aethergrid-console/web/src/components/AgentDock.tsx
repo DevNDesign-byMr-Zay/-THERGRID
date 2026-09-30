@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   runAgent,
@@ -10,11 +10,18 @@ import {
 
 const AGENTS: readonly AgentId[] = ['TEAM', 'AUREN', 'VÆLON', 'SOLVÆR'];
 
-interface AgentDockProps {
-  context: AgentSpatialContext;
+export interface AgentHandoffRequest {
+  id: number;
+  agent: AgentId;
+  prompt: string;
 }
 
-export function AgentDock({ context }: AgentDockProps) {
+interface AgentDockProps {
+  context: AgentSpatialContext;
+  handoff?: AgentHandoffRequest | null;
+}
+
+export function AgentDock({ context, handoff = null }: AgentDockProps) {
   const [agent, setAgent] = useState<AgentId>('TEAM');
   const [draft, setDraft] = useState('');
   const [histories, setHistories] = useState<Record<AgentId, AgentHistoryItem[]>>({
@@ -27,6 +34,16 @@ export function AgentDock({ context }: AgentDockProps) {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    if (!handoff) return;
+    setAgent(handoff.agent);
+    setDraft(handoff.prompt);
+    setLastRun(null);
+    setError(null);
+    globalThis.setTimeout(() => textareaRef.current?.focus(), 0);
+  }, [handoff?.id]);
 
   const history = histories[agent];
   const visibleHistory = useMemo(() => history.slice(-6), [history]);
@@ -129,6 +146,7 @@ export function AgentDock({ context }: AgentDockProps) {
         }}
       >
         <textarea
+          ref={textareaRef}
           value={draft}
           rows={2}
           placeholder={`Ask ${agent} about this spatial context…`}
