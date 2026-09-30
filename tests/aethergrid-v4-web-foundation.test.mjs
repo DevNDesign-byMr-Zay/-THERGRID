@@ -170,11 +170,16 @@ test('v4 live atmosphere is source-backed and drives Cesium clouds and fog', asy
   assert.match(contract, /'fog'/u);
   assert.match(service, /\/api\/aethergrid\/environment/u);
   assert.match(service, /source\.live === true/u);
+  assert.match(service, /modelTimeToIso/u);
   assert.match(weatherLayer, /CloudCollection/u);
   assert.match(weatherLayer, /scene\.fog\.density/u);
   assert.match(weatherLayer, /visualDensityScalar/u);
   assert.match(weatherLayer, /cloudCoverPercent/u);
   assert.match(weatherLayer, /windDirectionDegrees/u);
+  assert.match(weatherLayer, /ParticleSystem/u);
+  assert.match(weatherLayer, /BoxEmitter/u);
+  assert.match(weatherLayer, /time\.mode !== 'live'/u);
   assert.match(app, /ATMOSPHERE/u);
   assert.match(app, /loadCityEnvironment/u);
+  assert.match(app, /Current weather visuals are hidden until a source supports the selected time/u);
 });
