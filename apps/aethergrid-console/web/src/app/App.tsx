@@ -382,6 +382,23 @@ export function App() {
     [scope, worldOverlay, semanticOverlays, powerOverlay, seismicOverlay]
   );
 
+  const handleSpatialSelection = (next: SpatialFeatureSelection | null) => {
+    setSelection(next);
+
+    if (scope !== 'world' || next?.kind !== 'city') return;
+    const cityId =
+      typeof next.properties?.cityId === 'string'
+        ? next.properties.cityId
+        : null;
+    if (!cityId) return;
+
+    const target = CITY_TARGETS.find((candidate) => candidate.id === cityId);
+    if (!target) return;
+
+    setCity(target);
+    setScope('city');
+  };
+
   const toggleLayer = (id: string) => {
     setLayers((current) =>
       current.map((layer) =>
@@ -533,7 +550,7 @@ export function App() {
             visualMode={visualMode}
             overlays={activeOverlays}
             atmosphere={scope === 'city' ? atmosphere : null}
-            onSelection={setSelection}
+            onSelection={handleSpatialSelection}
           />
 
           <DataSourceBadge
