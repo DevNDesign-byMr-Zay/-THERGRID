@@ -59,6 +59,10 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
     assert.match(String(options.headers['user-agent']), /AETHERGRID/u);
     assert.match(options.body.get('data'), /nwr\["building:part"\]/u);
     assert.match(options.body.get('data'), /nwr\["building"\]/u);
+    assert.match(options.body.get('data'), /nwr\["natural"="water"\]/u);
+    assert.match(options.body.get('data'), /way\["natural"="coastline"\]/u);
+    assert.match(options.body.get('data'), /way\["waterway"/u);
+    assert.match(options.body.get('data'), /nwr\["leisure"/u);
     return new Response(
       JSON.stringify({
         osm3s: { timestamp_osm_base: '2026-09-30T06:30:00Z' },
@@ -120,6 +124,42 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
           },
           {
             type: 'way',
+            id: 2101,
+            tags: { natural: 'water', water: 'lake', name: 'Test Water' },
+            geometry: geometry.map((point) => ({
+              lat: point.lat - 0.001,
+              lon: point.lon - 0.001,
+            })),
+          },
+          {
+            type: 'way',
+            id: 2102,
+            tags: { natural: 'coastline' },
+            geometry: geometry.slice(0, 3).map((point) => ({
+              lat: point.lat - 0.0018,
+              lon: point.lon,
+            })),
+          },
+          {
+            type: 'way',
+            id: 2103,
+            tags: { waterway: 'river', name: 'Test River' },
+            geometry: geometry.slice(0, 3).map((point) => ({
+              lat: point.lat,
+              lon: point.lon - 0.0022,
+            })),
+          },
+          {
+            type: 'way',
+            id: 2201,
+            tags: { leisure: 'park', name: 'Test Park' },
+            geometry: geometry.map((point) => ({
+              lat: point.lat + 0.0024,
+              lon: point.lon - 0.0012,
+            })),
+          },
+          {
+            type: 'way',
             id: 3001,
             tags: {
               power: 'line',
@@ -173,6 +213,19 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
   assert.equal(first.roads[0].name, 'Test Avenue');
   assert.equal(first.roads[0].highwayType, 'primary');
   assert.ok(first.roads[0].path.length >= 2);
+  assert.equal(first.waterAreas.length, 1);
+  assert.equal(first.waterAreas[0].name, 'Test Water');
+  assert.equal(first.waterAreas[0].waterType, 'lake');
+  assert.ok(first.waterAreas[0].footprint.length >= 5);
+  assert.equal(first.waterways.length, 1);
+  assert.equal(first.waterways[0].name, 'Test River');
+  assert.equal(first.waterways[0].waterwayType, 'river');
+  assert.equal(first.coastlines.length, 1);
+  assert.ok(first.coastlines[0].path.length >= 2);
+  assert.equal(first.greenAreas.length, 1);
+  assert.equal(first.greenAreas[0].name, 'Test Park');
+  assert.equal(first.greenAreas[0].greenType, 'park');
+  assert.ok(first.greenAreas[0].footprint.length >= 5);
   assert.equal(first.powerLines.length, 1);
   assert.equal(first.powerLines[0].name, 'Test Transmission');
   assert.equal(first.powerLines[0].voltage, 138000);
@@ -226,6 +279,10 @@ test('geospatial provider failure degrades explicitly to local fallback geometry
   assert.ok(mesh.roads.length >= 10);
   assert.ok(mesh.powerLines.length >= 5);
   assert.ok(mesh.powerAssets.length >= 5);
+  assert.equal(mesh.waterAreas.length, 0);
+  assert.equal(mesh.waterways.length, 0);
+  assert.equal(mesh.coastlines.length, 0);
+  assert.equal(mesh.greenAreas.length, 0);
   assert.equal(mesh.skylineProfile.live, false);
   assert.equal(mesh.skylineProfile.sourceBackedHeightCoveragePercent, 0);
 });
@@ -256,6 +313,10 @@ test('geospatial coordinate explorer supports arbitrary valid world coordinates'
     'roads',
     'power-lines',
     'power-assets',
+    'water-areas',
+    'waterways',
+    'coastline',
+    'green-areas',
   ]);
 
   await assert.rejects(
