@@ -86,10 +86,11 @@ export function SpatialViewport({
     const observer = new ResizeObserver(() => manager.resize());
     observer.observe(host);
 
-    const onPointer = (event: PointerEvent) => {
+    const onPointer: EventListener = (event) => {
+      const pointer = event as PointerEvent;
       const rect = host.getBoundingClientRect();
       void manager
-        .pick({ x: event.clientX - rect.left, y: event.clientY - rect.top })
+        .pick({ x: pointer.clientX - rect.left, y: pointer.clientY - rect.top })
         .then((selection) => onSelection?.(selection))
         .catch(() => onSelection?.(null));
     };
