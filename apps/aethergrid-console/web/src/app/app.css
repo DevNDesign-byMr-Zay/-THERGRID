@@ -880,7 +880,18 @@ button {
   }
 
   .global-search {
-    display: none;
+    display: grid;
+    width: 100%;
+  }
+
+  .global-search .search-error {
+    left: 0;
+    max-width: 100%;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .operator-layout {
@@ -889,6 +900,10 @@ button {
 
   .left-rail {
     display: none;
+  }
+
+  .appearance-button {
+    min-height: 34px;
   }
 
   .stage-toolbar {
