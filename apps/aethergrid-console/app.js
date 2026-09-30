@@ -417,6 +417,9 @@
       this.compareEnabled = false;
       this.compareTimeHours = 18;
       this.cityVisualMode = 'solid';
+      this.environment = null;
+      this.skylineProfile = null;
+      this.cityCameraTarget = { yaw: 0.78, pitch: 0.57, distance: 18 };
       this.drag = null;
       this.timeStart = performance.now();
       this.geometry = {};
@@ -578,6 +581,8 @@
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
       this.geometry.buildingFaces = this.makeBuffer(buildingFaces);
+      this.geometry.roofFaces = this.makeBuffer(roofFaces);
+      this.geometry.roofLines = this.makeBuffer(roofLines);
       this.geometry.routes = this.makeBuffer(routes);
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
@@ -655,6 +660,9 @@
       const grid = [];
       const buildings = [];
       const buildingFaces = [];
+      const roofFaces = [];
+      const roofLines = [];
+      const cityCenters = [];
       const nodes = [];
       const routes = [];
       const infrastructureLines = [];
@@ -672,36 +680,61 @@
       mesh.buildings.forEach((building, buildingIndex) => {
         const footprint = (building.footprint || []).map(([x, z]) => [x * scale, z * scale]);
         if (footprint.length < 3) return;
+        const openFootprint =
+          footprint.length > 3 &&
+          Math.hypot(
+            footprint[0][0] - footprint.at(-1)[0],
+            footprint[0][1] - footprint.at(-1)[1],
+          ) < 0.001
+            ? footprint.slice(0, -1)
+            : footprint;
+        if (openFootprint.length < 3) return;
+        const center = openFootprint
+          .reduce((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0])
+          .map((value) => value / openFootprint.length);
+        cityCenters.push(center);
         const baseHeight = Math.max(0, Number(building.minHeightM || 0) * scale);
         const height = Math.max(baseHeight + 0.035, Number(building.heightM || 12) * scale);
+        const roofHeight = clamp(Number(building.roofHeightM || 0) * scale, 0, Math.max(0, height - baseHeight));
+        const supportedApexRoof = /^(pyramidal|hipped|conical|dome|onion)$/u.test(String(building.roofShape || ''));
+        const wallTop = supportedApexRoof && roofHeight > 0 ? Math.max(baseHeight + 0.02, height - roofHeight) : height;
         const phase = buildingIndex * 0.13;
-        for (let index = 1; index < footprint.length; index += 1) {
-          const [ax, az] = footprint[index - 1];
-          const [bx, bz] = footprint[index];
+        for (let index = 0; index < openFootprint.length; index += 1) {
+          const [ax, az] = openFootprint[index];
+          const [bx, bz] = openFootprint[(index + 1) % openFootprint.length];
           const aBase = [ax, baseHeight, az];
           const bBase = [bx, baseHeight, bz];
-          const aTop = [ax, height, az];
-          const bTop = [bx, height, bz];
+          const aTop = [ax, wallTop, az];
+          const bTop = [bx, wallTop, bz];
           this.line(buildings, aBase, bBase, phase);
           this.line(buildings, aTop, bTop, phase + 0.2);
           this.line(buildings, aBase, aTop, phase + 0.4);
           this.triangle(buildingFaces, aBase, bBase, bTop, phase + 0.08);
           this.triangle(buildingFaces, aBase, bTop, aTop, phase + 0.16);
+
+          if (supportedApexRoof && roofHeight > 0) {
+            const apex = [center[0], height, center[1]];
+            this.triangle(roofFaces, aTop, bTop, apex, phase + 0.24);
+            this.line(roofLines, aTop, apex, phase + 0.28);
+          } else {
+            const roofCenter = [center[0], height, center[1]];
+            const aRoof = [ax, height, az];
+            const bRoof = [bx, height, bz];
+            this.triangle(roofFaces, aRoof, bRoof, roofCenter, phase + 0.24);
+          }
         }
 
-        if (buildingIndex < 80 && (building.name || buildingIndex % 8 === 0)) {
-          const center = footprint
-            .reduce(
-              (acc, point) => [acc[0] + point[0], acc[1] + point[1]],
-              [0, 0],
-            )
-            .map((value) => value / footprint.length);
+        if (buildingIndex < 120 && (building.name || buildingIndex % 10 === 0)) {
           const node = {
             id: building.id,
             label: building.name || `Building ${buildingIndex + 1}`,
             type: 'building',
             heightM: building.heightM,
+            heightSource: building.heightSource || null,
+            roofShape: building.roofShape || null,
+            buildingMaterial: building.buildingMaterial || null,
             osmId: building.osmId || null,
+            osmType: building.osmType || null,
             position: [center[0], height + 0.08, center[1]],
           };
           this.graphNodes.push(node);
@@ -807,9 +840,34 @@
       this.selectedNode = null;
       if (this.selectionBuffer?.buffer) this.gl.deleteBuffer(this.selectionBuffer.buffer);
       this.selectionBuffer = null;
-      this.yaw = 0.78;
-      this.pitch = 0.57;
-      this.distance = 18;
+      this.environment = mesh.environment || null;
+      this.skylineProfile = mesh.skylineProfile || null;
+
+      let dominantYaw = 0.78;
+      if (cityCenters.length >= 6) {
+        const mean = cityCenters
+          .reduce((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0])
+          .map((value) => value / cityCenters.length);
+        let xx = 0;
+        let zz = 0;
+        let xz = 0;
+        cityCenters.forEach(([x, z]) => {
+          const dx = x - mean[0];
+          const dz = z - mean[1];
+          xx += dx * dx;
+          zz += dz * dz;
+          xz += dx * dz;
+        });
+        dominantYaw = 0.5 * Math.atan2(2 * xz, xx - zz) + 0.76;
+      }
+      const skylineUnits = Number(mesh.skylineProfile?.maxHeightM || 0) * scale;
+      const densityBias = clamp((Number(mesh.skylineProfile?.buildingCount || 0) - 300) / 1400, 0, 1);
+      this.cityCameraTarget = {
+        yaw: dominantYaw,
+        pitch: clamp(0.5 + skylineUnits * 0.025, 0.5, 0.72),
+        distance: clamp(17 + skylineUnits * 0.72 + densityBias * 2.5, 17, 27),
+      };
+      Object.assign(this, this.cityCameraTarget);
       this.updateReadout();
     }
 
@@ -823,7 +881,7 @@
     }
 
     cinematicEntrance(durationMs = 1050) {
-      const target = { yaw: 0.78, pitch: 0.57, distance: 18 };
+      const target = this.cityCameraTarget || { yaw: 0.78, pitch: 0.57, distance: 18 };
       if (state.settings.reducedMotion) {
         Object.assign(this, target);
         this.updateReadout();
@@ -1033,7 +1091,19 @@
       gl.depthFunc(gl.LEQUAL);
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-      gl.clearColor(0.008, 0.025, 0.06, 1);
+      const liveIsDay = this.environment?.current?.isDay;
+      const temporalIsDay = this.timeHours >= 6 && this.timeHours < 18;
+      const dayMode = liveIsDay == null ? temporalIsDay : Math.abs(this.timeHours - (environmentHour(this.environment) ?? this.timeHours)) < 0.3 ? liveIsDay : temporalIsDay;
+      const cloud = clamp(Number(this.environment?.current?.cloudCoverPercent || 0) / 100, 0, 1);
+      if (isLightTheme()) {
+        const base = dayMode ? 0.92 - cloud * 0.08 : 0.82;
+        gl.clearColor(base, base + 0.025, Math.min(1, base + 0.055), 1);
+      } else if (dayMode) {
+        gl.clearColor(0.018 + cloud * 0.008, 0.055 + cloud * 0.012, 0.11 + cloud * 0.02, 1);
+      } else {
+        if (isLightTheme()) gl.clearColor(0.9, 0.94, 0.98, 1);
+      else gl.clearColor(0.004, 0.015, 0.04, 1);
+      }
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.useProgram(this.program);
       gl.uniformMatrix4fv(this.loc.mvp, false, mvp);
@@ -1056,11 +1126,15 @@
       if (this.layers.grid) this.drawBuffer(this.geometry.grid, gl.LINES, [0.09, 0.42, 0.75, this.cityVisualMode === 'operations' ? 0.18 : 0.42], 0.045 * amplitude);
       if (this.layers.buildings && this.cityVisualMode !== 'xray') {
         const faceAlpha = this.cityVisualMode === 'operations' ? 0.13 : 0.28;
-        this.drawBuffer(this.geometry.buildingFaces, gl.TRIANGLES, [0.035, 0.31, 0.58, faceAlpha], 0.025 * amplitude);
+        const faceColor = isLightTheme() ? [0.15, 0.42, 0.62, faceAlpha] : [0.035, 0.31, 0.58, faceAlpha];
+        this.drawBuffer(this.geometry.buildingFaces, gl.TRIANGLES, faceColor, 0.025 * amplitude);
+        this.drawBuffer(this.geometry.roofFaces, gl.TRIANGLES, isLightTheme() ? [0.23, 0.49, 0.7, Math.min(0.48, faceAlpha + 0.12)] : [0.08, 0.46, 0.78, Math.min(0.52, faceAlpha + 0.12)], 0.018 * amplitude);
       }
       if (this.layers.buildings) {
         const edgeAlpha = this.cityVisualMode === 'xray' ? 0.28 : this.cityVisualMode === 'operations' ? 0.38 : 0.72;
-        this.drawBuffer(this.geometry.buildings, gl.LINES, [0.14, 0.64, 1, edgeAlpha], 0.07 * amplitude);
+        const edgeColor = isLightTheme() ? [0.03, 0.31, 0.52, edgeAlpha] : [0.14, 0.64, 1, edgeAlpha];
+        this.drawBuffer(this.geometry.buildings, gl.LINES, edgeColor, 0.07 * amplitude);
+        this.drawBuffer(this.geometry.roofLines, gl.LINES, isLightTheme() ? [0.21, 0.19, 0.55, edgeAlpha] : [0.55, 0.64, 1, edgeAlpha], 0.05 * amplitude);
       }
       if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [0.67, 0.48, 0.98, Math.min(1, 0.64 * trailBoost)], 0.075 * amplitude * trailBoost);
       if (this.layers.infrastructure) {
