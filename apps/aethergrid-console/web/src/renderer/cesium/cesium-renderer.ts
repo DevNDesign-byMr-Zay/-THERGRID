@@ -28,6 +28,7 @@ import type {
 import { CameraJourneyController } from './camera-journey-controller';
 import { GeodeticGridLayer } from './geodetic-grid-layer';
 import { NetworkOverlayLayer } from './network-overlay-layer';
+import { VisualModeController } from './visual-mode-controller';
 
 function featureId(feature: Cesium3DTileFeature): string | null {
   const candidates = ['id', '@id', 'osm_id', 'elementId', 'name'];
@@ -53,6 +54,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #buildings: Cesium3DTileset | null = null;
   #grid: GeodeticGridLayer | null = null;
   #cameraJourney: CameraJourneyController | null = null;
+  #visualController: VisualModeController | null = null;
   #overlays = new Map<string, NetworkOverlayLayer>();
   #visualMode: VisualMode = 'solid';
   #layers = new Map<string, LayerState>();
@@ -95,6 +97,9 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#viewer.scene.globe.depthTestAgainstTerrain = true;
     this.#grid = new GeodeticGridLayer(this.#viewer.scene);
     this.#cameraJourney = new CameraJourneyController(this.#viewer.camera);
+    this.#visualController = new VisualModeController(this.#viewer, {
+      realityEnabled: config.realityEnabled
+    });
 
     try {
       this.#buildings = await createOsmBuildingsAsync({
@@ -102,13 +107,16 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
         showOutline: true
       });
       this.#viewer.scene.primitives.add(this.#buildings);
+      this.#visualController.setBuildings(this.#buildings);
     } catch (error) {
       this.#degraded = true;
       this.#reason =
         error instanceof Error ? `OSM Buildings unavailable: ${error.message}` : 'OSM Buildings unavailable';
+      this.#visualController.setBuildings(null);
     }
 
     this.#ready = true;
+    this.setVisualMode(this.#visualMode);
     this.#applyLayerVisibility();
   }
 
@@ -139,17 +147,11 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
   setVisualMode(mode: VisualMode): void {
     this.#visualMode = mode;
-    const viewer = this.#viewer;
-    if (!viewer) return;
-
-    const holographic = mode === 'holographic' || mode === 'xray';
-    viewer.scene.globe.showGroundAtmosphere = !holographic;
-    viewer.scene.highDynamicRange = mode === 'reality' || mode === 'solid';
-    if (this.#buildings) {
-      this.#buildings.show = this.#layerVisible('buildings', true);
-      this.#buildings.showOutline = mode !== 'reality';
-    }
-    viewer.scene.requestRender();
+    if (!this.#visualController) return;
+    const result = this.#visualController.apply(mode);
+    this.#degraded = result.degraded;
+    this.#reason = result.reason;
+    if (this.#buildings) this.#buildings.show = this.#layerVisible('buildings', true);
   }
 
   applyOverlay(snapshot: SpatialOverlaySnapshot): void {
@@ -228,6 +230,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   destroy(): void {
     this.#cameraJourney?.cancel();
     this.#cameraJourney = null;
+    this.#visualController = null;
     for (const overlay of this.#overlays.values()) overlay.destroy();
     this.#overlays.clear();
     this.#grid?.destroy();
