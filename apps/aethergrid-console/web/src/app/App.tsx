@@ -16,12 +16,16 @@ import type {
   VisualMode
 } from '../renderer/spatial-renderer';
 import { loadCityEnvironment } from '../services/city-environment';
-import { loadCityPowerOverlay } from '../services/city-power-overlay';
+import {
+  loadCityPowerOverlay,
+  loadCoordinatePowerOverlay
+} from '../services/city-power-overlay';
 
 interface CityTarget extends SpatialTarget {
   id: string;
   name: string;
   district: string;
+  custom?: boolean;
 }
 
 const CITY_TARGETS: readonly CityTarget[] = [
@@ -125,6 +129,8 @@ export function App() {
   const [selection, setSelection] = useState<SpatialFeatureSelection | null>(null);
   const [powerOverlay, setPowerOverlay] = useState<SpatialOverlaySnapshot | null>(null);
   const [powerOverlayError, setPowerOverlayError] = useState<string | null>(null);
+  const [searchValue, setSearchValue] = useState('');
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [atmosphere, setAtmosphere] = useState<AtmosphericOverlaySnapshot | null>(null);
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
 
@@ -145,7 +151,16 @@ export function App() {
     setAtmosphere(null);
     setEnvironmentError(null);
 
-    void loadCityPowerOverlay(city.id, controller.signal)
+    const powerRequest = city.custom
+      ? loadCoordinatePowerOverlay(
+          city.latitude,
+          city.longitude,
+          city.name,
+          controller.signal
+        )
+      : loadCityPowerOverlay(city.id, controller.signal);
+
+    void powerRequest
       .then((snapshot) => setPowerOverlay(snapshot))
       .catch((error) => {
         if (controller.signal.aborted) return;
@@ -161,6 +176,49 @@ export function App() {
 
     return () => controller.abort();
   }, [city.id, city.latitude, city.longitude]);
+
+  const navigateSearch = (value: string) => {
+    const query = value.trim();
+    setSearchError(null);
+    if (!query) return;
+
+    const cityMatch = CITY_TARGETS.find((target) => {
+      const normalized = query.toLocaleLowerCase();
+      return (
+        target.name.toLocaleLowerCase().includes(normalized) ||
+        target.district.toLocaleLowerCase().includes(normalized)
+      );
+    });
+    if (cityMatch) {
+      setCity(cityMatch);
+      setSearchValue('');
+      return;
+    }
+
+    const coordinateMatch = query.match(
+      /^\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*$/u
+    );
+    if (coordinateMatch) {
+      const latitude = Number(coordinateMatch[1]);
+      const longitude = Number(coordinateMatch[2]);
+      if (latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180) {
+        setCity({
+          id: `coord-${latitude.toFixed(5)}-${longitude.toFixed(5)}`,
+          name: 'COORDINATE',
+          district: `${latitude.toFixed(5)}°, ${longitude.toFixed(5)}°`,
+          latitude,
+          longitude,
+          rangeMeters: 5_200,
+          pitchDegrees: -35,
+          custom: true
+        });
+        setSearchValue('');
+        return;
+      }
+    }
+
+    setSearchError('Enter a supported city or latitude, longitude.');
+  };
 
   const toggleLayer = (id: string) => {
     setLayers((current) =>
@@ -181,14 +239,24 @@ export function App() {
           </span>
         </div>
 
-        <div className="global-search" role="search">
+        <form
+          className="global-search"
+          role="search"
+          onSubmit={(event) => {
+            event.preventDefault();
+            navigateSearch(searchValue);
+          }}
+        >
           <span aria-hidden="true">⌕</span>
           <input
-            aria-label="Search world, city, infrastructure or asset"
-            placeholder="Search world / city / infrastructure / asset"
+            aria-label="Search city or geographic coordinate"
+            placeholder="City or lat, lon"
+            value={searchValue}
+            onChange={(event) => setSearchValue(event.currentTarget.value)}
           />
-          <kbd>⌘ K</kbd>
-        </div>
+          <button type="submit">GO</button>
+          {searchError ? <span className="search-error">{searchError}</span> : null}
+        </form>
 
         <div className="topbar-actions">
           <button
