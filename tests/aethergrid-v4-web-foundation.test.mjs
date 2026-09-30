@@ -375,3 +375,20 @@ test('v4 quantum panel distinguishes local simulation submitted QPU and executed
   assert.match(panel, /RUN LOCAL BELL TEST/u);
   assert.match(app, /<QuantumPanel/u);
 });
+
+test('v4 evidence panel reviews receipts and exports a real JSON package', async () => {
+  const [client, panel, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/services/evidence-client.ts'),
+    text('apps/aethergrid-console/web/src/components/EvidencePanel.tsx'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(client, /\/api\/aethergrid\/evidence/u);
+  assert.match(client, /\/api\/aethergrid\/export/u);
+  assert.match(client, /new Blob/u);
+  assert.match(client, /URL\.createObjectURL/u);
+  assert.match(panel, /PROVENANCE LEDGER/u);
+  assert.match(panel, /EXPORT EVIDENCE JSON/u);
+  assert.match(panel, /loadEvidenceRecord/u);
+  assert.match(app, /<EvidencePanel/u);
+});
