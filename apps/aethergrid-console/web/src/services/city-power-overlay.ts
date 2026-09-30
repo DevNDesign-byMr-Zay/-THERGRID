@@ -276,6 +276,7 @@ export function cityMeshToSemanticOverlays(
 export interface CitySpatialBundle {
   power: SpatialOverlaySnapshot;
   semantics: readonly SpatialOverlaySnapshot[];
+  illumination: SpatialOverlaySnapshot;
   identity: CityIdentitySummary;
 }
 
@@ -387,10 +388,78 @@ function cityIdentity(mesh: CityMeshResponse): CityIdentitySummary {
   };
 }
 
+
+function cityMeshToIlluminationOverlay(
+  mesh: CityMeshResponse
+): SpatialOverlaySnapshot {
+  const source = sourceFields(mesh);
+  const candidates = (mesh.buildings ?? [])
+    .map((building) => ({
+      building,
+      center: centroid(building.footprint),
+      heightM: Math.max(8, Number(building.heightM ?? 12))
+    }))
+    .filter(
+      (
+        item
+      ): item is {
+        building: CityBuilding;
+        center: readonly [number, number];
+        heightM: number;
+      } => Boolean(item.center)
+    );
+
+  const byHeight = [...candidates].sort((a, b) => b.heightM - a.heightM);
+  const selected = new Map<string, (typeof byHeight)[number]>();
+
+  for (const item of byHeight.slice(0, 160)) {
+    selected.set(item.building.id, item);
+  }
+
+  const remaining = candidates.filter(
+    (item) => !selected.has(item.building.id)
+  );
+  const stride = Math.max(1, Math.ceil(remaining.length / 340));
+  for (let index = 0; index < remaining.length; index += stride) {
+    const item = remaining[index];
+    if (item) selected.set(item.building.id, item);
+    if (selected.size >= 500) break;
+  }
+
+  const nodes: SpatialOverlayNode[] = [...selected.values()].map((item) => ({
+    id: `urban-light:${mesh.city.id}:${item.building.id}`,
+    kind: 'asset',
+    position: localMetersToCoordinate(
+      mesh.city,
+      item.center,
+      Math.max(10, item.heightM * 0.68)
+    ),
+    label: item.building.name || 'Mapped building illumination',
+    intensity: Math.min(1, Math.max(0.3, item.heightM / 180)),
+    properties: {
+      presentationType: 'urban-illumination',
+      presentationOnly: true,
+      sourceBuildingId: item.building.id,
+      buildingHeightM: item.heightM,
+      measuredOccupancy: false,
+      measuredWindowLights: false
+    }
+  }));
+
+  return {
+    id: `urban-illumination:${mesh.city.id}:${source.eventTime}`,
+    layerId: 'buildings',
+    ...source,
+    nodes,
+    edges: []
+  };
+}
+
 export function cityMeshToSpatialBundle(mesh: CityMeshResponse): CitySpatialBundle {
   return {
     power: cityMeshToPowerOverlay(mesh),
     semantics: cityMeshToSemanticOverlays(mesh),
+    illumination: cityMeshToIlluminationOverlay(mesh),
     identity: cityIdentity(mesh)
   };
 }
