@@ -304,3 +304,19 @@ test('v4 Cesium city identity includes mapped roads water coastline and green ar
   assert.match(app, /id: 'water', visible: true/u);
   assert.match(app, /id: 'green', visible: true/u);
 });
+
+test('v4 city inspector surfaces source-backed skyline identity and coverage', async () => {
+  const [service, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/services/city-power-overlay.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(service, /CityIdentitySummary/u);
+  assert.match(service, /sourceBackedHeightCoveragePercent/u);
+  assert.match(service, /namedStructures/u);
+  assert.match(service, /cityIdentity\(mesh/u);
+  assert.match(app, /CITY IDENTITY/u);
+  assert.match(app, /SKYLINE MAX/u);
+  assert.match(app, /HEIGHT COVERAGE/u);
+  assert.match(app, /cityIdentity\.namedStructures/u);
+});
