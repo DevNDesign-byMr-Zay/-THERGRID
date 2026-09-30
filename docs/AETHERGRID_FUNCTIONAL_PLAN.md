@@ -329,3 +329,43 @@ Each workflow analyzes the currently loaded bounded city mesh, returns transpare
 - city-operation tests must prove all five workflows stay bounded and advisory-only;
 - agent-thread UI must preserve separate history while backend agent/team routes remain unchanged;
 - all pre-existing tests, coverage, lint, typecheck, smoke, release-readiness, package and CodeQL gates must remain green.
+
+## Batch 12 — Source-backed skyline fidelity, live city context, and appearance modes
+
+Status: IMPLEMENTED / VERIFYING
+
+### City-specific 3D/4D identity
+- preset city coordinates target recognizable skyline districts rather than generic centroids;
+- OpenStreetMap ways and relation outer geometry are accepted for buildings and building parts;
+- source-backed height supports `height`, `est_height`, `building:levels`, `min_height`, and `building:min_level`;
+- the former 450 m renderer cap is removed; verified source heights are preserved up to a defensive 1,200 m ceiling;
+- supported source roof shapes and roof heights generate native WebGL roof surfaces/lines;
+- dense city samples preserve source-backed tall/complex structures before spatially sampling the remainder;
+- each city fly-in derives camera yaw from its footprint distribution and distance/pitch from its skyline profile;
+- skyline max, P95 height, source-backed height coverage, building-part count, roof coverage and upstream timestamp remain explicit metadata.
+
+### Current open-data context
+- OpenStreetMap Overpass remains operator-triggered and attribution-bound;
+- upstream OSM timestamp is retained when returned by Overpass;
+- `city-environment-runtime.mjs` adds current Open-Meteo temperature, apparent temperature, weather code, cloud cover, daylight, precipitation, wind speed and wind direction;
+- terrain remains bounded Open-Meteo Elevation / Copernicus DEM GLO-90 sampling;
+- city 4D time synchronizes to current local model time when environment context is available;
+- LIVE NOW restores the current city time after temporal exploration;
+- provider timestamps and fallback state are visible rather than represented as live when unavailable.
+
+### Appearance
+- Settings expose Dark, Light and System modes;
+- appearance persists in the existing local settings store;
+- System mode reacts to operating-system color preference changes;
+- semantic panels, controls and native WebGL city/globe palettes respond to the resolved theme.
+
+### Fidelity boundary
+The city twin is only as exact as the open-source geometry and metadata available for the selected coordinate. ÆTHERGRID must never invent an unverified landmark, façade, roof dimension or hardware state and then label it as source-backed. Missing data remains visible through coverage/provenance readouts or an explicit fallback state.
+
+### Verification requirements
+- tests prove an 828 m source height is not flattened and imperial heights are converted correctly;
+- tests prove relation building geometry and roof metadata survive parsing;
+- tests prove current environment data maps through the provider-neutral runtime without browser secrets;
+- release readiness requires roof buffers, city-specific camera framing, live-time controls and Light/Dark/System settings;
+- the full ZIP requires the new city environment runtime as a non-empty file;
+- all existing safety, coverage, smoke, packaging and CodeQL gates remain mandatory.
