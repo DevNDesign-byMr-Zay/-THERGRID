@@ -153,7 +153,7 @@ A fresh ZIP is considered functional when:
 
 ## Current verified state
 
-Batches 1–13 are implemented; Batch 13 has passed the maintained feature-branch gates and the exact merge candidate must remain green before entering `main`.
+Batches 1–13 are verified on `main`; Batch 14 is implemented on the feature branch and must pass the maintained gates before entering `main`.
 
 - Grid, Global, Holographic, Quantum, AI, Scenarios, Evidence and Settings are distinct routed workspaces.
 - WebGL node picking, scenario editing/duplication, evidence drill-down, agent receipts, persistent settings/profile, global coordinate exploration, mapped grid infrastructure, terrain and quantum provider workflows are all present.
@@ -463,3 +463,50 @@ Status: IMPLEMENTED / VERIFYING
 - standalone packaging must retain solar calculations, cloud geometry, procedural lights and directional atmosphere shader controls;
 - release-readiness must reject removal of the occupancy-boundary declaration;
 - test, lint, formatting, typecheck, coverage, package, fresh-clone, container, release-readiness and CodeQL gates remain mandatory.
+
+## Batch 14 — Solar city identity, atmospheric motion, and environmental operations
+
+Status: IMPLEMENTED / VERIFYING
+
+### Real-time solar globe
+- current subsolar latitude/longitude is calculated from UTC solar declination and equation of time;
+- the globe renders a live day/night terminator independently from the UTC longitude sweep;
+- the subsolar point is rendered as a dedicated live marker;
+- maintained cities on the night side gain a separate illumination marker layer;
+- solar geometry is recomputed on a bounded minute cadence and is not presented as astronomical ephemeris-grade output.
+
+### City-specific atmosphere and light
+- Open-Meteo modeled cloud cover controls a separate cloud-particle deck;
+- cloud motion is driven by current wind direction/speed through shader flow uniforms;
+- weather vectors now translate directionally through the city scene;
+- precipitation receives independent wind drift and downward fall motion;
+- source-backed building geometry produces procedural skyline light anchors;
+- procedural lights respond to modeled day/night state and do not represent measured occupancy, window state, or utility demand.
+
+### Expanded environment context
+- relative humidity;
+- surface pressure;
+- sunrise and sunset;
+- daylight duration;
+- sunshine duration;
+- existing temperature, apparent temperature, cloud, precipitation, wind, gust, radiation, visibility, AQI, and seismic context remain available.
+
+### Environmental operations
+Ten maintained workflows now include:
+- Heat Stress;
+- Visibility Operations;
+- the eight existing v2.7 workflows.
+
+Heat Stress combines apparent temperature, modeled relative humidity, UV, and mapped built density into a bounded attention proxy. Visibility Operations combines modeled visibility, cloud, precipitation, AQI, mapped roads, and built form into a bounded operational-context proxy. Neither result is an operational clearance or health diagnosis.
+
+### Verification requirements
+- environment-runtime tests must prove humidity, pressure and daily solar fields are requested and mapped;
+- semantic UI tests must require CLOUDS, CITY LIGHTS, solar status, Heat Stress and Visibility Operations controls;
+- WebGL source tests must require cloud particles, procedural city lights, directional flow and precipitation drop uniforms;
+- city-operation tests must exercise all ten maintained workflows with bounded live-context fixtures;
+- packaging must preserve solar calculations, atmosphere motion and both new operations in standalone HTML;
+- release-readiness must require all v2.8 manifest capabilities and fidelity disclaimers;
+- all test, lint, typecheck, coverage, fresh-clone, container, package, quality/release-readiness and CodeQL gates remain mandatory.
+
+### Fidelity boundary
+ÆTHERGRID continues to distinguish source-backed structure from visualization. Building geometry and supported heights/roofs come from mapped source data when available; weather and air quality remain provider model context; seismic events remain event-feed context; skyline lights and cloud particles are procedural render layers driven by those bounded inputs rather than claims of direct sensing.
