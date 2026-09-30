@@ -29,6 +29,7 @@
   const state = {
     workspace: 'grid',
     selectedAgent: 'TEAM',
+    agentChats: { TEAM: [], 'VÆLON': [], AUREN: [], 'SOLVÆR': [] },
     settings: { ...defaultSettings },
     system: {
       status: 'All Systems Nominal',
@@ -77,6 +78,7 @@
       cities: DEFAULT_GLOBAL_CITIES.map((city) => ({ ...city })),
       selectedCityId: 'new-york',
       cityMesh: null,
+      activeUseCase: null,
     },
     quantumRuntime: null,
     profile: {
@@ -387,6 +389,7 @@
       this.intensity = 1;
       this.compareEnabled = false;
       this.compareTimeHours = 18;
+      this.cityVisualMode = 'solid';
       this.drag = null;
       this.timeStart = performance.now();
       this.geometry = {};
@@ -476,9 +479,16 @@
       this.vertex(out, ...b, phase + 0.3);
     }
 
+    triangle(out, a, b, c, phase = 0) {
+      this.vertex(out, ...a, phase);
+      this.vertex(out, ...b, phase + 0.12);
+      this.vertex(out, ...c, phase + 0.24);
+    }
+
     buildGeometry() {
       const grid = [];
       const buildings = [];
+      const buildingFaces = [];
       const routes = [];
       const infrastructureLines = [];
       const infrastructureNodes = [];
@@ -540,6 +550,7 @@
       });
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
+      this.geometry.buildingFaces = this.makeBuffer(buildingFaces);
       this.geometry.routes = this.makeBuffer(routes);
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
@@ -552,6 +563,7 @@
       for (const item of Object.values(this.geometry)) if (item?.buffer) this.gl.deleteBuffer(item.buffer);
       const grid = [];
       const buildings = [];
+      const buildingFaces = [];
       const routes = [];
       const infrastructureLines = [];
       const infrastructureNodes = [];
@@ -602,6 +614,7 @@
       });
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
+      this.geometry.buildingFaces = this.makeBuffer(buildingFaces);
       this.geometry.routes = this.makeBuffer(routes);
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
@@ -614,6 +627,7 @@
       for (const item of Object.values(this.geometry)) if (item?.buffer) this.gl.deleteBuffer(item.buffer);
       const grid = [];
       const buildings = [];
+      const buildingFaces = [];
       const nodes = [];
       const routes = [];
       const infrastructureLines = [];
@@ -631,16 +645,21 @@
       mesh.buildings.forEach((building, buildingIndex) => {
         const footprint = (building.footprint || []).map(([x, z]) => [x * scale, z * scale]);
         if (footprint.length < 3) return;
-        const height = Math.max(0.035, Number(building.heightM || 12) * scale);
+        const baseHeight = Math.max(0, Number(building.minHeightM || 0) * scale);
+        const height = Math.max(baseHeight + 0.035, Number(building.heightM || 12) * scale);
         const phase = buildingIndex * 0.13;
         for (let index = 1; index < footprint.length; index += 1) {
           const [ax, az] = footprint[index - 1];
           const [bx, bz] = footprint[index];
-          this.line(buildings, [ax, 0, az], [bx, 0, bz], phase);
-          this.line(buildings, [ax, height, az], [bx, height, bz], phase + 0.2);
-          if (index % 2 === 0 || index === footprint.length - 1) {
-            this.line(buildings, [ax, 0, az], [ax, height, az], phase + 0.4);
-          }
+          const aBase = [ax, baseHeight, az];
+          const bBase = [bx, baseHeight, bz];
+          const aTop = [ax, height, az];
+          const bTop = [bx, height, bz];
+          this.line(buildings, aBase, bBase, phase);
+          this.line(buildings, aTop, bTop, phase + 0.2);
+          this.line(buildings, aBase, aTop, phase + 0.4);
+          this.triangle(buildingFaces, aBase, bBase, bTop, phase + 0.08);
+          this.triangle(buildingFaces, aBase, bTop, aTop, phase + 0.16);
         }
 
         if (buildingIndex < 80 && (building.name || buildingIndex % 8 === 0)) {
@@ -752,6 +771,7 @@
 
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
+      this.geometry.buildingFaces = this.makeBuffer(buildingFaces);
       this.geometry.routes = this.makeBuffer(routes);
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
@@ -764,6 +784,40 @@
       this.pitch = 0.57;
       this.distance = 18;
       this.updateReadout();
+    }
+
+    setCityVisualMode(mode) {
+      this.cityVisualMode = ['solid', 'xray', 'operations'].includes(mode) ? mode : 'solid';
+    }
+
+    setLayerProfile(layers = []) {
+      const enabled = new Set(layers);
+      for (const key of Object.keys(this.layers)) this.layers[key] = enabled.has(key);
+    }
+
+    cinematicEntrance(durationMs = 1050) {
+      const target = { yaw: 0.78, pitch: 0.57, distance: 18 };
+      if (state.settings.reducedMotion) {
+        Object.assign(this, target);
+        this.updateReadout();
+        return Promise.resolve();
+      }
+      const start = { yaw: -0.22, pitch: 1.02, distance: 32 };
+      Object.assign(this, start);
+      return new Promise((resolve) => {
+        const startedAt = performance.now();
+        const tick = (now) => {
+          const raw = clamp((now - startedAt) / durationMs, 0, 1);
+          const t = 1 - Math.pow(1 - raw, 3);
+          this.yaw = start.yaw + (target.yaw - start.yaw) * t;
+          this.pitch = start.pitch + (target.pitch - start.pitch) * t;
+          this.distance = start.distance + (target.distance - start.distance) * t;
+          this.updateReadout();
+          if (raw < 1) requestAnimationFrame(tick);
+          else resolve();
+        };
+        requestAnimationFrame(tick);
+      });
     }
 
     resize() {
@@ -972,8 +1026,15 @@
           0.025 * amplitude,
         );
       }
-      if (this.layers.grid) this.drawBuffer(this.geometry.grid, gl.LINES, [0.09, 0.42, 0.75, 0.42], 0.045 * amplitude);
-      if (this.layers.buildings) this.drawBuffer(this.geometry.buildings, gl.LINES, [0.14, 0.64, 1, 0.55], 0.07 * amplitude);
+      if (this.layers.grid) this.drawBuffer(this.geometry.grid, gl.LINES, [0.09, 0.42, 0.75, this.cityVisualMode === 'operations' ? 0.18 : 0.42], 0.045 * amplitude);
+      if (this.layers.buildings && this.cityVisualMode !== 'xray') {
+        const faceAlpha = this.cityVisualMode === 'operations' ? 0.13 : 0.28;
+        this.drawBuffer(this.geometry.buildingFaces, gl.TRIANGLES, [0.035, 0.31, 0.58, faceAlpha], 0.025 * amplitude);
+      }
+      if (this.layers.buildings) {
+        const edgeAlpha = this.cityVisualMode === 'xray' ? 0.28 : this.cityVisualMode === 'operations' ? 0.38 : 0.72;
+        this.drawBuffer(this.geometry.buildings, gl.LINES, [0.14, 0.64, 1, edgeAlpha], 0.07 * amplitude);
+      }
       if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [0.67, 0.48, 0.98, Math.min(1, 0.64 * trailBoost)], 0.075 * amplitude * trailBoost);
       if (this.layers.infrastructure) {
         this.drawBuffer(
