@@ -130,6 +130,16 @@ test('ÆTHERGRID exposes replaceable agent runtime without leaking provider secr
     assert.equal(team.runtime.agent, 'TEAM');
     assert.equal(team.advisoryOnly, true);
     assert.match(team.receipt, /^[a-f0-9]{64}$/u);
+    assert.equal(team.evidence.type, 'AI_TEAM');
+    assert.equal(team.evidence.details.contributionReceipts.length, 3);
+
+    const evidenceDetail = await fetch(
+      `${baseUrl}/api/aethergrid/evidence/${encodeURIComponent(team.evidence.id)}`,
+    );
+    assert.equal(evidenceDetail.status, 200);
+    const detailPayload = await evidenceDetail.json();
+    assert.equal(detailPayload.evidence.receipt, team.receipt);
+    assert.equal(detailPayload.evidence.details.advisoryOnly, true);
   });
 });
 
@@ -202,6 +212,8 @@ test('ÆTHERGRID backend supports live view, region, scenario and telemetry stat
       storageReservePercent: 27,
       weatherRiskPercent: 64,
     });
+    assert.equal(customPayload.evidence.type, 'SCENARIO');
+    assert.match(customPayload.evidence.receipt, /^[a-f0-9]{64}$/u);
 
     const telemetry = await fetch(`${baseUrl}/api/aethergrid/telemetry`);
     assert.equal(telemetry.status, 200);
