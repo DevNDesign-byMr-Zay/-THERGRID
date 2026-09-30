@@ -463,3 +463,14 @@ test('v4 operator profile persists real identity and bounded local avatar data',
   assert.match(menu, /LOCAL PROFILE · NO PROVIDER SECRETS/u);
   assert.match(app, /<ProfileMenu/u);
 });
+
+test('v4 world scope isolates global live context from selected-city overlays', async () => {
+  const app = await text('apps/aethergrid-console/web/src/app/App.tsx');
+
+  assert.match(app, /scope === 'world'\s*\? \[worldOverlay\]/u);
+  assert.match(app, /atmosphere=\{scope === 'city' \? atmosphere : null\}/u);
+  assert.match(app, /scope === 'world'\s*\? \{\s*latitude: 20,\s*longitude: 0/u);
+  assert.match(app, /scope === 'city' && cityIdentity/u);
+  assert.match(app, /scope === 'city' && atmosphere/u);
+  assert.match(app, /scope === 'city' && liveContext/u);
+});
