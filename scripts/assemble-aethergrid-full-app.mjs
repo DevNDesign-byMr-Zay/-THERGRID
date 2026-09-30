@@ -234,6 +234,10 @@ assert(/async function loadCoordinateCity/u.test(standaloneHtml), 'standalone HT
 assert(/loadTerrainFor/u.test(standaloneHtml), 'standalone HTML must retain live terrain request wiring');
 assert(/infrastructureLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL power-grid geometry');
 assert(/terrainLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL terrain geometry');
+assert(/bilinearTerrainElevation/u.test(standaloneHtml), 'standalone HTML must retain bilinear terrain interpolation');
+assert(/terrainSurfaceYAtSource/u.test(standaloneHtml), 'standalone HTML must retain terrain-conforming city placement');
+assert(/terrainConformance/u.test(standaloneHtml), 'standalone HTML must retain terrain conformance state');
+assert(/Terrain Fit/u.test(standaloneHtml), 'standalone HTML must retain terrain-fit fidelity readouts');
 assert(/data-global-layer="terrain"/u.test(standaloneHtml), 'standalone HTML must retain terrain layer controls');
 assert(/terrainLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL terrain geometry');
 assert(/roofFaces/u.test(standaloneHtml), 'standalone HTML must retain source-shaped roof geometry');
@@ -326,7 +330,15 @@ payload.set(
           'source-tagged-building-materials',
           'flood-context-operation',
           'green-infrastructure-operation',
-          'no-invented-environmental-geometry'
+          'no-invented-environmental-geometry',
+          'bilinear-terrain-interpolation',
+          'terrain-anchored-buildings',
+          'terrain-draped-roads',
+          'terrain-draped-waterways',
+          'terrain-aligned-green-space',
+          'terrain-draped-infrastructure',
+          'level-water-area-presentation',
+          'non-survey-grade-terrain-fit'
         ],
         files: inventory,
       },

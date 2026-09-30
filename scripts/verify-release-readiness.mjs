@@ -453,6 +453,7 @@ async function main() {
       /value="green-infrastructure"/u.test(exactAethergridHtml) &&
       /id="globalSolarStatus"/u.test(exactAethergridHtml) &&
       /id="globalGridStats"/u.test(exactAethergridHtml) &&
+      /Terrain Fit/u.test(exactAethergridHtml) &&
       /id="cityTransitionOverlay"/u.test(exactAethergridHtml) &&
       /data-city-visual="solid"/u.test(exactAethergridHtml) &&
       /id="cityUseCaseSelect"/u.test(exactAethergridHtml) &&
@@ -498,6 +499,9 @@ async function main() {
       /async function loadCoordinateCity/u.test(exactAethergridJs) &&
       /infrastructureLines/u.test(exactAethergridJs) &&
       /terrainLines/u.test(exactAethergridJs) &&
+      /function bilinearTerrainElevation/u.test(exactAethergridJs) &&
+      /terrainSurfaceYAtSource/u.test(exactAethergridJs) &&
+      /terrainConformance/u.test(exactAethergridJs) &&
       /loadTerrainFor/u.test(exactAethergridJs) &&
       /powerAssets/u.test(exactAethergridJs) &&
       /buildingFaces/u.test(exactAethergridJs) &&
@@ -650,9 +654,20 @@ async function main() {
       exactAethergridApp.capabilities?.floodContextUseCase === true &&
       exactAethergridApp.capabilities?.greenInfrastructureUseCase === true &&
       exactAethergridApp.capabilities?.noInventedEnvironmentalGeometry === true &&
+      exactAethergridApp.capabilities?.terrainConformingCityGeometry === true &&
+      exactAethergridApp.capabilities?.bilinearTerrainInterpolation === true &&
+      exactAethergridApp.capabilities?.terrainAnchoredBuildings === true &&
+      exactAethergridApp.capabilities?.terrainDrapedRoads === true &&
+      exactAethergridApp.capabilities?.terrainDrapedWaterways === true &&
+      exactAethergridApp.capabilities?.terrainAlignedGreenSpace === true &&
+      exactAethergridApp.capabilities?.terrainDrapedInfrastructure === true &&
+      exactAethergridApp.capabilities?.levelWaterAreaPresentation === true &&
       exactAethergridApp.visualContract?.proceduralCityLightsRepresentOccupancy === false &&
       exactAethergridApp.visualContract?.sourceTaggedMaterialStyling === true &&
       exactAethergridApp.visualContract?.environmentalGeometryFallbackInvented === false &&
+      exactAethergridApp.visualContract?.surveyGradeElevation === false &&
+      exactAethergridApp.visualContract?.waterAreasWarpedToTerrain === false &&
+      exactAethergridApp.visualContract?.unnamedTallLandmarkRequiresSourceBackedHeight === true &&
       exactAethergridApp.visualContract?.landmarkIdentityRequiresSourceNameOrTallGeometry ===
         true &&
       exactAethergridApp.visualContract?.thunderstormLinesRepresentDetectedStrikes === false &&
@@ -707,6 +722,10 @@ async function main() {
       exactAethergridApp.settingsRuntime.appearanceModes.includes('system') &&
       exactAethergridApp.terrainRuntime?.module === 'terrain-runtime.mjs' &&
       exactAethergridApp.terrainRuntime?.credentialsExposedToBrowser === false &&
+      exactAethergridApp.terrainRuntime?.interpolation === 'bilinear-local-grid' &&
+      exactAethergridApp.terrainRuntime?.cityConformance?.surveyGrade === false &&
+      exactAethergridUi.globalWorkspace?.terrainConformance?.enabled === true &&
+      exactAethergridUi.globalWorkspace?.terrainConformance?.surveyGrade === false &&
       exactAethergridApp.quantumRuntime?.ibmApiVersion === '2026-04-15' &&
       exactAethergridUi.workspaceRouting?.mode === 'exclusive-view' &&
       exactAethergridUi.spatialModel?.renderEngine === 'native-webgl' &&
@@ -862,6 +881,8 @@ async function main() {
   assert(
     /api\.open-meteo\.com\/v1\/elevation/u.test(aethergridTerrainRuntime) &&
       /Copernicus DEM GLO-90/u.test(aethergridTerrainRuntime) &&
+      /interpolateTerrainRelativeElevation/u.test(aethergridTerrainRuntime) &&
+      /bilinear-local-grid/u.test(aethergridTerrainRuntime) &&
       /maxPointsPerRequest: provider === 'open-meteo' \? 100/u.test(aethergridTerrainRuntime) &&
       /flat-local-fallback/u.test(aethergridTerrainRuntime) &&
       /credentialsExposed: false/u.test(aethergridTerrainRuntime),
@@ -907,6 +928,9 @@ async function main() {
       /waterLines/u.test(exactAethergridPackager) &&
       /greenFaces/u.test(exactAethergridPackager) &&
       /materialGlassFaces/u.test(exactAethergridPackager) &&
+      /bilinearTerrainElevation/u.test(exactAethergridPackager) &&
+      /terrainSurfaceYAtSource/u.test(exactAethergridPackager) &&
+      /Terrain Fit/u.test(exactAethergridPackager) &&
       /id="cityIdentity"/u.test(exactAethergridPackager) &&
       /landmarkCandidates/u.test(exactAethergridPackager) &&
       /snowParticles/u.test(exactAethergridPackager) &&

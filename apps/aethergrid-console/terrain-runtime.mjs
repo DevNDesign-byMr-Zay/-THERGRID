@@ -50,6 +50,42 @@ function sampleGrid({ lat, lon, radiusM, gridSize }) {
   return points;
 }
 
+export function interpolateTerrainRelativeElevation(terrain, xM, zM) {
+  const gridSize = Number(terrain?.gridSize || 0);
+  const radiusM = Number(terrain?.radiusM || 0);
+  const points = Array.isArray(terrain?.points) ? terrain.points : [];
+  if (
+    gridSize < 2 ||
+    radiusM <= 0 ||
+    points.length < gridSize * gridSize ||
+    !Number.isFinite(Number(xM)) ||
+    !Number.isFinite(Number(zM))
+  ) {
+    return 0;
+  }
+
+  const gridMax = gridSize - 1;
+  const gx = clamp(((Number(xM) + radiusM) / (radiusM * 2)) * gridMax, 0, gridMax);
+  const gz = clamp(((Number(zM) + radiusM) / (radiusM * 2)) * gridMax, 0, gridMax);
+  const x0 = Math.floor(gx);
+  const z0 = Math.floor(gz);
+  const x1 = Math.min(gridMax, x0 + 1);
+  const z1 = Math.min(gridMax, z0 + 1);
+  const tx = gx - x0;
+  const tz = gz - z0;
+  const elevationAt = (row, column) => {
+    const value = Number(points[row * gridSize + column]?.relativeElevationM);
+    return Number.isFinite(value) ? Math.max(0, value) : 0;
+  };
+  const e00 = elevationAt(z0, x0);
+  const e10 = elevationAt(z0, x1);
+  const e01 = elevationAt(z1, x0);
+  const e11 = elevationAt(z1, x1);
+  const top = e00 + (e10 - e00) * tx;
+  const bottom = e01 + (e11 - e01) * tx;
+  return top + (bottom - top) * tz;
+}
+
 function fallbackTerrain(input) {
   const points = sampleGrid(input).map((point) => ({
     ...point,
@@ -66,6 +102,11 @@ function fallbackTerrain(input) {
     center: { lat: input.lat, lon: input.lon },
     radiusM: input.radiusM,
     gridSize: input.gridSize,
+    interpolation: {
+      method: 'bilinear',
+      coordinateSpace: 'local-meters',
+      surfaceBasis: 'relative-to-sample-minimum',
+    },
     minElevationM: 0,
     maxElevationM: 0,
     points,
@@ -86,6 +127,7 @@ export function createTerrainRuntime({ env = process.env, fetchImpl = fetch } = 
       endpoint: provider === 'open-meteo' ? safeUrl(endpoint, 'elevation URL').origin : null,
       resolutionMeters: provider === 'open-meteo' ? 90 : null,
       maxPointsPerRequest: provider === 'open-meteo' ? 100 : null,
+      interpolation: 'bilinear-local-grid',
       attribution:
         provider === 'open-meteo'
           ? 'Elevation: Open-Meteo using Copernicus DEM GLO-90'
@@ -138,6 +180,11 @@ export function createTerrainRuntime({ env = process.env, fetchImpl = fetch } = 
         center: { lat: request.lat, lon: request.lon },
         radiusM: request.radiusM,
         gridSize: request.gridSize,
+        interpolation: {
+          method: 'bilinear',
+          coordinateSpace: 'local-meters',
+          surfaceBasis: 'relative-to-sample-minimum',
+        },
         minElevationM,
         maxElevationM,
         points: points.map((point, index) => ({

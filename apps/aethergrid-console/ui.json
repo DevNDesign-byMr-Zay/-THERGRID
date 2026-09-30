@@ -138,7 +138,14 @@
     "source-tagged-building-material-overlays",
     "flood-context-use-case",
     "green-infrastructure-use-case",
-    "no-invented-environmental-geometry"
+    "no-invented-environmental-geometry",
+    "bilinear-terrain-interpolation",
+    "terrain-anchored-buildings",
+    "terrain-draped-roads",
+    "terrain-draped-waterways",
+    "terrain-aligned-green-space",
+    "terrain-draped-infrastructure",
+    "level-water-area-presentation"
   ],
   "agents": [
     {
@@ -491,7 +498,8 @@
         "roof-tags",
         "terrain-relief",
         "weather",
-        "height-data-coverage"
+        "height-data-coverage",
+        "terrain-fit"
       ]
     },
     "weatherSemantics": {
@@ -505,6 +513,18 @@
       "mappedCoastline": true,
       "sourceTaggedBuildingMaterials": true,
       "noSyntheticWaterOrGreenFallback": true
+    },
+    "terrainConformance": {
+      "enabled": true,
+      "interpolation": "bilinear-local-grid",
+      "liveSource": "Open-Meteo Elevation / Copernicus DEM GLO-90",
+      "buildings": "footprint-center anchored foundation",
+      "roads": "per-vertex drape",
+      "waterways": "per-vertex drape",
+      "greenAreas": "per-vertex drape",
+      "infrastructure": "per-vertex/asset-anchor drape",
+      "waterAreas": "level plane",
+      "surveyGrade": false
     }
   },
   "profile": {

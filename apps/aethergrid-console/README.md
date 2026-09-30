@@ -213,6 +213,22 @@ These layers coexist with the existing named/tall skyline anchors and semantic r
 Fallback behavior is deliberately conservative: local fallback geometry does **not** invent water, coastline, parks or green space. Missing mapped geography remains empty/unknown.
 
 The operation catalog expands to 12 with **Flood Context** and **Green Infrastructure**. Both are bounded planning-context proxies: Flood Context is not inundation/storm-surge/drainage forecasting, and Green Infrastructure is not measured canopy, heat exposure, public-health risk or a siting directive.
+## v3.0 terrain-conforming city geometry
+
+The city twin now uses the bounded elevation grid as a vertical reference instead of drawing mapped city geometry on one flat local plane.
+
+Terrain fitting behavior:
+- the browser performs bilinear interpolation across the same local-meter DEM grid returned by `terrain-runtime.mjs`;
+- building foundations remain flat but are anchored to the interpolated elevation at each footprint center;
+- roads and mapped waterways drape vertex-by-vertex over the interpolated terrain surface;
+- green-space polygons drape across the DEM while preserving their mapped horizontal geometry;
+- mapped power lines and asset markers inherit local terrain elevation plus their presentation clearance/height;
+- coastline uses the bounded terrain datum to avoid climbing inland slopes;
+- mapped water polygons remain level presentation planes using the lowest interpolated polygon-edge elevation rather than being warped over terrain.
+
+The GLOBAL stats, CITY IDENTITY panel and provenance surface label this as **DEM DRAPED** when live elevation is available and **FLAT FALLBACK** otherwise.
+
+This is visualization-grade terrain fitting. The default live source is Open-Meteo Elevation backed by Copernicus DEM GLO-90; it is not survey, engineering, cadastral or LiDAR-grade vertical positioning. The app does not infer foundation engineering, road grade compliance, water level, drainage or clearance authority from the DEM.
 ## Windows ZIP workflow
 
 After extracting the package:

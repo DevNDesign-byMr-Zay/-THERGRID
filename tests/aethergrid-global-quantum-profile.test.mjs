@@ -9,7 +9,10 @@ import { createCityLiveRuntime } from '../apps/aethergrid-console/city-live-runt
 import { createGeoRuntime } from '../apps/aethergrid-console/geo-runtime.mjs';
 import { createProfileStore } from '../apps/aethergrid-console/profile-store.mjs';
 import { API_VERSION, createQuantumRuntime } from '../apps/aethergrid-console/quantum-runtime.mjs';
-import { createTerrainRuntime } from '../apps/aethergrid-console/terrain-runtime.mjs';
+import {
+  createTerrainRuntime,
+  interpolateTerrainRelativeElevation,
+} from '../apps/aethergrid-console/terrain-runtime.mjs';
 
 test('operator profile persists sanitized local identity data without secrets', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'aethergrid-profile-'));
@@ -558,9 +561,15 @@ test('terrain runtime samples real-coordinate elevation grids through a provider
   assert.equal(terrain.minElevationM, 30);
   assert.equal(terrain.maxElevationM, 42);
   assert.equal(terrain.points[0].relativeElevationM, 0);
+  assert.equal(terrain.interpolation.method, 'bilinear');
+  assert.equal(interpolateTerrainRelativeElevation(terrain, -900, -900), 0);
+  assert.equal(interpolateTerrainRelativeElevation(terrain, 0, 0), 6);
+  assert.equal(interpolateTerrainRelativeElevation(terrain, 900, 900), 12);
+  assert.equal(interpolateTerrainRelativeElevation(terrain, -450, -450), 3);
   assert.match(terrain.source.attribution, /Open-Meteo/u);
   assert.equal(runtime.summary().credentialsExposed, false);
   assert.equal(runtime.summary().resolutionMeters, 90);
+  assert.equal(runtime.summary().interpolation, 'bilinear-local-grid');
 });
 
 test('terrain runtime degrades explicitly to a flat local surface when elevation is unavailable', async () => {
@@ -581,6 +590,8 @@ test('terrain runtime degrades explicitly to a flat local surface when elevation
   assert.equal(terrain.source.provider, 'flat-local-fallback');
   assert.equal(terrain.points.length, 49);
   assert.ok(terrain.points.every((point) => point.relativeElevationM === 0));
+  assert.equal(terrain.interpolation.method, 'bilinear');
+  assert.equal(interpolateTerrainRelativeElevation(terrain, 0, 0), 0);
   assert.match(terrain.source.error, /Elevation HTTP 503/u);
 });
 
