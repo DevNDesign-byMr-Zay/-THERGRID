@@ -631,7 +631,8 @@ async function main() {
       exactAethergridApp.capabilities?.modeledFogAnimation === true &&
       exactAethergridApp.capabilities?.modeledThunderstormAnimation === true &&
       exactAethergridApp.visualContract?.proceduralCityLightsRepresentOccupancy === false &&
-      exactAethergridApp.visualContract?.landmarkIdentityRequiresSourceNameOrTallGeometry === true &&
+      exactAethergridApp.visualContract?.landmarkIdentityRequiresSourceNameOrTallGeometry ===
+        true &&
       exactAethergridApp.visualContract?.thunderstormLinesRepresentDetectedStrikes === false &&
       exactAethergridApp.visualContract?.fogSnowRainVisualsRepresentStreetLevelSensors === false &&
       exactAethergridApp.aiRuntime?.replaceableByConfiguration === true &&
