@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { AgentDock } from '../components/AgentDock';
 import { DataSourceBadge } from '../components/DataSourceBadge';
@@ -10,6 +10,7 @@ import { RuntimeDiagnosticsPanel } from '../components/RuntimeDiagnosticsPanel';
 import { SpatialViewport } from '../components/SpatialViewport';
 import { TemporalRail } from '../components/TemporalRail';
 import { useAppearance } from '../hooks/use-appearance';
+import { useOperatorShortcuts } from '../hooks/use-operator-shortcuts';
 import { useTemporalClock } from '../hooks/use-temporal-clock';
 import {
   weatherPhenomenon,
@@ -159,6 +160,7 @@ export function App() {
   const [searchValue, setSearchValue] = useState('');
   const [searchError, setSearchError] = useState<string | null>(null);
   const [intelOpen, setIntelOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [atmosphere, setAtmosphere] = useState<AtmosphericOverlaySnapshot | null>(null);
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
   const [liveContext, setLiveContext] = useState<CityLiveSnapshot | null>(null);
@@ -239,6 +241,14 @@ export function App() {
 
     return () => controller.abort();
   }, [city.id, city.latitude, city.longitude]);
+
+  useOperatorShortcuts({
+    focusSearch: () => searchInputRef.current?.focus(),
+    showWorld: () => setScope('world'),
+    showCity: () => setScope('city'),
+    goLive: () => clock.goLive(),
+    toggleIntel: () => setIntelOpen((open) => !open)
+  });
 
   const navigateSearch = (value: string) => {
     const query = value.trim();
@@ -428,12 +438,14 @@ export function App() {
         >
           <span aria-hidden="true">⌕</span>
           <input
+            ref={searchInputRef}
             aria-label="Search city or geographic coordinate"
             placeholder="City or lat, lon"
             value={searchValue}
             onChange={(event) => setSearchValue(event.currentTarget.value)}
           />
           <button type="submit">GO</button>
+          <kbd aria-hidden="true">⌘K</kbd>
           {searchError ? <span className="search-error">{searchError}</span> : null}
         </form>
 
