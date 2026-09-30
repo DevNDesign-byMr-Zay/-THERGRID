@@ -153,7 +153,7 @@ A fresh ZIP is considered functional when:
 
 ## Current verified state
 
-Batches 1–11 are implemented and required to pass the maintained verification gates before merge to `main`.
+Batches 1–12 are implemented and have passed the maintained feature-branch verification gates; the exact merge candidate must remain green before entering `main`.
 
 - Grid, Global, Holographic, Quantum, AI, Scenarios, Evidence and Settings are distinct routed workspaces.
 - WebGL node picking, scenario editing/duplication, evidence drill-down, agent receipts, persistent settings/profile, global coordinate exploration, mapped grid infrastructure, terrain and quantum provider workflows are all present.
@@ -164,11 +164,12 @@ Batches 1–11 are implemented and required to pass the maintained verification 
 
 The CI-built functional application archive was inspected after the final release gates passed:
 
-- 26 regular files;
+- 27 regular files;
 - 0 empty files;
 - includes `standalone.html`, modular HTML/CSS/JS, Node backend, provider-neutral AI runtime, agent config, JSON manifests, brand assets, app-local environment example, PowerShell/CMD launchers, README, file inventory and SHA-256 sums;
 - the old dashboard screenshot is not required by the runtime package;
 - tests, lint, typecheck, coverage, fresh-clone smoke, container smoke, quality/release-readiness and CodeQL are required before merge.
+- v2.6 verified functional ZIP: 684,707 bytes; SHA-256 `ea253b688d9c5195f99cdc5a3b79e020d697023d48772b63c2ef0fb783d4e3a6`.
 
 ## Batch 8 — Global intelligence, operator identity, and external compute
 
@@ -213,7 +214,7 @@ Status: COMPLETE
 
 ## Batch 9 — Global grid intelligence and shared agent context
 
-Status: IMPLEMENTED / VERIFYING
+Status: COMPLETE
 
 ### Arbitrary coordinate exploration
 - operator-entered latitude/longitude;
@@ -332,7 +333,7 @@ Each workflow analyzes the currently loaded bounded city mesh, returns transpare
 
 ## Batch 12 — Source-backed skyline fidelity, live city context, and appearance modes
 
-Status: IMPLEMENTED / VERIFYING
+Status: COMPLETE
 
 ### City-specific 3D/4D identity
 - preset city coordinates target recognizable skyline districts rather than generic centroids;
