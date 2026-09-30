@@ -243,6 +243,24 @@ const CITY_USE_CASES = Object.freeze({
     recommendedLayers: ['roads', 'buildings', 'illumination', 'clouds', 'weather', 'air', 'nodes'],
     animationProfile: 'visibility',
   }),
+  'flood-context': Object.freeze({
+    id: 'flood-context',
+    label: 'Flood Context',
+    purpose: 'Compare mapped water/coastline, terrain, precipitation, roads and infrastructure as a bounded flood-attention planning surface.',
+    indexLabel: 'Flood context index',
+    agentLead: 'SOLVÆR',
+    recommendedLayers: ['water', 'terrain', 'weather', 'roads', 'infrastructure', 'buildings', 'nodes'],
+    animationProfile: 'flood-context',
+  }),
+  'green-infrastructure': Object.freeze({
+    id: 'green-infrastructure',
+    label: 'Green Infrastructure',
+    purpose: 'Compare mapped parks and green areas with current heat, humidity, air quality and built-form density.',
+    indexLabel: 'Green infrastructure need index',
+    agentLead: 'AUREN',
+    recommendedLayers: ['green', 'buildings', 'weather', 'air', 'landmarks', 'nodes'],
+    animationProfile: 'green-infrastructure',
+  }),
 });
 
 function planarLength(path = []) {
@@ -276,6 +294,10 @@ function cityMeshMetrics(mesh) {
   const roads = Array.isArray(mesh?.roads) ? mesh.roads : [];
   const powerLines = Array.isArray(mesh?.powerLines) ? mesh.powerLines : [];
   const powerAssets = Array.isArray(mesh?.powerAssets) ? mesh.powerAssets : [];
+  const waterAreas = Array.isArray(mesh?.waterAreas) ? mesh.waterAreas : [];
+  const waterways = Array.isArray(mesh?.waterways) ? mesh.waterways : [];
+  const coastlines = Array.isArray(mesh?.coastlines) ? mesh.coastlines : [];
+  const greenAreas = Array.isArray(mesh?.greenAreas) ? mesh.greenAreas : [];
   const radiusM = Math.max(250, Number(mesh?.city?.radiusM || 900));
   let footprintAreaM2 = 0;
   let estimatedFloorAreaM2 = 0;
@@ -299,6 +321,40 @@ function cityMeshMetrics(mesh) {
     .reduce((sum, line) => sum + planarLength(line.path || []), 0) / 1000;
   const substations = powerAssets.filter((asset) => asset.powerType === 'substation').length;
   const generationAssets = powerAssets.filter((asset) => ['plant', 'generator'].includes(asset.powerType)).length;
+  const waterAreaM2 = waterAreas.reduce(
+    (sum, feature) => sum + polygonArea(feature.footprint || []),
+    0,
+  );
+  const waterwayLengthKm =
+    [...waterways, ...coastlines].reduce(
+      (sum, feature) => sum + planarLength(feature.path || []),
+      0,
+    ) / 1000;
+  const greenAreaM2 = greenAreas.reduce(
+    (sum, feature) => sum + polygonArea(feature.footprint || []),
+    0,
+  );
+  const sourceHeightValues = buildings
+    .filter(
+      (building) =>
+        !['inferred', 'synthetic-fallback'].includes(String(building.heightSource || '')) &&
+        Number(building.heightM || 0) > 0,
+    )
+    .map((building) => Number(building.heightM));
+  const landmarkThresholdM = sourceHeightValues.length
+    ? Math.max(
+        70,
+        [...sourceHeightValues].sort((a, b) => a - b)[
+          Math.floor((sourceHeightValues.length - 1) * 0.95)
+        ],
+      )
+    : 70;
+  const namedLandmarkCount = buildings.filter(
+    (building) =>
+      String(building.name || '').trim() &&
+      !['inferred', 'synthetic-fallback'].includes(String(building.heightSource || '')) &&
+      Number(building.heightM || 0) >= landmarkThresholdM,
+  ).length;
   const terrainReliefM = Math.max(0, Number(mesh?.terrain?.maxElevationM || 0) - Number(mesh?.terrain?.minElevationM || 0));
   const sampledAreaKm2 = Math.PI * Math.pow(radiusM / 1000, 2);
   return {
@@ -313,6 +369,12 @@ function cityMeshMetrics(mesh) {
     powerAssetCount: powerAssets.length,
     substations,
     generationAssets,
+    waterAreaM2: Math.round(waterAreaM2),
+    waterwayLengthKm: Number(waterwayLengthKm.toFixed(2)),
+    waterFeatureCount: waterAreas.length + waterways.length + coastlines.length,
+    greenAreaM2: Math.round(greenAreaM2),
+    greenFeatureCount: greenAreas.length,
+    namedLandmarkCount,
     terrainReliefM: Number(terrainReliefM.toFixed(1)),
     sampledAreaKm2: Number(sampledAreaKm2.toFixed(2)),
   };
@@ -429,6 +491,13 @@ function analyzeCityUseCase(mesh, useCaseId) {
     liveSignals.visibilityM == null
       ? 0
       : clampIndex(Math.max(0, 20_000 - liveSignals.visibilityM) / 200);
+  const sampledAreaM2 = Math.max(1, metrics.sampledAreaKm2 * 1_000_000);
+  const waterCoverage = clampIndex((metrics.waterAreaM2 / sampledAreaM2) * 500);
+  const waterEdgeContext = clampIndex(metrics.waterwayLengthKm * 7);
+  const greenCoverage = clampIndex((metrics.greenAreaM2 / sampledAreaM2) * 650);
+  const heatPressure = clampIndex(
+    apparentHeatStress * 0.5 + humidityStress * 0.2 + uvStress * 0.12 + builtMass * 0.18,
+  );
 
   let planningIndex = 0;
   let observations = [];
@@ -520,6 +589,32 @@ function analyzeCityUseCase(mesh, useCaseId) {
       `Precipitation is ${liveSignals.precipitationMm.toFixed(1)} mm and modeled US AQI is ${liveSignals.usAqi == null ? 'unavailable' : liveSignals.usAqi.toFixed(0)}.`,
       `The scene pairs atmospheric context with ${metrics.roadLengthKm.toFixed(1)} km of mapped roads; it is not a navigation clearance, aviation minimum or live traffic visibility guarantee.`,
     ];
+  } else if (useCaseId === 'flood-context') {
+    planningIndex = clampIndex(
+      waterCoverage * 0.3 +
+        waterEdgeContext * 0.18 +
+        clampIndex(liveSignals.precipitationMm * 18) * 0.22 +
+        builtMass * 0.12 +
+        terrainComplexity * 0.08 +
+        gridCoverage * 0.1,
+    );
+    observations = [
+      `${metrics.waterFeatureCount} mapped water/coastline feature(s) contribute ${Math.round(metrics.waterAreaM2).toLocaleString()} m² of mapped water area and ${metrics.waterwayLengthKm.toFixed(1)} km of mapped waterway/coastline geometry in the bounded sample.`,
+      `Current modeled precipitation is ${liveSignals.precipitationMm.toFixed(1)} mm; mapped terrain relief is ${metrics.terrainReliefM.toFixed(0)} m and ${metrics.roadLengthKm.toFixed(1)} km of road geometry is visible for spatial review.`,
+      'This is a mapped-context attention proxy only. It does not model drainage capacity, storm surge, river stage, surface runoff, inundation depth or forecast flooding.',
+    ];
+  } else if (useCaseId === 'green-infrastructure') {
+    planningIndex = clampIndex(
+      heatPressure * 0.42 +
+        builtMass * 0.28 +
+        (100 - greenCoverage) * 0.2 +
+        airStress * 0.1,
+    );
+    observations = [
+      `${metrics.greenFeatureCount} mapped green feature(s) contribute approximately ${Math.round(metrics.greenAreaM2).toLocaleString()} m² of green-area geometry in the bounded sample.`,
+      `Current heat context includes apparent temperature ${liveSignals.apparentTemperatureC == null ? 'unavailable' : `${liveSignals.apparentTemperatureC.toFixed(1)}°C`}, humidity ${liveSignals.relativeHumidityPercent == null ? 'unavailable' : `${liveSignals.relativeHumidityPercent.toFixed(0)}%`} and US AQI ${liveSignals.usAqi == null ? 'unavailable' : liveSignals.usAqi.toFixed(0)}.`,
+      'The result is a screening proxy for where mapped green-space context may deserve closer planning review; it is not canopy coverage, heat-island measurement, public-health exposure or a siting directive.',
+    ];
   } else {
     planningIndex = clampIndex(seismicStress * 0.72 + builtMass * 0.18 + terrainComplexity * 0.1);
     observations = [
@@ -530,7 +625,7 @@ function analyzeCityUseCase(mesh, useCaseId) {
   }
 
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     useCase,
     city: mesh.city,
     generatedAt: new Date().toISOString(),
@@ -558,6 +653,9 @@ function analyzeCityUseCase(mesh, useCaseId) {
       liveAirQuality: Boolean(mesh.liveContext?.airQuality?.source?.live),
       seismicProvider: mesh.liveContext?.seismic?.source?.provider || null,
       liveSeismic: Boolean(mesh.liveContext?.seismic?.source?.live),
+      mappedWaterFeatures: metrics.waterFeatureCount,
+      mappedGreenFeatures: metrics.greenFeatureCount,
+      mappedNamedLandmarks: metrics.namedLandmarkCount,
       limitations:
         'Decision-support indicators combine the currently loaded bounded map sample with current model/feed context and are not operational ground truth.',
     },
