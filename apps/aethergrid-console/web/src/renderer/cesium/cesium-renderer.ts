@@ -1,10 +1,8 @@
 import {
   Cartesian2,
-  BoundingSphere,
-  Cartesian3,
   Cesium3DTileFeature,
   Cesium3DTileset,
-  HeadingPitchRange,
+  Entity,
   Ion,
   JulianDate,
   Math as CesiumMath,
@@ -12,6 +10,8 @@ import {
   Viewer,
   createOsmBuildingsAsync
 } from 'cesium';
+
+import type { SpatialOverlaySnapshot } from '../overlays/spatial-overlay';
 
 import type {
   LayerState,
@@ -25,9 +25,9 @@ import type {
   VisualMode
 } from '../spatial-renderer';
 
+import { CameraJourneyController } from './camera-journey-controller';
 import { GeodeticGridLayer } from './geodetic-grid-layer';
-
-const DEFAULT_RANGE_METERS = 2_500;
+import { NetworkOverlayLayer } from './network-overlay-layer';
 
 function featureId(feature: Cesium3DTileFeature): string | null {
   const candidates = ['id', '@id', 'osm_id', 'elementId', 'name'];
@@ -52,6 +52,8 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #viewer: Viewer | null = null;
   #buildings: Cesium3DTileset | null = null;
   #grid: GeodeticGridLayer | null = null;
+  #cameraJourney: CameraJourneyController | null = null;
+  #overlays = new Map<string, NetworkOverlayLayer>();
   #visualMode: VisualMode = 'solid';
   #layers = new Map<string, LayerState>();
   #ready = false;
@@ -92,6 +94,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#viewer.scene.globe.enableLighting = true;
     this.#viewer.scene.globe.depthTestAgainstTerrain = true;
     this.#grid = new GeodeticGridLayer(this.#viewer.scene);
+    this.#cameraJourney = new CameraJourneyController(this.#viewer.camera);
 
     try {
       this.#buildings = await createOsmBuildingsAsync({
@@ -110,29 +113,16 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   }
 
   async flyTo(target: SpatialTarget): Promise<void> {
-    const viewer = this.#requireViewer();
-    const destination = Cartesian3.fromDegrees(
-      target.longitude,
-      target.latitude,
-      Math.max(0, target.heightMeters ?? 0)
-    );
-    viewer.camera.flyToBoundingSphere(
-      new BoundingSphere(destination, Math.max(10, target.rangeMeters ?? DEFAULT_RANGE_METERS)),
-      {
-        offset: new HeadingPitchRange(
-          CesiumMath.toRadians(target.headingDegrees ?? 0),
-          CesiumMath.toRadians(target.pitchDegrees ?? -35),
-          Math.max(50, target.rangeMeters ?? DEFAULT_RANGE_METERS)
-        ),
-        duration: 1.8
-      }
-    );
+    this.#requireViewer();
+    if (!this.#cameraJourney) throw new Error('Cesium camera journey is not initialized');
+    await this.#cameraJourney.flyTo(target);
   }
 
   setTime(time: TemporalInstant): void {
     const viewer = this.#requireViewer();
     viewer.clock.currentTime = JulianDate.fromIso8601(time.iso);
     this.#grid?.setTime(time.iso);
+    for (const overlay of this.#overlays.values()) overlay.setTime(time.iso);
     viewer.scene.requestRender();
   }
 
@@ -162,25 +152,63 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     viewer.scene.requestRender();
   }
 
+  applyOverlay(snapshot: SpatialOverlaySnapshot): void {
+    const viewer = this.#requireViewer();
+    let overlay = this.#overlays.get(snapshot.layerId);
+    if (!overlay) {
+      overlay = new NetworkOverlayLayer(viewer);
+      this.#overlays.set(snapshot.layerId, overlay);
+    }
+    overlay.apply(snapshot);
+    overlay.setVisible(this.#layerVisible(snapshot.layerId, true));
+  }
+
+  clearOverlay(layerId: string): void {
+    const overlay = this.#overlays.get(layerId);
+    if (!overlay) return;
+    overlay.destroy();
+    this.#overlays.delete(layerId);
+  }
+
   async pick(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null> {
     const viewer = this.#requireViewer();
-    const picked = viewer.scene.pick(new Cartesian2(point.x, point.y));
-    if (!(picked instanceof Cesium3DTileFeature)) return null;
+    const screen = new Cartesian2(point.x, point.y);
+    const picked = viewer.scene.pick(screen);
 
-    const cartesian = viewer.scene.pickPosition(new Cartesian2(point.x, point.y));
+    const cartesian = viewer.scene.pickPosition(screen);
     const cartographic = cartesian
       ? viewer.scene.globe.ellipsoid.cartesianToCartographic(cartesian)
       : null;
 
-    return {
-      id: featureId(picked) ?? 'cesium-feature',
-      kind: String(picked.getProperty('building') || picked.getProperty('type') || '3d-tile'),
-      source: 'cesium-osm-buildings',
-      latitude: cartographic ? CesiumMath.toDegrees(cartographic.latitude) : undefined,
-      longitude: cartographic ? CesiumMath.toDegrees(cartographic.longitude) : undefined,
-      heightMeters: cartographic?.height,
-      properties: featureProperties(picked)
-    };
+    if (picked instanceof Cesium3DTileFeature) {
+      return {
+        id: featureId(picked) ?? 'cesium-feature',
+        kind: String(picked.getProperty('building') || picked.getProperty('type') || '3d-tile'),
+        source: 'cesium-osm-buildings',
+        latitude: cartographic ? CesiumMath.toDegrees(cartographic.latitude) : undefined,
+        longitude: cartographic ? CesiumMath.toDegrees(cartographic.longitude) : undefined,
+        heightMeters: cartographic?.height,
+        properties: featureProperties(picked)
+      };
+    }
+
+    const entity = picked?.id;
+    if (entity instanceof Entity) {
+      const properties = entity.properties?.getValue(viewer.clock.currentTime) as
+        | Record<string, unknown>
+        | undefined;
+      return {
+        id: entity.id,
+        kind: String(properties?.overlayKind ?? 'overlay-entity'),
+        source: 'aethergrid-spatial-overlay',
+        latitude: cartographic ? CesiumMath.toDegrees(cartographic.latitude) : undefined,
+        longitude: cartographic ? CesiumMath.toDegrees(cartographic.longitude) : undefined,
+        heightMeters: cartographic?.height,
+        properties: properties ? Object.freeze({ ...properties }) : undefined
+      };
+    }
+
+    return null;
   }
 
   resize(): void {
@@ -198,10 +226,14 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   }
 
   destroy(): void {
-    if (this.#viewer && !this.#viewer.isDestroyed()) this.#viewer.destroy();
-    this.#viewer = null;
+    this.#cameraJourney?.cancel();
+    this.#cameraJourney = null;
+    for (const overlay of this.#overlays.values()) overlay.destroy();
+    this.#overlays.clear();
     this.#grid?.destroy();
     this.#grid = null;
+    if (this.#viewer && !this.#viewer.isDestroyed()) this.#viewer.destroy();
+    this.#viewer = null;
     this.#buildings = null;
     this.#ready = false;
   }
@@ -220,6 +252,9 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#viewer.scene.globe.show = this.#layerVisible('terrain', true);
     if (this.#buildings) this.#buildings.show = this.#layerVisible('buildings', true);
     this.#grid?.setVisible(this.#layerVisible('grid', true));
+    for (const [layerId, overlay] of this.#overlays) {
+      overlay.setVisible(this.#layerVisible(layerId, true));
+    }
     this.#viewer.scene.requestRender();
   }
 }
