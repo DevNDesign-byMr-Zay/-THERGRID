@@ -419,6 +419,10 @@
         buildings: true,
         infrastructure: true,
         terrain: true,
+        water: true,
+        rail: true,
+        transit: true,
+        green: true,
         weather: true,
         clouds: true,
         illumination: true,
@@ -618,6 +622,11 @@
       this.geometry.roofFaces = this.makeBuffer(roofFaces);
       this.geometry.roofLines = this.makeBuffer(roofLines);
       this.geometry.routes = this.makeBuffer(routes);
+      this.geometry.arterialRoutes = this.makeBuffer(arterialRoutes);
+      this.geometry.water = this.makeBuffer(waterLines);
+      this.geometry.rail = this.makeBuffer(railLines);
+      this.geometry.transit = this.makeBuffer(transitNodes);
+      this.geometry.green = this.makeBuffer(greenLines);
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
       this.geometry.terrain = this.makeBuffer(terrainLines);
@@ -730,6 +739,11 @@
       const cityCenters = [];
       const nodes = [];
       const routes = [];
+      const arterialRoutes = [];
+      const waterLines = [];
+      const railLines = [];
+      const transitNodes = [];
+      const greenLines = [];
       const infrastructureLines = [];
       const infrastructureNodes = [];
       const terrainLines = [];
@@ -882,10 +896,80 @@
 
       (mesh.roads || []).forEach((road, roadIndex) => {
         const path = (road.path || []).map(([x, z]) => [x * scale, z * scale]);
+        const isArterial = /^(motorway|trunk|primary|secondary)$/u.test(
+          String(road.highwayType || ''),
+        );
         for (let index = 1; index < path.length; index += 1) {
           const [ax, az] = path[index - 1];
           const [bx, bz] = path[index];
           this.line(routes, [ax, 0.025, az], [bx, 0.025, bz], roadIndex * 0.07);
+          if (isArterial) {
+            this.line(
+              arterialRoutes,
+              [ax, 0.034, az],
+              [bx, 0.034, bz],
+              roadIndex * 0.11 + index * 0.03,
+            );
+          }
+        }
+      });
+
+      (mesh.waterLines || []).forEach((water, waterIndex) => {
+        const path = (water.path || []).map(([x, z]) => [x * scale, z * scale]);
+        for (let index = 1; index < path.length; index += 1) {
+          const [ax, az] = path[index - 1];
+          const [bx, bz] = path[index];
+          this.line(
+            waterLines,
+            [ax, 0.012, az],
+            [bx, 0.012, bz],
+            waterIndex * 0.13 + index * 0.025,
+          );
+        }
+      });
+
+      (mesh.railLines || []).forEach((rail, railIndex) => {
+        const path = (rail.path || []).map(([x, z]) => [x * scale, z * scale]);
+        for (let index = 1; index < path.length; index += 1) {
+          const [ax, az] = path[index - 1];
+          const [bx, bz] = path[index];
+          this.line(
+            railLines,
+            [ax, 0.065, az],
+            [bx, 0.065, bz],
+            railIndex * 0.17 + index * 0.04,
+          );
+        }
+      });
+
+      (mesh.transitAssets || []).forEach((asset, assetIndex) => {
+        const [x, z] = asset.position || [];
+        if (!Number.isFinite(Number(x)) || !Number.isFinite(Number(z))) return;
+        const node = {
+          id: asset.id,
+          label: asset.name || titleCase(asset.railwayType || 'transit stop'),
+          type: `transit-${asset.railwayType || 'stop'}`,
+          operator: asset.operator || '',
+          railwayType: asset.railwayType || '',
+          osmId: asset.osmId || null,
+          osmType: asset.osmType || null,
+          position: [Number(x) * scale, 0.14, Number(z) * scale],
+        };
+        this.graphNodes.push(node);
+        this.vertex(transitNodes, ...node.position, assetIndex * 0.41);
+      });
+
+      (mesh.greenSpaces || []).forEach((green, greenIndex) => {
+        const path = (green.path || []).map(([x, z]) => [x * scale, z * scale]);
+        for (let index = 1; index < path.length; index += 1) {
+          const [ax, az] = path[index - 1];
+          const [bx, bz] = path[index];
+          this.line(
+            greenLines,
+            [ax, 0.018, az],
+            [bx, 0.018, bz],
+            greenIndex * 0.09 + index * 0.02,
+          );
         }
       });
 
@@ -1462,7 +1546,69 @@
         this.drawBuffer(this.geometry.buildings, gl.LINES, edgeColor, 0.07 * amplitude);
         this.drawBuffer(this.geometry.roofLines, gl.LINES, isLightTheme() ? [0.21, 0.19, 0.55, edgeAlpha] : [0.55, 0.64, 1, edgeAlpha], 0.05 * amplitude);
       }
-      if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [0.67, 0.48, 0.98, Math.min(1, 0.64 * trailBoost)], 0.075 * amplitude * trailBoost);
+      if (this.layers.routes) {
+        this.drawBuffer(
+          this.geometry.routes,
+          gl.LINES,
+          [0.49, 0.39, 0.76, Math.min(1, 0.44 * trailBoost)],
+          0.055 * amplitude * trailBoost,
+        );
+        this.drawBuffer(
+          this.geometry.arterialRoutes,
+          gl.LINES,
+          [0.78, 0.5, 1, Math.min(1, 0.82 * trailBoost)],
+          0.095 * amplitude * trailBoost,
+        );
+      }
+      if (this.layers.water) {
+        this.drawBuffer(
+          this.geometry.water,
+          gl.LINES,
+          isLightTheme() ? [0.08, 0.46, 0.72, 0.55] : [0.12, 0.68, 1, 0.68],
+          0.12 * amplitude,
+          0,
+          1,
+          0.08,
+          -0.04,
+          0.7,
+          0,
+        );
+      }
+      if (this.layers.green) {
+        this.drawBuffer(
+          this.geometry.green,
+          gl.LINES,
+          isLightTheme() ? [0.12, 0.5, 0.26, 0.52] : [0.22, 0.78, 0.42, 0.48],
+          0.025 * amplitude,
+        );
+      }
+      if (this.layers.rail) {
+        const railBoost = this.temporalMode === 'trail' ? 1.3 : 1;
+        this.drawBuffer(
+          this.geometry.rail,
+          gl.LINES,
+          [0.9, 0.35, 0.78, 0.82],
+          0.12 * amplitude * railBoost,
+          0,
+          1,
+          0.22,
+          0.08,
+          0.25,
+          0,
+        );
+      }
+      if (this.layers.transit) {
+        const transitPulse =
+          state.settings.reducedMotion ? 0.45 : 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(now * 0.004));
+        this.drawBuffer(
+          this.geometry.transit,
+          gl.POINTS,
+          [1, 0.45, 0.78, 0.78 + transitPulse * 0.18],
+          0.045 * amplitude,
+          1,
+          7 + transitPulse * 5,
+        );
+      }
       if (this.layers.infrastructure) {
         this.drawBuffer(
           this.geometry.infrastructureLines,
