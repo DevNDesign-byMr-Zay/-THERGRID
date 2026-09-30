@@ -82,7 +82,10 @@
     "individualAgentRuntime": true,
     "teamAgentRuntime": true,
     "replaceableModelProviders": true,
-    "safeRuntimeIntrospection": true
+    "safeRuntimeIntrospection": true,
+    "directWebGlNodePicking": true,
+    "customScenarioBuilder": true,
+    "weightedOptimizationControls": true
   },
   "aiRuntime": {
     "providers": [
