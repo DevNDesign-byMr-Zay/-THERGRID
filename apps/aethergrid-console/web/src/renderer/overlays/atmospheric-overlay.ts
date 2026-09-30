@@ -28,6 +28,7 @@ export interface AtmosphericOverlaySnapshot {
   fallback: boolean;
   attribution: string | null;
   timezone: string | null;
+  utcOffsetSeconds: number;
   current: AtmosphericCurrentState | null;
 }
 
