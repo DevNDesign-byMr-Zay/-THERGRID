@@ -1,0 +1,37 @@
+name: aethergrid/v4-web
+
+on:
+  pull_request:
+    paths:
+      - "apps/aethergrid-console/web/**"
+      - "tests/aethergrid-v4-web-foundation.test.mjs"
+      - ".github/workflows/aethergrid-v4-web.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/aethergrid-console/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install isolated web dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Type-check v4 spatial application
+        run: npm run typecheck
+
+      - name: Build v4 spatial application
+        run: npm run build
