@@ -58,7 +58,7 @@ The generated archive contains `standalone.html`. That file inlines the CSS, Jav
 
 The application now routes between distinct Grid, Global, Holographic, Quantum, AI, Scenarios, Evidence, and Settings workspaces. Navigation changes the active workspace instead of scrolling a single long dashboard.
 
-Settings are real browser-persistent preferences stored under `aethergrid.operator.settings.v2`. They control the default workspace, interface density, animation intensity, reduced-motion mode, holographic auto-rotation, spatial labels, default 4D hour, event-stream use, and polling fallback interval. Provider secrets are never stored in browser settings.
+Settings are real browser-persistent preferences stored under `aethergrid.operator.settings.v2`. They control Light / Dark / System appearance, default workspace, interface density, animation intensity, reduced-motion mode, holographic auto-rotation, spatial labels, default 4D hour, event-stream use, and polling fallback interval. Provider secrets are never stored in browser settings.
 
 ## AI agent runtime
 
@@ -105,6 +105,25 @@ The GLOBAL workspace now turns mapped city geometry into a usable planning surfa
 - independent persistent chat threads for TEAM, VÆLON, AUREN and SOLVÆR, with bounded conversation history sent to the configured model provider.
 
 City-operation scores are planning proxies derived from the currently loaded bounded map sample. They are not utility ground truth, outage forecasts, emergency routing guarantees, resource assessments or dispatch authority.
+## v2.6 source-backed city fidelity and current context
+
+Preset cities now target recognizable skyline districts instead of generic metropolitan centroids: Midtown Manhattan, City of London / South Bank, Shinjuku, Downtown Dubai, Marina Bay / Downtown Core, Paulista / Bela Vista, Victoria Island / Eko Atlantic, and Sydney CBD / Circular Quay.
+
+Each backend-connected city twin is assembled from current open-data requests and preserves source provenance rather than fabricating missing landmarks:
+
+- OpenStreetMap Overpass footprints, building parts and relation outer geometry;
+- source `height`, `est_height`, `building:levels`, `min_height` and `building:min_level` metadata;
+- source roof shape / roof height / roof levels and building/roof material or colour metadata when present;
+- mapped roads and energy infrastructure;
+- bounded Open-Meteo / Copernicus terrain elevation;
+- current Open-Meteo temperature, cloud, precipitation, daylight and wind context;
+- the OpenStreetMap upstream timestamp and city height-data coverage shown in the GLOBAL provenance/readout.
+
+The renderer keeps source-backed tall structures up to 1,200 m, preserves high-value/tall structures before spatial sampling dense scenes, builds supported roof forms, and derives each city's opening camera from that city's actual footprint distribution and skyline height. The 4D time control snaps to the city's current local model time when live environment data is available; **LIVE NOW** returns to that state after scrubbing.
+
+This is a source-backed digital-twin representation, not photogrammetry. Where open map data lacks a height, roof, façade or building part, ÆTHERGRID exposes the coverage gap and does not claim architectural identity it cannot verify.
+
+Settings now include **Dark**, **Light**, and **System** appearance modes. The selected mode persists locally and changes the semantic UI plus WebGL scene palette.
 ## Windows ZIP workflow
 
 After extracting the package:
