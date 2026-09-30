@@ -1,3 +1,4 @@
+import type { AtmosphericOverlaySnapshot } from './overlays/atmospheric-overlay';
 import type { SpatialOverlaySnapshot } from './overlays/spatial-overlay';
 
 export type SpatialEngine = 'cesium' | 'native-webgl';
@@ -76,6 +77,8 @@ export interface SpatialRenderer {
   setVisualMode(mode: VisualMode): void;
   applyOverlay(snapshot: SpatialOverlaySnapshot): void;
   clearOverlay(layerId: string): void;
+  applyAtmosphere(snapshot: AtmosphericOverlaySnapshot): void;
+  clearAtmosphere(): void;
   pick(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null>;
   resize(): void;
   status(): SpatialRendererStatus;
