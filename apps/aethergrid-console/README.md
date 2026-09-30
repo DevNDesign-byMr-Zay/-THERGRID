@@ -17,4 +17,23 @@ node server.mjs
 
 Then open `http://127.0.0.1:8090`.
 
-The Node backend provides state, optimization, AI collaboration, evidence, and export APIs. The application remains advisory-only and does not expose physical infrastructure actuation.
+The Node backend now provides live telemetry, state, region switching, review-mode switching, scenario selection, bounded optimization, AI collaboration, evidence, export, reset, and health APIs. The application remains advisory-only and does not expose physical infrastructure actuation.
+
+## Interactive surfaces
+
+The approved dashboard remains the visual baseline, but the interface now has a real interaction layer:
+
+- top GRID / HOLOGRAPHIC / QUANTUM / AI / EVIDENCE modes;
+- left navigation for Overview, Grid, Holographic, Quantum, AI, Scenarios, Evidence, and Settings;
+- live / forecast / scenario review modes;
+- command search across assets, storage, renewables, and scenarios;
+- region switching for New York Metro, Long Island, Hudson Valley, and Upstate New York;
+- clickable system-metric cards with animated drill-down telemetry;
+- holographic layer controls for infrastructure, energy flow, risk zones, and future state;
+- VÆLON, AUREN, and SOLVÆR collaboration surfaces plus AI team chat;
+- bounded optimization with classical-baseline preservation;
+- evidence review and JSON export packages;
+- health-check and reset controls;
+- subtle scanline, node-pulse, energy-sheen, and active-selection animation that preserves the approved idle composition.
+
+When opened directly from disk, the self-contained HTML uses local fallback state so the controls still work. When served through `server.mjs`, the same controls are backed by the Node APIs and a short in-memory audit/activity log.

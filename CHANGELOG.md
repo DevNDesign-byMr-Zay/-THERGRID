@@ -11,6 +11,8 @@
 ### Added
 
 - Rebuilt the ÆTHERGRID operator console to match the approved modern command-center reference, including the New York Metro digital-twin field, side navigation, AI collaboration rail, animated metrics/quantum/scenario surfaces, holographic previews, evidence history, and export tools.
+- Brought the approved ÆTHERGRID dashboard to life with subtle scanline/energy/node motion, active-selection feedback, command search, metric drill-downs, region switching, scenario switching, holographic layer controls, live/forecast/scenario modes, agent drill-downs, AI chat, bounded optimization, health/reset actions, and evidence exports.
+- Expanded the ÆTHERGRID Node backend with telemetry, view, region, scenario, reset, activity/audit, optimization, collaboration, and export endpoints while preserving the advisory-only/no-actuation authority boundary.
 - Fixed extracted-HTML rendering by replacing root-relative browser dependencies with direct-file-compatible relative assets and adding the maintained NYC field visual to every verified ZIP.
 
 - Introduced the **ÆTHERGRID** operator product identity on top of the maintained THERGRID application service.

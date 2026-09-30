@@ -1,20 +1,90 @@
 {
   "schemaVersion": 2,
   "product": "ÆTHERGRID",
-  "viewport": { "width": 1536, "height": 1024 },
+  "viewport": {
+    "width": 1536,
+    "height": 1024
+  },
   "referenceImage": "assets/dashboard-reference.webp",
-  "surfaces": ["OVERVIEW","GRID","HOLOGRAPHIC","QUANTUM","AI","SCENARIOS","EVIDENCE","SETTINGS"],
-  "primaryTabs": ["GRID","HOLOGRAPHIC","QUANTUM","AI","EVIDENCE"],
-  "interactiveCapabilities": ["live-view","forecast-view","scenario-view","run-optimization","classical-comparison","ai-chat","evidence-export","operator-report","simulation-package","3d-visualization","technical-evidence"],
+  "surfaces": [
+    "OVERVIEW",
+    "GRID",
+    "HOLOGRAPHIC",
+    "QUANTUM",
+    "AI",
+    "SCENARIOS",
+    "EVIDENCE",
+    "SETTINGS"
+  ],
+  "primaryTabs": [
+    "GRID",
+    "HOLOGRAPHIC",
+    "QUANTUM",
+    "AI",
+    "EVIDENCE"
+  ],
+  "interactiveCapabilities": [
+    "live-view",
+    "forecast-view",
+    "scenario-view",
+    "command-search",
+    "region-switching",
+    "metric-drilldowns",
+    "map-controls",
+    "holographic-layer-controls",
+    "run-optimization",
+    "classical-comparison",
+    "ai-chat",
+    "agent-drilldowns",
+    "evidence-review",
+    "evidence-export",
+    "operator-report",
+    "simulation-package",
+    "3d-visualization",
+    "technical-evidence",
+    "health-check",
+    "view-reset"
+  ],
   "agents": [
-    {"id":"VÆLON","role":"Optimization & Scenario Exploration"},
-    {"id":"AUREN","role":"Semantic Analysis & Spatial Intelligence"},
-    {"id":"SOLVÆR","role":"Simulation & Evidence Generation"}
+    {
+      "id": "VÆLON",
+      "role": "Optimization & Scenario Exploration"
+    },
+    {
+      "id": "AUREN",
+      "role": "Semantic Analysis & Spatial Intelligence"
+    },
+    {
+      "id": "SOLVÆR",
+      "role": "Simulation & Evidence Generation"
+    }
   ],
   "authorityBoundary": {
-    "recommendations":"ADVISORY",
-    "hardwareActuation":"DISABLED",
-    "infrastructureDispatch":"DISABLED",
-    "evidence":"REQUIRED"
-  }
+    "recommendations": "ADVISORY",
+    "hardwareActuation": "DISABLED",
+    "infrastructureDispatch": "DISABLED",
+    "evidence": "REQUIRED"
+  },
+  "motion": {
+    "idleBaselinePreserved": true,
+    "effects": [
+      "map-scanline",
+      "energy-sheen",
+      "grid-node-pulses",
+      "status-pulse",
+      "selection-glow"
+    ],
+    "reducedMotionSupported": true
+  },
+  "backendState": [
+    "system",
+    "metrics",
+    "optimization",
+    "agents",
+    "evidence",
+    "activity",
+    "regions",
+    "scenarios",
+    "views"
+  ]
 }

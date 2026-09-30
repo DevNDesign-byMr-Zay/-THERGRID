@@ -408,8 +408,13 @@ async function main() {
       !/href="\.\/styles\.css"/u.test(exactAethergridHtml) &&
       !/src="\.\/app\.js"/u.test(exactAethergridHtml) &&
       /data-action="run-optimization"/u.test(exactAethergridHtml) &&
-      /data-action="ai-chat"/u.test(exactAethergridHtml),
-    'ÆTHERGRID standalone HTML must embed the approved canvas, CSS, JavaScript, and functional controls',
+      /data-action="ai-chat"/u.test(exactAethergridHtml) &&
+      /data-action="search"/u.test(exactAethergridHtml) &&
+      /data-action="change-region"/u.test(exactAethergridHtml) &&
+      /data-action="metric-generation"/u.test(exactAethergridHtml) &&
+      /id="selectionGlow"/u.test(exactAethergridHtml) &&
+      /class="scanline"/u.test(exactAethergridHtml),
+    'ÆTHERGRID standalone HTML must embed the approved canvas, live motion, and functional controls',
   );
   assert(
     exactAethergridApp.entrypoints?.standaloneHtml === 'index.html' &&
@@ -423,9 +428,29 @@ async function main() {
   assert(
     exactAethergridUi.referenceImage === 'assets/dashboard-reference.webp' &&
       exactAethergridUi.interactiveCapabilities?.includes('run-optimization') &&
-      exactAethergridUi.interactiveCapabilities?.includes('ai-chat'),
-    'ÆTHERGRID UI contract must bind the approved reference canvas and interactive capabilities',
+      exactAethergridUi.interactiveCapabilities?.includes('ai-chat') &&
+      exactAethergridUi.interactiveCapabilities?.includes('region-switching') &&
+      exactAethergridUi.interactiveCapabilities?.includes('scenario-view') &&
+      exactAethergridUi.interactiveCapabilities?.includes('metric-drilldowns') &&
+      exactAethergridUi.motion?.idleBaselinePreserved === true,
+    'ÆTHERGRID UI contract must bind the approved reference canvas, live motion, and interactive capabilities',
   );
+  const exactAethergridServer = await text('apps/aethergrid-console/server.mjs');
+  for (const route of [
+    '/api/aethergrid/telemetry',
+    '/api/aethergrid/view',
+    '/api/aethergrid/region',
+    '/api/aethergrid/scenario',
+    '/api/aethergrid/reset',
+    '/api/aethergrid/optimize',
+    '/api/aethergrid/chat',
+    '/api/aethergrid/export',
+  ]) {
+    assert(
+      exactAethergridServer.includes(route),
+      `ÆTHERGRID backend must preserve maintained route: ${route}`,
+    );
+  }
 
   const operatorConsole = await text('apps/operator-console/index.html');
   const operatorConsoleStyles = await text('apps/operator-console/styles.css');
