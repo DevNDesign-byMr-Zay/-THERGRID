@@ -122,7 +122,7 @@
         <section class="workspace-view" data-workspace="global" aria-labelledby="globalTitle">
           <div class="workspace-head">
             <div><span class="eyebrow">GLOBAL / GOD'S-EYE SPATIAL GRID</span><h1 id="globalTitle">Planetary Grid & Live 3D Cities</h1><p>Orbit the globe, descend into skyline-focused city twins, and inspect current open-source building geometry, roofs, roads, terrain, weather context and mapped energy infrastructure in 3D + time.</p></div>
-            <div class="workspace-actions"><span class="pill" id="geoRuntimeBadge">GEO RUNTIME</span><button class="secondary-button" data-global-action="reset">RESET VIEW</button></div>
+            <div class="workspace-actions"><span class="pill" id="geoRuntimeBadge">GEO RUNTIME</span><span class="pill live-context-pill" id="globalLiveStatus">LIVE CONTEXT</span><button class="secondary-button" data-global-action="reset">RESET VIEW</button></div>
           </div>
           <div class="global-workspace">
             <section class="panel global-stage-panel">
@@ -143,6 +143,9 @@
                 <button class="active" data-global-layer="routes">ROADS</button>
                 <button class="active" data-global-layer="infrastructure">POWER GRID</button>
                 <button class="active" data-global-layer="terrain">TERRAIN</button>
+                <button class="active" data-global-layer="weather">WEATHER</button>
+                <button class="active" data-global-layer="air">AIR</button>
+                <button class="active" data-global-layer="seismic">SEISMIC</button>
                 <button class="active" data-global-layer="nodes">ASSET NODES</button>
               </div>
               <div class="city-visual-controls" aria-label="City visual mode">
@@ -158,7 +161,7 @@
                 <div class="city-transition-progress"><i id="cityTransitionProgress"></i></div>
                 <span id="cityTransitionStage">Aligning coordinates…</span>
               </div>
-              <canvas id="globalGlobe" aria-label="Interactive 3D global spatial grid with real city coordinates"></canvas>
+              <canvas id="globalGlobe" aria-label="Interactive animated global spatial grid with real city coordinates, live air-quality city signals and recent USGS seismic events"></canvas>
               <canvas id="cityGrid" aria-label="Interactive source-backed 3D city skyline and infrastructure twin" hidden></canvas>
               <div class="global-hud">
                 <span id="globalCoordinates">40.7128° N · 74.0060° W</span>
@@ -166,7 +169,7 @@
                 <span id="geoSourceStatus">REAL COORDINATES · CITY MESH ON DEMAND</span>
               </div>
               <div class="global-time-row"><label class="time-control global-time"><span>4D TIME INDEX</span><input id="globalTimeSlider" type="range" min="0" max="24" step=".25" value="12" /><span id="globalTimeValue">12:00</span></label><button class="secondary-button live-now-button" data-action="city-live-now">LIVE NOW</button></div>
-              <div class="global-attribution" id="geoAttribution">City geometry: © OpenStreetMap contributors when live provider is available.</div>
+              <div class="global-attribution" id="geoAttribution">City geometry: © OpenStreetMap contributors when live provider is available. Live context can also include Open-Meteo weather/air quality and USGS seismic feeds.</div>
             </section>
             <aside class="global-side">
               <section class="panel compact-panel">
@@ -180,7 +183,7 @@
               <section class="panel compact-panel city-operations-panel">
                 <header class="panel-head"><div class="panel-title"><span class="badge">◈</span><span><h3>CITY OPERATIONS</h3><small>Use the live 3D twin</small></span></div></header>
                 <div class="city-operation-controls">
-                  <label>USE CASE<select id="cityUseCaseSelect"><option value="grid-resilience">Grid Resilience</option><option value="outage-impact">Outage Impact</option><option value="emergency-access">Emergency Access</option><option value="renewable-siting">Renewable Siting</option><option value="load-growth">Load Growth</option></select></label>
+                  <label>USE CASE<select id="cityUseCaseSelect"><option value="grid-resilience">Grid Resilience</option><option value="outage-impact">Outage Impact</option><option value="emergency-access">Emergency Access</option><option value="renewable-siting">Renewable Siting</option><option value="load-growth">Load Growth</option><option value="weather-readiness">Weather Readiness</option><option value="air-quality-exposure">Air Quality Exposure</option><option value="seismic-awareness">Seismic Awareness</option></select></label>
                   <button class="primary-button" data-action="run-city-use-case">RUN CITY ANALYSIS</button>
                 </div>
                 <div class="city-operation-result" id="cityUseCaseResult"><div class="empty-state">Load a live city, then run a use case to turn the 3D twin into an operational planning surface.</div></div>
@@ -188,7 +191,7 @@
               </section>
               <section class="panel compact-panel">
                 <header class="panel-head"><div class="panel-title"><span class="badge">⌁</span><span><h3>LIVE GRID ASSETS</h3><small>Mapped infrastructure</small></span></div></header>
-                <div class="context-list" id="globalGridStats"><span><b>Power Lines</b><em>—</em></span><span><b>Power Assets</b><em>—</em></span><span><b>Roads</b><em>—</em></span><span><b>Buildings</b><em>—</em></span><span><b>Skyline Max</b><em>—</em></span><span><b>P95 Height</b><em>—</em></span><span><b>Height Data</b><em>—</em></span><span><b>Weather</b><em>—</em></span><span><b>Elevation</b><em>—</em></span></div>
+                <div class="context-list" id="globalGridStats"><span><b>Power Lines</b><em>—</em></span><span><b>Power Assets</b><em>—</em></span><span><b>Roads</b><em>—</em></span><span><b>Buildings</b><em>—</em></span><span><b>Skyline Max</b><em>—</em></span><span><b>P95 Height</b><em>—</em></span><span><b>Height Data</b><em>—</em></span><span><b>Weather</b><em>—</em></span><span><b>Air</b><em>—</em></span><span><b>Seismic</b><em>—</em></span><span><b>Elevation</b><em>—</em></span></div>
               </section>
               <section class="panel compact-panel">
                 <header class="panel-head"><div class="panel-title"><span class="badge">▤</span><span><h3>DATA PROVENANCE</h3><small>Source transparency</small></span></div></header>
