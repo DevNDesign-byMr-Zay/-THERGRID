@@ -20,7 +20,10 @@ const REQUIRED_FILES = Object.freeze([
   'manifest.webmanifest',
   'sw.js',
   'README.md',
-  'assets/dashboard-reference.webp',
+  'assets/brand/aethergrid-logo.webp',
+  'assets/brand/vaelon.webp',
+  'assets/brand/auren.webp',
+  'assets/brand/solvaer.webp',
 ]);
 
 function assert(condition, message) {
@@ -127,6 +130,7 @@ const payload = new Map();
 
 for (const absolute of sourceFiles) {
   const path = normalizePath(relative(SOURCE_ROOT, absolute));
+  if (path === 'assets/dashboard-reference.webp') continue;
   const metadata = await stat(absolute);
   assert(metadata.size > 0, `ÆTHERGRID app source file is empty: ${path}`);
   payload.set(path, await readFile(absolute));
@@ -139,9 +143,40 @@ for (const required of REQUIRED_FILES) {
 
 const appManifest = JSON.parse(payload.get('app.json').toString('utf8'));
 const uiManifest = JSON.parse(payload.get('ui.json').toString('utf8'));
-assert(appManifest.entrypoints?.standaloneHtml === 'index.html', 'app.json must expose index.html');
+assert(appManifest.entrypoints?.standaloneHtml === 'standalone.html', 'app.json must expose standalone.html');
+assert(appManifest.entrypoints?.webApp === 'index.html', 'app.json must expose index.html');
 assert(appManifest.entrypoints?.backend === 'server.mjs', 'app.json must expose server.mjs');
-assert(uiManifest.referenceImage === 'assets/dashboard-reference.webp', 'ui.json must bind the approved reference canvas');
+assert(appManifest.visualContract?.runtimeUsesBackgroundReferenceImage === false, 'runtime must not use a dashboard reference image');
+assert(uiManifest.runtimeUsesBackgroundReferenceImage === false, 'UI contract must prohibit a runtime background reference');
+assert(uiManifest.spatialModel?.renderEngine === 'native-webgl', 'UI must declare native WebGL spatial rendering');
+
+const sourceHtml = payload.get('index.html').toString('utf8');
+assert(!/dashboard-reference/iu.test(sourceHtml), 'runtime index.html must not reference the old dashboard screenshot');
+assert(/<canvas id="spatialGrid"/u.test(sourceHtml), 'runtime index.html must expose the real spatial WebGL canvas');
+assert(/data-mode="holographic"/u.test(sourceHtml), 'runtime index.html must expose semantic mode controls');
+
+const inlineCss = payload.get('styles.css').toString('utf8');
+const inlineJs = payload.get('app.js').toString('utf8');
+let standaloneHtml = sourceHtml
+  .replace(/\s*<link rel="manifest" href="\.\/manifest\.webmanifest" \/>\n?/u, '')
+  .replace('<link rel="stylesheet" href="./styles.css" />', `<style>\n${inlineCss}\n</style>`)
+  .replace('<script src="./app.js" defer></script>', `<script>\n${inlineJs}\n</script>`);
+
+for (const [path, mime] of [
+  ['assets/brand/aethergrid-logo.webp', 'image/webp'],
+  ['assets/brand/vaelon.webp', 'image/webp'],
+  ['assets/brand/auren.webp', 'image/webp'],
+  ['assets/brand/solvaer.webp', 'image/webp'],
+]) {
+  const encoded = payload.get(path).toString('base64');
+  standaloneHtml = standaloneHtml.replaceAll(`./${path}`, `data:${mime};base64,${encoded}`);
+}
+
+assert(!/src="\.\/app\.js"/u.test(standaloneHtml), 'standalone HTML cannot depend on app.js');
+assert(!/href="\.\/styles\.css"/u.test(standaloneHtml), 'standalone HTML cannot depend on styles.css');
+assert(!/assets\/brand\//u.test(standaloneHtml), 'standalone HTML must embed brand assets');
+assert(/attribute vec4 a_position/u.test(standaloneHtml), 'standalone HTML must embed the native 4D WebGL shader');
+payload.set('standalone.html', Buffer.from(standaloneHtml, 'utf8'));
 
 const inventory = [...payload.entries()]
   .sort(([left], [right]) => left.localeCompare(right))
@@ -156,7 +191,9 @@ payload.set(
       {
         schemaVersion: 1,
         product: 'ÆTHERGRID',
-        format: 'functional-html-and-node-app',
+        format: 'semantic-html-native-webgl-and-node-app',
+        standaloneHtml: 'standalone.html',
+        backgroundReferenceImageUsedAtRuntime: false,
         files: inventory,
       },
       null,
