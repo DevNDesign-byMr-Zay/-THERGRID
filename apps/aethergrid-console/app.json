@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "aethergrid.operator-console",
   "name": "ÆTHERGRID Operator Console",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "format": "html+pwa+node-app",
   "entrypoints": {
     "standaloneHtml": "standalone.html",
@@ -58,7 +58,9 @@
       "POST /api/aethergrid/reset",
       "GET /api/aethergrid/quantum/jobs/:id/results",
       "GET /api/aethergrid/quantum/jobs/:id/metrics",
-      "GET /api/aethergrid/terrain/runtime"
+      "GET /api/aethergrid/terrain/runtime",
+      "GET /api/aethergrid/city-operations/use-cases",
+      "POST /api/aethergrid/city-operations/analyze"
     ]
   },
   "safety": {
@@ -132,7 +134,14 @@
     "terrainWireframeLayer": true,
     "liveTerrainElevation": true,
     "independentTerrainLayer": true,
-    "terrainFallback": true
+    "terrainFallback": true,
+    "solidOpenStreetMapCityVolumes": true,
+    "osmBuildingParts": true,
+    "cityVisualModes": true,
+    "cinematicGlobeCityTransition": true,
+    "cityOperationsUseCases": true,
+    "dedicatedPersistentAgentChats": true,
+    "agentConversationHistory": true
   },
   "aiRuntime": {
     "providers": [
@@ -153,8 +162,11 @@
     "replaceableByConfiguration": true,
     "externalContext": [
       "geospatial-summary",
-      "quantum-job-summary"
-    ]
+      "quantum-job-summary",
+      "city-operation-summary"
+    ],
+    "dedicatedPersistentThreads": true,
+    "historyWindowMessages": 16
   },
   "geospatialRuntime": {
     "module": "geo-runtime.mjs",
@@ -174,10 +186,25 @@
     "livePowerAssetGeometry": true,
     "layers": [
       "buildings",
+      "building-parts",
       "roads",
       "power-lines",
       "power-assets",
       "terrain"
+    ],
+    "solidBuildingVolumes": true,
+    "buildingParts": true,
+    "cityVisualModes": [
+      "solid",
+      "xray",
+      "operations"
+    ],
+    "cityOperations": [
+      "grid-resilience",
+      "outage-impact",
+      "emergency-access",
+      "renewable-siting",
+      "load-growth"
     ]
   },
   "quantumRuntime": {

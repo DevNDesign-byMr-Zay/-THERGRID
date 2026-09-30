@@ -79,6 +79,14 @@ function numericHeight(tags = {}, id = 'building') {
   return 8 + (hash[0] / 255) * 34;
 }
 
+function numericMinHeight(tags = {}) {
+  const explicit = Number.parseFloat(String(tags.min_height || '').replace(/[^0-9.]/gu, ''));
+  if (Number.isFinite(explicit) && explicit >= 0) return Math.min(300, explicit);
+  const minLevel = Number.parseFloat(String(tags['building:min_level'] || ''));
+  if (Number.isFinite(minLevel) && minLevel > 0) return Math.min(300, minLevel * 3.2);
+  return 0;
+}
+
 function numericVoltage(value) {
   const candidates = String(value || '')
     .split(';')
@@ -192,15 +200,18 @@ function fallbackPower(city) {
 
 function parseOverpassBuildings(payload, city) {
   const buildings = [];
+  const seen = new Set();
   for (const element of payload?.elements || []) {
     if (
       element.type !== 'way' ||
-      !element.tags?.building ||
+      !(element.tags?.building || element.tags?.['building:part']) ||
       !Array.isArray(element.geometry) ||
       element.geometry.length < 4
     ) {
       continue;
     }
+    if (seen.has(element.id)) continue;
+    seen.add(element.id);
     const footprint = element.geometry
       .map((point) => projectPoint(Number(point.lat), Number(point.lon), city))
       .filter(([x, z]) => Number.isFinite(x) && Number.isFinite(z));
@@ -215,8 +226,10 @@ function parseOverpassBuildings(payload, city) {
       osmId: element.id,
       name: String(element.tags?.name || ''),
       heightM: numericHeight(element.tags, element.id),
+      minHeightM: numericMinHeight(element.tags),
       levels: Number(element.tags?.['building:levels']) || null,
-      buildingType: String(element.tags?.building || 'yes'),
+      buildingType: String(element.tags?.building || element.tags?.['building:part'] || 'yes'),
+      buildingPart: Boolean(element.tags?.['building:part']),
       footprint,
     });
     if (buildings.length >= 350) break;
@@ -389,7 +402,7 @@ export function createGeoRuntime({
       attribution: '© OpenStreetMap contributors',
       cities: CITY_PRESETS,
       supportsCustomCoordinates: true,
-      layers: ['buildings', 'roads', 'power-lines', 'power-assets'],
+      layers: ['buildings', 'building-parts', 'roads', 'power-lines', 'power-assets'],
     };
   }
 
@@ -415,6 +428,7 @@ export function createGeoRuntime({
       const query =
         `[out:json][timeout:25];(` +
         `way["building"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `way["building:part"](around:${city.radiusM},${city.lat},${city.lon});` +
         `way["highway"](around:${city.radiusM},${city.lat},${city.lon});` +
         `way["power"~"^(line|minor_line|cable)$"](around:${city.radiusM},${city.lat},${city.lon});` +
         `nwr["power"~"^(substation|plant|generator|transformer)$"](around:${city.radiusM},${city.lat},${city.lon});` +

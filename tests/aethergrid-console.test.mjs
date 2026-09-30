@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { server, spatialGraph, state } from '../apps/aethergrid-console/server.mjs';
+import {
+  CITY_USE_CASES,
+  analyzeCityUseCase,
+  cityMeshMetrics,
+  server,
+  spatialGraph,
+  state,
+} from '../apps/aethergrid-console/server.mjs';
 
 async function withServer(run) {
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -35,6 +42,11 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(html, /data-global-layer="infrastructure"/u);
     assert.match(html, /data-global-layer="terrain"/u);
     assert.match(html, /id="globalGridStats"/u);
+    assert.match(html, /id="cityTransitionOverlay"/u);
+    assert.match(html, /data-city-visual="solid"/u);
+    assert.match(html, /id="cityUseCaseSelect"/u);
+    assert.match(html, /data-action="run-city-use-case"/u);
+    assert.match(html, /id="agentThreadBadge"/u);
     assert.match(html, /data-workspace="holographic"/u);
     assert.match(html, /data-workspace="quantum"/u);
     assert.match(html, /data-workspace="ai"/u);
@@ -92,6 +104,12 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(appSource, /terrainLines/u);
     assert.match(appSource, /loadTerrainFor/u);
     assert.match(appSource, /powerAssets/u);
+    assert.match(appSource, /buildingFaces/u);
+    assert.match(appSource, /gl\.TRIANGLES/u);
+    assert.match(appSource, /cinematicEntrance/u);
+    assert.match(appSource, /async function runCityUseCase/u);
+    assert.match(appSource, /AGENT_CHAT_STORAGE_KEY/u);
+    assert.match(appSource, /agentHistory\(name\)/u);
     assert.match(appSource, /syncQuantumPrimitiveControls/u);
     assert.match(appSource, /async function submitQuantumJob/u);
     assert.match(appSource, /async function saveProfile/u);
@@ -201,6 +219,7 @@ test('ÆTHERGRID backend exposes profile, world-city and quantum runtime surface
     assert.equal(cities.runtime.supportsCustomCoordinates, true);
     assert.deepEqual(cities.runtime.layers, [
       'buildings',
+      'building-parts',
       'roads',
       'power-lines',
       'power-assets',
@@ -269,6 +288,52 @@ test('ÆTHERGRID backend exposes profile, world-city and quantum runtime surface
   });
 });
 
+test('ÆTHERGRID city operations derive bounded planning indicators from the active 3D mesh', () => {
+  const mesh = {
+    city: { id: 'test-city', name: 'Test City', lat: 40.7, lon: -74, radiusM: 900 },
+    source: { provider: 'test-mapped-geometry', live: true },
+    buildings: [
+      { id: 'b1', heightM: 32, levels: 10, footprint: [[0, 0], [30, 0], [30, 20], [0, 20], [0, 0]] },
+      { id: 'b2', heightM: 16, minHeightM: 3, footprint: [[60, 10], [82, 10], [82, 30], [60, 30], [60, 10]] },
+    ],
+    roads: [
+      { id: 'r1', highwayType: 'primary', path: [[-400, 0], [0, 0], [400, 0]] },
+      { id: 'r2', highwayType: 'residential', path: [[0, -300], [0, 300]] },
+    ],
+    powerLines: [
+      { id: 'p1', voltage: 138000, path: [[-350, -120], [0, -90], [350, -40]] },
+    ],
+    powerAssets: [
+      { id: 's1', powerType: 'substation', position: [100, 100] },
+      { id: 'g1', powerType: 'generator', position: [-120, 80] },
+    ],
+    terrain: {
+      minElevationM: 4,
+      maxElevationM: 31,
+      source: { provider: 'test-terrain', live: true },
+    },
+  };
+
+  const metrics = cityMeshMetrics(mesh);
+  assert.equal(metrics.buildingCount, 2);
+  assert.ok(metrics.estimatedFloorAreaM2 > metrics.footprintAreaM2);
+  assert.ok(metrics.roadLengthKm > 1);
+  assert.ok(metrics.powerLineKm > 0);
+  assert.equal(metrics.substations, 1);
+  assert.equal(metrics.generationAssets, 1);
+  assert.equal(metrics.terrainReliefM, 27);
+
+  for (const id of Object.keys(CITY_USE_CASES)) {
+    const analysis = analyzeCityUseCase(mesh, id);
+    assert.equal(analysis.useCase.id, id);
+    assert.equal(analysis.city.name, 'Test City');
+    assert.ok(analysis.planningIndex.value >= 0 && analysis.planningIndex.value <= 100);
+    assert.ok(analysis.useCase.recommendedLayers.length >= 4);
+    assert.ok(analysis.observations.length >= 3);
+    assert.equal(analysis.dataQuality.liveGeometry, true);
+    assert.equal(analysis.advisoryOnly, true);
+  }
+});
 test('ÆTHERGRID backend exposes a time-indexed 4D spatial graph', async () => {
   assert.deepEqual(spatialGraph.dimensions, ['x', 'y', 'z', 'time']);
   assert.ok(spatialGraph.nodes.length >= 7);

@@ -29,6 +29,7 @@
   const state = {
     workspace: 'grid',
     selectedAgent: 'TEAM',
+    agentChats: { TEAM: [], 'VÆLON': [], AUREN: [], 'SOLVÆR': [] },
     settings: { ...defaultSettings },
     system: {
       status: 'All Systems Nominal',
@@ -77,6 +78,7 @@
       cities: DEFAULT_GLOBAL_CITIES.map((city) => ({ ...city })),
       selectedCityId: 'new-york',
       cityMesh: null,
+      activeUseCase: null,
     },
     quantumRuntime: null,
     profile: {
@@ -387,6 +389,7 @@
       this.intensity = 1;
       this.compareEnabled = false;
       this.compareTimeHours = 18;
+      this.cityVisualMode = 'solid';
       this.drag = null;
       this.timeStart = performance.now();
       this.geometry = {};
@@ -476,9 +479,16 @@
       this.vertex(out, ...b, phase + 0.3);
     }
 
+    triangle(out, a, b, c, phase = 0) {
+      this.vertex(out, ...a, phase);
+      this.vertex(out, ...b, phase + 0.12);
+      this.vertex(out, ...c, phase + 0.24);
+    }
+
     buildGeometry() {
       const grid = [];
       const buildings = [];
+      const buildingFaces = [];
       const routes = [];
       const infrastructureLines = [];
       const infrastructureNodes = [];
@@ -540,6 +550,7 @@
       });
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
+      this.geometry.buildingFaces = this.makeBuffer(buildingFaces);
       this.geometry.routes = this.makeBuffer(routes);
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
@@ -552,6 +563,7 @@
       for (const item of Object.values(this.geometry)) if (item?.buffer) this.gl.deleteBuffer(item.buffer);
       const grid = [];
       const buildings = [];
+      const buildingFaces = [];
       const routes = [];
       const infrastructureLines = [];
       const infrastructureNodes = [];
@@ -602,6 +614,7 @@
       });
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
+      this.geometry.buildingFaces = this.makeBuffer(buildingFaces);
       this.geometry.routes = this.makeBuffer(routes);
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
@@ -614,6 +627,7 @@
       for (const item of Object.values(this.geometry)) if (item?.buffer) this.gl.deleteBuffer(item.buffer);
       const grid = [];
       const buildings = [];
+      const buildingFaces = [];
       const nodes = [];
       const routes = [];
       const infrastructureLines = [];
@@ -631,16 +645,21 @@
       mesh.buildings.forEach((building, buildingIndex) => {
         const footprint = (building.footprint || []).map(([x, z]) => [x * scale, z * scale]);
         if (footprint.length < 3) return;
-        const height = Math.max(0.035, Number(building.heightM || 12) * scale);
+        const baseHeight = Math.max(0, Number(building.minHeightM || 0) * scale);
+        const height = Math.max(baseHeight + 0.035, Number(building.heightM || 12) * scale);
         const phase = buildingIndex * 0.13;
         for (let index = 1; index < footprint.length; index += 1) {
           const [ax, az] = footprint[index - 1];
           const [bx, bz] = footprint[index];
-          this.line(buildings, [ax, 0, az], [bx, 0, bz], phase);
-          this.line(buildings, [ax, height, az], [bx, height, bz], phase + 0.2);
-          if (index % 2 === 0 || index === footprint.length - 1) {
-            this.line(buildings, [ax, 0, az], [ax, height, az], phase + 0.4);
-          }
+          const aBase = [ax, baseHeight, az];
+          const bBase = [bx, baseHeight, bz];
+          const aTop = [ax, height, az];
+          const bTop = [bx, height, bz];
+          this.line(buildings, aBase, bBase, phase);
+          this.line(buildings, aTop, bTop, phase + 0.2);
+          this.line(buildings, aBase, aTop, phase + 0.4);
+          this.triangle(buildingFaces, aBase, bBase, bTop, phase + 0.08);
+          this.triangle(buildingFaces, aBase, bTop, aTop, phase + 0.16);
         }
 
         if (buildingIndex < 80 && (building.name || buildingIndex % 8 === 0)) {
@@ -752,6 +771,7 @@
 
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
+      this.geometry.buildingFaces = this.makeBuffer(buildingFaces);
       this.geometry.routes = this.makeBuffer(routes);
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
@@ -764,6 +784,40 @@
       this.pitch = 0.57;
       this.distance = 18;
       this.updateReadout();
+    }
+
+    setCityVisualMode(mode) {
+      this.cityVisualMode = ['solid', 'xray', 'operations'].includes(mode) ? mode : 'solid';
+    }
+
+    setLayerProfile(layers = []) {
+      const enabled = new Set(layers);
+      for (const key of Object.keys(this.layers)) this.layers[key] = enabled.has(key);
+    }
+
+    cinematicEntrance(durationMs = 1050) {
+      const target = { yaw: 0.78, pitch: 0.57, distance: 18 };
+      if (state.settings.reducedMotion) {
+        Object.assign(this, target);
+        this.updateReadout();
+        return Promise.resolve();
+      }
+      const start = { yaw: -0.22, pitch: 1.02, distance: 32 };
+      Object.assign(this, start);
+      return new Promise((resolve) => {
+        const startedAt = performance.now();
+        const tick = (now) => {
+          const raw = clamp((now - startedAt) / durationMs, 0, 1);
+          const t = 1 - Math.pow(1 - raw, 3);
+          this.yaw = start.yaw + (target.yaw - start.yaw) * t;
+          this.pitch = start.pitch + (target.pitch - start.pitch) * t;
+          this.distance = start.distance + (target.distance - start.distance) * t;
+          this.updateReadout();
+          if (raw < 1) requestAnimationFrame(tick);
+          else resolve();
+        };
+        requestAnimationFrame(tick);
+      });
     }
 
     resize() {
@@ -972,8 +1026,15 @@
           0.025 * amplitude,
         );
       }
-      if (this.layers.grid) this.drawBuffer(this.geometry.grid, gl.LINES, [0.09, 0.42, 0.75, 0.42], 0.045 * amplitude);
-      if (this.layers.buildings) this.drawBuffer(this.geometry.buildings, gl.LINES, [0.14, 0.64, 1, 0.55], 0.07 * amplitude);
+      if (this.layers.grid) this.drawBuffer(this.geometry.grid, gl.LINES, [0.09, 0.42, 0.75, this.cityVisualMode === 'operations' ? 0.18 : 0.42], 0.045 * amplitude);
+      if (this.layers.buildings && this.cityVisualMode !== 'xray') {
+        const faceAlpha = this.cityVisualMode === 'operations' ? 0.13 : 0.28;
+        this.drawBuffer(this.geometry.buildingFaces, gl.TRIANGLES, [0.035, 0.31, 0.58, faceAlpha], 0.025 * amplitude);
+      }
+      if (this.layers.buildings) {
+        const edgeAlpha = this.cityVisualMode === 'xray' ? 0.28 : this.cityVisualMode === 'operations' ? 0.38 : 0.72;
+        this.drawBuffer(this.geometry.buildings, gl.LINES, [0.14, 0.64, 1, edgeAlpha], 0.07 * amplitude);
+      }
       if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [0.67, 0.48, 0.98, Math.min(1, 0.64 * trailBoost)], 0.075 * amplitude * trailBoost);
       if (this.layers.infrastructure) {
         this.drawBuffer(
@@ -1732,12 +1793,41 @@
     stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
   }
 
-  function applyCityMeshResult(result, status = q('#cityMeshStatus')) {
+  function showCityTransition(city, stage = 'Aligning global coordinate…', progress = 8) {
+    const overlay = q('#cityTransitionOverlay');
+    if (!overlay) return;
+    if (q('#cityTransitionName')) q('#cityTransitionName').textContent = String(city?.name || 'CITY').toUpperCase();
+    if (q('#cityTransitionStage')) q('#cityTransitionStage').textContent = stage;
+    if (q('#cityTransitionProgress')) q('#cityTransitionProgress').style.width = `${clamp(Number(progress), 0, 100)}%`;
+    overlay.hidden = false;
+  }
+
+  function updateCityTransition(stage, progress) {
+    if (q('#cityTransitionStage')) q('#cityTransitionStage').textContent = stage;
+    if (q('#cityTransitionProgress')) q('#cityTransitionProgress').style.width = `${clamp(Number(progress), 0, 100)}%`;
+  }
+
+  function hideCityTransition() {
+    const overlay = q('#cityTransitionOverlay');
+    if (overlay) overlay.hidden = true;
+  }
+
+  async function applyCityMeshResult(result, status = q('#cityMeshStatus')) {
     state.geospatial.cityMesh = result;
     if (Array.isArray(result.activity)) state.activity = result.activity;
     cityGrid?.loadCityMesh(result);
     cityGrid?.setTime(q('#globalTimeSlider')?.value || state.settings.defaultHour);
+    cityGrid?.setCityVisualMode('solid');
+    qa('[data-city-visual]').forEach((button) => button.classList.toggle('active', button.dataset.cityVisual === 'solid'));
+    state.geospatial.activeUseCase = null;
+    const operationResult = q('#cityUseCaseResult');
+    if (operationResult) operationResult.innerHTML = '<div class="empty-state">City twin ready. Choose a use case to generate a bounded operational planning view.</div>';
+    const teamButton = q('[data-action="ask-city-team"]');
+    if (teamButton) teamButton.disabled = true;
+    updateCityTransition('Building local 3D city twin…', 82);
     setGlobalMode('city');
+    await cityGrid?.cinematicEntrance(1050);
+    updateCityTransition('City digital twin ready', 100);
     updateGlobalGridStats(result);
     if (q('#geoSourceStatus')) {
       q('#geoSourceStatus').textContent = result.source?.live
@@ -1761,6 +1851,8 @@
       result.source?.live ? 'LIVE CITY + GRID LOADED' : 'CITY FALLBACK LOADED',
       `${result.city.name} · ${result.buildings.length} buildings · ${(result.roads || []).length} roads · ${(result.powerLines || []).length} power lines · ${result.source?.provider}`,
     );
+    if (!state.settings.reducedMotion) await new Promise((resolve) => setTimeout(resolve, 260));
+    hideCityTransition();
   }
 
   async function loadTerrainFor(city) {
@@ -1781,6 +1873,10 @@
   async function loadLiveCity(cityId = state.geospatial.selectedCityId, { force = false } = {}) {
     const city = state.geospatial.cities.find((item) => item.id === cityId);
     if (city) handleGlobalCitySelection(city);
+    if (city) {
+      setGlobalMode('globe');
+      showCityTransition(city, 'Locking planetary coordinate…', 10);
+    }
     const status = q('#cityMeshStatus');
     if (status) status.innerHTML = `<b>Loading ${escapeHtml(city?.name || cityId)}…</b><p>Requesting building footprints and heights from the configured geospatial provider.</p>`;
     if (q('#geoSourceStatus')) q('#geoSourceStatus').textContent = 'LOADING CITY GEOMETRY';
@@ -1792,13 +1888,15 @@
       const descent =
         city && globalGlobe ? globalGlobe.descendToCity(city, 720) : Promise.resolve();
       const [result, terrain] = await Promise.all([meshRequest, terrainRequest, descent]);
+      updateCityTransition('Streaming mapped buildings, roads, terrain and grid assets…', 66);
       if (terrain) result.terrain = terrain;
-      applyCityMeshResult(result, status);
+      await applyCityMeshResult(result, status);
     } catch (error) {
       const fallbackCity =
         city || state.geospatial.cities.find((item) => item.id === cityId) || DEFAULT_GLOBAL_CITIES[0];
       const fallback = buildStandaloneCityMesh(fallbackCity);
-      applyCityMeshResult(fallback, status);
+      updateCityTransition('Live provider unavailable · building local fallback twin…', 64);
+      await applyCityMeshResult(fallback, status);
       if (q('#geoSourceStatus')) {
         q('#geoSourceStatus').textContent = 'STANDALONE FALLBACK · NOT LIVE MAP DATA';
       }
@@ -1835,6 +1933,8 @@
     ];
     globalGlobe?.setCities(state.geospatial.cities);
     handleGlobalCitySelection(city);
+    setGlobalMode('globe');
+    showCityTransition(city, 'Targeting custom coordinate…', 10);
     const list = q('#globalCityList');
     if (list) {
       const existing = list.querySelector('[data-global-city-custom]');
@@ -1860,11 +1960,13 @@
       const terrainRequest = loadTerrainFor(city);
       const descent = globalGlobe ? globalGlobe.descendToCity(city, 720) : Promise.resolve();
       const [result, terrain] = await Promise.all([meshRequest, terrainRequest, descent]);
+      updateCityTransition('Streaming coordinate geometry and elevation…', 66);
       if (terrain) result.terrain = terrain;
-      applyCityMeshResult(result, status);
+      await applyCityMeshResult(result, status);
     } catch (error) {
       const fallback = buildStandaloneCityMesh(city);
-      applyCityMeshResult(fallback, status);
+      updateCityTransition('Live provider unavailable · building coordinate fallback…', 64);
+      await applyCityMeshResult(fallback, status);
       if (q('#geoSourceStatus')) {
         q('#geoSourceStatus').textContent = 'STANDALONE FALLBACK · NOT LIVE MAP DATA';
       }
@@ -1905,6 +2007,80 @@
       showToast('CITY LAYER', `${titleCase(button.dataset.globalLayer)} updated.`);
     }),
   );
+  function syncCityLayerButtons() {
+    qa('[data-global-layer]').forEach((button) => {
+      const key = button.dataset.globalLayer;
+      button.classList.toggle('active', Boolean(cityGrid?.layers?.[key]));
+    });
+  }
+
+  function applyCityLayerProfile(layers = []) {
+    const normalized = layers.map((layer) => (layer === 'roads' ? 'routes' : layer));
+    cityGrid?.setLayerProfile(normalized);
+    syncCityLayerButtons();
+  }
+
+  function renderCityUseCase(analysis) {
+    const container = q('#cityUseCaseResult');
+    if (!container || !analysis) return;
+    const observations = (analysis.observations || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('');
+    container.innerHTML = `<div class="operation-index"><b>${Number(analysis.planningIndex?.value || 0)}</b><span>${escapeHtml(analysis.planningIndex?.label || 'Planning index')}</span><small>${escapeHtml(analysis.planningIndex?.scale || '0–100')}</small></div><strong>${escapeHtml(analysis.useCase?.label || 'City operation')} · ${escapeHtml(analysis.city?.name || '')}</strong><ul>${observations}</ul><div class="operation-source">${escapeHtml(analysis.dataQuality?.geometryProvider || 'unknown source')} · ${analysis.dataQuality?.liveGeometry ? 'live mapped geometry' : 'local fallback geometry'} · advisory planning proxy</div>`;
+  }
+
+  async function runCityUseCase() {
+    if (!state.geospatial.cityMesh) {
+      showToast('CITY REQUIRED', 'Descend into a city before running an operational use case.');
+      return;
+    }
+    const useCaseId = q('#cityUseCaseSelect')?.value || 'grid-resilience';
+    const container = q('#cityUseCaseResult');
+    if (container) container.innerHTML = '<div class="empty-state">Analyzing the active city twin…</div>';
+    try {
+      const result = await api('./api/aethergrid/city-operations/analyze', {
+        method: 'POST',
+        body: JSON.stringify({ useCaseId }),
+      });
+      state.geospatial.activeUseCase = result.analysis;
+      if (Array.isArray(result.activity)) state.activity = result.activity;
+      if (result.evidence) {
+        state.evidence.unshift(result.evidence);
+        state.evidence = state.evidence.slice(0, 24);
+        renderEvidence();
+      } else {
+        renderActivity();
+      }
+      cityGrid?.setCityVisualMode('operations');
+      qa('[data-city-visual]').forEach((button) => button.classList.toggle('active', button.dataset.cityVisual === 'operations'));
+      applyCityLayerProfile(result.analysis?.useCase?.recommendedLayers || ['buildings', 'routes', 'infrastructure', 'nodes']);
+      renderCityUseCase(result.analysis);
+      const teamButton = q('[data-action="ask-city-team"]');
+      if (teamButton) teamButton.disabled = false;
+      showToast('CITY OPERATION READY', `${result.analysis.city.name} · ${result.analysis.useCase.label}`);
+    } catch (error) {
+      if (container) container.innerHTML = `<div class="empty-state">${escapeHtml(error.message || 'City analysis requires the backend-connected app.')}</div>`;
+      showToast('CITY ANALYSIS UNAVAILABLE', error.message || 'Backend-connected city twin required.');
+    }
+  }
+
+  qa('[data-city-visual]').forEach((button) =>
+    button.addEventListener('click', () => {
+      cityGrid?.setCityVisualMode(button.dataset.cityVisual);
+      qa('[data-city-visual]').forEach((item) => item.classList.toggle('active', item === button));
+      showToast('CITY VISUAL', titleCase(button.dataset.cityVisual));
+    }),
+  );
+  q('[data-action="run-city-use-case"]')?.addEventListener('click', runCityUseCase);
+  q('[data-action="ask-city-team"]')?.addEventListener('click', () => {
+    const analysis = state.geospatial.activeUseCase;
+    if (!analysis) return;
+    setSelectedAgent('TEAM');
+    switchWorkspace('ai');
+    const input = q('#chatInput');
+    if (input) {
+      input.value = `Review the active ${analysis.useCase.label} city operation for ${analysis.city.name}. Explain the planning index, the strongest evidence in the loaded 3D twin, key limitations, and what VÆLON, AUREN, and SOLVÆR each recommend investigating next.`;
+      input.focus();
+    }
+  });
   q('#globalTimeSlider')?.addEventListener('input', (event) => {
     cityGrid?.setTime(event.target.value);
     if (q('#globalTimeValue')) {
@@ -2741,7 +2917,76 @@
       : '<div class="empty-state">No optimization run in this session yet.</div>';
   }
 
+  const AGENT_CHAT_STORAGE_KEY = 'aethergrid.agent.chats.v2';
+  const AGENT_CHAT_IDS = ['TEAM', 'VÆLON', 'AUREN', 'SOLVÆR'];
+
+  function loadAgentChats() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(AGENT_CHAT_STORAGE_KEY) || '{}');
+      for (const id of AGENT_CHAT_IDS) {
+        state.agentChats[id] = Array.isArray(stored[id]) ? stored[id].slice(-50) : [];
+      }
+    } catch {
+      for (const id of AGENT_CHAT_IDS) state.agentChats[id] = [];
+    }
+  }
+
+  function persistAgentChats() {
+    try {
+      localStorage.setItem(AGENT_CHAT_STORAGE_KEY, JSON.stringify(state.agentChats));
+    } catch {}
+  }
+
+  function agentWelcome(name) {
+    if (name === 'TEAM') return 'Team thread ready. VÆLON, AUREN and SOLVÆR share the active operator, city, scenario and evidence context for coordinated synthesis.';
+    if (name === 'VÆLON') return 'VÆLON thread ready. Focus: bounded optimization, scenario tradeoffs, constraints and candidate comparison.';
+    if (name === 'AUREN') return 'AUREN thread ready. Focus: semantic meaning, spatial relationships, operator context and city intelligence.';
+    return 'SOLVÆR thread ready. Focus: simulation, evidence generation, validation and reproducible comparison.';
+  }
+
+  function renderSelectedAgentChat() {
+    const log = q('#chatLog');
+    if (!log) return;
+    const name = state.selectedAgent;
+    const messages = state.agentChats[name] || [];
+    if (!messages.length) {
+      log.innerHTML = `<div class="chat-bubble system">${escapeHtml(agentWelcome(name))}</div>`;
+    } else {
+      log.innerHTML = messages.map((item) => {
+        const roleClass = item.role === 'user' ? 'user' : 'system';
+        const runtime = item.runtime ? `<div class="agent-runtime-line">${escapeHtml(item.runtime.provider || 'local')} · ${escapeHtml(item.runtime.model || 'fallback')}${item.runtime.fallbackUsed ? ' · fallback' : ''}</div>` : '';
+        const contributions = Array.isArray(item.contributions) && item.contributions.length
+          ? `<details class="agent-contributions"><summary>View ${item.contributions.length} specialist contributions</summary>${item.contributions.map((entry) => `<article><b>${escapeHtml(entry.agent)}</b><small>${escapeHtml(entry.runtime?.provider || 'local')} · ${escapeHtml(entry.runtime?.model || 'fallback')}</small><p>${escapeHtml(entry.reply || '')}</p></article>`).join('')}</details>`
+          : '';
+        return `<div class="chat-bubble ${roleClass}"><div>${escapeHtml(item.content || '')}</div>${runtime}${contributions}</div>`;
+      }).join('');
+    }
+    const threadBadge = q('#agentThreadBadge');
+    if (threadBadge) threadBadge.textContent = `${name} THREAD · ${messages.length} MSG${messages.length === 1 ? '' : 'S'}`;
+    qa('[data-agent]').forEach((button) => {
+      const hasHistory = Boolean((state.agentChats[button.dataset.agent] || []).length);
+      button.dataset.hasHistory = hasHistory ? 'true' : 'false';
+    });
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function agentHistory(name) {
+    return (state.agentChats[name] || [])
+      .filter((item) => item.role === 'user' || item.role === 'assistant')
+      .slice(-16)
+      .map((item) => ({ role: item.role, content: item.content }));
+  }
+
+  function appendAgentMessage(name, entry) {
+    if (!state.agentChats[name]) state.agentChats[name] = [];
+    state.agentChats[name].push({ ...entry, at: entry.at || new Date().toISOString() });
+    state.agentChats[name] = state.agentChats[name].slice(-50);
+    persistAgentChats();
+    if (state.selectedAgent === name) renderSelectedAgentChat();
+  }
+
   function setSelectedAgent(name) {
+    if (!AGENT_CHAT_IDS.includes(name)) name = 'TEAM';
     state.selectedAgent = name;
     qa('[data-agent]').forEach((button) => button.classList.toggle('active', button.dataset.agent === name));
     if (q('#activeAgentTitle')) q('#activeAgentTitle').textContent = name === 'TEAM' ? 'TEAM MODE' : name;
@@ -2749,6 +2994,7 @@
       q('#activeAgentSubtitle').textContent =
         name === 'TEAM' ? 'VÆLON + AUREN + SOLVÆR' : state.agents[name]?.role || 'Specialized Agent';
     }
+    renderSelectedAgentChat();
   }
 
   qa('[data-agent]').forEach((button) =>
@@ -2756,41 +3002,54 @@
   );
 
   q('[data-action="clear-chat"]')?.addEventListener('click', () => {
-    const log = q('#chatLog');
-    if (log) log.innerHTML = '<div class="chat-bubble system">Conversation cleared. Agent context remains connected to the active operator state.</div>';
+    state.agentChats[state.selectedAgent] = [];
+    persistAgentChats();
+    renderSelectedAgentChat();
+    showToast('THREAD CLEARED', `${state.selectedAgent} conversation cleared. Live system context remains connected.`);
   });
 
   q('#chatForm')?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const input = q('#chatInput');
-    const log = q('#chatLog');
     const message = input.value.trim();
     if (!message) return;
-    log.insertAdjacentHTML('beforeend', `<div class="chat-bubble user">${escapeHtml(message)}</div>`);
+    const agent = state.selectedAgent;
+    const history = agentHistory(agent);
+    appendAgentMessage(agent, { role: 'user', content: message });
     input.value = '';
+    const log = q('#chatLog');
     const pendingId = `pending-${Date.now()}`;
-    log.insertAdjacentHTML('beforeend', `<div class="chat-bubble system" id="${pendingId}">Working…</div>`);
-    log.scrollTop = log.scrollHeight;
-    let reply =
-      'Local fallback active. Start the Node backend and configure a provider to enable model-backed agent reasoning.';
+    log?.insertAdjacentHTML('beforeend', `<div class="chat-bubble system" id="${pendingId}">Working in ${escapeHtml(agent)} thread…</div>`);
+    if (log) log.scrollTop = log.scrollHeight;
+    let reply = 'Local fallback active. Start the Node backend and configure a provider to enable model-backed agent reasoning.';
+    let runtime = null;
+    let contributions = [];
     try {
-      const endpoint =
-        state.selectedAgent === 'TEAM'
-          ? './api/aethergrid/team'
-          : `./api/aethergrid/agents/${encodeURIComponent(state.selectedAgent)}`;
+      const endpoint = agent === 'TEAM' ? './api/aethergrid/team' : `./api/aethergrid/agents/${encodeURIComponent(agent)}`;
+      const activeCity = state.geospatial.cityMesh?.city || null;
+      const activeUseCase = state.geospatial.activeUseCase || null;
       const result = await api(endpoint, {
         method: 'POST',
         body: JSON.stringify({
           message,
+          history,
           context: {
             region: state.system.region,
             scenario: state.system.scenario,
             view: state.system.view,
             metrics: state.metrics,
+            city: activeCity ? { id: activeCity.id, name: activeCity.name, lat: activeCity.lat, lon: activeCity.lon } : null,
+            cityOperation: activeUseCase ? { id: activeUseCase.useCase?.id, label: activeUseCase.useCase?.label, planningIndex: activeUseCase.planningIndex, observations: activeUseCase.observations } : null,
           },
         }),
       });
       reply = result.reply || result.synthesis || reply;
+      runtime = result.runtime || null;
+      contributions = Array.isArray(result.contributions) ? result.contributions.map((item) => ({
+        agent: item.agent,
+        reply: item.reply,
+        runtime: item.runtime ? { provider: item.runtime.provider, model: item.runtime.model, fallbackUsed: item.runtime.fallbackUsed } : null,
+      })) : [];
       if (result.runtime) state.runtime = result.runtime;
       if (Array.isArray(result.activity)) state.activity = result.activity;
       if (result.evidence) {
@@ -2800,19 +3059,6 @@
       } else {
         renderActivity();
       }
-      const contributionMarkup = Array.isArray(result.contributions)
-        ? `<details class="agent-contributions"><summary>View ${result.contributions.length} specialist contributions</summary>${result.contributions
-            .map(
-              (item) =>
-                `<article><b>${escapeHtml(item.agent)}</b><small>${escapeHtml(item.runtime?.provider || 'local')} · ${escapeHtml(item.runtime?.model || 'fallback')}</small><p>${escapeHtml(item.reply)}</p></article>`,
-            )
-            .join('')}</details>`
-        : '';
-      const runtimeMarkup = result.runtime
-        ? `<div class="agent-runtime-line">${escapeHtml(result.runtime.provider || 'local')} · ${escapeHtml(result.runtime.model || 'fallback')}${result.runtime.fallbackUsed ? ' · fallback' : ''}</div>`
-        : '';
-      const pending = q(`#${pendingId}`);
-      pending.innerHTML = `<div>${escapeHtml(reply)}</div>${runtimeMarkup}${contributionMarkup}`;
       if (result.runtime?.agent && result.runtime.agent !== 'TEAM') {
         const badge = q(`[data-agent-runtime="${CSS.escape(result.runtime.agent)}"]`);
         if (badge) badge.textContent = result.runtime.model || result.runtime.provider || 'READY';
@@ -2821,15 +3067,19 @@
       try {
         const result = await api('./api/aethergrid/chat', {
           method: 'POST',
-          body: JSON.stringify({ message, agent: state.selectedAgent }),
+          body: JSON.stringify({ message, agent, history }),
         });
         reply = result.reply || reply;
       } catch {}
-      q(`#${pendingId}`).textContent = reply;
     }
-    log.scrollTop = log.scrollHeight;
+    q(`#${pendingId}`)?.remove();
+    appendAgentMessage(agent, {
+      role: 'assistant',
+      content: reply,
+      runtime: runtime ? { provider: runtime.provider, model: runtime.model, fallbackUsed: runtime.fallbackUsed } : null,
+      contributions,
+    });
   });
-
   async function exportPackage(kind) {
     const payload = {
       kind,
@@ -3039,6 +3289,8 @@
     profileDialog?.close();
   });
 
+  loadAgentChats();
+  setSelectedAgent(state.selectedAgent);
   loadSettings();
   bindSettings();
   switchWorkspace(initialWorkspace(), { persist: false });

@@ -434,6 +434,11 @@ async function main() {
       /data-global-layer="infrastructure"/u.test(exactAethergridHtml) &&
       /data-global-layer="terrain"/u.test(exactAethergridHtml) &&
       /id="globalGridStats"/u.test(exactAethergridHtml) &&
+      /id="cityTransitionOverlay"/u.test(exactAethergridHtml) &&
+      /data-city-visual="solid"/u.test(exactAethergridHtml) &&
+      /id="cityUseCaseSelect"/u.test(exactAethergridHtml) &&
+      /data-action="run-city-use-case"/u.test(exactAethergridHtml) &&
+      /id="agentThreadBadge"/u.test(exactAethergridHtml) &&
       /data-workspace="holographic"/u.test(exactAethergridHtml) &&
       /data-workspace="quantum"/u.test(exactAethergridHtml) &&
       /data-workspace="ai"/u.test(exactAethergridHtml) &&
@@ -475,6 +480,12 @@ async function main() {
       /terrainLines/u.test(exactAethergridJs) &&
       /loadTerrainFor/u.test(exactAethergridJs) &&
       /powerAssets/u.test(exactAethergridJs) &&
+      /buildingFaces/u.test(exactAethergridJs) &&
+      /gl\.TRIANGLES/u.test(exactAethergridJs) &&
+      /cinematicEntrance/u.test(exactAethergridJs) &&
+      /async function runCityUseCase/u.test(exactAethergridJs) &&
+      /AGENT_CHAT_STORAGE_KEY/u.test(exactAethergridJs) &&
+      /agentHistory\(name\)/u.test(exactAethergridJs) &&
       /descendToCity\(city, durationMs/u.test(exactAethergridJs) &&
       /async function submitQuantumJob/u.test(exactAethergridJs) &&
       /async function loadQuantumJobDetail/u.test(exactAethergridJs) &&
@@ -484,7 +495,10 @@ async function main() {
   assert(
     /#spatialGrid/u.test(exactAethergridStyles) &&
       /\.map-card/u.test(exactAethergridStyles) &&
-      /\.quantum-canvas/u.test(exactAethergridStyles),
+      /\.quantum-canvas/u.test(exactAethergridStyles) &&
+      /\.city-transition-overlay/u.test(exactAethergridStyles) &&
+      /\.city-operation-result/u.test(exactAethergridStyles) &&
+      /\.thread-pill/u.test(exactAethergridStyles),
     'ÆTHERGRID styles must target real runtime elements',
   );
   assert(
@@ -526,14 +540,26 @@ async function main() {
       exactAethergridApp.capabilities?.liveAgentExternalContext === true &&
       exactAethergridApp.capabilities?.liveElevationTerrain === true &&
       exactAethergridApp.capabilities?.terrainWireframeLayer === true &&
+      exactAethergridApp.capabilities?.solidOpenStreetMapCityVolumes === true &&
+      exactAethergridApp.capabilities?.osmBuildingParts === true &&
+      exactAethergridApp.capabilities?.cityVisualModes === true &&
+      exactAethergridApp.capabilities?.cinematicGlobeCityTransition === true &&
+      exactAethergridApp.capabilities?.cityOperationsUseCases === true &&
+      exactAethergridApp.capabilities?.dedicatedPersistentAgentChats === true &&
+      exactAethergridApp.capabilities?.agentConversationHistory === true &&
       exactAethergridApp.aiRuntime?.replaceableByConfiguration === true &&
       Array.isArray(exactAethergridApp.aiRuntime?.externalContext) &&
       exactAethergridApp.aiRuntime.externalContext.includes('geospatial-summary') &&
       exactAethergridApp.aiRuntime.externalContext.includes('quantum-job-summary') &&
+      exactAethergridApp.aiRuntime.externalContext.includes('city-operation-summary') &&
+      exactAethergridApp.aiRuntime?.dedicatedPersistentThreads === true &&
       exactAethergridApp.geospatialRuntime?.liveFetchOnExplicitOperatorAction === true &&
       exactAethergridApp.geospatialRuntime?.supportsCustomCoordinates === true &&
       exactAethergridApp.geospatialRuntime?.livePowerLineGeometry === true &&
       exactAethergridApp.geospatialRuntime?.livePowerAssetGeometry === true &&
+      exactAethergridApp.geospatialRuntime?.layers?.includes('building-parts') &&
+      exactAethergridApp.geospatialRuntime?.solidBuildingVolumes === true &&
+      exactAethergridApp.geospatialRuntime?.buildingParts === true &&
       exactAethergridApp.geospatialRuntime?.layers?.includes('terrain') &&
       exactAethergridApp.terrainRuntime?.module === 'terrain-runtime.mjs' &&
       exactAethergridApp.terrainRuntime?.credentialsExposedToBrowser === false &&
@@ -554,6 +580,8 @@ async function main() {
     '/api/aethergrid/geospatial/cities',
     '/api/aethergrid/geospatial/city/',
     '/api/aethergrid/geospatial/point',
+    '/api/aethergrid/city-operations/use-cases',
+    '/api/aethergrid/city-operations/analyze',
     '/api/aethergrid/terrain',
     '/api/aethergrid/terrain/runtime',
     '/api/aethergrid/quantum/runtime',
@@ -581,6 +609,8 @@ async function main() {
   );
   assert(
     /function agentContext\(input = \{\}\)/u.test(exactAethergridServer) &&
+      /function analyzeCityUseCase\(mesh, useCaseId\)/u.test(exactAethergridServer) &&
+      /CITY_USE_CASES/u.test(exactAethergridServer) &&
       /externalContext: \{/u.test(exactAethergridServer) &&
       /geospatial: state\.externalContext\.geospatial/u.test(exactAethergridServer) &&
       /quantum: state\.externalContext\.quantum/u.test(exactAethergridServer),
@@ -619,6 +649,8 @@ async function main() {
     /OpenStreetMap Overpass/u.test(aethergridGeoRuntime) &&
       /© OpenStreetMap contributors/u.test(aethergridGeoRuntime) &&
       /way\["building"\]/u.test(aethergridGeoRuntime) &&
+      /way\["building:part"\]/u.test(aethergridGeoRuntime) &&
+      /minHeightM/u.test(aethergridGeoRuntime) &&
       /way\["highway"\]/u.test(aethergridGeoRuntime) &&
       /way\["power"~"\^\(line\|minor_line\|cable\)\$"\]/u.test(aethergridGeoRuntime) &&
       /substation\|plant\|generator\|transformer/u.test(aethergridGeoRuntime) &&
