@@ -4,9 +4,7 @@ import type {
 } from '../overlays/atmospheric-overlay';
 import type {
   OverlayCoordinate,
-  SpatialOverlayArea,
   SpatialOverlayEdge,
-  SpatialOverlayNode,
   SpatialOverlaySnapshot
 } from '../overlays/spatial-overlay';
 import { solarStateAt } from '../solar-position';
@@ -576,7 +574,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
         if (node.id === this.#selectedId) color = rgba('#ffffff', 1);
         pointPositions.push(point[0], point[1]);
         pointColors.push(color.r, color.g, color.b, color.a);
-        pointSizes.push(node.id === this.#selectedId ? 13 : 6 + clamp(node.intensity, 0, 1) * 6);
+        pointSizes.push(node.id === this.#selectedId ? 13 : 6 + clamp(node.intensity ?? 0.5, 0, 1) * 6);
         this.#features.push({
           id: node.id,
           kind: node.kind,
@@ -745,7 +743,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
         const selected = node.id === this.#selectedId;
         context.fillStyle = selected ? '#ffffff' : css(this.#visualColor(layerColor(snapshot.layerId, node.kind)));
         context.beginPath();
-        context.arc(x, y, selected ? 6 : 3.5 + clamp(node.intensity, 0, 1) * 2.5, 0, Math.PI * 2);
+        context.arc(x, y, selected ? 6 : 3.5 + clamp(node.intensity ?? 0.5, 0, 1) * 2.5, 0, Math.PI * 2);
         context.fill();
 
         this.#features.push({
