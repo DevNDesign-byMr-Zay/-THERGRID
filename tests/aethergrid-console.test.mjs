@@ -42,6 +42,13 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(html, /data-action="city-live-now"/u);
     assert.match(html, /data-global-layer="infrastructure"/u);
     assert.match(html, /data-global-layer="terrain"/u);
+    assert.match(html, /data-global-layer="weather"/u);
+    assert.match(html, /data-global-layer="air"/u);
+    assert.match(html, /data-global-layer="seismic"/u);
+    assert.match(html, /id="globalLiveStatus"/u);
+    assert.match(html, /value="weather-readiness"/u);
+    assert.match(html, /value="air-quality-exposure"/u);
+    assert.match(html, /value="seismic-awareness"/u);
     assert.match(html, /id="globalGridStats"/u);
     assert.match(html, /id="cityTransitionOverlay"/u);
     assert.match(html, /data-city-visual="solid"/u);
@@ -109,6 +116,13 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(appSource, /buildingFaces/u);
     assert.match(appSource, /roofFaces/u);
     assert.match(appSource, /roofLines/u);
+    assert.match(appSource, /weatherLines/u);
+    assert.match(appSource, /precipitationLines/u);
+    assert.match(appSource, /airParticles/u);
+    assert.match(appSource, /seismicLines/u);
+    assert.match(appSource, /setLiveActivity/u);
+    assert.match(appSource, /updateUtcSweep/u);
+    assert.match(appSource, /setOperationProfile/u);
     assert.match(appSource, /environmentHour/u);
     assert.match(appSource, /resolvedTheme/u);
     assert.match(appSource, /cityCameraTarget/u);
@@ -164,6 +178,9 @@ test('ÆTHERGRID exposes replaceable agent runtime without leaking provider secr
     assert.equal(runtime.geospatial.provider, 'osm-overpass');
     assert.equal(runtime.environment.provider, 'open-meteo');
     assert.equal(runtime.environment.credentialsExposed, false);
+    assert.equal(runtime.liveContext.airQualityProvider, 'open-meteo');
+    assert.equal(runtime.liveContext.seismicProvider, 'usgs');
+    assert.equal(runtime.liveContext.credentialsExposed, false);
     assert.equal(runtime.terrain.provider, 'open-meteo');
     assert.equal(runtime.terrain.credentialsExposed, false);
     assert.equal(runtime.quantum.provider, 'local-simulator');
@@ -240,6 +257,14 @@ test('ÆTHERGRID backend exposes profile, world-city and quantum runtime surface
     const environmentRuntime = await environmentRuntimeResponse.json();
     assert.equal(environmentRuntime.provider, 'open-meteo');
     assert.equal(environmentRuntime.credentialsExposed, false);
+
+    const liveRuntimeResponse = await fetch(`${baseUrl}/api/aethergrid/city-live/runtime`);
+    assert.equal(liveRuntimeResponse.status, 200);
+    const liveRuntime = await liveRuntimeResponse.json();
+    assert.equal(liveRuntime.airQualityProvider, 'open-meteo');
+    assert.equal(liveRuntime.seismicProvider, 'usgs');
+    assert.equal(liveRuntime.credentialsExposed, false);
+    assert.match(liveRuntime.seismicFeed, /M2\.5\+/u);
 
     const terrainRuntimeResponse = await fetch(`${baseUrl}/api/aethergrid/terrain/runtime`);
     assert.equal(terrainRuntimeResponse.status, 200);
@@ -328,6 +353,37 @@ test('ÆTHERGRID city operations derive bounded planning indicators from the act
       maxElevationM: 31,
       source: { provider: 'test-terrain', live: true },
     },
+    environment: {
+      source: { provider: 'test-weather', live: true },
+      current: {
+        temperatureC: 31,
+        apparentTemperatureC: 34,
+        cloudCoverPercent: 55,
+        precipitationMm: 1.2,
+        windSpeedKph: 22,
+        windGustsKph: 38,
+        shortwaveRadiationWm2: 620,
+        visibilityM: 12000,
+      },
+    },
+    liveContext: {
+      airQuality: {
+        source: { provider: 'test-air', live: true },
+        current: {
+          usAqi: 84,
+          category: 'moderate',
+          pm25UgM3: 21.2,
+          pm10UgM3: 34.1,
+          uvIndex: 4,
+        },
+      },
+      seismic: {
+        source: { provider: 'test-seismic', live: true },
+        events: [{ magnitude: 4.4, distanceKm: 140 }],
+        eventCount: 1,
+        maxMagnitude: 4.4,
+      },
+    },
   };
 
   const metrics = cityMeshMetrics(mesh);
@@ -339,6 +395,11 @@ test('ÆTHERGRID city operations derive bounded planning indicators from the act
   assert.equal(metrics.generationAssets, 1);
   assert.equal(metrics.terrainReliefM, 27);
 
+  assert.equal(Object.keys(CITY_USE_CASES).length, 8);
+  assert.ok(CITY_USE_CASES['weather-readiness']);
+  assert.ok(CITY_USE_CASES['air-quality-exposure']);
+  assert.ok(CITY_USE_CASES['seismic-awareness']);
+
   for (const id of Object.keys(CITY_USE_CASES)) {
     const analysis = analyzeCityUseCase(mesh, id);
     assert.equal(analysis.useCase.id, id);
@@ -346,7 +407,14 @@ test('ÆTHERGRID city operations derive bounded planning indicators from the act
     assert.ok(analysis.planningIndex.value >= 0 && analysis.planningIndex.value <= 100);
     assert.ok(analysis.useCase.recommendedLayers.length >= 4);
     assert.ok(analysis.observations.length >= 3);
+    assert.ok(analysis.visualization.animationProfile);
+    assert.equal(analysis.visualization.sourceDriven, true);
+    assert.equal(analysis.liveSignals.usAqi, 84);
+    assert.equal(analysis.liveSignals.seismicEventCount, 1);
     assert.equal(analysis.dataQuality.liveGeometry, true);
+    assert.equal(analysis.dataQuality.liveWeather, true);
+    assert.equal(analysis.dataQuality.liveAirQuality, true);
+    assert.equal(analysis.dataQuality.liveSeismic, true);
     assert.equal(analysis.advisoryOnly, true);
   }
 });
