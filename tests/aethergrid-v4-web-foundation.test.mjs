@@ -1050,3 +1050,35 @@ test('v4 analysis workspace captures the 4d frame and routes measure clicks with
   assert.match(panel, /Native fallback cannot claim terrain elevation/u);
   assert.match(panel, /CLEAR MEASUREMENT/u);
 });
+
+test('v4 frame comparison captures only temporally valid metrics and leaves missing fields missing', async () => {
+  const comparison = await text(
+    'apps/aethergrid-console/web/src/services/spatial-comparison.ts',
+  );
+
+  assert.match(comparison, /captureSpatialObservation/u);
+  assert.match(comparison, /const live = input\.temporal\.mode === 'live'/u);
+  assert.match(comparison, /temperatureC: live \?/u);
+  assert.match(comparison, /usAqi: live \?/u);
+  assert.match(comparison, /seismicEventCount: live \?/u);
+  assert.match(comparison, /if \(aValue == null \|\| bValue == null\) return \[\]/u);
+  assert.match(comparison, /authoritative: false/u);
+  assert.match(comparison, /not a substitute for the server evidence ledger/u);
+});
+
+test('v4 analysis workspace compares frame a b and keeps causal interpretation under operator review', async () => {
+  const [app, panel] = await Promise.all([
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/components/SpatialComparisonPanel.tsx'),
+  ]);
+
+  assert.match(app, /const \[observationA, setObservationA\]/u);
+  assert.match(app, /const \[observationB, setObservationB\]/u);
+  assert.match(app, /compareSpatialObservations\(observationA, observationB\)/u);
+  assert.match(app, /do not infer causation from correlation/u);
+  assert.match(app, /agent: 'AUREN'/u);
+  assert.match(panel, /FRAME A/u);
+  assert.match(panel, /FRAME B/u);
+  assert.match(panel, /EXPORT ANALYSIS JSON/u);
+  assert.match(panel, /OPERATOR ANALYSIS · NON-AUTHORITATIVE/u);
+});
