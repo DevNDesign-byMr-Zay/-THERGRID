@@ -17,6 +17,9 @@ const REQUIRED_FILES = Object.freeze([
   'server.mjs',
   'agent-config.mjs',
   'ai-runtime.mjs',
+  'profile-store.mjs',
+  'geo-runtime.mjs',
+  'quantum-runtime.mjs',
   'app.json',
   'ui.json',
   'manifest.webmanifest',
@@ -137,6 +140,7 @@ const payload = new Map();
 for (const absolute of sourceFiles) {
   const path = normalizePath(relative(SOURCE_ROOT, absolute));
   if (path === 'assets/dashboard-reference.webp') continue;
+  if (path === '.aethergrid-data' || path.startsWith('.aethergrid-data/')) continue;
   const metadata = await stat(absolute);
   assert(metadata.size > 0, `ÆTHERGRID app source file is empty: ${path}`);
   payload.set(path, await readFile(absolute));
@@ -158,9 +162,17 @@ assert(uiManifest.spatialModel?.renderEngine === 'native-webgl', 'UI must declar
 
 const sourceHtml = payload.get('index.html').toString('utf8');
 assert(!/dashboard-reference/iu.test(sourceHtml), 'runtime index.html must not reference the old dashboard screenshot');
+assert(
+  ![...payload.keys()].some((path) => path === '.aethergrid-data' || path.startsWith('.aethergrid-data/')),
+  'runtime profile persistence data must never be included in the distributable ZIP',
+);
 assert(/<canvas id="spatialGrid"/u.test(sourceHtml), 'runtime index.html must expose the real spatial WebGL canvas');
 assert(/data-workspace-target="holographic"/u.test(sourceHtml), 'runtime index.html must expose functional workspace controls');
 assert(/data-workspace="settings"/u.test(sourceHtml), 'runtime index.html must include a real settings workspace');
+assert(/data-workspace="global"/u.test(sourceHtml), 'runtime index.html must include the global 3D workspace');
+assert(/id="globalGlobe"/u.test(sourceHtml), 'runtime index.html must expose the real global WebGL canvas');
+assert(/id="profileForm"/u.test(sourceHtml), 'runtime index.html must expose the persistent operator profile form');
+assert(/id="quantumCircuit"/u.test(sourceHtml), 'runtime index.html must expose real quantum job controls');
 assert(/data-agent="TEAM"/u.test(sourceHtml), 'runtime index.html must expose team-agent mode');
 
 const inlineCss = payload.get('styles.css').toString('utf8');

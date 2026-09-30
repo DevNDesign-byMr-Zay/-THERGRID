@@ -22,6 +22,7 @@
 
       <nav class="mode-tabs" aria-label="Primary operator workspaces">
         <button class="mode-tab active" data-workspace-target="grid"><span class="mode-icon">⌗</span><span><b>GRID</b><small>Digital twin</small></span></button>
+        <button class="mode-tab" data-workspace-target="global"><span class="mode-icon">◎</span><span><b>GLOBAL</b><small>God's-eye grid</small></span></button>
         <button class="mode-tab" data-workspace-target="holographic"><span class="mode-icon">◇</span><span><b>HOLOGRAPHIC</b><small>4D analysis</small></span></button>
         <button class="mode-tab" data-workspace-target="quantum"><span class="mode-icon">✣</span><span><b>QUANTUM</b><small>Optimization</small></span></button>
         <button class="mode-tab" data-workspace-target="ai"><span class="mode-icon">△</span><span><b>AI</b><small>Agent team</small></span></button>
@@ -31,7 +32,7 @@
       <div class="top-status">
         <div class="status-copy"><i class="status-dot"></i><span><small>System Status</small><b id="systemStatus">All Systems Nominal</b></span></div>
         <div class="clock"><small id="systemDate"></small><b id="systemClock"></b></div>
-        <button class="profile" data-action="profile" aria-label="Operator profile">IM</button>
+        <button class="profile" data-action="profile" aria-label="Operator profile"><img id="profileAvatarButton" alt="" hidden /><span id="profileInitials">IM</span></button>
         <button class="gear" data-workspace-target="settings" aria-label="Settings">⚙</button>
       </div>
     </header>
@@ -40,6 +41,7 @@
       <aside class="sidebar">
         <nav class="side-nav" aria-label="Operator navigation">
           <button class="side-button active" data-workspace-target="grid"><span class="side-icon">⌘</span><span><b>GRID</b><small>Digital twin & assets</small></span></button>
+          <button class="side-button" data-workspace-target="global"><span class="side-icon">◎</span><span><b>GLOBAL</b><small>God's-eye world grid</small></span></button>
           <button class="side-button" data-workspace-target="holographic"><span class="side-icon">◇</span><span><b>HOLOGRAPHIC</b><small>Spatial visualization</small></span></button>
           <button class="side-button" data-workspace-target="quantum"><span class="side-icon">✣</span><span><b>QUANTUM</b><small>Optimization lab</small></span></button>
           <button class="side-button" data-workspace-target="ai"><span class="side-icon">◉</span><span><b>AI</b><small>Model collaboration</small></span></button>
@@ -117,6 +119,44 @@
           </div>
         </section>
 
+        <section class="workspace-view" data-workspace="global" aria-labelledby="globalTitle">
+          <div class="workspace-head">
+            <div><span class="eyebrow">GLOBAL / GOD'S-EYE SPATIAL GRID</span><h1 id="globalTitle">Planetary Grid & Live 3D Cities</h1><p>Orbit a real-coordinate global grid, select world cities, then descend into live OpenStreetMap building geometry rendered as interactive 3D wireframes.</p></div>
+            <div class="workspace-actions"><span class="pill" id="geoRuntimeBadge">GEO RUNTIME</span><button class="secondary-button" data-global-action="reset">RESET VIEW</button></div>
+          </div>
+          <div class="global-workspace">
+            <section class="panel global-stage-panel">
+              <div class="global-toolbar">
+                <div class="global-mode-switch"><button class="active" data-global-mode="globe">GLOBE</button><button data-global-mode="city">CITY 3D</button></div>
+                <select id="globalCitySelect" aria-label="Select city"><option value="new-york">New York · United States</option></select>
+                <button class="primary-button" data-action="load-live-city">DESCEND INTO CITY</button>
+              </div>
+              <canvas id="globalGlobe" aria-label="Interactive 3D global spatial grid with real city coordinates"></canvas>
+              <canvas id="cityGrid" aria-label="Interactive 3D city building wireframe" hidden></canvas>
+              <div class="global-hud">
+                <span id="globalCoordinates">40.7128° N · 74.0060° W</span>
+                <span id="globalScale">PLANETARY SCALE</span>
+                <span id="geoSourceStatus">REAL COORDINATES · CITY MESH ON DEMAND</span>
+              </div>
+              <div class="global-attribution" id="geoAttribution">City geometry: © OpenStreetMap contributors when live provider is available.</div>
+            </section>
+            <aside class="global-side">
+              <section class="panel compact-panel">
+                <header class="panel-head"><div class="panel-title"><span class="badge">◎</span><span><h3>WORLD NODES</h3><small>Real city coordinates</small></span></div></header>
+                <div id="globalCityList" class="global-city-list"><div class="empty-state">Loading world cities…</div></div>
+              </section>
+              <section class="panel compact-panel">
+                <header class="panel-head"><div class="panel-title"><span class="badge">⌂</span><span><h3>CITY MESH</h3><small>Live building geometry</small></span></div></header>
+                <div class="inspector-body" id="cityMeshStatus"><b>New York selected</b><p>Choose DESCEND INTO CITY to fetch live building footprints and heights from the configured geospatial provider.</p></div>
+              </section>
+              <section class="panel compact-panel">
+                <header class="panel-head"><div class="panel-title"><span class="badge">▤</span><span><h3>DATA PROVENANCE</h3><small>Source transparency</small></span></div></header>
+                <div class="context-list" id="geoProvenance"><span><b>Provider</b><em>Loading…</em></span><span><b>Mode</b><em>On-demand</em></span><span><b>Actuation</b><em>Disabled</em></span></div>
+              </section>
+            </aside>
+          </div>
+        </section>
+
         <section class="workspace-view" data-workspace="holographic" aria-labelledby="holoTitle">
           <div class="workspace-head">
             <div><span class="eyebrow">HOLOGRAPHIC / SPATIAL INTELLIGENCE</span><h1 id="holoTitle">4D Holographic Analysis</h1><p>Explore topology, flow, risk and future-state geometry with independent camera and temporal controls.</p></div>
@@ -170,6 +210,24 @@
               </div>
             </section>
             <section class="panel run-history-panel"><header class="panel-head"><div class="panel-title"><span class="badge">▤</span><span><h3>RUN HISTORY</h3><small>Receipts & comparisons</small></span></div></header><div id="optimizationHistory" class="history-list"><div class="empty-state">No optimization run in this session yet.</div></div></section>
+
+            <section class="panel quantum-provider-panel">
+              <header class="panel-head"><div class="panel-title"><span class="badge">Q</span><span><h3>QUANTUM COMPUTE RUNTIME</h3><small>Local sampler or real IBM Quantum QPU submission</small></span></div><span class="pill" id="quantumProviderBadge">LOADING</span></header>
+              <div class="quantum-provider-grid">
+                <div class="quantum-job-controls">
+                  <label>Backend<select id="quantumBackend"><option value="aethergrid-local-sampler">aethergrid-local-sampler</option></select></label>
+                  <label>Shots<input id="quantumShots" type="number" min="1" max="100000" value="1024" /></label>
+                  <label>OpenQASM 3 Circuit<textarea id="quantumCircuit" rows="7">OPENQASM 3.0; include "stdgates.inc"; bit[2] c; h $0; cx $0, $1; c[0] = measure $0; c[1] = measure $1;</textarea></label>
+                  <div class="quantum-job-actions"><button class="secondary-button" data-action="refresh-quantum-backends">REFRESH BACKENDS</button><button class="primary-button" data-action="submit-quantum-job">SUBMIT SAMPLER JOB</button></div>
+                </div>
+                <div class="quantum-runtime-detail">
+                  <div id="quantumRuntimeStatus" class="runtime-status"><span class="status-dot"></span><div><b>Loading quantum runtime…</b><small>Credentials remain server-side.</small></div></div>
+                  <div id="quantumJobResult" class="quantum-job-result"><div class="empty-state">No quantum job submitted in this session.</div></div>
+                  <div class="quantum-jobs-head"><b>REMOTE JOBS</b><button class="secondary-button" data-action="refresh-quantum-jobs">REFRESH</button></div>
+                  <div id="quantumJobs" class="history-list"><div class="empty-state">No remote jobs loaded.</div></div>
+                </div>
+              </div>
+            </section>
           </div>
         </section>
 
@@ -229,7 +287,7 @@
           <div class="workspace-head"><div><span class="eyebrow">SETTINGS / RUNTIME</span><h1 id="settingsTitle">Operator Settings</h1><p>Persistent visual, spatial and runtime preferences. Secrets remain server-side.</p></div><div class="workspace-actions"><span class="pill" id="settingsSavedBadge">SAVED LOCALLY</span></div></div>
           <div class="settings-grid">
             <section class="panel settings-card"><header class="panel-head"><div class="panel-title"><span class="badge">◉</span><span><h3>INTERFACE</h3><small>Persistent browser preferences</small></span></div></header><div class="settings-form">
-              <label>Default Workspace<select id="settingDefaultWorkspace"><option value="grid">Grid</option><option value="holographic">Holographic</option><option value="quantum">Quantum</option><option value="ai">AI</option><option value="scenarios">Scenarios</option><option value="evidence">Evidence</option></select></label>
+              <label>Default Workspace<select id="settingDefaultWorkspace"><option value="grid">Grid</option><option value="global">Global</option><option value="holographic">Holographic</option><option value="quantum">Quantum</option><option value="ai">AI</option><option value="scenarios">Scenarios</option><option value="evidence">Evidence</option></select></label>
               <label>Interface Density<select id="settingDensity"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label>
               <label>Animation Intensity <output id="settingAnimationValue">100%</output><input id="settingAnimation" type="range" min="0" max="100" value="100" /></label>
               <label class="switch-row"><input id="settingReducedMotion" type="checkbox" /><span>Reduce non-essential motion</span></label>
@@ -242,6 +300,10 @@
             </div></section>
 
             <section class="panel settings-card"><header class="panel-head"><div class="panel-title"><span class="badge">△</span><span><h3>AI RUNTIME</h3><small>Safe provider visibility</small></span></div></header><div class="settings-form" id="aiRuntimeSettings"><div class="runtime-status"><span class="status-dot"></span><div><b>Loading model configuration…</b><small>No secret values are exposed to the browser.</small></div></div></div></section>
+
+            <section class="panel settings-card"><header class="panel-head"><div class="panel-title"><span class="badge">◎</span><span><h3>GEOSPATIAL RUNTIME</h3><small>Live city geometry provider</small></span></div></header><div class="settings-form" id="geoRuntimeSettings"><div class="runtime-status"><span class="status-dot"></span><div><b>Loading geospatial runtime…</b><small>Live city meshes are fetched only on operator request.</small></div></div></div></section>
+
+            <section class="panel settings-card"><header class="panel-head"><div class="panel-title"><span class="badge">Q</span><span><h3>QUANTUM RUNTIME</h3><small>Compute provider visibility</small></span></div></header><div class="settings-form" id="quantumRuntimeSettings"><div class="runtime-status"><span class="status-dot"></span><div><b>Loading quantum provider…</b><small>IBM credentials remain server-side.</small></div></div></div></section>
 
             <section class="panel settings-card"><header class="panel-head"><div class="panel-title"><span class="badge">⌁</span><span><h3>TELEMETRY</h3><small>Connection behavior</small></span></div></header><div class="settings-form">
               <label class="switch-row"><input id="settingLiveStream" type="checkbox" checked /><span>Use live server event stream when available</span></label>
@@ -256,6 +318,28 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <dialog id="profileDialog" class="profile-dialog">
+    <button class="dialog-close" data-dialog-close aria-label="Close">×</button>
+    <div class="dialog-kicker">OPERATOR PROFILE</div><h2>Identity & Workspace Profile</h2>
+    <form id="profileForm" class="profile-form">
+      <div class="profile-avatar-editor">
+        <div class="profile-avatar-preview" id="profileAvatarPreview"><span id="profileAvatarPreviewInitials">IM</span><img id="profileAvatarPreviewImage" alt="" hidden /></div>
+        <label class="secondary-button profile-upload">UPLOAD AVATAR<input id="profileAvatarInput" type="file" accept="image/png,image/jpeg,image/webp" hidden /></label>
+        <small>Stored locally with the profile. Image is resized before save.</small>
+      </div>
+      <div class="profile-fields">
+        <label>Display Name<input id="profileDisplayName" maxlength="80" required /></label>
+        <label>Initials<input id="profileInitialsInput" maxlength="4" required /></label>
+        <label>Title<input id="profileTitle" maxlength="100" /></label>
+        <label>Organization<input id="profileOrganization" maxlength="100" /></label>
+        <label>Home Region<input id="profileHomeRegion" maxlength="100" /></label>
+        <label>Timezone<input id="profileTimezone" maxlength="80" /></label>
+        <label class="profile-bio">Bio<textarea id="profileBio" rows="4" maxlength="500"></textarea></label>
+      </div>
+      <div class="profile-actions"><span id="profilePersistStatus">LOCAL PROFILE</span><button type="submit" class="primary-button">SAVE PROFILE</button></div>
+    </form>
+  </dialog>
 
   <dialog id="panelDialog">
     <button class="dialog-close" data-dialog-close aria-label="Close">×</button>

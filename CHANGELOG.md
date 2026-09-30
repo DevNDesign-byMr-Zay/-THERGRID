@@ -10,6 +10,11 @@
 
 ### Added
 
+- Added a native-WebGL **GLOBAL** God's-eye workspace with real latitude/longitude city nodes, orbit/zoom selection, and a city-descent workflow.
+- Added on-demand OpenStreetMap Overpass building-footprint ingestion with attribution, request caching, height/level extraction, metric projection, explicit live-vs-fallback provenance, and interactive 3D wireframe city rendering.
+- Added a persistent operator profile with editable identity fields, local JSON persistence, browser cache fallback, and client-side 256×256 avatar resizing.
+- Added a provider-neutral quantum compute runtime with default local Sampler fallback plus real IBM Cloud IAM, IBM Quantum backend discovery, OpenQASM 3 Sampler V2 submission, remote job listing/details, and evidence receipts that distinguish submission from completed hardware execution.
+
 - Added exclusive ÆTHERGRID workspace routing so Grid, Holographic, Quantum, AI, Scenarios, Evidence, and Settings operate as distinct usable views instead of a single scrolling dashboard.
 - Added persistent operator settings for default workspace, density, motion, holographic auto-rotation, labels, default 4D time, event streaming, and polling fallback.
 - Added replaceable `local`, `openai-compatible`, and `ollama` AI provider adapters with per-agent VÆLON/AUREN/SOLVÆR/TEAM model configuration, safe runtime introspection, provider timeout/fallback evidence, individual-agent endpoints, and three-agent parallel team synthesis.

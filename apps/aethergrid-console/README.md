@@ -103,3 +103,44 @@ After extracting the package:
 4. To configure real model providers, copy `.env.example` to `.env` and fill in the provider/model settings. Never commit the populated `.env`.
 
 The generated `standalone.html` remains available for direct-open WebGL/local-fallback use when no Node backend is desired.
+
+## Global God's-eye workspace
+
+ÆTHERGRID now includes a native-WebGL global workspace. The globe is generated from real latitude/longitude coordinates rather than a map screenshot. The maintained city registry currently includes New York, London, Tokyo, Dubai, Singapore, São Paulo, Lagos, and Sydney.
+
+Selecting **DESCEND INTO CITY** requests building footprints from the configured OpenStreetMap Overpass provider. Returned building ways are projected from geographic coordinates into a local metric frame, assigned height from OpenStreetMap `height` / `building:levels` tags when present, and rendered as interactive 3D wireframe extrusions. The request is operator-triggered and cached; it is not an autocomplete, bulk scraper, or background crawler.
+
+When the live provider cannot be reached, the UI labels the geometry as local fallback rather than presenting it as live map data. OpenStreetMap attribution remains visible whenever OSM-derived geometry is used.
+
+## Persistent operator profile
+
+The top-right profile is now editable and persistent. The local Node backend stores bounded profile data in `.aethergrid-data/operator-profile.json` with private file permissions. The browser keeps a cache so the profile remains visible in direct-open/standalone mode.
+
+Supported fields:
+- display name and initials;
+- title and organization;
+- home region and timezone;
+- short bio;
+- avatar upload.
+
+Avatar files are resized in-browser to 256×256 before persistence and are limited by the server-side encoded-size guard. This profile is local application identity, not an Internet authentication or authorization system.
+
+## Quantum compute runtime
+
+The Quantum workspace now has two execution providers:
+
+- `local-simulator`: credential-free deterministic sampler used by default and in offline ZIP workflows;
+- `ibm-quantum`: real IBM Quantum Compute Service REST integration.
+
+The IBM adapter uses server-side IBM Cloud IAM authentication, backend discovery, Sampler V2 job submission, remote job listing, and job-detail retrieval. The current maintained IBM API version is `2026-04-15`.
+
+To enable IBM Quantum, configure in the app-local `.env`:
+
+```text
+AETHERGRID_QUANTUM_PROVIDER=ibm-quantum
+AETHERGRID_IBM_QUANTUM_API_KEY=<server-side secret>
+AETHERGRID_IBM_QUANTUM_SERVICE_CRN=<instance CRN>
+AETHERGRID_IBM_QUANTUM_BACKEND=<backend name>
+```
+
+The browser never receives the API key or IAM bearer token. Submitting a job is not treated as proof that QPU execution completed; the evidence record distinguishes submission from completed hardware execution.

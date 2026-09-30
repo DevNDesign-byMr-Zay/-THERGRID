@@ -3,6 +3,16 @@
   const qa = (selector, root = document) => [...root.querySelectorAll(selector)];
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const SETTINGS_KEY = 'aethergrid.operator.settings.v2';
+  const DEFAULT_GLOBAL_CITIES = Object.freeze([
+    { id: 'new-york', name: 'New York', country: 'United States', lat: 40.7128, lon: -74.006, radiusM: 900 },
+    { id: 'london', name: 'London', country: 'United Kingdom', lat: 51.5074, lon: -0.1278, radiusM: 900 },
+    { id: 'tokyo', name: 'Tokyo', country: 'Japan', lat: 35.6762, lon: 139.6503, radiusM: 900 },
+    { id: 'dubai', name: 'Dubai', country: 'United Arab Emirates', lat: 25.2048, lon: 55.2708, radiusM: 900 },
+    { id: 'singapore', name: 'Singapore', country: 'Singapore', lat: 1.3521, lon: 103.8198, radiusM: 900 },
+    { id: 'sao-paulo', name: 'São Paulo', country: 'Brazil', lat: -23.5505, lon: -46.6333, radiusM: 900 },
+    { id: 'lagos', name: 'Lagos', country: 'Nigeria', lat: 6.5244, lon: 3.3792, radiusM: 900 },
+    { id: 'sydney', name: 'Sydney', country: 'Australia', lat: -33.8688, lon: 151.2093, radiusM: 900 },
+  ]);
 
   const defaultSettings = Object.freeze({
     defaultWorkspace: 'grid',
@@ -62,6 +72,25 @@
     ],
     optimizationHistory: [],
     runtime: null,
+    geospatial: {
+      runtime: null,
+      cities: DEFAULT_GLOBAL_CITIES.map((city) => ({ ...city })),
+      selectedCityId: 'new-york',
+      cityMesh: null,
+    },
+    quantumRuntime: null,
+    profile: {
+      id: 'local-operator',
+      displayName: 'Operator',
+      initials: 'IM',
+      title: 'ÆTHERGRID Operator',
+      organization: '',
+      homeRegion: 'New York Metro',
+      timezone: 'America/New_York',
+      bio: '',
+      avatarDataUrl: '',
+      updatedAt: null,
+    },
   };
 
   const toast = q('#toast');
@@ -229,7 +258,7 @@
   }
 
   function switchWorkspace(name, { persist = true } = {}) {
-    const valid = ['grid', 'holographic', 'quantum', 'ai', 'scenarios', 'evidence', 'settings'];
+    const valid = ['grid', 'global', 'holographic', 'quantum', 'ai', 'scenarios', 'evidence', 'settings'];
     if (!valid.includes(name)) name = 'grid';
     state.workspace = name;
     document.body.dataset.workspace = name;
@@ -244,6 +273,8 @@
     requestAnimationFrame(() => {
       spatial?.resize();
       holographic?.resize();
+      globalGlobe?.resize();
+      cityGrid?.resize();
       quantumSurface?.resize();
       scenarioChart?.resize();
     });
@@ -559,6 +590,79 @@
       this.geometry.nodes = this.makeBuffer(nodes);
     }
 
+    loadCityMesh(mesh) {
+      if (!this.gl || !mesh?.buildings?.length) return;
+      for (const item of Object.values(this.geometry)) if (item?.buffer) this.gl.deleteBuffer(item.buffer);
+      const grid = [];
+      const buildings = [];
+      const nodes = [];
+      const routes = [];
+      const radius = Math.max(200, Number(mesh.city?.radiusM || 900));
+      const scale = 8.5 / radius;
+
+      for (let n = -10; n <= 10; n += 1) {
+        this.line(grid, [-10, 0, n], [10, 0, n], n * 0.13);
+        this.line(grid, [n, 0, -10], [n, 0, 10], n * 0.17);
+      }
+
+      this.graphNodes = [];
+      mesh.buildings.forEach((building, buildingIndex) => {
+        const footprint = (building.footprint || []).map(([x, z]) => [x * scale, z * scale]);
+        if (footprint.length < 3) return;
+        const height = Math.max(0.035, Number(building.heightM || 12) * scale);
+        const phase = buildingIndex * 0.13;
+        for (let index = 1; index < footprint.length; index += 1) {
+          const [ax, az] = footprint[index - 1];
+          const [bx, bz] = footprint[index];
+          this.line(buildings, [ax, 0, az], [bx, 0, bz], phase);
+          this.line(buildings, [ax, height, az], [bx, height, bz], phase + 0.2);
+          if (index % 2 === 0 || index === footprint.length - 1) {
+            this.line(buildings, [ax, 0, az], [ax, height, az], phase + 0.4);
+          }
+        }
+
+        if (buildingIndex < 80 && (building.name || buildingIndex % 8 === 0)) {
+          const center = footprint
+            .reduce(
+              (acc, point) => [acc[0] + point[0], acc[1] + point[1]],
+              [0, 0],
+            )
+            .map((value) => value / footprint.length);
+          const node = {
+            id: building.id,
+            label: building.name || `Building ${buildingIndex + 1}`,
+            type: 'building',
+            heightM: building.heightM,
+            osmId: building.osmId || null,
+            position: [center[0], height + 0.08, center[1]],
+          };
+          this.graphNodes.push(node);
+          this.vertex(nodes, ...node.position, phase);
+        }
+      });
+
+      (mesh.roads || []).forEach((road, roadIndex) => {
+        const path = (road.path || []).map(([x, z]) => [x * scale, z * scale]);
+        for (let index = 1; index < path.length; index += 1) {
+          const [ax, az] = path[index - 1];
+          const [bx, bz] = path[index];
+          this.line(routes, [ax, 0.025, az], [bx, 0.025, bz], roadIndex * 0.07);
+        }
+      });
+
+      this.geometry.grid = this.makeBuffer(grid);
+      this.geometry.buildings = this.makeBuffer(buildings);
+      this.geometry.routes = this.makeBuffer(routes);
+      this.geometry.nodes = this.makeBuffer(nodes);
+      this.selectedNode = null;
+      if (this.selectionBuffer?.buffer) this.gl.deleteBuffer(this.selectionBuffer.buffer);
+      this.selectionBuffer = null;
+      this.yaw = 0.78;
+      this.pitch = 0.57;
+      this.distance = 18;
+      this.updateReadout();
+    }
+
     resize() {
       if (!this.gl || !this.canvas) return;
       const dpr = Math.min(devicePixelRatio || 1, 2);
@@ -778,6 +882,305 @@
     };
   }
 
+  class GlobalGlobe3D {
+    constructor(canvas, options = {}) {
+      this.canvas = canvas;
+      this.options = options;
+      this.gl = canvas?.getContext('webgl', { antialias: true, alpha: true });
+      this.yaw = 0.35;
+      this.pitch = 0.28;
+      this.distance = 11.5;
+      this.drag = null;
+      this.cities = [];
+      this.selectedCity = null;
+      this.currentMvp = null;
+      this.selectedBuffer = null;
+      if (!this.gl) return;
+      this.initProgram();
+      this.buildGlobe();
+      this.bindControls();
+      this.resize();
+      this.animate();
+      addEventListener('resize', () => this.resize());
+    }
+
+    shader(type, source) {
+      const shader = this.gl.createShader(type);
+      this.gl.shaderSource(shader, source);
+      this.gl.compileShader(shader);
+      if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
+        throw new Error(this.gl.getShaderInfoLog(shader));
+      }
+      return shader;
+    }
+
+    initProgram() {
+      const gl = this.gl;
+      const vertex = this.shader(
+        gl.VERTEX_SHADER,
+        `attribute vec3 a_position;
+         uniform mat4 u_mvp;
+         uniform float u_pointSize;
+         void main(){
+           gl_Position=u_mvp*vec4(a_position,1.0);
+           gl_PointSize=u_pointSize;
+         }`,
+      );
+      const fragment = this.shader(
+        gl.FRAGMENT_SHADER,
+        `precision mediump float;
+         uniform vec4 u_color;
+         uniform float u_pointMode;
+         void main(){
+           if(u_pointMode>0.5){
+             vec2 c=gl_PointCoord-vec2(0.5);
+             if(dot(c,c)>0.25) discard;
+           }
+           gl_FragColor=u_color;
+         }`,
+      );
+      this.program = gl.createProgram();
+      gl.attachShader(this.program, vertex);
+      gl.attachShader(this.program, fragment);
+      gl.linkProgram(this.program);
+      this.loc = {
+        pos: gl.getAttribLocation(this.program, 'a_position'),
+        mvp: gl.getUniformLocation(this.program, 'u_mvp'),
+        color: gl.getUniformLocation(this.program, 'u_color'),
+        pointSize: gl.getUniformLocation(this.program, 'u_pointSize'),
+        pointMode: gl.getUniformLocation(this.program, 'u_pointMode'),
+      };
+    }
+
+    makeBuffer(data) {
+      const buffer = this.gl.createBuffer();
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer);
+      this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(data), this.gl.STATIC_DRAW);
+      return { buffer, count: data.length / 3 };
+    }
+
+    spherePoint(latDeg, lonDeg, radius = 4) {
+      const lat = (latDeg * Math.PI) / 180;
+      const lon = (lonDeg * Math.PI) / 180;
+      return [
+        radius * Math.cos(lat) * Math.cos(lon),
+        radius * Math.sin(lat),
+        radius * Math.cos(lat) * Math.sin(lon),
+      ];
+    }
+
+    pushLine(out, a, b) {
+      out.push(...a, ...b);
+    }
+
+    buildGlobe() {
+      const lines = [];
+      for (let lat = -75; lat <= 75; lat += 15) {
+        let previous = this.spherePoint(lat, -180);
+        for (let lon = -175; lon <= 180; lon += 5) {
+          const current = this.spherePoint(lat, lon);
+          this.pushLine(lines, previous, current);
+          previous = current;
+        }
+      }
+      for (let lon = -180; lon < 180; lon += 15) {
+        let previous = this.spherePoint(-90, lon);
+        for (let lat = -85; lat <= 90; lat += 5) {
+          const current = this.spherePoint(lat, lon);
+          this.pushLine(lines, previous, current);
+          previous = current;
+        }
+      }
+      this.gridBuffer = this.makeBuffer(lines);
+      this.cityBuffer = this.makeBuffer([]);
+    }
+
+    setCities(cities = []) {
+      this.cities = cities.map((city) => ({
+        ...city,
+        position: this.spherePoint(Number(city.lat), Number(city.lon), 4.08),
+      }));
+      if (this.cityBuffer?.buffer) this.gl.deleteBuffer(this.cityBuffer.buffer);
+      this.cityBuffer = this.makeBuffer(this.cities.flatMap((city) => city.position));
+    }
+
+    resize() {
+      if (!this.gl || !this.canvas) return;
+      const dpr = Math.min(devicePixelRatio || 1, 2);
+      const rect = this.canvas.getBoundingClientRect();
+      const width = Math.max(1, Math.round(rect.width * dpr));
+      const height = Math.max(1, Math.round(rect.height * dpr));
+      if (this.canvas.width !== width || this.canvas.height !== height) {
+        this.canvas.width = width;
+        this.canvas.height = height;
+      }
+      this.gl.viewport(0, 0, width, height);
+    }
+
+    bindControls() {
+      this.canvas.addEventListener('pointerdown', (event) => {
+        this.drag = { x: event.clientX, y: event.clientY, yaw: this.yaw, pitch: this.pitch, moved: false };
+        this.canvas.setPointerCapture(event.pointerId);
+        this.canvas.classList.add('dragging');
+      });
+      this.canvas.addEventListener('pointermove', (event) => {
+        if (!this.drag) return;
+        const dx = event.clientX - this.drag.x;
+        const dy = event.clientY - this.drag.y;
+        if (Math.hypot(dx, dy) > 4) this.drag.moved = true;
+        this.yaw = this.drag.yaw + dx * 0.008;
+        this.pitch = clamp(this.drag.pitch + dy * 0.006, -1.15, 1.15);
+      });
+      const end = (event) => {
+        if (!this.drag) return;
+        const wasClick = !this.drag.moved;
+        this.drag = null;
+        this.canvas.classList.remove('dragging');
+        try { this.canvas.releasePointerCapture(event.pointerId); } catch {}
+        if (wasClick) this.pickCity(event.clientX, event.clientY);
+      };
+      this.canvas.addEventListener('pointerup', end);
+      this.canvas.addEventListener('pointercancel', end);
+      this.canvas.addEventListener('wheel', (event) => {
+        event.preventDefault();
+        this.distance = clamp(this.distance + event.deltaY * 0.01, 6.6, 18);
+      }, { passive: false });
+      this.canvas.addEventListener('dblclick', () => {
+        if (this.selectedCity) this.options.onEnterCity?.(this.selectedCity);
+      });
+    }
+
+    reset() {
+      this.yaw = 0.35;
+      this.pitch = 0.28;
+      this.distance = 11.5;
+    }
+
+    cityCameraTarget(city) {
+      return {
+        yaw: -((Number(city.lon) * Math.PI) / 180) - Math.PI / 2,
+        pitch: clamp((Number(city.lat) * Math.PI) / 180, -1.05, 1.05),
+      };
+    }
+
+    markCitySelected(city) {
+      this.selectedCity = city;
+      if (this.selectedBuffer?.buffer) this.gl.deleteBuffer(this.selectedBuffer.buffer);
+      const position = city.position || this.spherePoint(Number(city.lat), Number(city.lon), 4.12);
+      this.selectedBuffer = this.makeBuffer(position);
+      this.options.onSelectCity?.(city);
+    }
+
+    focusCity(city) {
+      if (!city) return;
+      const target = this.cityCameraTarget(city);
+      this.yaw = target.yaw;
+      this.pitch = target.pitch;
+      this.distance = 8.2;
+      this.markCitySelected(city);
+    }
+
+    descendToCity(city, durationMs = 700) {
+      if (!city) return Promise.resolve();
+      const start = {
+        yaw: this.yaw,
+        pitch: this.pitch,
+        distance: this.distance,
+      };
+      const target = this.cityCameraTarget(city);
+      this.markCitySelected(city);
+      return new Promise((resolve) => {
+        const startedAt = performance.now();
+        const tick = (now) => {
+          const raw = clamp((now - startedAt) / durationMs, 0, 1);
+          const t = 1 - Math.pow(1 - raw, 3);
+          this.yaw = start.yaw + (target.yaw - start.yaw) * t;
+          this.pitch = start.pitch + (target.pitch - start.pitch) * t;
+          this.distance = start.distance + (5.65 - start.distance) * t;
+          if (raw < 1 && !state.settings.reducedMotion) requestAnimationFrame(tick);
+          else {
+            this.yaw = target.yaw;
+            this.pitch = target.pitch;
+            this.distance = 5.65;
+            resolve();
+          }
+        };
+        if (state.settings.reducedMotion) tick(startedAt + durationMs);
+        else requestAnimationFrame(tick);
+      });
+    }
+
+    projectCity(city) {
+      if (!this.currentMvp || !city?.position) return null;
+      const [x, y, z] = city.position;
+      const matrix = this.currentMvp;
+      const clipX = matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12];
+      const clipY = matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13];
+      const clipW = matrix[3] * x + matrix[7] * y + matrix[11] * z + matrix[15];
+      if (clipW <= 0.001) return null;
+      const rect = this.canvas.getBoundingClientRect();
+      return {
+        x: rect.left + (clipX / clipW * 0.5 + 0.5) * rect.width,
+        y: rect.top + (-clipY / clipW * 0.5 + 0.5) * rect.height,
+      };
+    }
+
+    pickCity(clientX, clientY) {
+      let best = null;
+      for (const city of this.cities) {
+        const point = this.projectCity(city);
+        if (!point) continue;
+        const distance = Math.hypot(point.x - clientX, point.y - clientY);
+        if (distance < 30 && (!best || distance < best.distance)) best = { city, distance };
+      }
+      if (best) this.focusCity(best.city);
+      return best?.city || null;
+    }
+
+    draw(item, primitive, color, pointMode = 0, pointSize = 1) {
+      if (!item?.count) return;
+      const gl = this.gl;
+      gl.bindBuffer(gl.ARRAY_BUFFER, item.buffer);
+      gl.vertexAttribPointer(this.loc.pos, 3, gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(this.loc.pos);
+      gl.uniform4fv(this.loc.color, color);
+      gl.uniform1f(this.loc.pointMode, pointMode);
+      gl.uniform1f(this.loc.pointSize, pointSize);
+      gl.drawArrays(primitive, 0, item.count);
+    }
+
+    animate = () => {
+      if (!this.gl) return;
+      const gl = this.gl;
+      const rect = this.canvas.getBoundingClientRect();
+      const aspect = Math.max(0.1, rect.width / Math.max(1, rect.height));
+      if (!this.drag && !state.settings.reducedMotion) {
+        this.yaw += 0.00018 * Math.max(0.1, state.settings.animationIntensity / 100);
+      }
+      const eye = [
+        Math.sin(this.yaw) * Math.cos(this.pitch) * this.distance,
+        Math.sin(this.pitch) * this.distance,
+        Math.cos(this.yaw) * Math.cos(this.pitch) * this.distance,
+      ];
+      const mvp = mat4Multiply(
+        perspective(Math.PI / 3.2, aspect, 0.1, 60),
+        lookAt(eye, [0, 0, 0], [0, 1, 0]),
+      );
+      this.currentMvp = mvp;
+      gl.enable(gl.DEPTH_TEST);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gl.clearColor(0.004, 0.015, 0.04, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.useProgram(this.program);
+      gl.uniformMatrix4fv(this.loc.mvp, false, mvp);
+      this.draw(this.gridBuffer, gl.LINES, [0.08, 0.55, 0.95, 0.52], 0, 1);
+      this.draw(this.cityBuffer, gl.POINTS, [0.18, 1, 0.82, 1], 1, 9);
+      if (this.selectedBuffer) this.draw(this.selectedBuffer, gl.POINTS, [1, 0.7, 0.18, 1], 1, 16);
+      requestAnimationFrame(this.animate);
+    };
+  }
+
   class WaveSurface {
     constructor(canvas) {
       this.canvas = canvas;
@@ -910,6 +1313,31 @@
     showToast('SPATIAL NODE SELECTED', node.label || node.id);
   }
 
+  function handleCityBuildingSelection(node) {
+    const status = q('#cityMeshStatus');
+    if (status) {
+      status.innerHTML = `<b>${escapeHtml(node.label || node.id)}</b><p>Building node · ${Number(node.heightM || 0).toFixed(1)} m high${node.osmId ? ` · OSM way ${escapeHtml(node.osmId)}` : ''}.</p>`;
+    }
+    showToast('CITY BUILDING SELECTED', node.label || node.id);
+  }
+
+  function handleGlobalCitySelection(city) {
+    if (!city) return;
+    state.geospatial.selectedCityId = city.id;
+    const select = q('#globalCitySelect');
+    if (select) select.value = city.id;
+    qa('[data-global-city]').forEach((button) =>
+      button.classList.toggle('active', button.dataset.globalCity === city.id),
+    );
+    const latLabel = `${Math.abs(Number(city.lat)).toFixed(4)}° ${Number(city.lat) >= 0 ? 'N' : 'S'}`;
+    const lonLabel = `${Math.abs(Number(city.lon)).toFixed(4)}° ${Number(city.lon) >= 0 ? 'E' : 'W'}`;
+    if (q('#globalCoordinates')) q('#globalCoordinates').textContent = `${latLabel} · ${lonLabel}`;
+    const status = q('#cityMeshStatus');
+    if (status) {
+      status.innerHTML = `<b>${escapeHtml(city.name)} · ${escapeHtml(city.country)}</b><p>Real-coordinate world node selected. Descend into the city to request live building geometry.</p>`;
+    }
+  }
+
   const spatial = new SpatialGrid4D(q('#spatialGrid'), {
     readoutId: 'cameraReadout',
     onSelectNode: handleSpatialSelection,
@@ -920,8 +1348,242 @@
     distance: 18,
     onSelectNode: handleSpatialSelection,
   });
+  const globalGlobe = new GlobalGlobe3D(q('#globalGlobe'), {
+    onSelectCity: handleGlobalCitySelection,
+    onEnterCity: (city) => loadLiveCity(city.id),
+  });
+  globalGlobe?.setCities(state.geospatial.cities);
+  const cityGrid = new SpatialGrid4D(q('#cityGrid'), {
+    yaw: 0.86,
+    pitch: 0.62,
+    distance: 18,
+    onSelectNode: handleCityBuildingSelection,
+  });
+  cityGrid.autoRotate = false;
   const quantumSurface = new WaveSurface(q('#quantumCanvas'));
   const scenarioChart = new ScenarioChart(q('#scenarioChart'));
+
+  function setGlobalMode(mode) {
+    const globeCanvas = q('#globalGlobe');
+    const cityCanvas = q('#cityGrid');
+    const cityMode = mode === 'city';
+    if (globeCanvas) globeCanvas.hidden = cityMode;
+    if (cityCanvas) cityCanvas.hidden = !cityMode;
+    qa('[data-global-mode]').forEach((button) =>
+      button.classList.toggle('active', button.dataset.globalMode === mode),
+    );
+    if (q('#globalScale')) q('#globalScale').textContent = cityMode ? 'CITY SCALE' : 'PLANETARY SCALE';
+    requestAnimationFrame(() => {
+      globalGlobe?.resize();
+      cityGrid?.resize();
+    });
+  }
+
+  async function loadGlobalRuntime() {
+    const list = q('#globalCityList');
+    const select = q('#globalCitySelect');
+    try {
+      const result = await api('./api/aethergrid/geospatial/cities');
+      state.geospatial.runtime = result.runtime;
+      state.geospatial.cities = Array.isArray(result.cities) ? result.cities : [];
+      globalGlobe?.setCities(state.geospatial.cities);
+      if (select) {
+        select.innerHTML = state.geospatial.cities
+          .map(
+            (city) =>
+              `<option value="${escapeHtml(city.id)}">${escapeHtml(city.name)} · ${escapeHtml(city.country)}</option>`,
+          )
+          .join('');
+        select.value = state.geospatial.selectedCityId;
+      }
+      if (list) {
+        list.innerHTML = state.geospatial.cities
+          .map(
+            (city) =>
+              `<button class="global-city-button${city.id === state.geospatial.selectedCityId ? ' active' : ''}" data-global-city="${escapeHtml(city.id)}"><b>${escapeHtml(city.name)}</b><small>${escapeHtml(city.country)} · ${Number(city.lat).toFixed(2)}, ${Number(city.lon).toFixed(2)}</small><em>ENTER</em></button>`,
+          )
+          .join('');
+      }
+      const provider = result.runtime?.provider || 'local';
+      if (q('#geoRuntimeBadge')) q('#geoRuntimeBadge').textContent = provider === 'osm-overpass' ? 'LIVE OSM READY' : 'LOCAL GEO';
+      if (q('#geoProvenance')) {
+        q('#geoProvenance').innerHTML = `<span><b>Provider</b><em>${escapeHtml(provider)}</em></span><span><b>Attribution</b><em>${escapeHtml(result.runtime?.attribution || 'Local')}</em></span><span><b>Cache</b><em>${Math.round(Number(result.runtime?.cacheTtlMs || 0) / 60000)} min</em></span><span><b>Actuation</b><em>Disabled</em></span>`;
+      }
+      const selected = state.geospatial.cities.find((city) => city.id === state.geospatial.selectedCityId);
+      if (selected) globalGlobe?.focusCity(selected);
+    } catch {
+      state.geospatial.cities = DEFAULT_GLOBAL_CITIES.map((city) => ({ ...city }));
+      globalGlobe?.setCities(state.geospatial.cities);
+      if (select) {
+        select.innerHTML = state.geospatial.cities
+          .map(
+            (city) =>
+              `<option value="${escapeHtml(city.id)}">${escapeHtml(city.name)} · ${escapeHtml(city.country)}</option>`,
+          )
+          .join('');
+        select.value = state.geospatial.selectedCityId;
+      }
+      if (list) {
+        list.innerHTML = state.geospatial.cities
+          .map(
+            (city) =>
+              `<button class="global-city-button${city.id === state.geospatial.selectedCityId ? ' active' : ''}" data-global-city="${escapeHtml(city.id)}"><b>${escapeHtml(city.name)}</b><small>${escapeHtml(city.country)} · ${Number(city.lat).toFixed(2)}, ${Number(city.lon).toFixed(2)}</small><em>ENTER</em></button>`,
+          )
+          .join('');
+      }
+      if (q('#geoRuntimeBadge')) q('#geoRuntimeBadge').textContent = 'STANDALONE GEO';
+      if (q('#geoProvenance')) {
+        q('#geoProvenance').innerHTML =
+          '<span><b>Provider</b><em>standalone coordinates</em></span><span><b>City Mesh</b><em>backend required</em></span><span><b>Actuation</b><em>Disabled</em></span>';
+      }
+      const selected = state.geospatial.cities.find((city) => city.id === state.geospatial.selectedCityId);
+      if (selected) globalGlobe?.focusCity(selected);
+    }
+  }
+
+  function buildStandaloneCityMesh(city, count = 120) {
+    let seed = [...String(city?.id || 'city')].reduce(
+      (value, character) => (Math.imul(value, 31) + character.charCodeAt(0)) >>> 0,
+      2166136261,
+    );
+    const random = () => {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+    const buildings = Array.from({ length: count }, (_, index) => {
+      const x = (random() - 0.5) * 1500;
+      const z = (random() - 0.5) * 1500;
+      const width = 10 + random() * 35;
+      const depth = 10 + random() * 35;
+      return {
+        id: `standalone-${index + 1}`,
+        name: '',
+        heightM: 9 + random() * 110,
+        footprint: [
+          [x - width, z - depth],
+          [x + width, z - depth],
+          [x + width, z + depth],
+          [x - width, z + depth],
+          [x - width, z - depth],
+        ],
+      };
+    });
+    const roads = Array.from({ length: 18 }, (_, index) => {
+      const horizontal = index % 2 === 0;
+      const offset = (random() - 0.5) * 1250;
+      const wobble = (random() - 0.5) * 80;
+      return {
+        id: `standalone-road-${index + 1}`,
+        name: '',
+        highwayType: index % 4 === 0 ? 'primary' : 'residential',
+        path: horizontal
+          ? [
+              [-720, offset],
+              [-250, offset + wobble],
+              [250, offset - wobble],
+              [720, offset],
+            ]
+          : [
+              [offset, -720],
+              [offset + wobble, -250],
+              [offset - wobble, 250],
+              [offset, 720],
+            ],
+      };
+    });
+    return {
+      schemaVersion: 1,
+      city,
+      source: {
+        provider: 'standalone-local-fallback',
+        live: false,
+        attribution: 'Live OpenStreetMap geometry requires the Node backend.',
+      },
+      buildings,
+      roads,
+    };
+  }
+
+  async function loadLiveCity(cityId = state.geospatial.selectedCityId, { force = false } = {}) {
+    const city = state.geospatial.cities.find((item) => item.id === cityId);
+    if (city) handleGlobalCitySelection(city);
+    const status = q('#cityMeshStatus');
+    if (status) status.innerHTML = `<b>Loading ${escapeHtml(city?.name || cityId)}…</b><p>Requesting building footprints and heights from the configured geospatial provider.</p>`;
+    if (q('#geoSourceStatus')) q('#geoSourceStatus').textContent = 'LOADING CITY GEOMETRY';
+    try {
+      const meshRequest = api(
+        `./api/aethergrid/geospatial/city/${encodeURIComponent(cityId)}${force ? '?force=1' : ''}`,
+      );
+      const descent =
+        city && globalGlobe ? globalGlobe.descendToCity(city, 720) : Promise.resolve();
+      const [result] = await Promise.all([meshRequest, descent]);
+      state.geospatial.cityMesh = result;
+      if (Array.isArray(result.activity)) state.activity = result.activity;
+      cityGrid?.loadCityMesh(result);
+      setGlobalMode('city');
+      if (q('#geoSourceStatus')) {
+        q('#geoSourceStatus').textContent = result.source?.live
+          ? `LIVE OSM · ${result.buildings.length} BUILDINGS`
+          : `LOCAL FALLBACK · ${result.buildings.length} BUILDINGS`;
+      }
+      if (q('#geoAttribution')) {
+        q('#geoAttribution').textContent =
+          result.source?.attribution || 'Live city geometry unavailable; using local fallback geometry.';
+      }
+      if (status) {
+        status.innerHTML = `<b>${escapeHtml(result.city.name)} · ${result.buildings.length} buildings · ${(result.roads || []).length} roads</b><p>${result.source?.live ? 'Live OpenStreetMap building footprints and road topology are now rendered as interactive 3D wireframe geometry.' : 'Provider request could not be completed; clearly marked local fallback geometry is being rendered.'}</p><button class="secondary-button" data-action="reload-city-live">REFRESH LIVE GEOMETRY</button>`;
+      }
+      renderActivity();
+      showToast(
+        result.source?.live ? 'LIVE CITY LOADED' : 'CITY FALLBACK LOADED',
+        `${result.city.name} · ${result.buildings.length} buildings · ${(result.roads || []).length} roads · ${result.source?.provider}`,
+      );
+    } catch (error) {
+      const fallbackCity =
+        city || state.geospatial.cities.find((item) => item.id === cityId) || DEFAULT_GLOBAL_CITIES[0];
+      const fallback = buildStandaloneCityMesh(fallbackCity);
+      state.geospatial.cityMesh = fallback;
+      cityGrid?.loadCityMesh(fallback);
+      setGlobalMode('city');
+      if (status) {
+        status.innerHTML = `<b>${escapeHtml(fallbackCity.name)} · standalone fallback</b><p>Live geometry could not be reached. Interactive 3D geometry remains available, but it is explicitly local fallback—not OpenStreetMap data.</p>`;
+      }
+      if (q('#geoSourceStatus')) q('#geoSourceStatus').textContent = 'STANDALONE FALLBACK · NOT LIVE MAP DATA';
+      if (q('#geoAttribution')) q('#geoAttribution').textContent = fallback.source.attribution;
+      showToast('STANDALONE CITY MODE', error.message || 'Backend unavailable; rendering local fallback geometry.');
+    }
+  }
+
+  q('#globalCitySelect')?.addEventListener('change', (event) => {
+    const city = state.geospatial.cities.find((item) => item.id === event.target.value);
+    if (city) globalGlobe?.focusCity(city);
+  });
+  q('#globalCityList')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-global-city]');
+    if (!button) return;
+    const city = state.geospatial.cities.find((item) => item.id === button.dataset.globalCity);
+    if (city) {
+      globalGlobe?.focusCity(city);
+      loadLiveCity(city.id);
+    }
+  });
+  qa('[data-global-mode]').forEach((button) =>
+    button.addEventListener('click', () => {
+      if (button.dataset.globalMode === 'city' && !state.geospatial.cityMesh) {
+        loadLiveCity();
+      } else {
+        setGlobalMode(button.dataset.globalMode);
+      }
+    }),
+  );
+  q('[data-action="load-live-city"]')?.addEventListener('click', () => loadLiveCity());
+  q('[data-global-action="reset"]')?.addEventListener('click', () => {
+    globalGlobe?.reset();
+    setGlobalMode('globe');
+  });
+  q('#cityMeshStatus')?.addEventListener('click', (event) => {
+    if (event.target.closest('[data-action="reload-city-live"]')) loadLiveCity(state.geospatial.selectedCityId, { force: true });
+  });
 
   function updateClock() {
     const now = new Date();
@@ -1142,32 +1804,210 @@
   }
 
   async function loadRuntimeConfig() {
-    const container = q('#aiRuntimeSettings');
-    if (!container) return;
+    const aiContainer = q('#aiRuntimeSettings');
+    const geoContainer = q('#geoRuntimeSettings');
+    const quantumContainer = q('#quantumRuntimeSettings');
     try {
       const result = await api('./api/aethergrid/runtime');
       state.runtime = result;
-      const agents = result.agents || {};
-      container.innerHTML = `
-        <div class="runtime-status"><span class="status-dot"></span><div><b>${escapeHtml(result.mode || 'Provider runtime ready')}</b><small>Secrets remain server-side.</small></div></div>
-        ${Object.entries(agents)
-          .map(
-            ([name, config]) =>
-              `<div class="runtime-status"><span class="status-dot"></span><div><b>${escapeHtml(name)} · ${escapeHtml(config.provider || 'fallback')}</b><small>${escapeHtml(config.model || 'deterministic-local')} · ${escapeHtml(config.status || 'ready')}</small></div></div>`,
-          )
-          .join('')}
-      `;
+      state.geospatial.runtime = result.geospatial || null;
+      state.quantumRuntime = result.quantum || null;
+      const agents = result.agents || result.ai?.agents || {};
+      if (aiContainer) {
+        aiContainer.innerHTML = `
+          <div class="runtime-status"><span class="status-dot"></span><div><b>${escapeHtml(result.mode || result.ai?.mode || 'Provider runtime ready')}</b><small>Secrets remain server-side.</small></div></div>
+          ${Object.entries(agents)
+            .map(
+              ([name, config]) =>
+                `<div class="runtime-status"><span class="status-dot"></span><div><b>${escapeHtml(name)} · ${escapeHtml(config.provider || 'fallback')}</b><small>${escapeHtml(config.model || 'deterministic-local')} · ${escapeHtml(config.status || 'ready')}</small></div></div>`,
+            )
+            .join('')}
+        `;
+      }
       for (const [name, config] of Object.entries(agents)) {
         const badge = q(`[data-agent-runtime="${CSS.escape(name)}"]`);
         if (badge) badge.textContent = config.model || config.provider || 'READY';
       }
-      if (q('#aiRuntimeBadge')) q('#aiRuntimeBadge').textContent = result.liveProviders ? 'MODEL PROVIDERS READY' : 'LOCAL FALLBACK';
+      const liveProviders = Boolean(result.liveProviders ?? result.ai?.liveProviders);
+      if (q('#aiRuntimeBadge')) q('#aiRuntimeBadge').textContent = liveProviders ? 'MODEL PROVIDERS READY' : 'LOCAL FALLBACK';
+
+      if (geoContainer) {
+        const geo = result.geospatial || {};
+        geoContainer.innerHTML = `<div class="runtime-status"><span class="status-dot"></span><div><b>${escapeHtml(geo.provider || 'local')}</b><small>${geo.liveProviderConfigured ? 'Live city geometry provider configured' : 'Local geometry fallback'} · ${escapeHtml(geo.attribution || 'No external attribution')}</small></div></div>`;
+      }
+
+      if (quantumContainer) {
+        const quantum = result.quantum || {};
+        quantumContainer.innerHTML = `<div class="runtime-status"><span class="status-dot"></span><div><b>${escapeHtml(quantum.provider || 'local-simulator')}</b><small>${quantum.configured ? 'Configured' : 'Credentials or backend required'} · ${escapeHtml(quantum.defaultBackend || 'No default backend')}</small></div></div>`;
+      }
+      renderQuantumRuntime(result.quantum || {});
     } catch {
-      container.innerHTML =
-        '<div class="runtime-status"><span class="status-dot"></span><div><b>Standalone fallback</b><small>Start server.mjs to enable configured model providers.</small></div></div>';
+      if (aiContainer) {
+        aiContainer.innerHTML =
+          '<div class="runtime-status"><span class="status-dot"></span><div><b>Standalone fallback</b><small>Start server.mjs to enable configured model providers.</small></div></div>';
+      }
+      if (geoContainer) {
+        geoContainer.innerHTML =
+          '<div class="runtime-status"><span class="status-dot"></span><div><b>Standalone geospatial mode</b><small>Backend required for live OpenStreetMap city geometry.</small></div></div>';
+      }
+      if (quantumContainer) {
+        quantumContainer.innerHTML =
+          '<div class="runtime-status"><span class="status-dot"></span><div><b>Standalone quantum visualization</b><small>Backend required for local sampler or IBM Quantum submission.</small></div></div>';
+      }
       if (q('#aiRuntimeBadge')) q('#aiRuntimeBadge').textContent = 'LOCAL FALLBACK';
+      renderQuantumRuntime({ provider: 'standalone', configured: false });
     }
   }
+
+  function renderQuantumRuntime(runtime = {}) {
+    state.quantumRuntime = { ...(state.quantumRuntime || {}), ...runtime };
+    const provider = runtime.provider || 'local-simulator';
+    if (q('#quantumProviderBadge')) {
+      q('#quantumProviderBadge').textContent =
+        provider === 'ibm-quantum'
+          ? runtime.configured
+            ? 'IBM QUANTUM READY'
+            : 'IBM QUANTUM CONFIG NEEDED'
+          : provider === 'standalone'
+            ? 'STANDALONE'
+            : 'LOCAL SAMPLER';
+    }
+    const status = q('#quantumRuntimeStatus');
+    if (status) {
+      status.innerHTML = `<span class="status-dot"></span><div><b>${escapeHtml(provider)}</b><small>${runtime.hardwareExecution ? 'Real QPU submission enabled' : 'Local deterministic sampler'} · ${escapeHtml(runtime.defaultBackend || 'no backend selected')} · credentials never enter the browser</small></div>`;
+    }
+  }
+
+  async function loadQuantumBackends() {
+    const select = q('#quantumBackend');
+    try {
+      const result = await api('./api/aethergrid/quantum/backends');
+      const backends = Array.isArray(result.backends) ? result.backends : [];
+      if (select && backends.length) {
+        select.innerHTML = backends
+          .map(
+            (backend) =>
+              `<option value="${escapeHtml(backend.name)}">${escapeHtml(backend.name)} · ${escapeHtml(backend.status || 'available')}${backend.simulator ? ' · simulator' : ''}</option>`,
+          )
+          .join('');
+        if (state.quantumRuntime?.defaultBackend && backends.some((item) => item.name === state.quantumRuntime.defaultBackend)) {
+          select.value = state.quantumRuntime.defaultBackend;
+        }
+      }
+      showToast('QUANTUM BACKENDS', `${backends.length} backend${backends.length === 1 ? '' : 's'} available through ${result.provider}.`);
+    } catch (error) {
+      showToast('QUANTUM BACKENDS', error.message || 'Unable to load quantum backends.');
+    }
+  }
+
+  function renderQuantumJob(job) {
+    const container = q('#quantumJobResult');
+    if (!container || !job) return;
+    const distribution = job.distribution
+      ? Object.entries(job.distribution)
+          .map(([stateKey, count]) => `<dt>|${escapeHtml(stateKey)}⟩</dt><dd>${Number(count).toLocaleString()}</dd>`)
+          .join('')
+      : '';
+    container.innerHTML = `<div class="quantum-job-card"><b>${escapeHtml(job.id || 'Quantum job')}</b><code>${escapeHtml(job.provider || 'unknown')} / ${escapeHtml(job.backend || 'unknown')}</code><dl><dt>Status</dt><dd>${escapeHtml(job.status || 'unknown')}</dd><dt>Primitive</dt><dd>${escapeHtml(job.programId || 'sampler')}</dd><dt>Hardware Submitted</dt><dd>${job.hardwareSubmitted ? 'YES' : 'NO'}</dd><dt>Receipt</dt><dd>${escapeHtml((job.receipt || '').slice(0, 18))}…</dd>${distribution}</dl></div>`;
+  }
+
+  async function submitQuantumJob() {
+    const circuit = q('#quantumCircuit')?.value.trim();
+    const backend = q('#quantumBackend')?.value;
+    const shots = Number(q('#quantumShots')?.value || 1024);
+    if (!circuit) return showToast('QUANTUM JOB', 'OpenQASM circuit is required.');
+    if (q('#quantumProviderBadge')) q('#quantumProviderBadge').textContent = 'SUBMITTING…';
+    try {
+      const result = await api('./api/aethergrid/quantum/jobs', {
+        method: 'POST',
+        body: JSON.stringify({ circuit, backend, shots }),
+      });
+      renderQuantumJob(result.job);
+      if (result.evidence) {
+        state.evidence.unshift(result.evidence);
+        state.evidence = state.evidence.slice(0, 24);
+      }
+      if (Array.isArray(result.activity)) state.activity = result.activity;
+      renderEvidence();
+      renderQuantumRuntime(state.quantumRuntime || {});
+      showToast(
+        'QUANTUM JOB SUBMITTED',
+        `${result.job.provider} · ${result.job.backend} · ${result.job.status}`,
+      );
+      if (result.job.provider === 'ibm-quantum') loadQuantumJobs();
+    } catch (error) {
+      renderQuantumRuntime(state.quantumRuntime || {});
+      showToast('QUANTUM JOB FAILED', error.message || String(error));
+    }
+  }
+
+  async function loadQuantumJobs() {
+    const container = q('#quantumJobs');
+    if (!container) return;
+    try {
+      const result = await api('./api/aethergrid/quantum/jobs?limit=20');
+      const jobs = Array.isArray(result.jobs) ? result.jobs : [];
+      container.innerHTML = jobs.length
+        ? jobs
+            .map(
+              (job) =>
+                `<div class="history-row quantum-job-row"><span><b>${escapeHtml(job.id || 'job')}</b><small>${escapeHtml(job.backend || 'backend')} · ${escapeHtml(job.programId || 'program')} · ${escapeHtml(job.status || 'unknown')}${job.created ? ` · ${escapeHtml(job.created)}` : ''}</small></span><button class="secondary-button" data-quantum-job="${escapeHtml(job.id || '')}">INSPECT</button></div>`,
+            )
+            .join('')
+        : '<div class="empty-state">No remote jobs returned by the configured provider.</div>';
+    } catch (error) {
+      container.innerHTML = `<div class="empty-state">${escapeHtml(error.message || String(error))}</div>`;
+    }
+  }
+
+  async function loadQuantumJobDetail(jobId) {
+    const container = q('#quantumJobResult');
+    if (!container || !jobId) return;
+    container.innerHTML = '<div class="empty-state">Loading IBM Quantum job detail…</div>';
+    try {
+      const detail = await api(
+        `./api/aethergrid/quantum/jobs/${encodeURIComponent(jobId)}`,
+      );
+      const completed = String(detail.status || '').toLowerCase() === 'completed';
+      const [results, metrics] = await Promise.all([
+        completed
+          ? api(
+              `./api/aethergrid/quantum/jobs/${encodeURIComponent(jobId)}/results`,
+            ).catch(() => null)
+          : Promise.resolve(null),
+        completed
+          ? api(
+              `./api/aethergrid/quantum/jobs/${encodeURIComponent(jobId)}/metrics`,
+            ).catch(() => null)
+          : Promise.resolve(null),
+      ]);
+      const payload = {
+        job: detail,
+        results: results?.result || null,
+        metrics: metrics?.metrics || null,
+      };
+      container.innerHTML = `<div class="quantum-job-card"><b>${escapeHtml(jobId)}</b><code>${escapeHtml(detail.backend || 'backend')} · ${escapeHtml(detail.status || 'unknown')}</code><dl><dt>Primitive</dt><dd>${escapeHtml(detail.programId || 'unknown')}</dd><dt>QPU Completed</dt><dd>${detail.hardwareExecuted ? 'YES' : 'NO'}</dd></dl></div><pre class="evidence-json quantum-result-json">${escapeHtml(JSON.stringify(payload, null, 2).slice(0, 12000))}</pre>`;
+      showToast(
+        'QUANTUM JOB INSPECTED',
+        completed
+          ? 'Job detail, results and execution metrics loaded.'
+          : `Current status: ${detail.status || 'unknown'}`,
+      );
+    } catch (error) {
+      container.innerHTML = `<div class="empty-state">${escapeHtml(error.message || String(error))}</div>`;
+    }
+  }
+
+  q('[data-action="refresh-quantum-backends"]')?.addEventListener(
+    'click',
+    loadQuantumBackends,
+  );
+  q('[data-action="submit-quantum-job"]')?.addEventListener('click', submitQuantumJob);
+  q('[data-action="refresh-quantum-jobs"]')?.addEventListener('click', loadQuantumJobs);
+  q('#quantumJobs')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-quantum-job]');
+    if (button) loadQuantumJobDetail(button.dataset.quantumJob);
+  });
 
   qa('[data-map-tool]').forEach((button) =>
     button.addEventListener('click', () => {
@@ -1679,19 +2519,161 @@
     showToast('REGION CHANGED', state.system.region);
   });
 
-  q('[data-action="profile"]')?.addEventListener('click', () =>
-    openPanel(
-      'OPERATOR',
-      'Profile',
-      '<div class="detail-card"><h3>IM · Operator Session</h3><p>Access to Grid, Holographic, Quantum, AI, Scenario, Evidence and Settings workspaces. Authority remains advisory-only.</p></div>',
-    ),
-  );
+  const PROFILE_CACHE_KEY = 'aethergrid.operator.profile.v1';
+  const profileDialog = q('#profileDialog');
+
+  function applyProfile(profile = {}) {
+    state.profile = { ...state.profile, ...profile };
+    const initials = (state.profile.initials || 'OP').slice(0, 4).toUpperCase();
+    const buttonInitials = q('#profileInitials');
+    const buttonAvatar = q('#profileAvatarButton');
+    if (buttonInitials) {
+      buttonInitials.textContent = initials;
+      buttonInitials.hidden = Boolean(state.profile.avatarDataUrl);
+    }
+    if (buttonAvatar) {
+      buttonAvatar.hidden = !state.profile.avatarDataUrl;
+      if (state.profile.avatarDataUrl) buttonAvatar.src = state.profile.avatarDataUrl;
+      else buttonAvatar.removeAttribute('src');
+    }
+
+    const previewInitials = q('#profileAvatarPreviewInitials');
+    const previewImage = q('#profileAvatarPreviewImage');
+    if (previewInitials) {
+      previewInitials.textContent = initials;
+      previewInitials.hidden = Boolean(state.profile.avatarDataUrl);
+    }
+    if (previewImage) {
+      previewImage.hidden = !state.profile.avatarDataUrl;
+      if (state.profile.avatarDataUrl) previewImage.src = state.profile.avatarDataUrl;
+      else previewImage.removeAttribute('src');
+    }
+
+    const fields = {
+      profileDisplayName: state.profile.displayName,
+      profileInitialsInput: initials,
+      profileTitle: state.profile.title,
+      profileOrganization: state.profile.organization,
+      profileHomeRegion: state.profile.homeRegion,
+      profileTimezone: state.profile.timezone,
+      profileBio: state.profile.bio,
+    };
+    for (const [id, value] of Object.entries(fields)) {
+      const input = q(`#${id}`);
+      if (input) input.value = value || '';
+    }
+    if (q('#profilePersistStatus')) {
+      q('#profilePersistStatus').textContent = state.profile.updatedAt
+        ? `SAVED · ${new Date(state.profile.updatedAt).toLocaleString()}`
+        : 'LOCAL PROFILE';
+    }
+  }
+
+  async function loadProfile() {
+    let cached = null;
+    try {
+      cached = JSON.parse(localStorage.getItem(PROFILE_CACHE_KEY) || 'null');
+    } catch {}
+    if (cached) applyProfile(cached);
+    try {
+      const result = await api('./api/aethergrid/profile');
+      if (result.profile) {
+        applyProfile(result.profile);
+        localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(result.profile));
+      }
+    } catch {}
+  }
+
+  function profilePayload() {
+    return {
+      ...state.profile,
+      displayName: q('#profileDisplayName')?.value.trim() || 'Operator',
+      initials: q('#profileInitialsInput')?.value.trim().toUpperCase() || 'OP',
+      title: q('#profileTitle')?.value.trim() || 'ÆTHERGRID Operator',
+      organization: q('#profileOrganization')?.value.trim() || '',
+      homeRegion: q('#profileHomeRegion')?.value.trim() || 'New York Metro',
+      timezone: q('#profileTimezone')?.value.trim() || Intl.DateTimeFormat().resolvedOptions().timeZone,
+      bio: q('#profileBio')?.value.trim() || '',
+      avatarDataUrl: state.profile.avatarDataUrl || '',
+    };
+  }
+
+  async function saveProfile(profile) {
+    let saved = { ...profile, updatedAt: new Date().toISOString() };
+    try {
+      const result = await api('./api/aethergrid/profile', {
+        method: 'PUT',
+        body: JSON.stringify({ profile }),
+      });
+      if (result.profile) saved = result.profile;
+      if (Array.isArray(result.activity)) state.activity = result.activity;
+    } catch {}
+    localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(saved));
+    applyProfile(saved);
+    renderActivity();
+    showToast('PROFILE SAVED', `${saved.displayName} · ${saved.title}`);
+    return saved;
+  }
+
+  async function resizeProfileAvatar(file) {
+    if (!file || !file.type.startsWith('image/')) throw new Error('Choose an image file.');
+    if (file.size > 8_000_000) throw new Error('Avatar image must be under 8 MB.');
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error || new Error('Unable to read image.'));
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(file);
+    });
+    const image = await new Promise((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error('Unable to decode image.'));
+      element.src = dataUrl;
+    });
+    const size = Math.min(image.naturalWidth, image.naturalHeight);
+    const sx = (image.naturalWidth - size) / 2;
+    const sy = (image.naturalHeight - size) / 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const context = canvas.getContext('2d');
+    context.drawImage(image, sx, sy, size, size, 0, 0, 256, 256);
+    return canvas.toDataURL('image/webp', 0.78);
+  }
+
+  q('[data-action="profile"]')?.addEventListener('click', () => {
+    applyProfile(state.profile);
+    profileDialog?.showModal();
+  });
+
+  q('#profileAvatarInput')?.addEventListener('change', async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      state.profile.avatarDataUrl = await resizeProfileAvatar(file);
+      applyProfile(state.profile);
+      showToast('AVATAR READY', 'Profile avatar resized to 256×256 and ready to save.');
+    } catch (error) {
+      showToast('AVATAR ERROR', error.message || String(error));
+    } finally {
+      event.target.value = '';
+    }
+  });
+
+  q('#profileForm')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await saveProfile(profilePayload());
+    profileDialog?.close();
+  });
 
   loadSettings();
   bindSettings();
   switchWorkspace(initialWorkspace(), { persist: false });
   syncStateToUi();
   loadState();
+  loadProfile();
+  loadGlobalRuntime();
+  loadQuantumBackends();
   configureTelemetry();
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {

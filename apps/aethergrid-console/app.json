@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "aethergrid.operator-console",
   "name": "ÆTHERGRID Operator Console",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "format": "html+pwa+node-app",
   "entrypoints": {
     "standaloneHtml": "standalone.html",
@@ -35,6 +35,16 @@
       "GET /api/aethergrid/evidence",
       "GET /api/aethergrid/evidence/:id",
       "GET /api/aethergrid/runtime",
+      "POST /api/aethergrid/quantum/jobs",
+      "GET /api/aethergrid/quantum/jobs/:id",
+      "GET /api/aethergrid/quantum/jobs",
+      "GET /api/aethergrid/quantum/backends",
+      "GET /api/aethergrid/quantum/runtime",
+      "GET /api/aethergrid/geospatial/city/:id",
+      "GET /api/aethergrid/geospatial/cities",
+      "GET /api/aethergrid/geospatial/runtime",
+      "PUT /api/aethergrid/profile",
+      "GET /api/aethergrid/profile",
       "POST /api/aethergrid/view",
       "POST /api/aethergrid/region",
       "POST /api/aethergrid/scenario",
@@ -43,7 +53,9 @@
       "POST /api/aethergrid/team",
       "POST /api/aethergrid/chat",
       "POST /api/aethergrid/export",
-      "POST /api/aethergrid/reset"
+      "POST /api/aethergrid/reset",
+      "GET /api/aethergrid/quantum/jobs/:id/results",
+      "GET /api/aethergrid/quantum/jobs/:id/metrics"
     ]
   },
   "safety": {
@@ -93,7 +105,21 @@
     "savedCameraViews": true,
     "scenarioDuplication": true,
     "auditTimeline": true,
-    "classicalExperimentalComparison": true
+    "classicalExperimentalComparison": true,
+    "persistentOperatorProfile": true,
+    "avatarProfile": true,
+    "globalWebGlGlobe": true,
+    "realCoordinateWorldNodes": true,
+    "liveOpenStreetMapCityMeshes": true,
+    "cityWireframeExtrusion": true,
+    "ibmQuantumComputeIntegration": true,
+    "quantumBackendDiscovery": true,
+    "quantumJobSubmission": true,
+    "localQuantumSamplerFallback": true,
+    "liveOpenStreetMapRoadTopology": true,
+    "animatedGlobeCityDescent": true,
+    "quantumJobResults": true,
+    "quantumJobMetrics": true
   },
   "aiRuntime": {
     "providers": [
@@ -112,5 +138,41 @@
     "secretsExposedToBrowser": false,
     "fallback": "deterministic-local",
     "replaceableByConfiguration": true
+  },
+  "geospatialRuntime": {
+    "module": "geo-runtime.mjs",
+    "providers": [
+      "osm-overpass",
+      "local-fallback"
+    ],
+    "cityRegistry": "real coordinates",
+    "liveBuildingGeometry": true,
+    "attributionRequired": "© OpenStreetMap contributors",
+    "liveFetchOnExplicitOperatorAction": true,
+    "cacheEnabled": true,
+    "liveRoadTopology": true,
+    "animatedCityDescent": true
+  },
+  "quantumRuntime": {
+    "module": "quantum-runtime.mjs",
+    "providers": [
+      "local-simulator",
+      "ibm-quantum"
+    ],
+    "ibmApiVersion": "2026-04-15",
+    "primitives": [
+      "sampler",
+      "estimator"
+    ],
+    "credentialsExposedToBrowser": false,
+    "hardwareSubmissionRequiresServerCredentials": true,
+    "jobResults": true,
+    "jobMetrics": true
+  },
+  "profileRuntime": {
+    "module": "profile-store.mjs",
+    "persistence": "local-json",
+    "avatarResizeClientSide": true,
+    "secrets": false
   }
 }

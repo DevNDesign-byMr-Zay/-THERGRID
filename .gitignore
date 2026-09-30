@@ -18,3 +18,7 @@ dist/
 .DS_Store
 .idea/
 .vscode/
+
+# ÆTHERGRID local runtime persistence
+.aethergrid-data/
+apps/aethergrid-console/.aethergrid-data/
