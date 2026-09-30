@@ -13,7 +13,9 @@ import { RendererManager } from '../renderer/renderer-manager';
 import type {
   LayerState,
   SpatialFeatureSelection,
+  SpatialInteractionMode,
   SpatialRendererStatus,
+  SpatialSurfacePoint,
   SpatialTarget,
   TemporalInstant,
   VisualMode
@@ -28,7 +30,9 @@ interface SpatialViewportProps {
   overlays?: readonly SpatialOverlaySnapshot[];
   atmosphere?: AtmosphericOverlaySnapshot | null;
   airQuality?: AirQualityOverlaySnapshot | null;
+  interactionMode?: SpatialInteractionMode;
   onSelection?(selection: SpatialFeatureSelection | null): void;
+  onSurfacePoint?(point: SpatialSurfacePoint | null): void;
 }
 
 const STARTING_STATUS: SpatialRendererStatus = {
@@ -47,13 +51,18 @@ export function SpatialViewport({
   overlays = [],
   atmosphere = null,
   airQuality = null,
-  onSelection
+  interactionMode = 'inspect',
+  onSelection,
+  onSurfacePoint
 }: SpatialViewportProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const managerRef = useRef<RendererManager | null>(null);
   const overlayIdsRef = useRef<Set<string>>(new Set());
   const journeyGenerationRef = useRef(0);
   const lastJourneyKeyRef = useRef<string | null>(null);
+  const interactionModeRef = useRef<SpatialInteractionMode>(interactionMode);
+  const onSelectionRef = useRef(onSelection);
+  const onSurfacePointRef = useRef(onSurfacePoint);
   const [status, setStatus] = useState<SpatialRendererStatus>(STARTING_STATUS);
   const [switchingEngine, setSwitchingEngine] = useState(false);
 
@@ -124,18 +133,31 @@ export function SpatialViewport({
     const onPointer: EventListener = (event) => {
       const pointer = event as PointerEvent;
       const rect = host.getBoundingClientRect();
+      const screen = {
+        x: pointer.clientX - rect.left,
+        y: pointer.clientY - rect.top
+      };
+
+      if (interactionModeRef.current === 'measure') {
+        void manager
+          .pickSurface(screen)
+          .then((surface) => onSurfacePointRef.current?.(surface))
+          .catch(() => onSurfacePointRef.current?.(null));
+        return;
+      }
+
       void manager
-        .pick({ x: pointer.clientX - rect.left, y: pointer.clientY - rect.top })
+        .pick(screen)
         .then((selection) => {
           manager.selectFeature(selection?.id ?? null);
-          onSelection?.(selection);
+          onSelectionRef.current?.(selection);
         })
-        .catch(() => onSelection?.(null));
+        .catch(() => onSelectionRef.current?.(null));
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       manager.selectFeature(null);
-      onSelection?.(null);
+      onSelectionRef.current?.(null);
     };
 
     host.addEventListener('click', onPointer);
@@ -150,6 +172,12 @@ export function SpatialViewport({
       if (managerRef.current === manager) managerRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    interactionModeRef.current = interactionMode;
+    onSelectionRef.current = onSelection;
+    onSurfacePointRef.current = onSurfacePoint;
+  }, [interactionMode, onSelection, onSurfacePoint]);
 
   useEffect(() => {
     const manager = managerRef.current;
@@ -285,7 +313,11 @@ export function SpatialViewport({
   };
 
   return (
-    <div className="spatial-shell" data-solar-phase={status.solar?.phase ?? 'unknown'}>
+    <div
+      className="spatial-shell"
+      data-solar-phase={status.solar?.phase ?? 'unknown'}
+      data-interaction-mode={interactionMode}
+    >
       <div className="spatial-canvas" ref={hostRef} aria-label="ÆTHERGRID 4D spatial viewport" />
       <div className="spatial-grid-overlay" aria-hidden="true" />
       {storm.active ? (
