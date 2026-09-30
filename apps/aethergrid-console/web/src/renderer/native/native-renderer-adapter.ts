@@ -1,3 +1,4 @@
+import type { AtmosphericOverlaySnapshot } from '../overlays/atmospheric-overlay';
 import type { SpatialOverlaySnapshot } from '../overlays/spatial-overlay';
 
 import type {
@@ -21,6 +22,8 @@ export interface LegacyNativeSpatialBridge {
   setVisualMode?(mode: VisualMode): void;
   applyOverlay?(snapshot: SpatialOverlaySnapshot): void;
   clearOverlay?(layerId: string): void;
+  applyAtmosphere?(snapshot: AtmosphericOverlaySnapshot): void;
+  clearAtmosphere?(): void;
   pick?(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null> | SpatialFeatureSelection | null;
   resize?(): void;
   destroy?(): void;
@@ -77,6 +80,14 @@ export class NativeSpatialRendererAdapter implements SpatialRenderer {
 
   clearOverlay(layerId: string): void {
     this.#bridge.clearOverlay?.(layerId);
+  }
+
+  applyAtmosphere(snapshot: AtmosphericOverlaySnapshot): void {
+    this.#bridge.applyAtmosphere?.(snapshot);
+  }
+
+  clearAtmosphere(): void {
+    this.#bridge.clearAtmosphere?.();
   }
 
   async pick(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null> {
