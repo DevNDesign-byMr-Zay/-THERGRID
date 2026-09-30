@@ -55,6 +55,8 @@ test('v4 spatial renderer has Cesium primary and native fallback contracts', asy
   assert.match(cesiumRenderer, /GeodeticGridLayer/u);
   assert.match(geodeticGrid, /Cartesian3\.fromDegrees/u);
   assert.match(geodeticGrid, /setTime\(isoTime/u);
+  assert.match(geodeticGrid, /setVisualMode\(mode/u);
+  assert.match(geodeticGrid, /this\.#mode === 'holographic'/u);
   assert.match(geodeticGrid, /Math\.sin/u);
   assert.match(nativeRenderer, /LegacyNativeSpatialBridge/u);
   assert.match(manager, /await this\.#activate\(this\.#primary\)/u);
