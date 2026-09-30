@@ -153,7 +153,7 @@ A fresh ZIP is considered functional when:
 
 ## Current verified state
 
-Batches 1–13 are verified on `main`; Batch 14 is implemented on the feature branch and must pass the maintained gates before entering `main`.
+Batches 1–14 are verified on `main`; Batch 15 is implemented on the feature branch and must pass the maintained gates before entering `main`.
 
 - Grid, Global, Holographic, Quantum, AI, Scenarios, Evidence and Settings are distinct routed workspaces.
 - WebGL node picking, scenario editing/duplication, evidence drill-down, agent receipts, persistent settings/profile, global coordinate exploration, mapped grid infrastructure, terrain and quantum provider workflows are all present.
@@ -470,3 +470,41 @@ Heat Stress combines apparent temperature, modeled relative humidity, UV, and ma
 
 ### Fidelity boundary
 ÆTHERGRID continues to distinguish source-backed structure from visualization. Building geometry and supported heights/roofs come from mapped source data when available; weather and air quality remain provider model context; seismic events remain event-feed context; skyline lights and cloud particles are procedural render layers driven by those bounded inputs rather than claims of direct sensing.
+
+## Batch 15 — Source-backed city identity and environmental geometry
+
+Status: IMPLEMENTED / VERIFYING
+
+### Physical city identity
+- OpenStreetMap water polygons from mapped water tags;
+- linear river/canal/stream/tidal-channel geometry;
+- mapped coastline geometry;
+- mapped park/garden/reserve/grass/meadow/wood/grassland polygons;
+- independent WATER and GREEN renderer layers;
+- fallback mode intentionally leaves water/green layers empty rather than fabricating local geography.
+
+### Built identity
+- building material/colour tags are grouped into restrained glass, masonry, metal and natural-material overlays;
+- base source-backed building geometry remains the authoritative shape;
+- named tall buildings with source-backed heights receive a separate LANDMARKS outline;
+- landmark threshold is `max(70 m, city P95 source-backed height)`;
+- material/landmark overlays remain absent where source metadata is absent.
+
+### New source-driven operations
+- Flood Context;
+- Green Infrastructure;
+- maintained city-operation total: 12.
+
+Flood Context uses mapped hydrologic geometry, terrain relief, current modeled precipitation, road and infrastructure context only as a bounded attention proxy. Green Infrastructure uses mapped green-space geometry, built form and current modeled heat/humidity/AQI as a bounded planning proxy.
+
+### Verification requirements
+- live OSM test fixtures must include water polygon, linear waterway, coastline, green polygon and source-tagged named tall building;
+- fallback tests must prove no water/green geography is invented;
+- UI and standalone package must preserve WATER, GREEN and LANDMARKS controls;
+- native WebGL source must preserve water surfaces/lines, green surfaces/lines, material groups and landmark lines;
+- city-operation tests must exercise all 12 workflows and expose mapped feature counts;
+- manifests and release-readiness must require the v2.9 identity contract;
+- all maintained CI and CodeQL gates remain mandatory before merge.
+
+### Fidelity boundary
+These layers improve geographic recognizability but remain only as complete as the underlying open map. Absence of a mapped feature is not evidence that the real-world feature does not exist. Material tint is tag-derived visualization, not photorealistic façade reconstruction.
