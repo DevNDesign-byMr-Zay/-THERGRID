@@ -82,3 +82,66 @@ export interface AirQualityOverlaySnapshot {
     windDirectionDegrees: number | null;
   } | null;
 }
+
+
+export interface StormPresentationState {
+  active: boolean;
+  intensity: number;
+  cadenceSeconds: number;
+  flashOpacity: number;
+}
+
+function bounded(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function stormPresentation(
+  snapshot: AtmosphericOverlaySnapshot | null,
+  isoTime: string
+): StormPresentationState {
+  if (!snapshot?.current || weatherPhenomenon(snapshot) !== 'thunderstorm') {
+    return {
+      active: false,
+      intensity: 0,
+      cadenceSeconds: 0,
+      flashOpacity: 0
+    };
+  }
+
+  const precipitation = Math.max(0, snapshot.current.precipitationMm ?? 0);
+  const gusts = Math.max(
+    snapshot.current.windSpeedKph ?? 0,
+    snapshot.current.windGustsKph ?? 0
+  );
+  const intensity = bounded(
+    0.25 + bounded(precipitation / 12, 0, 1) * 0.45 + bounded(gusts / 120, 0, 1) * 0.3,
+    0.25,
+    1
+  );
+  const cadenceSeconds = Math.round(10 - intensity * 6);
+  const timestamp = Date.parse(isoTime);
+  if (!Number.isFinite(timestamp)) {
+    return {
+      active: true,
+      intensity,
+      cadenceSeconds,
+      flashOpacity: 0
+    };
+  }
+
+  const second = Math.floor(timestamp / 1000);
+  const phase = second % cadenceSeconds;
+  const flashOpacity =
+    phase === 0
+      ? 0.12 + intensity * 0.3
+      : phase === 1 && intensity >= 0.7
+        ? 0.04 + intensity * 0.08
+        : 0;
+
+  return {
+    active: true,
+    intensity,
+    cadenceSeconds,
+    flashOpacity
+  };
+}
