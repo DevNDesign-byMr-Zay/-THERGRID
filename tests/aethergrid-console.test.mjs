@@ -275,6 +275,10 @@ test('ÆTHERGRID backend exposes profile, world-city and quantum runtime surface
       'roads',
       'power-lines',
       'power-assets',
+      'water-areas',
+      'waterways',
+      'coastline',
+      'green-areas',
     ]);
 
     const environmentRuntimeResponse = await fetch(`${baseUrl}/api/aethergrid/environment/runtime`);
