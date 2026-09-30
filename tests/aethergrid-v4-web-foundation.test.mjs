@@ -183,3 +183,18 @@ test('v4 live atmosphere is source-backed and drives Cesium clouds and fog', asy
   assert.match(app, /loadCityEnvironment/u);
   assert.match(app, /Current weather visuals are hidden until a source supports the selected time/u);
 });
+
+
+test('v4 appearance preserves dark light system preferences without provider coupling', async () => {
+  const [appearance, app, styles] = await Promise.all([
+    text('apps/aethergrid-console/web/src/hooks/use-appearance.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/app/app.css'),
+  ]);
+
+  assert.match(appearance, /aethergrid\.operator\.settings\.v2/u);
+  assert.match(appearance, /'dark' \| 'light' \| 'system'/u);
+  assert.match(appearance, /prefers-color-scheme: light/u);
+  assert.match(app, /appearance\.cycle/u);
+  assert.match(styles, /data-theme='light'/u);
+});
