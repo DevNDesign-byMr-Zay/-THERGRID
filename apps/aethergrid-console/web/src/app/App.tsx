@@ -6,6 +6,7 @@ import {
 } from '../components/AgentDock';
 import { DataSourceBadge } from '../components/DataSourceBadge';
 import { EvidencePanel } from '../components/EvidencePanel';
+import { OperationalDataPanel } from '../components/OperationalDataPanel';
 import { QuantumPanel } from '../components/QuantumPanel';
 import { ProfileMenu } from '../components/ProfileMenu';
 import { ScenarioPanel } from '../components/ScenarioPanel';
@@ -210,7 +211,7 @@ export function App() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [intelOpen, setIntelOpen] = useState(false);
   const [intelWorkspace, setIntelWorkspace] = useState<
-    'context' | 'analysis' | 'ai' | 'scenario' | 'quantum' | 'evidence' | 'system'
+    'context' | 'operations' | 'analysis' | 'ai' | 'scenario' | 'quantum' | 'evidence' | 'system'
   >('context');
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [atmosphere, setAtmosphere] = useState<AtmosphericOverlaySnapshot | null>(null);
@@ -1137,6 +1138,7 @@ export function App() {
           <nav className="intel-workspace-tabs" aria-label="Intelligence workspace">
             {[
               ['context', 'CONTEXT'],
+              ['operations', 'OPS'],
               ['analysis', 'ANALYSIS'],
               ['ai', 'AI'],
               ['scenario', 'SCENARIO'],
@@ -1153,6 +1155,7 @@ export function App() {
                   setIntelWorkspace(
                     id as
                       | 'context'
+                      | 'operations'
                       | 'analysis'
                       | 'ai'
                       | 'scenario'
@@ -1331,6 +1334,15 @@ export function App() {
             </div>
           </section>
 
+          <div className="intel-workspace intel-operations">
+            <OperationalDataPanel
+              latitude={city.latitude}
+              longitude={city.longitude}
+              cityId={city.id}
+              temporalMode={temporal.mode}
+              cursorIso={temporal.cursorIso}
+            />
+          </div>
           <div className="intel-workspace intel-analysis">
             <SpatialAnalysisPanel
               mode={interactionMode}
