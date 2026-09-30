@@ -340,6 +340,10 @@
       this.drag = null;
       this.timeStart = performance.now();
       this.geometry = {};
+      this.graphNodes = [];
+      this.selectedNode = null;
+      this.selectionBuffer = null;
+      this.currentMvp = null;
       if (!this.gl) return;
       this.initProgram();
       this.buildGeometry();
@@ -457,6 +461,13 @@
         ].forEach(([a, b]) => this.line(buildings, a, b, phase));
       }
       const hubs = [[-6,.3,-3],[-2,.5,1],[2,.6,-2],[5,.45,3],[0,.7,5],[7,.35,-5],[-7,.42,5]];
+      const labels = ['Renewable Generation','Grid Load','Energy Storage','New York City','North Hub','Coastal Hub','West Hub'];
+      this.graphNodes = hubs.map((position, index) => ({
+        id: `local-node-${index + 1}`,
+        label: labels[index],
+        type: index === 0 ? 'generation' : index === 1 ? 'load' : index === 2 ? 'storage' : 'transmission',
+        position,
+      }));
       hubs.forEach((node, index) => this.vertex(nodes, node[0], node[1], node[2], index * 0.91));
       [[0,1],[1,2],[2,3],[1,4],[3,5],[4,6],[6,0],[4,3],[2,5]].forEach(([aIndex,bIndex], index) => {
         const a = hubs[aIndex];
@@ -491,6 +502,10 @@
         this.line(grid, [-10, 0, n], [10, 0, n], n * 0.21);
         this.line(grid, [n, 0, -10], [n, 0, 10], n * 0.23);
       }
+      this.graphNodes = graph.nodes.map((node) => ({ ...node, position: [...node.position] }));
+      this.selectedNode = null;
+      if (this.selectionBuffer?.buffer) this.gl.deleteBuffer(this.selectionBuffer.buffer);
+      this.selectionBuffer = null;
       const nodeMap = new Map(graph.nodes.map((node) => [node.id, node]));
       for (const item of graph.structures || []) {
         const x0 = item.x - item.width;
@@ -547,21 +562,26 @@
 
     bindControls() {
       this.canvas.addEventListener('pointerdown', (event) => {
-        this.drag = { x: event.clientX, y: event.clientY, yaw: this.yaw, pitch: this.pitch };
+        this.drag = { x: event.clientX, y: event.clientY, yaw: this.yaw, pitch: this.pitch, moved: false };
         this.canvas.setPointerCapture(event.pointerId);
         this.canvas.classList.add('dragging');
       });
       this.canvas.addEventListener('pointermove', (event) => {
         if (!this.drag) return;
-        this.yaw = this.drag.yaw + (event.clientX - this.drag.x) * 0.008;
-        this.pitch = clamp(this.drag.pitch + (event.clientY - this.drag.y) * 0.006, 0.12, 1.15);
+        const dx = event.clientX - this.drag.x;
+        const dy = event.clientY - this.drag.y;
+        if (Math.hypot(dx, dy) > 4) this.drag.moved = true;
+        this.yaw = this.drag.yaw + dx * 0.008;
+        this.pitch = clamp(this.drag.pitch + dy * 0.006, 0.12, 1.15);
         this.updateReadout();
       });
       const end = (event) => {
         if (!this.drag) return;
+        const wasClick = !this.drag.moved;
         this.drag = null;
         this.canvas.classList.remove('dragging');
         try { this.canvas.releasePointerCapture(event.pointerId); } catch {}
+        if (wasClick) this.pickNode(event.clientX, event.clientY);
       };
       this.canvas.addEventListener('pointerup', end);
       this.canvas.addEventListener('pointercancel', end);
@@ -596,6 +616,44 @@
 
     setTime(hours) {
       this.timeHours = Number(hours);
+    }
+
+    projectNode(node) {
+      if (!this.currentMvp || !node?.position) return null;
+      const [x, y, z] = node.position;
+      const matrix = this.currentMvp;
+      const clipX = matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12];
+      const clipY = matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13];
+      const clipW = matrix[3] * x + matrix[7] * y + matrix[11] * z + matrix[15];
+      if (clipW <= 0.0001) return null;
+      const ndcX = clipX / clipW;
+      const ndcY = clipY / clipW;
+      const rect = this.canvas.getBoundingClientRect();
+      return {
+        x: rect.left + (ndcX * 0.5 + 0.5) * rect.width,
+        y: rect.top + (-ndcY * 0.5 + 0.5) * rect.height,
+      };
+    }
+
+    selectNode(node) {
+      if (!node) return;
+      this.selectedNode = node;
+      if (this.selectionBuffer?.buffer) this.gl.deleteBuffer(this.selectionBuffer.buffer);
+      const [x, y, z] = node.position;
+      this.selectionBuffer = this.makeBuffer([x, y, z, 0]);
+      this.options.onSelectNode?.(node, this);
+    }
+
+    pickNode(clientX, clientY) {
+      let best = null;
+      for (const node of this.graphNodes) {
+        const point = this.projectNode(node);
+        if (!point) continue;
+        const distance = Math.hypot(point.x - clientX, point.y - clientY);
+        if (distance <= 34 && (!best || distance < best.distance)) best = { node, distance };
+      }
+      if (best) this.selectNode(best.node);
+      return best?.node || null;
     }
 
     setProjection(mode) {
@@ -665,6 +723,7 @@
           ? orthographic(-12 * aspect, 12 * aspect, -12, 12, 0.1, 100)
           : perspective(Math.PI / 3.1, aspect, 0.1, 100);
       const mvp = mat4Multiply(projection, view);
+      this.currentMvp = mvp;
       gl.enable(gl.DEPTH_TEST);
       gl.depthFunc(gl.LEQUAL);
       gl.enable(gl.BLEND);
@@ -685,6 +744,7 @@
       if (this.layers.buildings) this.drawBuffer(this.geometry.buildings, gl.LINES, [0.14, 0.64, 1, 0.55], 0.07 * amplitude);
       if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [0.83, 0.36, 1, Math.min(1, 0.78 * trailBoost)], 0.11 * amplitude * trailBoost);
       if (this.layers.nodes) this.drawBuffer(this.geometry.nodes, gl.POINTS, [0.22, 1, 0.84, 1], 0.08 * amplitude, 1, 9);
+      if (this.selectionBuffer) this.drawBuffer(this.selectionBuffer, gl.POINTS, [1, 0.72, 0.22, 1], 0, 1, 16);
       requestAnimationFrame(this.animate);
     };
   }
@@ -812,8 +872,25 @@
     };
   }
 
-  const spatial = new SpatialGrid4D(q('#spatialGrid'), { readoutId: 'cameraReadout' });
-  const holographic = new SpatialGrid4D(q('#holographicGrid'), { yaw: 1.0, pitch: 0.56, distance: 18 });
+  function handleSpatialSelection(node, renderer) {
+    const inspector = q('#holoSelection');
+    if (inspector) {
+      inspector.innerHTML = `<b>${escapeHtml(node.label || node.id)}</b><p>${escapeHtml(titleCase(node.type || 'spatial node'))} · position [${node.position.map((value) => Number(value).toFixed(2)).join(', ')}]. Selected directly from the ${renderer === holographic ? 'holographic' : 'grid'} renderer.</p>`;
+    }
+    if (renderer === spatial) holographic?.selectNode(node);
+    showToast('SPATIAL NODE SELECTED', node.label || node.id);
+  }
+
+  const spatial = new SpatialGrid4D(q('#spatialGrid'), {
+    readoutId: 'cameraReadout',
+    onSelectNode: handleSpatialSelection,
+  });
+  const holographic = new SpatialGrid4D(q('#holographicGrid'), {
+    yaw: 1.0,
+    pitch: 0.56,
+    distance: 18,
+    onSelectNode: handleSpatialSelection,
+  });
   const quantumSurface = new WaveSurface(q('#quantumCanvas'));
   const scenarioChart = new ScenarioChart(q('#scenarioChart'));
 
