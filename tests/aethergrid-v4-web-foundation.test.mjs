@@ -140,9 +140,12 @@ test('v4 source-backed power overlay preserves live and fallback provenance', as
   assert.match(cesiumLayer, /CustomDataSource/u);
   assert.match(cesiumLayer, /PolylineGraphics/u);
   assert.match(cesiumLayer, /PointGraphics/u);
-  assert.match(app, /OSM POWER · LIVE SOURCE/u);
-  assert.match(app, /POWER · FALLBACK/u);
-  assert.match(app, /POWER DATA UNAVAILABLE/u);
+  assert.match(app, /<DataSourceBadge/u);
+  assert.match(app, /\? 'OSM POWER'/u);
+  assert.match(app, /\? 'unavailable'/u);
+  assert.match(app, /\? 'live'/u);
+  assert.match(app, /\? 'fallback'/u);
+  assert.match(app, /: 'loading'/u);
 });
 
 test('v4 streamed 3D buildings have actual visual-mode styling', async () => {
