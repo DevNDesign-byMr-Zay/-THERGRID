@@ -79,6 +79,7 @@
       cities: DEFAULT_GLOBAL_CITIES.map((city) => ({ ...city })),
       selectedCityId: 'new-york',
       cityMesh: null,
+      globalLive: null,
       activeUseCase: null,
     },
     quantumRuntime: null,
@@ -404,6 +405,9 @@
         buildings: true,
         infrastructure: true,
         terrain: true,
+        weather: true,
+        air: true,
+        seismic: true,
         nodes: true,
       };
       this.yaw = options.yaw ?? 0.74;
@@ -418,6 +422,8 @@
       this.compareTimeHours = 18;
       this.cityVisualMode = 'solid';
       this.environment = null;
+      this.liveContext = null;
+      this.operationProfile = null;
       this.skylineProfile = null;
       this.cityCameraTarget = { yaw: 0.78, pitch: 0.57, distance: 18 };
       this.drag = null;
@@ -589,6 +595,11 @@
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
       this.geometry.terrain = this.makeBuffer(terrainLines);
+      this.geometry.weather = this.makeBuffer([]);
+      this.geometry.precipitation = this.makeBuffer([]);
+      this.geometry.air = this.makeBuffer([]);
+      this.geometry.seismicLines = this.makeBuffer([]);
+      this.geometry.seismicNodes = this.makeBuffer([]);
       this.geometry.nodes = this.makeBuffer(nodes);
     }
 
@@ -657,7 +668,15 @@
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
       this.geometry.terrain = this.makeBuffer(terrainLines);
+      this.geometry.weather = this.makeBuffer([]);
+      this.geometry.precipitation = this.makeBuffer([]);
+      this.geometry.air = this.makeBuffer([]);
+      this.geometry.seismicLines = this.makeBuffer([]);
+      this.geometry.seismicNodes = this.makeBuffer([]);
       this.geometry.nodes = this.makeBuffer(nodes);
+      this.environment = null;
+      this.liveContext = null;
+      this.operationProfile = null;
     }
 
     loadCityMesh(mesh) {
@@ -674,6 +693,11 @@
       const infrastructureLines = [];
       const infrastructureNodes = [];
       const terrainLines = [];
+      const weatherLines = [];
+      const precipitationLines = [];
+      const airParticles = [];
+      const seismicLines = [];
+      const seismicNodes = [];
       const radius = Math.max(200, Number(mesh.city?.radiusM || 900));
       const scale = 8.5 / radius;
 
@@ -835,6 +859,89 @@
         }
       }
 
+      const environment = mesh.environment?.current || {};
+      const liveContext = mesh.liveContext || {};
+      const deterministic = (index, salt = 0) => {
+        const raw = Math.sin(index * 12.9898 + salt * 78.233) * 43758.5453;
+        return raw - Math.floor(raw);
+      };
+      const windSpeed = Math.max(0, Number(environment.windSpeedKph || 0));
+      const windDirection = (Number(environment.windDirectionDegrees || 0) * Math.PI) / 180;
+      const windLength = clamp(0.25 + windSpeed / 32, 0.25, 1.8);
+      const windCount = windSpeed > 0 ? Math.round(clamp(36 + windSpeed * 1.7, 36, 150)) : 0;
+      for (let index = 0; index < windCount; index += 1) {
+        const x = (deterministic(index, 1) - 0.5) * 17;
+        const z = (deterministic(index, 2) - 0.5) * 17;
+        const y = 0.18 + deterministic(index, 3) * 4.8;
+        const dx = Math.sin(windDirection) * windLength;
+        const dz = Math.cos(windDirection) * windLength;
+        this.line(
+          weatherLines,
+          [x, y, z],
+          [x + dx, y + Math.sin(index * 0.7) * 0.03, z + dz],
+          index * 0.31,
+        );
+      }
+
+      const precipitation = Math.max(0, Number(environment.precipitationMm || 0));
+      const rainCount =
+        precipitation > 0.02 ? Math.round(clamp(24 + precipitation * 32, 24, 180)) : 0;
+      for (let index = 0; index < rainCount; index += 1) {
+        const x = (deterministic(index, 4) - 0.5) * 17;
+        const z = (deterministic(index, 5) - 0.5) * 17;
+        const y = 1.2 + deterministic(index, 6) * 5.8;
+        const lean = Math.sin(windDirection) * clamp(windSpeed / 70, 0, 0.75);
+        const drift = Math.cos(windDirection) * clamp(windSpeed / 70, 0, 0.75);
+        this.line(
+          precipitationLines,
+          [x, y, z],
+          [x + lean, y - 0.72, z + drift],
+          index * 0.43,
+        );
+      }
+
+      const air = liveContext.airQuality?.current || {};
+      const aqi = clamp(Number(air.usAqi || 0), 0, 500);
+      const airCount = air.usAqi == null ? 0 : Math.round(clamp(18 + aqi * 0.34, 18, 150));
+      for (let index = 0; index < airCount; index += 1) {
+        this.vertex(
+          airParticles,
+          (deterministic(index, 7) - 0.5) * 16,
+          0.22 + deterministic(index, 8) * 4.2,
+          (deterministic(index, 9) - 0.5) * 16,
+          index * 0.27,
+        );
+      }
+
+      (liveContext.seismic?.events || []).slice(0, 18).forEach((event, eventIndex) => {
+        const offset = event.offsetM || { x: 0, z: 0 };
+        const rawX = Number(offset.x || 0) * scale;
+        const rawZ = Number(offset.z || 0) * scale;
+        const rawDistance = Math.hypot(rawX, rawZ);
+        const sceneDistance = Math.min(7.7, rawDistance);
+        const directionX = rawDistance > 0 ? rawX / rawDistance : 1;
+        const directionZ = rawDistance > 0 ? rawZ / rawDistance : 0;
+        const cx = directionX * sceneDistance;
+        const cz = directionZ * sceneDistance;
+        const magnitude = Math.max(0, Number(event.magnitude || 0));
+        const ringBase = clamp(0.12 + magnitude * 0.065, 0.12, 0.62);
+        for (let ring = 1; ring <= 3; ring += 1) {
+          let previous = null;
+          const ringRadius = ringBase * ring;
+          for (let step = 0; step <= 28; step += 1) {
+            const angle = (step / 28) * Math.PI * 2;
+            const point = [
+              cx + Math.cos(angle) * ringRadius,
+              0.055 + ring * 0.012,
+              cz + Math.sin(angle) * ringRadius,
+            ];
+            if (previous) this.line(seismicLines, previous, point, eventIndex * 0.83 + ring * 0.4);
+            previous = point;
+          }
+        }
+        this.vertex(seismicNodes, cx, 0.11, cz, eventIndex * 0.91 + magnitude);
+      });
+
       this.geometry.grid = this.makeBuffer(grid);
       this.geometry.buildings = this.makeBuffer(buildings);
       this.geometry.buildingFaces = this.makeBuffer(buildingFaces);
@@ -844,11 +951,18 @@
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
       this.geometry.terrain = this.makeBuffer(terrainLines);
+      this.geometry.weather = this.makeBuffer(weatherLines);
+      this.geometry.precipitation = this.makeBuffer(precipitationLines);
+      this.geometry.air = this.makeBuffer(airParticles);
+      this.geometry.seismicLines = this.makeBuffer(seismicLines);
+      this.geometry.seismicNodes = this.makeBuffer(seismicNodes);
       this.geometry.nodes = this.makeBuffer(nodes);
       this.selectedNode = null;
       if (this.selectionBuffer?.buffer) this.gl.deleteBuffer(this.selectionBuffer.buffer);
       this.selectionBuffer = null;
       this.environment = mesh.environment || null;
+      this.liveContext = mesh.liveContext || null;
+      this.operationProfile = null;
       this.skylineProfile = mesh.skylineProfile || null;
 
       let dominantYaw = 0.78;
@@ -881,6 +995,10 @@
 
     setCityVisualMode(mode) {
       this.cityVisualMode = ['solid', 'xray', 'operations'].includes(mode) ? mode : 'solid';
+    }
+
+    setOperationProfile(profile = null) {
+      this.operationProfile = profile || null;
     }
 
     setLayerProfile(layers = []) {
@@ -1159,6 +1277,66 @@
           0.08 * amplitude,
           1,
           12,
+        );
+      }
+      const focus = this.operationProfile || '';
+      const windSpeed = Math.max(0, Number(this.environment?.current?.windSpeedKph || 0));
+      const precipitation = Math.max(0, Number(this.environment?.current?.precipitationMm || 0));
+      if (this.layers.weather) {
+        const weatherBoost = focus === 'weather' || focus === 'resource-flow' || focus === 'grid-flow' ? 1 : 0.58;
+        gl.uniform1f(this.loc.time, temporal * (1 + Math.min(2.4, windSpeed / 30)));
+        this.drawBuffer(
+          this.geometry.weather,
+          gl.LINES,
+          isLightTheme() ? [0.05, 0.46, 0.68, 0.48 * weatherBoost] : [0.35, 0.88, 1, 0.58 * weatherBoost],
+          0.035 * amplitude * weatherBoost,
+        );
+        if (precipitation > 0) {
+          this.drawBuffer(
+            this.geometry.precipitation,
+            gl.LINES,
+            isLightTheme() ? [0.18, 0.42, 0.72, 0.5 * weatherBoost] : [0.32, 0.58, 1, 0.72 * weatherBoost],
+            0.08 * amplitude * weatherBoost,
+          );
+        }
+        gl.uniform1f(this.loc.time, temporal);
+      }
+      if (this.layers.air) {
+        const aqi = clamp(Number(this.liveContext?.airQuality?.current?.usAqi || 0), 0, 500);
+        const airBoost = focus === 'air-quality' ? 1 : 0.42;
+        const airColor =
+          aqi >= 151
+            ? [1, 0.34, 0.4, 0.74 * airBoost]
+            : aqi >= 101
+              ? [1, 0.55, 0.25, 0.68 * airBoost]
+              : aqi >= 51
+                ? [1, 0.79, 0.22, 0.56 * airBoost]
+                : [0.32, 0.92, 0.68, 0.44 * airBoost];
+        this.drawBuffer(
+          this.geometry.air,
+          gl.POINTS,
+          airColor,
+          0.12 * amplitude * airBoost,
+          1,
+          focus === 'air-quality' ? 7 : 4,
+        );
+      }
+      if (this.layers.seismic) {
+        const seismicBoost = focus === 'seismic' || focus === 'grid-flow' ? 1 : 0.48;
+        const pulse = state.settings.reducedMotion ? 0 : 0.5 + 0.5 * Math.sin(now * 0.006);
+        this.drawBuffer(
+          this.geometry.seismicLines,
+          gl.LINES,
+          [1, 0.3, 0.42, (0.34 + pulse * 0.35) * seismicBoost],
+          0.075 * amplitude * seismicBoost,
+        );
+        this.drawBuffer(
+          this.geometry.seismicNodes,
+          gl.POINTS,
+          [1, 0.48, 0.22, 0.9 * seismicBoost],
+          0.04 * amplitude,
+          1,
+          9 + pulse * 7,
         );
       }
       if (this.layers.nodes) this.drawBuffer(this.geometry.nodes, gl.POINTS, [0.22, 1, 0.84, 1], 0.08 * amplitude, 1, 9);
