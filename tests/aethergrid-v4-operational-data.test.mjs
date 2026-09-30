@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 
-const text = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
+const ROOT = new URL('../', import.meta.url);
+
+async function text(path) {
+  return readFile(new URL(path, ROOT), 'utf8');
+}
 
 test('v4 operational temporal capability registry refuses to replay current-only data', async () => {
   const capabilities = await text(
@@ -32,6 +36,12 @@ test('v4 operational client uses provider receipts and withholds fallback metric
   assert.match(client, /Fallback response present; operational metrics withheld/u);
   assert.match(client, /if \(input\.temporalMode !== 'live'\)/u);
   assert.match(client, /No provider-backed sample is connected to this non-LIVE cursor/u);
+  assert.match(client, /loadHydrologyGauge/u);
+  assert.match(client, /A source-backed gauge identifier is required/u);
+  assert.match(client, /loadEnergyContextForRegion/u);
+  assert.match(client, /A source-backed energy region is required/u);
+  assert.match(client, /Location-to-gauge resolution is not connected yet/u);
+  assert.match(client, /Location-to-energy-region resolution is not connected yet/u);
   assert.match(client, /\/api\/aethergrid\/weather\/current/u);
   assert.match(client, /\/api\/aethergrid\/hazards\/alerts/u);
   assert.match(client, /\/api\/aethergrid\/hydrology\/gauges/u);
@@ -51,10 +61,14 @@ test('v4 OPS workspace exposes source readiness without synthetic telemetry', as
   assert.match(panel, /Missing providers stay missing/u);
   assert.match(panel, /NO SYNTHETIC TELEMETRY/u);
   assert.match(panel, /temporalSupportFor/u);
-  assert.match(panel, /source\.state === 'live'/u);
+  assert.match(panel, /existingSourceSnapshot/u);
+  assert.match(panel, /sampleKey = temporalMode === 'live' \? 'live' : cursorIso/u);
   assert.match(app, /\['operations', 'OPS'\]/u);
   assert.match(app, /className="intel-workspace intel-operations"/u);
   assert.match(app, /<OperationalDataPanel/u);
+  assert.match(app, /weatherCurrent=/u);
+  assert.match(app, /airQualityCurrent=/u);
+  assert.match(app, /seismicCurrent=/u);
   assert.match(app, /temporalMode=\{temporal\.mode\}/u);
   assert.match(app, /cursorIso=\{temporal\.cursorIso\}/u);
   assert.match(css, /data-workspace='operations'/u);
