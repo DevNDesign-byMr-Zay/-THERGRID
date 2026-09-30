@@ -30,6 +30,8 @@ const REQUIRED_FILES = Object.freeze([
   'apps/aethergrid-console/styles.css',
   'apps/aethergrid-console/app.js',
   'apps/aethergrid-console/server.mjs',
+  'apps/aethergrid-console/agent-config.mjs',
+  'apps/aethergrid-console/ai-runtime.mjs',
   'apps/aethergrid-console/app.json',
   'apps/aethergrid-console/ui.json',
   'apps/aethergrid-console/manifest.webmanifest',
@@ -39,6 +41,7 @@ const REQUIRED_FILES = Object.freeze([
   'apps/aethergrid-console/assets/brand/vaelon.webp',
   'apps/aethergrid-console/assets/brand/auren.webp',
   'apps/aethergrid-console/assets/brand/solvaer.webp',
+  'docs/AETHERGRID_FUNCTIONAL_PLAN.md',
   'docs/BRAND_ASSETS.md',
   'docs/OPERATOR_CONSOLE.md',
   'CHANGELOG.md',
@@ -413,7 +416,15 @@ async function main() {
     /<canvas id="spatialGrid"/u.test(exactAethergridHtml) &&
       /id="timeSlider"/u.test(exactAethergridHtml) &&
       /data-map-tool="buildings"/u.test(exactAethergridHtml) &&
-      /data-mode="holographic"/u.test(exactAethergridHtml) &&
+      /data-workspace="grid"/u.test(exactAethergridHtml) &&
+      /data-workspace="holographic"/u.test(exactAethergridHtml) &&
+      /data-workspace="quantum"/u.test(exactAethergridHtml) &&
+      /data-workspace="ai"/u.test(exactAethergridHtml) &&
+      /data-workspace="scenarios"/u.test(exactAethergridHtml) &&
+      /data-workspace="evidence"/u.test(exactAethergridHtml) &&
+      /data-workspace="settings"/u.test(exactAethergridHtml) &&
+      /id="settingDefaultWorkspace"/u.test(exactAethergridHtml) &&
+      /data-agent="TEAM"/u.test(exactAethergridHtml) &&
       /id="quantumCanvas"/u.test(exactAethergridHtml) &&
       /id="scenarioChart"/u.test(exactAethergridHtml),
     'ÆTHERGRID runtime HTML must expose real semantic controls and canvas surfaces',
@@ -431,7 +442,9 @@ async function main() {
       /gl\.drawArrays/u.test(exactAethergridJs) &&
       /pointerdown/u.test(exactAethergridJs) &&
       /wheel/u.test(exactAethergridJs) &&
-      /loadGraph\(graph\)/u.test(exactAethergridJs),
+      /loadGraph\(graph\)/u.test(exactAethergridJs) &&
+      /function switchWorkspace/u.test(exactAethergridJs) &&
+      /localStorage\.setItem\(SETTINGS_KEY/u.test(exactAethergridJs),
     'ÆTHERGRID must keep native WebGL 4D geometry, interaction controls, and backend graph loading',
   );
   assert(
@@ -446,6 +459,12 @@ async function main() {
       exactAethergridApp.entrypoints?.backend === 'server.mjs' &&
       exactAethergridApp.capabilities?.nativeWebGL4DGrid === true &&
       exactAethergridApp.capabilities?.interactiveWireframeMap === true &&
+      exactAethergridApp.capabilities?.workspaceRouter === true &&
+      exactAethergridApp.capabilities?.persistentOperatorSettings === true &&
+      exactAethergridApp.capabilities?.individualAgentRuntime === true &&
+      exactAethergridApp.capabilities?.teamAgentRuntime === true &&
+      exactAethergridApp.aiRuntime?.replaceableByConfiguration === true &&
+      exactAethergridUi.workspaceRouting?.mode === 'exclusive-view' &&
       exactAethergridUi.spatialModel?.renderEngine === 'native-webgl' &&
       JSON.stringify(exactAethergridUi.spatialModel?.dimensions) ===
         JSON.stringify(['x', 'y', 'z', 'time']),
@@ -455,6 +474,9 @@ async function main() {
     '/api/aethergrid/telemetry',
     '/api/aethergrid/stream',
     '/api/aethergrid/spatial',
+    '/api/aethergrid/runtime',
+    '/api/aethergrid/agents/',
+    '/api/aethergrid/team',
     '/api/aethergrid/view',
     '/api/aethergrid/region',
     '/api/aethergrid/scenario',
@@ -472,6 +494,25 @@ async function main() {
     /dimensions: \['x', 'y', 'z', 'time'\]/u.test(exactAethergridServer) &&
       /const spatialGraph = buildSpatialGraph\(\)/u.test(exactAethergridServer),
     'ÆTHERGRID backend must build a time-indexed spatial graph',
+  );
+  const aethergridAgentConfig = await text('apps/aethergrid-console/agent-config.mjs');
+  const aethergridAiRuntime = await text('apps/aethergrid-console/ai-runtime.mjs');
+  assert(
+    /openai-compatible/u.test(aethergridAgentConfig) &&
+      /ollama/u.test(aethergridAgentConfig) &&
+      /local/u.test(aethergridAgentConfig) &&
+      /AETHERGRID_VAELON/u.test(aethergridAgentConfig) &&
+      /AETHERGRID_AUREN/u.test(aethergridAgentConfig) &&
+      /AETHERGRID_SOLVAER/u.test(aethergridAgentConfig),
+    'ÆTHERGRID agent configuration must preserve replaceable provider and per-agent model wiring',
+  );
+  assert(
+    /async function callOpenAiCompatible/u.test(aethergridAiRuntime) &&
+      /async function callOllama/u.test(aethergridAiRuntime) &&
+      /async function runTeam/u.test(aethergridAiRuntime) &&
+      /Promise\.all/u.test(aethergridAiRuntime) &&
+      /fallbackUsed/u.test(aethergridAiRuntime),
+    'ÆTHERGRID AI runtime must keep real provider adapters, team orchestration, and fallback evidence',
   );
   assert(
     /standalone\.html/u.test(exactAethergridPackager) &&
