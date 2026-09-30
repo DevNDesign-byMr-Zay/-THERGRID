@@ -5,6 +5,7 @@ export type OverlayNodeKind =
   | 'load'
   | 'transit'
   | 'sensor'
+  | 'city'
   | 'asset'
   | 'event';
 
