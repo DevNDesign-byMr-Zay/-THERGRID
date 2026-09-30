@@ -897,3 +897,25 @@ test('v4 thunderstorm presentation is source-bounded and explicitly synthetic in
   assert.match(viewport, /stormPresentation\(atmosphere, time\.iso\)/u);
   assert.match(viewport, /SOURCE WEATHER · SYNTHETIC FLASH TIMING/u);
 });
+
+test('v4 live wind field is source-backed spatial geometry shared by Cesium and native failover', async () => {
+  const [service, cesium, nativeRenderer, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/services/city-environment.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(service, /atmosphereToWindOverlay/u);
+  assert.match(service, /kind: 'flow'/u);
+  assert.match(service, /vectorType: 'wind'/u);
+  assert.match(service, /meteorologicalFromDegrees/u);
+  assert.match(service, /syntheticGeometry: true/u);
+  assert.match(service, /layerId: 'weather'/u);
+  assert.match(app, /const windOverlay = useMemo/u);
+  assert.match(app, /powerOverlay, windOverlay, seismicOverlay/u);
+  assert.match(cesium, /windEdge/u);
+  assert.match(cesium, /#7de9ff/u);
+  assert.match(nativeRenderer, /windEdge/u);
+  assert.match(nativeRenderer, /#7de9ff/u);
+});
