@@ -183,8 +183,15 @@ async function hazardSource(
   );
 }
 
-async function hydrologySource(signal?: AbortSignal): Promise<OperationalSourceSnapshot> {
-  const result = await fetchJson('/api/aethergrid/hydrology/gauges', signal);
+export async function loadHydrologyGauge(
+  gaugeId: string,
+  signal?: AbortSignal
+): Promise<OperationalSourceSnapshot> {
+  if (!gaugeId.trim()) {
+    return unavailable('hydrology', 'A source-backed gauge identifier is required.', 'unconfigured');
+  }
+  const query = new URLSearchParams({ gaugeId });
+  const result = await fetchJson(`/api/aethergrid/hydrology/gauges?${query.toString()}`, signal);
   if (!result.ok) return unavailable('hydrology', `Hydrology endpoint unavailable (HTTP ${result.status}).`);
   const data = object(result.payload.data ?? result.payload);
   const stage = finite(data.observedStageFeet);
@@ -201,8 +208,15 @@ async function hydrologySource(signal?: AbortSignal): Promise<OperationalSourceS
   );
 }
 
-async function energySource(signal?: AbortSignal): Promise<OperationalSourceSnapshot> {
-  const result = await fetchJson('/api/aethergrid/energy/context', signal);
+export async function loadEnergyContextForRegion(
+  region: string,
+  signal?: AbortSignal
+): Promise<OperationalSourceSnapshot> {
+  if (!region.trim()) {
+    return unavailable('energy', 'A source-backed energy region is required.', 'unconfigured');
+  }
+  const query = new URLSearchParams({ region });
+  const result = await fetchJson(`/api/aethergrid/energy/context?${query.toString()}`, signal);
   if (!result.ok) return unavailable('energy', `Energy endpoint unavailable (HTTP ${result.status}).`);
   const data = object(result.payload.data ?? result.payload);
   const count = finite(data.recordsCount);
@@ -268,13 +282,11 @@ export async function loadOperationalSnapshot(input: {
   const settled = await Promise.allSettled([
     weatherSource(input.latitude, input.longitude, input.signal),
     hazardSource(input.latitude, input.longitude, input.signal),
-    hydrologySource(input.signal),
-    energySource(input.signal),
     transitSource(input.cityId, input.signal)
   ]);
 
-  const ids: readonly OperationalSourceId[] = ['weather', 'hazards', 'hydrology', 'energy', 'transit'];
-  const sources = settled.map((result, index) =>
+  const ids: readonly OperationalSourceId[] = ['weather', 'hazards', 'transit'];
+  const resolved = settled.map((result, index) =>
     result.status === 'fulfilled'
       ? result.value
       : unavailable(
@@ -282,6 +294,23 @@ export async function loadOperationalSnapshot(input: {
           result.reason instanceof Error ? result.reason.message : String(result.reason)
         )
   );
+
+  const byId = new Map(resolved.map((source) => [source.id, source]));
+  const sources: readonly OperationalSourceSnapshot[] = [
+    byId.get('weather') ?? unavailable('weather', 'Weather source unavailable.'),
+    byId.get('hazards') ?? unavailable('hazards', 'Hazards source unavailable.'),
+    unavailable(
+      'hydrology',
+      'Location-to-gauge resolution is not connected yet; no default gauge is assumed.',
+      'unconfigured'
+    ),
+    unavailable(
+      'energy',
+      'Location-to-energy-region resolution is not connected yet; no default balancing authority is assumed.',
+      'unconfigured'
+    ),
+    byId.get('transit') ?? unavailable('transit', 'Transit source unavailable.')
+  ];
 
   return {
     coordinate: { latitude: input.latitude, longitude: input.longitude },
