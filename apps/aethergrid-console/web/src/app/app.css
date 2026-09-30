@@ -704,6 +704,14 @@ button {
   font-size: 12px;
 }
 
+.selection-hint {
+  display: inline-block;
+  margin-top: 9px;
+  color: var(--cyan);
+  font-size: 7px;
+  letter-spacing: 0.12em;
+}
+
 .selection-card dl {
   display: grid;
   gap: 7px;
@@ -944,4 +952,14 @@ button {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+
+.cesium-selection-wrapper {
+  filter: drop-shadow(0 0 9px rgba(112, 231, 255, 0.82));
+}
+
+.cesium-selection-wrapper svg {
+  fill: rgba(112, 231, 255, 0.08);
+  stroke: var(--cyan);
 }
