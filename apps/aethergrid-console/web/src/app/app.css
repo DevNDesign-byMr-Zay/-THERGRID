@@ -774,6 +774,113 @@ button {
   font-size: 8px;
 }
 
+
+.journey-status {
+  position: absolute;
+  top: 72px;
+  left: 50%;
+  z-index: 6;
+  width: min(320px, calc(100% - 40px));
+  transform: translateX(-50%);
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(112, 231, 255, 0.18);
+  border-radius: 9px;
+  background: rgba(5, 9, 15, 0.84);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+.journey-status > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.journey-status span {
+  color: #637a8d;
+  font-size: 7px;
+  letter-spacing: 0.12em;
+}
+
+.journey-status strong {
+  color: #dff8ff;
+  font: 600 9px ui-monospace, "SFMono-Regular", Consolas, monospace;
+  letter-spacing: 0.1em;
+}
+
+.journey-progress {
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.journey-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(112, 231, 255, 0.55), rgba(155, 124, 255, 0.95));
+  box-shadow: 0 0 10px rgba(112, 231, 255, 0.4);
+  transition: width 180ms ease;
+}
+
+.solar-status {
+  position: absolute;
+  right: 16px;
+  bottom: 58px;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 2px 8px;
+  align-items: center;
+  padding: 7px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 7px;
+  background: rgba(5, 9, 15, 0.76);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+.solar-status span {
+  grid-column: 1 / -1;
+  color: #687e90;
+  font-size: 6px;
+  letter-spacing: 0.11em;
+}
+
+.solar-status strong {
+  color: #eef7ff;
+  font-size: 9px;
+}
+
+.solar-status small {
+  color: #63788b;
+  font-size: 6px;
+}
+
+.solar-status[data-phase='golden-hour'] {
+  border-color: rgba(255, 187, 97, 0.24);
+}
+
+.solar-status[data-phase='golden-hour'] strong {
+  color: #ffc77e;
+}
+
+.solar-status[data-phase='twilight'] {
+  border-color: rgba(135, 127, 255, 0.22);
+}
+
+.solar-status[data-phase='night'] {
+  border-color: rgba(105, 132, 255, 0.18);
+}
+
+.spatial-shell[data-solar-phase='night'] .spatial-grid-overlay {
+  opacity: 0.18;
+}
+
 .viewport-warning {
   position: absolute;
   left: 50%;
@@ -2452,5 +2559,12 @@ button {
   .intel-workspace-tabs {
     top: 33px;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .journey-progress span {
+    transition: none;
   }
 }
