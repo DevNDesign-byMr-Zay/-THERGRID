@@ -692,3 +692,25 @@ test('v4 city arrival heading is derived from mapped building geometry and appli
   assert.match(app, /journey: identityMatches \? 'direct' : 'full'/u);
   assert.match(app, /ARRIVAL HEADING/u);
 });
+
+test('v4 scenario map effects mirror the backend stress model without mutating source data', async () => {
+  const [client, panel, layer, renderer, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/services/scenario-client.ts'),
+    text('apps/aethergrid-console/web/src/components/ScenarioPanel.tsx'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(client, /stressFactor: 0\.88/u);
+  assert.match(client, /stressFactor: 1\.12/u);
+  assert.match(client, /stressFactor: 1\.18/u);
+  assert.match(client, /parameters\.weatherRiskPercent \/ 1000/u);
+  assert.match(panel, /scenarioVisualState/u);
+  assert.match(panel, /activeVisual\.stressFactor/u);
+  assert.match(layer, /time\.mode === 'scenario'/u);
+  assert.match(layer, /scenario\.stressFactor/u);
+  assert.match(layer, /scenarioColor/u);
+  assert.match(renderer, /if \(this\.#time\) overlay\.setTime\(this\.#time\)/u);
+  assert.match(app, /MODELED SCENARIO · SOURCE DATA UNCHANGED/u);
+});
