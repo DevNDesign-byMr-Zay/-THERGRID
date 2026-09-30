@@ -625,3 +625,17 @@ test('v4 viewport prevents duplicate initial camera descent while polling transi
   assert.match(viewport, /setInterval\(\(\) => \{/u);
   assert.match(viewport, /manager\.status\(\)/u);
 });
+
+test('v4 city transitions report geometry atmosphere and live-context readiness independently', async () => {
+  const app = await text('apps/aethergrid-console/web/src/app/App.tsx');
+
+  assert.match(app, /interface CityLoadState/u);
+  assert.match(app, /spatial: true/u);
+  assert.match(app, /environment: true/u);
+  assert.match(app, /liveContext: true/u);
+  assert.match(app, /SOURCES PENDING/u);
+  assert.match(app, /GEOMETRY/u);
+  assert.match(app, /ATMOSPHERE/u);
+  assert.match(app, /LIVE CONTEXT/u);
+  assert.match(app, /setCityLoad\(\(current\) => \(\{ \.\.\.current, spatial: false \}\)\)/u);
+});
