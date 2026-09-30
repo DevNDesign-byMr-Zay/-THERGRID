@@ -231,11 +231,13 @@
             <section class="panel run-history-panel"><header class="panel-head"><div class="panel-title"><span class="badge">▤</span><span><h3>RUN HISTORY</h3><small>Receipts & comparisons</small></span></div></header><div id="optimizationHistory" class="history-list"><div class="empty-state">No optimization run in this session yet.</div></div></section>
 
             <section class="panel quantum-provider-panel">
-              <header class="panel-head"><div class="panel-title"><span class="badge">Q</span><span><h3>QUANTUM COMPUTE RUNTIME</h3><small>Local sampler or real IBM Quantum QPU submission</small></span></div><span class="pill" id="quantumProviderBadge">LOADING</span></header>
+              <header class="panel-head"><div class="panel-title"><span class="badge">Q</span><span><h3>QUANTUM COMPUTE RUNTIME</h3><small>Local primitives or real IBM Quantum Sampler / Estimator submission</small></span></div><span class="pill" id="quantumProviderBadge">LOADING</span></header>
               <div class="quantum-provider-grid">
                 <div class="quantum-job-controls">
+                  <label>Primitive<select id="quantumPrimitive"><option value="sampler">Sampler V2</option><option value="estimator">Estimator V2</option></select></label>
                   <label>Backend<select id="quantumBackend"><option value="aethergrid-local-sampler">aethergrid-local-sampler</option></select></label>
-                  <label>Shots<input id="quantumShots" type="number" min="1" max="100000" value="1024" /></label>
+                  <label id="quantumShotsRow">Shots<input id="quantumShots" type="number" min="1" max="100000" value="1024" /></label>
+                  <label id="quantumObservableRow" hidden>Pauli Observable<input id="quantumObservable" type="text" value="ZZ" maxlength="64" placeholder="ZZ" /></label>
                   <label>OpenQASM 3 Circuit<textarea id="quantumCircuit" rows="7">OPENQASM 3.0; include "stdgates.inc"; bit[2] c; h $0; cx $0, $1; c[0] = measure $0; c[1] = measure $1;</textarea></label>
                   <div class="quantum-job-actions"><button class="secondary-button" data-action="refresh-quantum-backends">REFRESH BACKENDS</button><button class="primary-button" data-action="submit-quantum-job">SUBMIT SAMPLER JOB</button></div>
                 </div>
