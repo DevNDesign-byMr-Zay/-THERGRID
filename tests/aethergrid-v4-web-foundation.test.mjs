@@ -567,7 +567,10 @@ test('v4 intelligence workspace tabs preserve mounted AI scenario quantum eviden
   assert.match(app, /SYSTEM/u);
   assert.match(app, /intel-workspace intel-ai/u);
   assert.match(app, /intel-workspace intel-quantum/u);
-  assert.match(styles, /\.intel-workspace,\s*\.intel-context-panel \{\s*display: none/u);
+  assert.match(
+    styles,
+    /\.intel-workspace,\s*\.intel-context-panel \{\s*display: none/u,
+  );
   assert.match(styles, /data-workspace='ai'/u);
   assert.match(styles, /data-workspace='evidence'/u);
 });
