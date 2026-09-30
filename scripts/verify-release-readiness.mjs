@@ -402,16 +402,23 @@ async function main() {
   const exactAethergridApp = JSON.parse(await text('apps/aethergrid-console/app.json'));
   const exactAethergridUi = JSON.parse(await text('apps/aethergrid-console/ui.json'));
   assert(
-    /assets\/dashboard-reference\.webp/u.test(exactAethergridHtml) &&
+    /data:image\/webp;base64,/u.test(exactAethergridHtml) &&
+      /<style>[\s\S]+\.dashboard-stage/u.test(exactAethergridHtml) &&
+      /<script>[\s\S]+runOptimization/u.test(exactAethergridHtml) &&
+      !/href="\.\/styles\.css"/u.test(exactAethergridHtml) &&
+      !/src="\.\/app\.js"/u.test(exactAethergridHtml) &&
       /data-action="run-optimization"/u.test(exactAethergridHtml) &&
       /data-action="ai-chat"/u.test(exactAethergridHtml),
-    'ÆTHERGRID exact dashboard HTML must preserve the approved canvas and functional controls',
+    'ÆTHERGRID standalone HTML must embed the approved canvas, CSS, JavaScript, and functional controls',
   );
   assert(
     exactAethergridApp.entrypoints?.standaloneHtml === 'index.html' &&
       exactAethergridApp.entrypoints?.backend === 'server.mjs' &&
-      exactAethergridApp.visualContract?.referenceViewport?.join('x') === '1536x1024',
-    'ÆTHERGRID app manifest must bind the standalone HTML, backend, and approved viewport',
+      exactAethergridApp.visualContract?.referenceViewport?.join('x') === '1536x1024' &&
+      exactAethergridApp.standalone?.selfContained === true &&
+      exactAethergridApp.standalone?.externalAssetsRequired === false &&
+      exactAethergridApp.standalone?.opensViaFileProtocol === true,
+    'ÆTHERGRID app manifest must guarantee a self-contained standalone HTML plus backend app',
   );
   assert(
     exactAethergridUi.referenceImage === 'assets/dashboard-reference.webp' &&
