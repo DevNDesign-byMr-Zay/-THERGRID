@@ -107,13 +107,13 @@ export function SpatialViewport({
       onSelection?.(null);
     };
 
-    host.addEventListener('dblclick', onPointer);
+    host.addEventListener('click', onPointer);
     globalThis.addEventListener('keydown', onKeyDown);
 
     return () => {
       cancelled = true;
       observer.disconnect();
-      host.removeEventListener('dblclick', onPointer);
+      host.removeEventListener('click', onPointer);
       globalThis.removeEventListener('keydown', onKeyDown);
       manager.destroy();
       if (managerRef.current === manager) managerRef.current = null;
