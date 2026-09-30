@@ -91,7 +91,14 @@
     "terrain-wireframe-layer",
     "live-terrain-elevation",
     "independent-terrain-layer",
-    "terrain-fallback"
+    "terrain-fallback",
+    "solid-osm-city-volumes",
+    "osm-building-parts",
+    "cinematic-globe-city-transition",
+    "city-visual-modes",
+    "city-operations-use-cases",
+    "dedicated-agent-chat-threads",
+    "persistent-agent-conversation-history"
   ],
   "agents": [
     {
@@ -122,7 +129,9 @@
       "node-pulses",
       "quantum-wave-surface",
       "scenario-line-motion",
-      "wireframe-thumbnails"
+      "wireframe-thumbnails",
+      "cinematic-globe-city-descent",
+      "city-volume-fly-in"
     ],
     "reducedMotionSupported": true
   },
@@ -209,8 +218,12 @@
     "providerSecretsClientVisible": false,
     "externalContext": [
       "geospatial-summary",
-      "quantum-job-summary"
-    ]
+      "quantum-job-summary",
+      "city-operation-summary"
+    ],
+    "dedicatedPersistentThreads": true,
+    "threadStorage": "localStorage",
+    "historyWindowMessages": 16
   },
   "scenarioModel": {
     "templates": [
@@ -234,7 +247,8 @@
       "SCENARIO",
       "OPTIMIZATION",
       "AI_AGENT",
-      "AI_TEAM"
+      "AI_TEAM",
+      "CITY_OPERATION"
     ],
     "contributionReceipts": true,
     "advisoryOnly": true
@@ -305,6 +319,7 @@
     "temporalCityScrubbing": true,
     "liveLayers": [
       "buildings",
+      "building-parts",
       "roads",
       "power-lines",
       "power-assets",
@@ -314,7 +329,27 @@
     "terrainProvider": "Open-Meteo Elevation / Copernicus DEM GLO-90",
     "terrainLayerControl": true,
     "terrainEndpoint": "GET /api/aethergrid/terrain",
-    "liveTerrainElevation": true
+    "liveTerrainElevation": true,
+    "solidBuildingVolumes": true,
+    "buildingParts": true,
+    "visualModes": [
+      "solid",
+      "xray",
+      "operations"
+    ],
+    "cinematicTransition": true,
+    "cityOperations": {
+      "catalogEndpoint": "GET /api/aethergrid/city-operations/use-cases",
+      "analyzeEndpoint": "POST /api/aethergrid/city-operations/analyze",
+      "useCases": [
+        "grid-resilience",
+        "outage-impact",
+        "emergency-access",
+        "renewable-siting",
+        "load-growth"
+      ],
+      "advisoryOnly": true
+    }
   },
   "profile": {
     "persistence": "backend local JSON with browser cache fallback",
