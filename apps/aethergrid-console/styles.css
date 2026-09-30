@@ -740,3 +740,41 @@ html[data-theme="light"] .operation-live-badge {
   border-color: rgba(36, 111, 151, 0.28);
   background: rgba(74, 143, 180, 0.08);
 }
+
+
+/* v2.8 solar-cycle and city-identity states */
+#globalSolarStatus {
+  border-left: 1px solid rgba(255, 178, 67, 0.32);
+  padding-left: 9px;
+  color: rgba(255, 197, 103, 0.9);
+  text-shadow: 0 0 12px rgba(255, 164, 53, 0.12);
+}
+
+.global-layer-controls [data-global-layer="clouds"],
+.global-layer-controls [data-global-layer="illumination"] {
+  position: relative;
+}
+
+.global-layer-controls [data-global-layer="clouds"].active::after,
+.global-layer-controls [data-global-layer="illumination"].active::after {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.9;
+  animation: live-layer-pulse calc(1.7s / max(var(--animation-scale), 0.25)) ease-in-out infinite;
+}
+
+html[data-theme="light"] #globalSolarStatus {
+  color: #8b5700;
+  border-left-color: rgba(139, 87, 0, 0.28);
+  text-shadow: none;
+}
+
+body[data-motion="reduced"] .global-layer-controls [data-global-layer="clouds"].active::after,
+body[data-motion="reduced"] .global-layer-controls [data-global-layer="illumination"].active::after {
+  animation: none;
+}

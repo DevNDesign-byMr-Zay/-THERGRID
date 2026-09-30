@@ -225,6 +225,24 @@ const CITY_USE_CASES = Object.freeze({
     recommendedLayers: ['seismic', 'buildings', 'terrain', 'roads', 'infrastructure'],
     animationProfile: 'seismic',
   }),
+  'heat-stress': Object.freeze({
+    id: 'heat-stress',
+    label: 'Heat Stress',
+    purpose: 'Combine current apparent temperature, humidity, UV and mapped built-form density for urban heat attention review.',
+    indexLabel: 'Heat attention index',
+    agentLead: 'AUREN',
+    recommendedLayers: ['buildings', 'illumination', 'clouds', 'weather', 'air', 'nodes'],
+    animationProfile: 'heat',
+  }),
+  'visibility-operations': Object.freeze({
+    id: 'visibility-operations',
+    label: 'Visibility Operations',
+    purpose: 'Combine current visibility, precipitation, cloud and air-quality context with mapped roads and structures.',
+    indexLabel: 'Visibility attention index',
+    agentLead: 'SOLVÆR',
+    recommendedLayers: ['roads', 'buildings', 'illumination', 'clouds', 'weather', 'air', 'nodes'],
+    animationProfile: 'visibility',
+  }),
 });
 
 function planarLength(path = []) {
@@ -319,6 +337,20 @@ function liveCitySignals(mesh) {
     apparentTemperatureC: Number.isFinite(Number(environment.apparentTemperatureC))
       ? Number(environment.apparentTemperatureC)
       : null,
+    relativeHumidityPercent: Number.isFinite(Number(environment.relativeHumidityPercent))
+      ? Number(environment.relativeHumidityPercent)
+      : null,
+    surfacePressureHpa: Number.isFinite(Number(environment.surfacePressureHpa))
+      ? Number(environment.surfacePressureHpa)
+      : null,
+    isDay: typeof environment.isDay === 'boolean' ? environment.isDay : null,
+    sunrise: mesh?.environment?.solar?.sunrise || null,
+    sunset: mesh?.environment?.solar?.sunset || null,
+    daylightDurationSeconds: Number.isFinite(
+      Number(mesh?.environment?.solar?.daylightDurationSeconds),
+    )
+      ? Number(mesh.environment.solar.daylightDurationSeconds)
+      : null,
     cloudCoverPercent: Number.isFinite(Number(environment.cloudCoverPercent))
       ? Number(environment.cloudCoverPercent)
       : null,
@@ -388,6 +420,15 @@ function analyzeCityUseCase(mesh, useCaseId) {
     (liveSignals.shortwaveRadiationWm2 || 0) / 10 +
       (100 - (liveSignals.cloudCoverPercent ?? 50)) * 0.25,
   );
+  const apparentHeatStress = clampIndex(
+    Math.max(0, Number(liveSignals.apparentTemperatureC ?? liveSignals.temperatureC ?? 20) - 20) * 4,
+  );
+  const humidityStress = clampIndex(liveSignals.relativeHumidityPercent ?? 0);
+  const uvStress = clampIndex((liveSignals.uvIndex ?? 0) * 10);
+  const visibilityStress =
+    liveSignals.visibilityM == null
+      ? 0
+      : clampIndex(Math.max(0, 20_000 - liveSignals.visibilityM) / 200);
 
   let planningIndex = 0;
   let observations = [];
@@ -458,6 +499,27 @@ function analyzeCityUseCase(mesh, useCaseId) {
       `PM2.5 is ${liveSignals.pm25UgM3 == null ? 'unavailable' : `${liveSignals.pm25UgM3.toFixed(1)} µg/m³`} and PM10 is ${liveSignals.pm10UgM3 == null ? 'unavailable' : `${liveSignals.pm10UgM3.toFixed(1)} µg/m³`}.`,
       `The atmospheric overlay is paired with ${metrics.buildingCount} mapped buildings and ${metrics.roadLengthKm.toFixed(1)} km of road geometry; it is not a block-level exposure measurement.`,
     ];
+  } else if (useCaseId === 'heat-stress') {
+    planningIndex = clampIndex(
+      apparentHeatStress * 0.45 + humidityStress * 0.2 + uvStress * 0.15 + builtMass * 0.2,
+    );
+    observations = [
+      `Current modeled temperature is ${liveSignals.temperatureC == null ? 'unavailable' : `${liveSignals.temperatureC.toFixed(1)}°C`} with apparent temperature ${liveSignals.apparentTemperatureC == null ? 'unavailable' : `${liveSignals.apparentTemperatureC.toFixed(1)}°C`}.`,
+      `Relative humidity is ${liveSignals.relativeHumidityPercent == null ? 'unavailable' : `${liveSignals.relativeHumidityPercent.toFixed(0)}%`} and UV index is ${liveSignals.uvIndex == null ? 'unavailable' : liveSignals.uvIndex.toFixed(1)}.`,
+      `Mapped built-form density contributes context from ${metrics.buildingCount} structures; this is an urban heat attention proxy, not WBGT, a clinical heat-risk assessment or a block-level temperature sensor.`,
+    ];
+  } else if (useCaseId === 'visibility-operations') {
+    planningIndex = clampIndex(
+      visibilityStress * 0.48 +
+        weatherStress * 0.22 +
+        airStress * 0.18 +
+        clampIndex(metrics.roadLengthKm * 3) * 0.12,
+    );
+    observations = [
+      `Current modeled visibility is ${liveSignals.visibilityM == null ? 'unavailable' : `${(liveSignals.visibilityM / 1000).toFixed(1)} km`}; cloud cover is ${liveSignals.cloudCoverPercent == null ? 'unavailable' : `${liveSignals.cloudCoverPercent.toFixed(0)}%`}.`,
+      `Precipitation is ${liveSignals.precipitationMm.toFixed(1)} mm and modeled US AQI is ${liveSignals.usAqi == null ? 'unavailable' : liveSignals.usAqi.toFixed(0)}.`,
+      `The scene pairs atmospheric context with ${metrics.roadLengthKm.toFixed(1)} km of mapped roads; it is not a navigation clearance, aviation minimum or live traffic visibility guarantee.`,
+    ];
   } else {
     planningIndex = clampIndex(seismicStress * 0.72 + builtMass * 0.18 + terrainComplexity * 0.1);
     observations = [
@@ -468,7 +530,7 @@ function analyzeCityUseCase(mesh, useCaseId) {
   }
 
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     useCase,
     city: mesh.city,
     generatedAt: new Date().toISOString(),
@@ -783,6 +845,10 @@ const server = http.createServer(async (request, response) => {
           windGustsKph: mesh.environment?.current?.windGustsKph ?? null,
           shortwaveRadiationWm2: mesh.environment?.current?.shortwaveRadiationWm2 ?? null,
           visibilityM: mesh.environment?.current?.visibilityM ?? null,
+          relativeHumidityPercent: mesh.environment?.current?.relativeHumidityPercent ?? null,
+          surfacePressureHpa: mesh.environment?.current?.surfacePressureHpa ?? null,
+          sunrise: mesh.environment?.solar?.sunrise ?? null,
+          sunset: mesh.environment?.solar?.sunset ?? null,
         },
         liveContext: {
           airQualityProvider: mesh.liveContext?.airQuality?.source?.provider || null,
@@ -869,6 +935,10 @@ const server = http.createServer(async (request, response) => {
           windGustsKph: mesh.environment?.current?.windGustsKph ?? null,
           shortwaveRadiationWm2: mesh.environment?.current?.shortwaveRadiationWm2 ?? null,
           visibilityM: mesh.environment?.current?.visibilityM ?? null,
+          relativeHumidityPercent: mesh.environment?.current?.relativeHumidityPercent ?? null,
+          surfacePressureHpa: mesh.environment?.current?.surfacePressureHpa ?? null,
+          sunrise: mesh.environment?.solar?.sunrise ?? null,
+          sunset: mesh.environment?.solar?.sunset ?? null,
         },
         liveContext: {
           airQualityProvider: mesh.liveContext?.airQuality?.source?.provider || null,

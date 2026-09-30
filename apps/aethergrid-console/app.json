@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "aethergrid.operator-console",
   "name": "ÆTHERGRID Operator Console",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "format": "html+pwa+node-app",
   "entrypoints": {
     "standaloneHtml": "standalone.html",
@@ -20,7 +20,9 @@
     ],
     "target": "approved-aethergrid-command-center",
     "designReferenceRepositoryPath": "assets/dashboard-reference.webp",
-    "designReferenceIncludedInRuntimePackage": false
+    "designReferenceIncludedInRuntimePackage": false,
+    "proceduralCityLightsRepresentOccupancy": false,
+    "proceduralCityLightsBasis": "mapped building geometry + daylight state"
   },
   "backend": {
     "runtime": "node>=22",
@@ -165,7 +167,17 @@
     "sourceDrivenCityUseCaseAnimation": true,
     "weatherReadinessUseCase": true,
     "airQualityExposureUseCase": true,
-    "seismicAwarenessUseCase": true
+    "seismicAwarenessUseCase": true,
+    "realTimeSolarTerminator": true,
+    "liveSubsolarPoint": true,
+    "nightSideCityIllumination": true,
+    "windDrivenCloudDeck": true,
+    "directionalPrecipitationMotion": true,
+    "proceduralSkylineLighting": true,
+    "solarDaylightContext": true,
+    "humidityPressureContext": true,
+    "heatStressUseCase": true,
+    "visibilityOperationsUseCase": true
   },
   "aiRuntime": {
     "providers": [
@@ -232,7 +244,9 @@
       "load-growth",
       "weather-readiness",
       "air-quality-exposure",
-      "seismic-awareness"
+      "seismic-awareness",
+      "heat-stress",
+      "visibility-operations"
     ],
     "skylineFocusPresets": true,
     "maxSupportedBuildingHeightM": 1200,
@@ -243,7 +257,9 @@
     "liveAnimatedLayers": [
       "weather",
       "air",
-      "seismic"
+      "seismic",
+      "clouds",
+      "illumination"
     ]
   },
   "quantumRuntime": {
@@ -292,13 +308,40 @@
     "variables": [
       "temperature_2m",
       "apparent_temperature",
+      "relative_humidity_2m",
+      "surface_pressure",
       "weather_code",
       "cloud_cover",
       "is_day",
       "precipitation",
       "wind_speed_10m",
-      "wind_direction_10m"
-    ]
+      "wind_direction_10m",
+      "wind_gusts_10m",
+      "shortwave_radiation",
+      "visibility"
+    ],
+    "currentVariables": [
+      "temperature_2m",
+      "apparent_temperature",
+      "relative_humidity_2m",
+      "surface_pressure",
+      "weather_code",
+      "cloud_cover",
+      "is_day",
+      "precipitation",
+      "wind_speed_10m",
+      "wind_direction_10m",
+      "wind_gusts_10m",
+      "shortwave_radiation",
+      "visibility"
+    ],
+    "dailyVariables": [
+      "sunrise",
+      "sunset",
+      "daylight_duration",
+      "sunshine_duration"
+    ],
+    "solarContext": true
   },
   "settingsRuntime": {
     "persistence": "localStorage",

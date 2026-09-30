@@ -114,7 +114,16 @@
     "seismic-pulse-animation",
     "global-aqi-city-pulses",
     "global-utc-sweep",
-    "source-driven-city-use-case-animation"
+    "source-driven-city-use-case-animation",
+    "real-time-solar-terminator",
+    "live-subsolar-point",
+    "night-side-city-illumination",
+    "wind-driven-cloud-deck",
+    "directional-precipitation-motion",
+    "procedural-skyline-lighting",
+    "solar-daylight-context",
+    "heat-stress-operation",
+    "visibility-operations"
   ],
   "agents": [
     {
@@ -372,7 +381,9 @@
         "load-growth",
         "weather-readiness",
         "air-quality-exposure",
-        "seismic-awareness"
+        "seismic-awareness",
+        "heat-stress",
+        "visibility-operations"
       ],
       "advisoryOnly": true
     },
@@ -387,7 +398,25 @@
       "provider": "Open-Meteo",
       "endpoint": "GET /api/aethergrid/environment",
       "runtimeEndpoint": "GET /api/aethergrid/environment/runtime",
-      "currentConditions": true
+      "currentConditions": true,
+      "currentFields": [
+        "temperature",
+        "apparent-temperature",
+        "relative-humidity",
+        "surface-pressure",
+        "cloud-cover",
+        "precipitation",
+        "wind",
+        "wind-gusts",
+        "shortwave-radiation",
+        "visibility"
+      ],
+      "dailyFields": [
+        "sunrise",
+        "sunset",
+        "daylight-duration",
+        "sunshine-duration"
+      ]
     },
     "liveContext": {
       "airQualityProvider": "Open-Meteo Air Quality",
@@ -397,21 +426,35 @@
       "animatedLayers": [
         "weather",
         "air",
-        "seismic"
+        "seismic",
+        "clouds",
+        "illumination"
       ]
     },
     "globeAnimations": [
       "atmospheric-shell-pulse",
       "utc-sweep",
       "city-air-quality-pulses",
-      "recent-seismic-event-pulses"
+      "recent-seismic-event-pulses",
+      "real-time-solar-terminator",
+      "live-subsolar-point",
+      "night-side-city-illumination"
     ],
     "cityAnimations": [
       "wind-vectors",
       "precipitation-streaks",
       "air-quality-particles",
-      "directional-seismic-rings"
-    ]
+      "directional-seismic-rings",
+      "wind-driven-cloud-deck",
+      "directional-wind-flow",
+      "falling-precipitation",
+      "procedural-night-skyline-lights"
+    ],
+    "solarContext": {
+      "terminator": "computed from current UTC solar declination/equation of time",
+      "cityLights": "procedural mapped-geometry visualization",
+      "occupancyClaim": false
+    }
   },
   "profile": {
     "persistence": "backend local JSON with browser cache fallback",

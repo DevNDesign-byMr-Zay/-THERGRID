@@ -406,6 +406,8 @@
         infrastructure: true,
         terrain: true,
         weather: true,
+        clouds: true,
+        illumination: true,
         air: true,
         seismic: true,
         nodes: true,
@@ -461,10 +463,16 @@
          uniform float u_time;
          uniform float u_amp;
          uniform float u_pointSize;
+         uniform vec2 u_flow;
+         uniform float u_verticalScale;
+         uniform float u_drop;
          varying float v_phase;
          void main(){
            vec3 p=a_position.xyz;
-           p.y += sin(a_position.w + u_time) * u_amp;
+           float phase=a_position.w + u_time;
+           p.y += sin(phase) * u_amp * u_verticalScale;
+           p.xz += u_flow * sin(phase) * u_amp;
+           p.y -= fract(phase * 0.15915494) * u_drop;
            gl_Position=u_mvp*vec4(p,1.0);
            gl_PointSize=u_pointSize;
            v_phase=0.5+0.5*sin(a_position.w+u_time);
@@ -496,6 +504,9 @@
         color: gl.getUniformLocation(this.program, 'u_color'),
         pointSize: gl.getUniformLocation(this.program, 'u_pointSize'),
         pointMode: gl.getUniformLocation(this.program, 'u_pointMode'),
+        flow: gl.getUniformLocation(this.program, 'u_flow'),
+        verticalScale: gl.getUniformLocation(this.program, 'u_verticalScale'),
+        drop: gl.getUniformLocation(this.program, 'u_drop'),
       };
     }
 
@@ -596,6 +607,8 @@
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
       this.geometry.terrain = this.makeBuffer(terrainLines);
       this.geometry.weather = this.makeBuffer([]);
+      this.geometry.clouds = this.makeBuffer([]);
+      this.geometry.illumination = this.makeBuffer([]);
       this.geometry.precipitation = this.makeBuffer([]);
       this.geometry.air = this.makeBuffer([]);
       this.geometry.seismicLines = this.makeBuffer([]);
@@ -669,6 +682,8 @@
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
       this.geometry.terrain = this.makeBuffer(terrainLines);
       this.geometry.weather = this.makeBuffer([]);
+      this.geometry.clouds = this.makeBuffer([]);
+      this.geometry.illumination = this.makeBuffer([]);
       this.geometry.precipitation = this.makeBuffer([]);
       this.geometry.air = this.makeBuffer([]);
       this.geometry.seismicLines = this.makeBuffer([]);
@@ -694,6 +709,8 @@
       const infrastructureNodes = [];
       const terrainLines = [];
       const weatherLines = [];
+      const cloudParticles = [];
+      const cityLights = [];
       const precipitationLines = [];
       const airParticles = [];
       const seismicLines = [];
@@ -752,6 +769,17 @@
             const bRoof = [bx, height, bz];
             this.triangle(roofFaces, aRoof, bRoof, roofCenter, phase + 0.24);
           }
+        }
+
+        const sourceHeightM = Math.max(3, Number(building.heightM || 12));
+        const lightBands = Math.min(4, Math.max(1, Math.round(sourceHeightM / 55)));
+        const edgePoint = openFootprint[buildingIndex % openFootprint.length] || center;
+        for (let band = 1; band <= lightBands; band += 1) {
+          const fraction = band / (lightBands + 1);
+          const lightX = center[0] * 0.42 + edgePoint[0] * 0.58;
+          const lightZ = center[1] * 0.42 + edgePoint[1] * 0.58;
+          const lightY = baseHeight + Math.max(0.03, (wallTop - baseHeight) * fraction);
+          this.vertex(cityLights, lightX, lightY, lightZ, phase + band * 0.67);
         }
 
         if (buildingIndex < 120 && (building.name || buildingIndex % 10 === 0)) {
@@ -865,6 +893,18 @@
         const raw = Math.sin(index * 12.9898 + salt * 78.233) * 43758.5453;
         return raw - Math.floor(raw);
       };
+      const cloudCover = clamp(Number(environment.cloudCoverPercent || 0), 0, 100);
+      const cloudCount = Math.round(clamp(cloudCover * 0.9, 0, 90));
+      for (let index = 0; index < cloudCount; index += 1) {
+        this.vertex(
+          cloudParticles,
+          (deterministic(index, 10) - 0.5) * 17.5,
+          4.7 + deterministic(index, 11) * 1.55,
+          (deterministic(index, 12) - 0.5) * 17.5,
+          index * 0.21,
+        );
+      }
+
       const windSpeed = Math.max(0, Number(environment.windSpeedKph || 0));
       const windDirection = (Number(environment.windDirectionDegrees || 0) * Math.PI) / 180;
       const windLength = clamp(0.25 + windSpeed / 32, 0.25, 1.8);
@@ -952,6 +992,8 @@
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
       this.geometry.terrain = this.makeBuffer(terrainLines);
       this.geometry.weather = this.makeBuffer(weatherLines);
+      this.geometry.clouds = this.makeBuffer(cloudParticles);
+      this.geometry.illumination = this.makeBuffer(cityLights);
       this.geometry.precipitation = this.makeBuffer(precipitationLines);
       this.geometry.air = this.makeBuffer(airParticles);
       this.geometry.seismicLines = this.makeBuffer(seismicLines);
@@ -1180,7 +1222,18 @@
       }
     }
 
-    drawBuffer(item, primitive, color, amplitude, pointMode = 0, pointSize = 1) {
+    drawBuffer(
+      item,
+      primitive,
+      color,
+      amplitude,
+      pointMode = 0,
+      pointSize = 1,
+      flowX = 0,
+      flowZ = 0,
+      verticalScale = 1,
+      drop = 0,
+    ) {
       if (!item) return;
       const gl = this.gl;
       gl.bindBuffer(gl.ARRAY_BUFFER, item.buffer);
@@ -1190,6 +1243,9 @@
       gl.uniform1f(this.loc.amp, amplitude);
       gl.uniform1f(this.loc.pointMode, pointMode);
       gl.uniform1f(this.loc.pointSize, pointSize);
+      gl.uniform2f(this.loc.flow, flowX, flowZ);
+      gl.uniform1f(this.loc.verticalScale, verticalScale);
+      gl.uniform1f(this.loc.drop, drop);
       gl.drawArrays(primitive, 0, item.count);
     }
 
@@ -1281,29 +1337,101 @@
       }
       const focus = this.operationProfile || '';
       const windSpeed = Math.max(0, Number(this.environment?.current?.windSpeedKph || 0));
+      const windDirection =
+        (Number(this.environment?.current?.windDirectionDegrees || 0) * Math.PI) / 180;
+      const flowX = Math.sin(windDirection);
+      const flowZ = Math.cos(windDirection);
       const precipitation = Math.max(0, Number(this.environment?.current?.precipitationMm || 0));
+      const currentCloud = clamp(
+        Number(this.environment?.current?.cloudCoverPercent || 0) / 100,
+        0,
+        1,
+      );
+
+      if (this.layers.clouds) {
+        const cloudBoost = focus === 'weather' || focus === 'visibility' ? 1 : 0.58;
+        const cloudSize = 10 + currentCloud * 12;
+        this.drawBuffer(
+          this.geometry.clouds,
+          gl.POINTS,
+          isLightTheme()
+            ? [0.38, 0.48, 0.58, (0.08 + currentCloud * 0.2) * cloudBoost]
+            : [0.62, 0.78, 0.9, (0.08 + currentCloud * 0.24) * cloudBoost],
+          0.12 * amplitude * cloudBoost,
+          1,
+          cloudSize,
+          flowX * 0.62,
+          flowZ * 0.62,
+          0.18,
+          0,
+        );
+      }
+
+      if (this.layers.illumination) {
+        const lightBoost =
+          focus === 'visibility' ? 1.16 : focus === 'heat' ? 0.82 : 1;
+        const nightAlpha = dayMode ? 0.06 : 0.88;
+        const lightSize = dayMode ? 2.2 : 3.8;
+        this.drawBuffer(
+          this.geometry.illumination,
+          gl.POINTS,
+          [1, 0.72, 0.26, nightAlpha * lightBoost],
+          0.025 * amplitude,
+          1,
+          lightSize,
+          0,
+          0,
+          0.18,
+          0,
+        );
+      }
+
       if (this.layers.weather) {
-        const weatherBoost = focus === 'weather' || focus === 'resource-flow' || focus === 'grid-flow' ? 1 : 0.58;
+        const weatherBoost =
+          focus === 'weather' ||
+          focus === 'resource-flow' ||
+          focus === 'grid-flow' ||
+          focus === 'visibility'
+            ? 1
+            : 0.58;
         gl.uniform1f(this.loc.time, temporal * (1 + Math.min(2.4, windSpeed / 30)));
         this.drawBuffer(
           this.geometry.weather,
           gl.LINES,
-          isLightTheme() ? [0.05, 0.46, 0.68, 0.48 * weatherBoost] : [0.35, 0.88, 1, 0.58 * weatherBoost],
-          0.035 * amplitude * weatherBoost,
+          isLightTheme()
+            ? [0.05, 0.46, 0.68, 0.48 * weatherBoost]
+            : [0.35, 0.88, 1, 0.58 * weatherBoost],
+          0.055 * amplitude * weatherBoost,
+          0,
+          1,
+          flowX * 0.8,
+          flowZ * 0.8,
+          0.25,
+          0,
         );
         if (precipitation > 0) {
           this.drawBuffer(
             this.geometry.precipitation,
             gl.LINES,
-            isLightTheme() ? [0.18, 0.42, 0.72, 0.5 * weatherBoost] : [0.32, 0.58, 1, 0.72 * weatherBoost],
-            0.08 * amplitude * weatherBoost,
+            isLightTheme()
+              ? [0.18, 0.42, 0.72, 0.5 * weatherBoost]
+              : [0.32, 0.58, 1, 0.72 * weatherBoost],
+            0.04 * amplitude * weatherBoost,
+            0,
+            1,
+            flowX * 0.22,
+            flowZ * 0.22,
+            0.08,
+            1.05 * Math.min(1.8, 0.7 + precipitation * 0.08),
           );
         }
         gl.uniform1f(this.loc.time, temporal);
       }
+
       if (this.layers.air) {
         const aqi = clamp(Number(this.liveContext?.airQuality?.current?.usAqi || 0), 0, 500);
-        const airBoost = focus === 'air-quality' ? 1 : 0.42;
+        const airBoost =
+          focus === 'air-quality' || focus === 'visibility' || focus === 'heat' ? 1 : 0.42;
         const airColor =
           aqi >= 151
             ? [1, 0.34, 0.4, 0.74 * airBoost]
@@ -1318,7 +1446,11 @@
           airColor,
           0.12 * amplitude * airBoost,
           1,
-          focus === 'air-quality' ? 7 : 4,
+          focus === 'air-quality' || focus === 'visibility' ? 7 : 4,
+          flowX * 0.3,
+          flowZ * 0.3,
+          0.45,
+          0,
         );
       }
       if (this.layers.seismic) {
@@ -1390,6 +1522,11 @@
       this.liveBuffers = {};
       this.utcSweepBuffer = null;
       this.utcSweepMinute = -1;
+      this.solarMinute = -1;
+      this.solarState = null;
+      this.terminatorBuffer = null;
+      this.sunBuffer = null;
+      this.nightCityBuffer = null;
       if (!this.gl) return;
       this.initProgram();
       this.buildGlobe();
@@ -1507,6 +1644,7 @@
         quakeHigh: this.makeBuffer([]),
       };
       this.updateUtcSweep(true);
+      this.updateSolarGeometry(true);
     }
 
     setCities(cities = []) {
@@ -1516,7 +1654,92 @@
       }));
       if (this.cityBuffer?.buffer) this.gl.deleteBuffer(this.cityBuffer.buffer);
       this.cityBuffer = this.makeBuffer(this.cities.flatMap((city) => city.position));
+      this.updateSolarGeometry(true);
     }
+
+    solarPosition(date = new Date()) {
+      const year = date.getUTCFullYear();
+      const start = Date.UTC(year, 0, 0);
+      const today = Date.UTC(year, date.getUTCMonth(), date.getUTCDate());
+      const dayOfYear = Math.max(1, Math.round((today - start) / 86400000));
+      const utcHour =
+        date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
+      const gamma =
+        (2 * Math.PI / 365) * (dayOfYear - 1 + (utcHour - 12) / 24);
+      const declination =
+        0.006918 -
+        0.399912 * Math.cos(gamma) +
+        0.070257 * Math.sin(gamma) -
+        0.006758 * Math.cos(2 * gamma) +
+        0.000907 * Math.sin(2 * gamma) -
+        0.002697 * Math.cos(3 * gamma) +
+        0.00148 * Math.sin(3 * gamma);
+      const equationOfTime =
+        229.18 *
+        (0.000075 +
+          0.001868 * Math.cos(gamma) -
+          0.032077 * Math.sin(gamma) -
+          0.014615 * Math.cos(2 * gamma) -
+          0.040849 * Math.sin(2 * gamma));
+      let subsolarLon = (720 - utcHour * 60 - equationOfTime) / 4;
+      subsolarLon = ((subsolarLon + 540) % 360) - 180;
+      return {
+        subsolarLat: (declination * 180) / Math.PI,
+        subsolarLon,
+        equationOfTimeMinutes: equationOfTime,
+        generatedAt: date.toISOString(),
+      };
+    }
+
+    updateSolarGeometry(force = false) {
+      const minute = Math.floor(Date.now() / 60000);
+      if (!force && minute === this.solarMinute) return;
+      this.solarMinute = minute;
+      const solar = this.solarPosition(new Date());
+      const sun = this.spherePoint(solar.subsolarLat, solar.subsolarLon, 1);
+      const normalizeVector = (vector) => {
+        const length = Math.hypot(...vector) || 1;
+        return vector.map((value) => value / length);
+      };
+      const cross = (a, b) => [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+      ];
+      const reference = Math.abs(sun[1]) > 0.92 ? [1, 0, 0] : [0, 1, 0];
+      const axisA = normalizeVector(cross(sun, reference));
+      const axisB = normalizeVector(cross(sun, axisA));
+      const terminator = [];
+      let previous = null;
+      for (let step = 0; step <= 144; step += 1) {
+        const angle = (step / 144) * Math.PI * 2;
+        const point = [
+          (axisA[0] * Math.cos(angle) + axisB[0] * Math.sin(angle)) * 4.17,
+          (axisA[1] * Math.cos(angle) + axisB[1] * Math.sin(angle)) * 4.17,
+          (axisA[2] * Math.cos(angle) + axisB[2] * Math.sin(angle)) * 4.17,
+        ];
+        if (previous) this.pushLine(terminator, previous, point);
+        previous = point;
+      }
+      const nightCities = [];
+      for (const city of this.cities) {
+        const unit = this.spherePoint(Number(city.lat), Number(city.lon), 1);
+        const dot = unit[0] * sun[0] + unit[1] * sun[1] + unit[2] * sun[2];
+        city.solarDaylight = dot > 0;
+        if (dot <= 0) {
+          nightCities.push(...this.spherePoint(Number(city.lat), Number(city.lon), 4.115));
+        }
+      }
+      for (const item of [this.terminatorBuffer, this.sunBuffer, this.nightCityBuffer]) {
+        if (item?.buffer) this.gl.deleteBuffer(item.buffer);
+      }
+      this.terminatorBuffer = this.makeBuffer(terminator);
+      this.sunBuffer = this.makeBuffer(this.spherePoint(solar.subsolarLat, solar.subsolarLon, 4.34));
+      this.nightCityBuffer = this.makeBuffer(nightCities);
+      this.solarState = solar;
+      this.options.onSolarUpdate?.(solar);
+    }
+
     updateUtcSweep(force = false) {
       const minute = Math.floor(Date.now() / 60000);
       if (!force && minute === this.utcSweepMinute) return;
@@ -1733,6 +1956,7 @@
       const motion = state.settings.reducedMotion ? 0 : Math.max(0.1, state.settings.animationIntensity / 100);
       if (!this.drag && motion > 0) this.yaw += 0.00018 * motion;
       this.updateUtcSweep();
+      this.updateSolarGeometry();
       const eye = [
         Math.sin(this.yaw) * Math.cos(this.pitch) * this.distance,
         Math.sin(this.pitch) * this.distance,
@@ -1775,6 +1999,27 @@
         isLightTheme() ? [0.46, 0.31, 0.68, 0.38] : [0.65, 0.48, 1, 0.5],
         0,
         1,
+      );
+      this.draw(
+        this.terminatorBuffer,
+        gl.LINES,
+        isLightTheme() ? [0.86, 0.47, 0.16, 0.54] : [1, 0.62, 0.2, 0.64],
+        0,
+        1,
+      );
+      this.draw(
+        this.sunBuffer,
+        gl.POINTS,
+        [1, 0.76, 0.24, 0.96],
+        1,
+        12 + pulse * 5,
+      );
+      this.draw(
+        this.nightCityBuffer,
+        gl.POINTS,
+        [1, 0.66, 0.26, 0.58 + pulse * 0.22],
+        1,
+        8 + pulse * 3,
       );
 
       this.draw(this.cityBuffer, gl.POINTS, [0.18, 1, 0.82, 0.62], 1, 7);
@@ -1979,6 +2224,13 @@
   const globalGlobe = new GlobalGlobe3D(q('#globalGlobe'), {
     onSelectCity: handleGlobalCitySelection,
     onEnterCity: (city) => loadLiveCity(city.id),
+    onSolarUpdate: (solar) => {
+      const label = q('#globalSolarStatus');
+      if (!label || !solar) return;
+      const lat = `${Math.abs(Number(solar.subsolarLat)).toFixed(1)}°${Number(solar.subsolarLat) >= 0 ? 'N' : 'S'}`;
+      const lon = `${Math.abs(Number(solar.subsolarLon)).toFixed(1)}°${Number(solar.subsolarLon) >= 0 ? 'E' : 'W'}`;
+      label.textContent = `SUN ${lat} · ${lon} · TERMINATOR LIVE`;
+    },
   });
   globalGlobe?.setCities(state.geospatial.cities);
   const cityGrid = new SpatialGrid4D(q('#cityGrid'), {
@@ -2208,10 +2460,11 @@
         live: false,
       },
       environment: {
-        schemaVersion: 1,
+        schemaVersion: 2,
         coordinate: { lat: city.lat, lon: city.lon },
         source: { provider: 'local-environment-fallback', live: false, attribution: null, fetchedAt: new Date().toISOString() },
         current: null,
+        solar: null,
       },
       liveContext: {
         schemaVersion: 1,
@@ -2260,9 +2513,21 @@
       : '—';
     const air = mesh.liveContext?.airQuality?.current || null;
     const airQuality = air?.usAqi == null ? '—' : `AQI ${Number(air.usAqi).toFixed(0)} · ${titleCase(air.category || 'unknown')}`;
+    const humidity =
+      environment?.relativeHumidityPercent == null
+        ? '—'
+        : `${Number(environment.relativeHumidityPercent).toFixed(0)}%`;
+    const compactSolarTime = (value) => {
+      const text = String(value || '');
+      const time = text.includes('T') ? text.split('T')[1] : text;
+      return time ? time.slice(0, 5) : '—';
+    };
+    const sunriseSunset = mesh.environment?.solar
+      ? `${compactSolarTime(mesh.environment.solar.sunrise)} / ${compactSolarTime(mesh.environment.solar.sunset)}`
+      : '—';
     const seismic = mesh.liveContext?.seismic || null;
     const seismicLabel = seismic ? `${Number(seismic.eventCount || 0)} nearby · M${Number(seismic.maxMagnitude || 0).toFixed(1)} max` : '—';
-    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Skyline Max</b><em>${skylineMax}</em></span><span><b>P95 Height</b><em>${p95}</em></span><span><b>Height Data</b><em>${heightCoverage}</em></span><span><b>Weather</b><em>${weather}</em></span><span><b>Air</b><em>${airQuality}</em></span><span><b>Seismic</b><em>${seismicLabel}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
+    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Skyline Max</b><em>${skylineMax}</em></span><span><b>P95 Height</b><em>${p95}</em></span><span><b>Height Data</b><em>${heightCoverage}</em></span><span><b>Weather</b><em>${weather}</em></span><span><b>Air</b><em>${airQuality}</em></span><span><b>Humidity</b><em>${humidity}</em></span><span><b>Sunrise / Sunset</b><em>${sunriseSunset}</em></span><span><b>Seismic</b><em>${seismicLabel}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
   }
 
   function showCityTransition(city, stage = 'Aligning global coordinate…', progress = 8) {
@@ -2320,9 +2585,11 @@
         result.liveContext?.airQuality?.source?.attribution,
         result.liveContext?.seismic?.source?.attribution,
       ].filter(Boolean);
-      q('#geoAttribution').textContent =
+      const sourceText =
         attributions.join(' · ') ||
         'Live city geometry unavailable; using local fallback geometry.';
+      q('#geoAttribution').textContent =
+        `${sourceText} · City-light points are procedural visualization from mapped geometry + daylight state, not measured window occupancy.`;
     }
     if (status) {
       const skyline = result.skylineProfile || {};
@@ -2333,7 +2600,7 @@
       const air = result.liveContext?.airQuality?.current || null;
       const seismic = result.liveContext?.seismic || null;
       const currentContext = env
-        ? ` Current environment: ${Number.isFinite(env.temperatureC) ? `${Number(env.temperatureC).toFixed(1)}°C, ` : ''}${Number.isFinite(env.cloudCoverPercent) ? `${Number(env.cloudCoverPercent).toFixed(0)}% cloud, ` : ''}${Number.isFinite(env.windSpeedKph) ? `${Number(env.windSpeedKph).toFixed(1)} km/h wind, ` : ''}${env.isDay ? 'daylight' : 'night'}.`
+        ? ` Current environment: ${Number.isFinite(env.temperatureC) ? `${Number(env.temperatureC).toFixed(1)}°C, ` : ''}${Number.isFinite(env.relativeHumidityPercent) ? `${Number(env.relativeHumidityPercent).toFixed(0)}% humidity, ` : ''}${Number.isFinite(env.cloudCoverPercent) ? `${Number(env.cloudCoverPercent).toFixed(0)}% cloud, ` : ''}${Number.isFinite(env.windSpeedKph) ? `${Number(env.windSpeedKph).toFixed(1)} km/h wind, ` : ''}${env.isDay ? 'daylight' : 'night'}.`
         : '';
       const liveContextCopy = `${air?.usAqi == null ? '' : ` Air quality: US AQI ${Number(air.usAqi).toFixed(0)} (${titleCase(air.category || 'unknown')}).`}${seismic ? ` USGS context: ${Number(seismic.eventCount || 0)} M2.5+ event(s) within ${Number(seismic.radiusKm || 0).toFixed(0)} km.` : ''}`;
       status.innerHTML = `<b>${escapeHtml(result.city.name)}${district} · ${result.buildings.length} mapped structures${maxHeight}</b><p>${result.source?.live ? `Current OpenStreetMap geometry is rendered from source-backed footprints/parts; height coverage ${heightCoverage || 'is shown in the stats panel'}.` : 'Provider request could not be completed; clearly marked local fallback geometry is being rendered.'}${currentContext}${liveContextCopy}</p><button class="secondary-button" data-action="reload-city-live">REFRESH OPEN DATA</button>`;

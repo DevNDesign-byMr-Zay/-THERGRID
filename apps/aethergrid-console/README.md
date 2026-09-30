@@ -155,6 +155,30 @@ AETHERGRID_SEISMIC_PROVIDER=usgs
 AETHERGRID_USGS_EARTHQUAKE_URL=https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson
 AETHERGRID_SEISMIC_CACHE_TTL_MS=60000
 ```
+## v2.8 solar city identity and atmospheric motion
+
+v2.8 deepens the visual identity of each loaded city by binding the scene to current solar, atmospheric, and mapped-building context rather than applying one generic animation profile.
+
+Planetary behavior:
+- computes the current subsolar latitude/longitude from UTC using solar declination and equation-of-time approximations;
+- renders the resulting day/night terminator as live native-WebGL geometry;
+- renders the subsolar point and highlights maintained cities currently on the night side;
+- keeps the existing UTC sweep, AQI pulses, seismic pulses, and cinematic city descent.
+
+City behavior:
+- current Open-Meteo cloud cover generates a wind-driven cloud deck above the mapped skyline;
+- wind vectors and precipitation now move directionally through shader flow uniforms instead of only pulsing in place;
+- precipitation receives a downward fall term while retaining current wind direction;
+- procedural skyline light points are generated from actual mapped building geometry and become prominent on the current night side;
+- city-light points are explicitly a visualization device, not a claim about occupied windows, utility load, or measured lighting.
+
+Current environment context now also includes modeled relative humidity, surface pressure, sunrise, sunset, daylight duration, and sunshine duration. These fields remain source-timestamped and server-side provider driven.
+
+Two additional bounded operations are available:
+- **Heat Stress** — combines apparent temperature, humidity, UV, and mapped built-form density as an attention proxy;
+- **Visibility Operations** — combines current visibility, precipitation, cloud, AQI, and mapped roads/structures for situational review.
+
+Both operations remain advisory-only. Heat Stress is not WBGT or a clinical risk calculation, and Visibility Operations is not a traffic, aviation, marine, or emergency-clearance authority.
 ## Windows ZIP workflow
 
 After extracting the package:

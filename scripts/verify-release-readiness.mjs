@@ -435,12 +435,17 @@ async function main() {
       /data-global-layer="infrastructure"/u.test(exactAethergridHtml) &&
       /data-global-layer="terrain"/u.test(exactAethergridHtml) &&
       /data-global-layer="weather"/u.test(exactAethergridHtml) &&
+      /data-global-layer="clouds"/u.test(exactAethergridHtml) &&
+      /data-global-layer="illumination"/u.test(exactAethergridHtml) &&
       /data-global-layer="air"/u.test(exactAethergridHtml) &&
       /data-global-layer="seismic"/u.test(exactAethergridHtml) &&
       /id="globalLiveStatus"/u.test(exactAethergridHtml) &&
       /value="weather-readiness"/u.test(exactAethergridHtml) &&
       /value="air-quality-exposure"/u.test(exactAethergridHtml) &&
       /value="seismic-awareness"/u.test(exactAethergridHtml) &&
+      /value="heat-stress"/u.test(exactAethergridHtml) &&
+      /value="visibility-operations"/u.test(exactAethergridHtml) &&
+      /id="globalSolarStatus"/u.test(exactAethergridHtml) &&
       /id="globalGridStats"/u.test(exactAethergridHtml) &&
       /id="cityTransitionOverlay"/u.test(exactAethergridHtml) &&
       /data-city-visual="solid"/u.test(exactAethergridHtml) &&
@@ -493,8 +498,14 @@ async function main() {
       /roofFaces/u.test(exactAethergridJs) &&
       /roofLines/u.test(exactAethergridJs) &&
       /weatherLines/u.test(exactAethergridJs) &&
+      /cloudParticles/u.test(exactAethergridJs) &&
+      /cityLights/u.test(exactAethergridJs) &&
       /precipitationLines/u.test(exactAethergridJs) &&
       /airParticles/u.test(exactAethergridJs) &&
+      /u_flow/u.test(exactAethergridJs) &&
+      /u_drop/u.test(exactAethergridJs) &&
+      /solarPosition/u.test(exactAethergridJs) &&
+      /updateSolarGeometry/u.test(exactAethergridJs) &&
       /seismicLines/u.test(exactAethergridJs) &&
       /setLiveActivity/u.test(exactAethergridJs) &&
       /updateUtcSweep/u.test(exactAethergridJs) &&
@@ -522,7 +533,8 @@ async function main() {
       /\.thread-pill/u.test(exactAethergridStyles) &&
       /html\[data-theme="light"\]/u.test(exactAethergridStyles) &&
       /\.operation-live-badge/u.test(exactAethergridStyles) &&
-      /live-layer-pulse/u.test(exactAethergridStyles),
+      /live-layer-pulse/u.test(exactAethergridStyles) &&
+      /#globalSolarStatus/u.test(exactAethergridStyles),
     'ÆTHERGRID styles must target real runtime elements',
   );
   assert(
@@ -590,6 +602,17 @@ async function main() {
       exactAethergridApp.capabilities?.weatherReadinessUseCase === true &&
       exactAethergridApp.capabilities?.airQualityExposureUseCase === true &&
       exactAethergridApp.capabilities?.seismicAwarenessUseCase === true &&
+      exactAethergridApp.capabilities?.realTimeSolarTerminator === true &&
+      exactAethergridApp.capabilities?.liveSubsolarPoint === true &&
+      exactAethergridApp.capabilities?.nightSideCityIllumination === true &&
+      exactAethergridApp.capabilities?.windDrivenCloudDeck === true &&
+      exactAethergridApp.capabilities?.directionalPrecipitationMotion === true &&
+      exactAethergridApp.capabilities?.proceduralSkylineLighting === true &&
+      exactAethergridApp.capabilities?.solarDaylightContext === true &&
+      exactAethergridApp.capabilities?.humidityPressureContext === true &&
+      exactAethergridApp.capabilities?.heatStressUseCase === true &&
+      exactAethergridApp.capabilities?.visibilityOperationsUseCase === true &&
+      exactAethergridApp.visualContract?.proceduralCityLightsRepresentOccupancy === false &&
       exactAethergridApp.aiRuntime?.replaceableByConfiguration === true &&
       Array.isArray(exactAethergridApp.aiRuntime?.externalContext) &&
       exactAethergridApp.aiRuntime.externalContext.includes('geospatial-summary') &&
@@ -610,10 +633,15 @@ async function main() {
       exactAethergridApp.geospatialRuntime?.layers?.includes('terrain') &&
       exactAethergridApp.environmentRuntime?.module === 'city-environment-runtime.mjs' &&
       exactAethergridApp.environmentRuntime?.browserSecrets === false &&
+      exactAethergridApp.environmentRuntime?.solarContext === true &&
+      exactAethergridApp.environmentRuntime?.currentVariables?.includes('relative_humidity_2m') &&
+      exactAethergridApp.environmentRuntime?.dailyVariables?.includes('sunrise') &&
       exactAethergridApp.liveContextRuntime?.module === 'city-live-runtime.mjs' &&
       exactAethergridApp.liveContextRuntime?.browserSecrets === false &&
       exactAethergridApp.liveContextRuntime?.seismicFeed === 'M2.5+ past day GeoJSON' &&
       exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('weather') &&
+      exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('clouds') &&
+      exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('illumination') &&
       exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('air') &&
       exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('seismic') &&
       Array.isArray(exactAethergridApp.settingsRuntime?.appearanceModes) &&
@@ -740,6 +768,12 @@ async function main() {
       /cloud_cover/u.test(aethergridEnvironmentRuntime) &&
       /is_day/u.test(aethergridEnvironmentRuntime) &&
       /wind_speed_10m/u.test(aethergridEnvironmentRuntime) &&
+      /relative_humidity_2m/u.test(aethergridEnvironmentRuntime) &&
+      /surface_pressure/u.test(aethergridEnvironmentRuntime) &&
+      /sunrise/u.test(aethergridEnvironmentRuntime) &&
+      /sunset/u.test(aethergridEnvironmentRuntime) &&
+      /daylight_duration/u.test(aethergridEnvironmentRuntime) &&
+      /sunshine_duration/u.test(aethergridEnvironmentRuntime) &&
       /local-environment-fallback/u.test(aethergridEnvironmentRuntime) &&
       /credentialsExposed: false/u.test(aethergridEnvironmentRuntime),
     'ÆTHERGRID city environment runtime must keep current open weather context with explicit fallback',
@@ -800,6 +834,11 @@ async function main() {
       /city-environment-runtime\.mjs/u.test(exactAethergridPackager) &&
       /city-live-runtime\.mjs/u.test(exactAethergridPackager) &&
       /data-global-layer="weather"/u.test(exactAethergridPackager) &&
+      /data-global-layer="clouds"/u.test(exactAethergridPackager) &&
+      /data-global-layer="illumination"/u.test(exactAethergridPackager) &&
+      /value="heat-stress"/u.test(exactAethergridPackager) &&
+      /value="visibility-operations"/u.test(exactAethergridPackager) &&
+      /solarPosition/u.test(exactAethergridPackager) &&
       /data-global-layer="air"/u.test(exactAethergridPackager) &&
       /data-global-layer="seismic"/u.test(exactAethergridPackager) &&
       /id="settingTheme"/u.test(exactAethergridPackager) &&

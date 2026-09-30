@@ -272,6 +272,12 @@ test('city environment runtime maps current open weather context without credent
       assert.equal(parsed.searchParams.get('longitude'), '55.2744');
       assert.match(parsed.searchParams.get('current'), /cloud_cover/u);
       assert.match(parsed.searchParams.get('current'), /is_day/u);
+      assert.match(parsed.searchParams.get('current'), /relative_humidity_2m/u);
+      assert.match(parsed.searchParams.get('current'), /surface_pressure/u);
+      assert.equal(
+        parsed.searchParams.get('daily'),
+        'sunrise,sunset,daylight_duration,sunshine_duration',
+      );
       return new Response(
         JSON.stringify({
           latitude: 25.1972,
@@ -283,6 +289,8 @@ test('city environment runtime maps current open weather context without credent
             interval: 900,
             temperature_2m: 34.1,
             apparent_temperature: 37.8,
+            relative_humidity_2m: 61,
+            surface_pressure: 1004.6,
             weather_code: 1,
             cloud_cover: 18,
             is_day: 1,
@@ -292,6 +300,13 @@ test('city environment runtime maps current open weather context without credent
             wind_gusts_10m: 21.8,
             shortwave_radiation: 712,
             visibility: 24100,
+          },
+          daily: {
+            time: ['2026-09-30'],
+            sunrise: ['2026-09-30T06:07'],
+            sunset: ['2026-09-30T18:04'],
+            daylight_duration: [43020],
+            sunshine_duration: [39600],
           },
         }),
         { status: 200, headers: { 'content-type': 'application/json' } },
@@ -311,6 +326,13 @@ test('city environment runtime maps current open weather context without credent
   assert.equal(environment.current.windGustsKph, 21.8);
   assert.equal(environment.current.shortwaveRadiationWm2, 712);
   assert.equal(environment.current.visibilityM, 24100);
+  assert.equal(environment.current.relativeHumidityPercent, 61);
+  assert.equal(environment.current.surfacePressureHpa, 1004.6);
+  assert.equal(environment.solar.sunrise, '2026-09-30T06:07');
+  assert.equal(environment.solar.sunset, '2026-09-30T18:04');
+  assert.equal(environment.solar.daylightDurationSeconds, 43020);
+  assert.equal(environment.solar.sunshineDurationSeconds, 39600);
+  assert.ok(runtime.summary().dailyVariables.includes('sunrise'));
   assert.equal(runtime.summary().credentialsExposed, false);
 
   const fallback = createCityEnvironmentRuntime({

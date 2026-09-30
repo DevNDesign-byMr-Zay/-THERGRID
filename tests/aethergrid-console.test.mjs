@@ -43,12 +43,17 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(html, /data-global-layer="infrastructure"/u);
     assert.match(html, /data-global-layer="terrain"/u);
     assert.match(html, /data-global-layer="weather"/u);
+    assert.match(html, /data-global-layer="clouds"/u);
+    assert.match(html, /data-global-layer="illumination"/u);
     assert.match(html, /data-global-layer="air"/u);
     assert.match(html, /data-global-layer="seismic"/u);
     assert.match(html, /id="globalLiveStatus"/u);
+    assert.match(html, /id="globalSolarStatus"/u);
     assert.match(html, /value="weather-readiness"/u);
     assert.match(html, /value="air-quality-exposure"/u);
     assert.match(html, /value="seismic-awareness"/u);
+    assert.match(html, /value="heat-stress"/u);
+    assert.match(html, /value="visibility-operations"/u);
     assert.match(html, /id="globalGridStats"/u);
     assert.match(html, /id="cityTransitionOverlay"/u);
     assert.match(html, /data-city-visual="solid"/u);
@@ -120,7 +125,13 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(appSource, /precipitationLines/u);
     assert.match(appSource, /airParticles/u);
     assert.match(appSource, /seismicLines/u);
+    assert.match(appSource, /cloudParticles/u);
+    assert.match(appSource, /cityLights/u);
+    assert.match(appSource, /u_flow/u);
+    assert.match(appSource, /u_drop/u);
     assert.match(appSource, /setLiveActivity/u);
+    assert.match(appSource, /solarPosition/u);
+    assert.match(appSource, /updateSolarGeometry/u);
     assert.match(appSource, /updateUtcSweep/u);
     assert.match(appSource, /setOperationProfile/u);
     assert.match(appSource, /environmentHour/u);
@@ -358,12 +369,20 @@ test('ÆTHERGRID city operations derive bounded planning indicators from the act
       current: {
         temperatureC: 31,
         apparentTemperatureC: 34,
+        relativeHumidityPercent: 72,
+        surfacePressureHpa: 1002,
         cloudCoverPercent: 55,
         precipitationMm: 1.2,
         windSpeedKph: 22,
         windGustsKph: 38,
         shortwaveRadiationWm2: 620,
         visibilityM: 12000,
+        isDay: true,
+      },
+      solar: {
+        sunrise: '2026-09-30T06:30',
+        sunset: '2026-09-30T18:40',
+        daylightDurationSeconds: 43800,
       },
     },
     liveContext: {
@@ -395,10 +414,12 @@ test('ÆTHERGRID city operations derive bounded planning indicators from the act
   assert.equal(metrics.generationAssets, 1);
   assert.equal(metrics.terrainReliefM, 27);
 
-  assert.equal(Object.keys(CITY_USE_CASES).length, 8);
+  assert.equal(Object.keys(CITY_USE_CASES).length, 10);
   assert.ok(CITY_USE_CASES['weather-readiness']);
   assert.ok(CITY_USE_CASES['air-quality-exposure']);
   assert.ok(CITY_USE_CASES['seismic-awareness']);
+  assert.ok(CITY_USE_CASES['heat-stress']);
+  assert.ok(CITY_USE_CASES['visibility-operations']);
 
   for (const id of Object.keys(CITY_USE_CASES)) {
     const analysis = analyzeCityUseCase(mesh, id);
@@ -410,6 +431,8 @@ test('ÆTHERGRID city operations derive bounded planning indicators from the act
     assert.ok(analysis.visualization.animationProfile);
     assert.equal(analysis.visualization.sourceDriven, true);
     assert.equal(analysis.liveSignals.usAqi, 84);
+    assert.equal(analysis.liveSignals.relativeHumidityPercent, 72);
+    assert.equal(analysis.liveSignals.sunrise, '2026-09-30T06:30');
     assert.equal(analysis.liveSignals.seismicEventCount, 1);
     assert.equal(analysis.dataQuality.liveGeometry, true);
     assert.equal(analysis.dataQuality.liveWeather, true);
