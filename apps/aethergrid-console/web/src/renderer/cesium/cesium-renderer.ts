@@ -149,6 +149,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
     this.#busy = true;
     this.#solar = this.#solarLighting?.setTarget(target) ?? this.#solar;
+    if (this.#solar) this.#visualController?.setSolarPhase(this.#solar.phase);
     try {
       await this.#cameraJourney.flyTo(target, (phase) => {
         this.#journeyPhase = phase;
@@ -165,6 +166,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   setTime(time: TemporalInstant): void {
     const viewer = this.#requireViewer();
     this.#solar = this.#solarLighting?.setTime(time) ?? this.#solar;
+    if (this.#solar) this.#visualController?.setSolarPhase(this.#solar.phase);
     this.#grid?.setTime(time.iso);
     for (const overlay of this.#overlays.values()) overlay.setTime(time.iso);
     this.#weather?.setTime(time);
