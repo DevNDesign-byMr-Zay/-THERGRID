@@ -897,6 +897,71 @@ button {
 }
 
 
+
+.city-load-status {
+  position: absolute;
+  left: 50%;
+  bottom: 86px;
+  z-index: 6;
+  width: min(360px, calc(100% - 40px));
+  transform: translateX(-50%);
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(112, 231, 255, 0.16);
+  border-radius: 9px;
+  background: rgba(5, 9, 15, 0.82);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+.city-load-status > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.city-load-status span,
+.city-load-status strong {
+  font-size: 7px;
+  letter-spacing: 0.09em;
+}
+
+.city-load-status span {
+  color: #6a8092;
+}
+
+.city-load-status strong {
+  color: #b7eefa;
+}
+
+.city-load-status ul {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.city-load-status li {
+  padding: 5px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 5px;
+  color: #6a7e91;
+  background: rgba(255, 255, 255, 0.012);
+  text-align: center;
+  font-size: 6px;
+  letter-spacing: 0.06em;
+}
+
+.city-load-status li[data-ready='true'] {
+  border-color: rgba(99, 255, 197, 0.16);
+  color: var(--success);
+  background: rgba(99, 255, 197, 0.035);
+}
+
 .source-badge {
   position: absolute;
   left: 16px;
