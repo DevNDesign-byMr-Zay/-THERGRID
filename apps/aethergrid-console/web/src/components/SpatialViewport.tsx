@@ -1,6 +1,7 @@
-import type {
-  AirQualityOverlaySnapshot,
-  AtmosphericOverlaySnapshot
+import {
+  stormPresentation,
+  type AirQualityOverlaySnapshot,
+  type AtmosphericOverlaySnapshot
 } from '../renderer/overlays/atmospheric-overlay';
 import type { SpatialOverlaySnapshot } from '../renderer/overlays/spatial-overlay';
 
@@ -265,6 +266,16 @@ export function SpatialViewport({
     }
   };
 
+  const storm =
+    time.mode === 'live'
+      ? stormPresentation(atmosphere, time.iso)
+      : {
+          active: false,
+          intensity: 0,
+          cadenceSeconds: 0,
+          flashOpacity: 0
+        };
+
   const phaseProgress: Record<string, number> = {
     global: 25,
     regional: 50,
@@ -277,6 +288,21 @@ export function SpatialViewport({
     <div className="spatial-shell" data-solar-phase={status.solar?.phase ?? 'unknown'}>
       <div className="spatial-canvas" ref={hostRef} aria-label="ÆTHERGRID 4D spatial viewport" />
       <div className="spatial-grid-overlay" aria-hidden="true" />
+      {storm.active ? (
+        <>
+          <div
+            className="storm-illumination"
+            aria-hidden="true"
+            style={{ opacity: storm.flashOpacity }}
+          />
+          <div className="storm-presentation-label">
+            <strong>THUNDERSTORM</strong>
+            <span>
+              SOURCE WEATHER · SYNTHETIC FLASH TIMING · {Math.round(storm.intensity * 100)}%
+            </span>
+          </div>
+        </>
+      ) : null}
       <div className="viewport-status">
         <span className={status.ready ? 'status-dot live' : 'status-dot'} />
         <strong>{status.engine === 'cesium' ? 'CESIUM WORLD' : 'NATIVE FALLBACK'}</strong>
