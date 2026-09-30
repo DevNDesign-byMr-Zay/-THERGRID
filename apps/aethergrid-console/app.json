@@ -33,6 +33,7 @@
       "GET /api/aethergrid/telemetry",
       "GET /api/aethergrid/spatial",
       "GET /api/aethergrid/evidence",
+      "GET /api/aethergrid/evidence/:id",
       "GET /api/aethergrid/runtime",
       "POST /api/aethergrid/view",
       "POST /api/aethergrid/region",
@@ -85,7 +86,9 @@
     "safeRuntimeIntrospection": true,
     "directWebGlNodePicking": true,
     "customScenarioBuilder": true,
-    "weightedOptimizationControls": true
+    "weightedOptimizationControls": true,
+    "evidenceDrillDown": true,
+    "agentEvidenceReceipts": true
   },
   "aiRuntime": {
     "providers": [
