@@ -11,7 +11,7 @@ async function text(path) {
 test('v4 web workspace remains isolated from the verified v3 runtime', async () => {
   const [packageJson, readme] = await Promise.all([
     text('apps/aethergrid-console/web/package.json'),
-    text('apps/aethergrid-console/web/README.md')
+    text('apps/aethergrid-console/web/README.md'),
   ]);
 
   const packageData = JSON.parse(packageJson);
@@ -28,7 +28,7 @@ test('v4 spatial renderer has Cesium primary and native fallback contracts', asy
     text('apps/aethergrid-console/web/src/renderer/spatial-renderer.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
     text('apps/aethergrid-console/web/src/renderer/native/native-renderer-adapter.ts'),
-    text('apps/aethergrid-console/web/src/renderer/renderer-manager.ts')
+    text('apps/aethergrid-console/web/src/renderer/renderer-manager.ts'),
   ]);
 
   for (const method of [
@@ -40,7 +40,7 @@ test('v4 spatial renderer has Cesium primary and native fallback contracts', asy
     'setVisualMode',
     'pick',
     'resize',
-    'destroy'
+    'destroy',
   ]) {
     assert.match(contract, new RegExp(`\\b${method}\\b`, 'u'));
   }
@@ -61,7 +61,7 @@ test('v4 temporal model separates live, historical, forecast and scenario time',
     text('apps/aethergrid-console/web/src/time/temporal-model.ts'),
     text('apps/aethergrid-console/web/src/time/temporal-clock.ts'),
     text('apps/aethergrid-console/web/src/time/temporal-layer-store.ts'),
-    text('apps/aethergrid-console/web/src/components/TemporalRail.tsx')
+    text('apps/aethergrid-console/web/src/components/TemporalRail.tsx'),
   ]);
 
   for (const mode of ['live', 'historical', 'forecast', 'scenario']) {
@@ -84,7 +84,7 @@ test('v4 operator shell keeps the spatial viewport dominant and responsive', asy
   const [app, viewport, styles] = await Promise.all([
     text('apps/aethergrid-console/web/src/app/App.tsx'),
     text('apps/aethergrid-console/web/src/components/SpatialViewport.tsx'),
-    text('apps/aethergrid-console/web/src/app/app.css')
+    text('apps/aethergrid-console/web/src/app/app.css'),
   ]);
 
   assert.match(app, /<SpatialViewport/u);
