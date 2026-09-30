@@ -61,11 +61,25 @@ export interface SpatialRendererConfig {
   realityEnabled?: boolean;
 }
 
+export type SpatialJourneyPhase = 'idle' | 'global' | 'regional' | 'city' | 'district';
+export type SpatialDetailLevel = 'world' | 'regional' | 'city' | 'district';
+
+export interface SpatialSolarStatus {
+  phase: 'day' | 'golden-hour' | 'twilight' | 'night';
+  elevationDegrees: number;
+  azimuthDegrees: number;
+  localSolarHour: number;
+}
+
 export interface SpatialRendererStatus {
   engine: SpatialEngine;
   ready: boolean;
   visualMode: VisualMode;
   degraded: boolean;
+  busy?: boolean;
+  journeyPhase?: SpatialJourneyPhase;
+  detailLevel?: SpatialDetailLevel;
+  solar?: SpatialSolarStatus | null;
   reason?: string | null;
 }
 
