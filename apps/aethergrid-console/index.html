@@ -4,59 +4,58 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#02050c" />
-  <meta name="description" content="ÆTHERGRID interactive 4D spatial-grid operator console." />
+  <meta name="description" content="ÆTHERGRID interactive spatial intelligence, optimization and AI operator console." />
   <title>ÆTHERGRID Operator Console</title>
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
-<body>
+<body data-workspace="grid">
   <div class="app">
     <header class="topbar">
-      <div class="brand">
-        <img src="./assets/brand/aethergrid-logo.webp" alt="ÆTHERGRID" />
-        <div>
-          <div class="brand-title">ÆTHERGRID</div>
-          <div class="brand-tag">INTELLIGENCE FOR A HIGHER TOMORROW</div>
-        </div>
-      </div>
+      <button class="brand" data-workspace-target="grid" aria-label="Open Grid workspace">
+        <img src="./assets/brand/aethergrid-logo.webp" alt="" />
+        <span>
+          <span class="brand-title">ÆTHERGRID</span>
+          <span class="brand-tag">INTELLIGENCE FOR A HIGHER TOMORROW</span>
+        </span>
+      </button>
 
-      <nav class="mode-tabs" aria-label="Primary operator modes">
-        <button class="mode-tab active" data-mode="grid"><span class="mode-icon">⌗</span><span><b>GRID</b><small>Live system view</small></span></button>
-        <button class="mode-tab" data-mode="holographic"><span class="mode-icon">◇</span><span><b>HOLOGRAPHIC</b><small>4D spatial analysis</small></span></button>
-        <button class="mode-tab" data-mode="quantum"><span class="mode-icon">✣</span><span><b>QUANTUM</b><small>Optimization</small></span></button>
-        <button class="mode-tab" data-mode="ai"><span class="mode-icon">△</span><span><b>AI</b><small>Collaborate</small></span></button>
-        <button class="mode-tab" data-mode="evidence"><span class="mode-icon">▤</span><span><b>EVIDENCE</b><small>Verify & export</small></span></button>
+      <nav class="mode-tabs" aria-label="Primary operator workspaces">
+        <button class="mode-tab active" data-workspace-target="grid"><span class="mode-icon">⌗</span><span><b>GRID</b><small>Digital twin</small></span></button>
+        <button class="mode-tab" data-workspace-target="holographic"><span class="mode-icon">◇</span><span><b>HOLOGRAPHIC</b><small>4D analysis</small></span></button>
+        <button class="mode-tab" data-workspace-target="quantum"><span class="mode-icon">✣</span><span><b>QUANTUM</b><small>Optimization</small></span></button>
+        <button class="mode-tab" data-workspace-target="ai"><span class="mode-icon">△</span><span><b>AI</b><small>Agent team</small></span></button>
+        <button class="mode-tab" data-workspace-target="evidence"><span class="mode-icon">▤</span><span><b>EVIDENCE</b><small>Verify & export</small></span></button>
       </nav>
 
       <div class="top-status">
         <div class="status-copy"><i class="status-dot"></i><span><small>System Status</small><b id="systemStatus">All Systems Nominal</b></span></div>
-        <div class="clock"><small id="systemDate">Mon, Sep 28, 2026</small><b id="systemClock">10:24:17 AM</b></div>
-        <button class="profile" data-action="profile" aria-label="Profile">IM</button>
-        <button class="gear" data-action="settings" aria-label="Settings">⚙</button>
+        <div class="clock"><small id="systemDate"></small><b id="systemClock"></b></div>
+        <button class="profile" data-action="profile" aria-label="Operator profile">IM</button>
+        <button class="gear" data-workspace-target="settings" aria-label="Settings">⚙</button>
       </div>
     </header>
 
     <div class="shell">
       <aside class="sidebar">
-        <nav class="side-nav" aria-label="Console sections">
-          <button class="side-button active" data-section="overview"><span class="side-icon">⌂</span><span><b>OVERVIEW</b><small>Global system status</small></span></button>
-          <button class="side-button" data-section="grid"><span class="side-icon">⌘</span><span><b>GRID</b><small>Digital twin & assets</small></span></button>
-          <button class="side-button" data-section="holographic"><span class="side-icon">◇</span><span><b>HOLOGRAPHIC</b><small>Spatial visualization</small></span></button>
-          <button class="side-button" data-section="quantum"><span class="side-icon">✣</span><span><b>QUANTUM</b><small>Optimization lab</small></span></button>
-          <button class="side-button" data-section="ai"><span class="side-icon">◉</span><span><b>AI</b><small>Model collaboration</small></span></button>
-          <button class="side-button" data-section="scenarios"><span class="side-icon">◫</span><span><b>SCENARIOS</b><small>Simulate & compare</small></span></button>
-          <button class="side-button" data-section="evidence"><span class="side-icon">▤</span><span><b>EVIDENCE</b><small>Reports & provenance</small></span></button>
-          <button class="side-button" data-section="settings"><span class="side-icon">⚙</span><span><b>SETTINGS</b><small>System configuration</small></span></button>
+        <nav class="side-nav" aria-label="Operator navigation">
+          <button class="side-button active" data-workspace-target="grid"><span class="side-icon">⌘</span><span><b>GRID</b><small>Digital twin & assets</small></span></button>
+          <button class="side-button" data-workspace-target="holographic"><span class="side-icon">◇</span><span><b>HOLOGRAPHIC</b><small>Spatial visualization</small></span></button>
+          <button class="side-button" data-workspace-target="quantum"><span class="side-icon">✣</span><span><b>QUANTUM</b><small>Optimization lab</small></span></button>
+          <button class="side-button" data-workspace-target="ai"><span class="side-icon">◉</span><span><b>AI</b><small>Model collaboration</small></span></button>
+          <button class="side-button" data-workspace-target="scenarios"><span class="side-icon">◫</span><span><b>SCENARIOS</b><small>Simulate & compare</small></span></button>
+          <button class="side-button" data-workspace-target="evidence"><span class="side-icon">▤</span><span><b>EVIDENCE</b><small>Reports & provenance</small></span></button>
+          <button class="side-button" data-workspace-target="settings"><span class="side-icon">⚙</span><span><b>SETTINGS</b><small>Preferences & runtime</small></span></button>
         </nav>
 
         <section class="region-card">
           <div class="globe-wrap"><div class="globe" aria-hidden="true"></div></div>
-          <b id="regionLabel">NYC METRO</b><small>OPERATOR VIEW</small>
+          <b id="regionLabel">NEW YORK METRO</b><small>OPERATOR VIEW</small>
           <button data-action="change-region">CHANGE REGION</button>
           <div class="data-title">Data Sources</div>
           <div class="data-list">
-            <span><i></i>Grid Operator (ISO-NE)</span><span><i></i>Weather & Climate</span>
-            <span><i></i>Renewable Forecasts</span><span><i></i>Market Data (LMP)</span><span><i></i>Sensor Networks</span>
+            <span><i></i>Grid Operator</span><span><i></i>Weather & Climate</span>
+            <span><i></i>Renewable Forecasts</span><span><i></i>Market Data</span><span><i></i>Sensor Networks</span>
           </div>
         </section>
 
@@ -66,13 +65,14 @@
       </aside>
 
       <main class="main">
-        <div class="dashboard">
-          <div class="left-stack">
-            <section class="panel spatial-panel" id="grid">
-              <header class="panel-head">
-                <div class="panel-title"><span class="badge">⌗</span><span><h2>NEW YORK METRO</h2><small>DIGITAL TWIN · 4D LIVE VIEW</small></span></div>
-                <div class="pill-row"><span class="pill" id="cameraReadout">Orbit 42° · 24°</span><span class="pill" id="streamReadout">LIVE STREAM</span></div>
-              </header>
+        <section class="workspace-view active" data-workspace="grid" aria-labelledby="gridTitle">
+          <div class="workspace-head">
+            <div><span class="eyebrow">GRID / DIGITAL TWIN</span><h1 id="gridTitle">New York Metro Live System</h1><p>Observe the spatial grid, time-indexed telemetry and evidence-linked assets.</p></div>
+            <div class="workspace-actions"><span class="pill" id="cameraReadout">Orbit 42° · 24°</span><span class="pill" id="streamReadout">CONNECTING</span></div>
+          </div>
+
+          <div class="grid-layout">
+            <section class="panel spatial-panel">
               <div class="spatial-stage">
                 <canvas id="spatialGrid" aria-label="Interactive 4D wireframe map of the New York Metro energy grid"></canvas>
                 <div class="spatial-overlay">
@@ -81,110 +81,172 @@
                     <button class="active" data-view="live">Live</button><button data-view="forecast">Forecast</button><button data-view="scenario">Scenario</button>
                   </div>
                   <div class="map-tools" aria-label="Wireframe map tools">
-                    <button data-map-tool="layers" class="active" title="Layers">▱</button>
+                    <button data-map-tool="layers" class="active" title="All layers">▱</button>
                     <button data-map-tool="routes" class="active" title="Transmission routes">⌁</button>
-                    <button data-map-tool="buildings" class="active" title="Buildings">⌂</button>
+                    <button data-map-tool="buildings" class="active" title="Structures">⌂</button>
                     <button data-map-tool="nodes" class="active" title="Grid nodes">⊙</button>
                     <button data-map-tool="reset" title="Reset camera">↺</button>
                   </div>
-
-                  <button class="map-card renewables" data-node="renewables">
-                    <b>Renewable Generation</b><dl><dt>Solar</dt><dd>1,280 MW</dd><dt>Wind</dt><dd>640 MW</dd><dt>Other</dt><dd>210 MW</dd></dl>
-                  </button>
-                  <button class="map-card grid-load" data-node="load">
-                    <b>Grid Load</b><dl><dt>Current</dt><dd>2,410 MW</dd><dt>Forecast</dt><dd>2,780 MW</dd></dl>
-                  </button>
-                  <button class="map-card storage" data-node="storage">
-                    <b>Energy Storage</b><dl><dt>Battery</dt><dd>320 MW</dd><dt>Pumped</dt><dd>180 MW</dd><dt>Thermal</dt><dd>90 MW</dd></dl>
-                  </button>
-                  <button class="map-card city" data-node="city">
-                    <b>New York City</b><dl><dt>Load</dt><dd>1,240 MW</dd><dt>Renewables</dt><dd>420 MW</dd><dt>Storage</dt><dd>310 MW</dd></dl>
-                  </button>
-
+                  <button class="map-card renewables" data-node="renewables"><b>Renewable Generation</b><dl><dt>Solar</dt><dd>1,280 MW</dd><dt>Wind</dt><dd>640 MW</dd><dt>Other</dt><dd>210 MW</dd></dl></button>
+                  <button class="map-card grid-load" data-node="load"><b>Grid Load</b><dl><dt>Current</dt><dd>2,410 MW</dd><dt>Forecast</dt><dd>2,780 MW</dd></dl></button>
+                  <button class="map-card storage" data-node="storage"><b>Energy Storage</b><dl><dt>Battery</dt><dd>320 MW</dd><dt>Pumped</dt><dd>180 MW</dd><dt>Thermal</dt><dd>90 MW</dd></dl></button>
+                  <button class="map-card city" data-node="city"><b>New York City</b><dl><dt>Load</dt><dd>1,240 MW</dd><dt>Renewables</dt><dd>420 MW</dd><dt>Storage</dt><dd>310 MW</dd></dl></button>
                   <div class="map-readout">
-                    <span><i class="legend-dot g"></i>Generation</span><span><i class="legend-dot v"></i>Storage</span>
-                    <span><i class="legend-dot a"></i>Load</span><span><i class="legend-dot c"></i>Transmission</span>
+                    <span><i class="legend-dot g"></i>Generation</span><span><i class="legend-dot v"></i>Storage</span><span><i class="legend-dot a"></i>Load</span><span><i class="legend-dot c"></i>Transmission</span>
                   </div>
                   <label class="time-control"><span>4D TIME</span><input id="timeSlider" type="range" min="0" max="24" step=".1" value="12" /><span id="timeValue">12:00</span></label>
                 </div>
               </div>
             </section>
 
-            <div class="metrics-row">
-              <section class="panel metric-panel">
-                <header class="panel-head"><div class="panel-title"><span class="badge">⌁</span><span><h3>SYSTEM METRICS</h3><small>Live grid performance indicators</small></span></div><span class="pill">● Real-time</span></header>
+            <aside class="grid-inspector">
+              <section class="panel compact-panel">
+                <header class="panel-head"><div class="panel-title"><span class="badge">⌁</span><span><h3>LIVE METRICS</h3><small>Streaming state</small></span></div></header>
                 <div class="metric-grid">
-                  <button class="metric-card" data-metric="generation"><b>Total Generation</b><div class="metric-value"><span id="generationValue">2,130</span> <small>MW</small></div><div class="metric-delta">↑ 12.4%</div><svg class="spark" viewBox="0 0 120 32"><polyline id="sparkGeneration" fill="none" stroke="#22d8ff" stroke-width="2" points="0,24 12,21 24,24 36,13 48,17 60,11 72,13 84,8 96,12 108,5 120,8"/></svg></button>
-                  <button class="metric-card" data-metric="load"><b>Total Load</b><div class="metric-value"><span id="loadValue">2,410</span> <small>MW</small></div><div class="metric-delta">↑ 8.1%</div><svg class="spark" viewBox="0 0 120 32"><polyline id="sparkLoad" fill="none" stroke="#ffb84d" stroke-width="2" points="0,21 12,23 24,18 36,20 48,14 60,10 72,11 84,7 96,4 108,8 120,3"/></svg></button>
-                  <button class="metric-card" data-metric="renewable"><b>Renewable %</b><div class="metric-value"><span id="renewableValue">46.8</span><small>%</small></div><div class="metric-delta">↑ 6.3%</div><svg class="spark" viewBox="0 0 120 32"><polyline fill="none" stroke="#43ef91" stroke-width="2" points="0,26 12,20 24,22 36,15 48,18 60,13 72,12 84,8 96,10 108,4 120,7"/></svg></button>
-                  <button class="metric-card" data-metric="storage"><b>Storage Available</b><div class="metric-value"><span id="storageValue">590</span> <small>MW</small></div><div class="metric-delta">↑ 18.6%</div><svg class="spark" viewBox="0 0 120 32"><polyline fill="none" stroke="#bd67ff" stroke-width="2" points="0,25 12,24 24,19 36,22 48,16 60,18 72,11 84,14 96,8 108,5 120,6"/></svg></button>
+                  <button class="metric-card" data-metric="generation"><b>Total Generation</b><div class="metric-value"><span id="generationValue">2,130</span> <small>MW</small></div><div class="metric-delta">↑ 12.4%</div></button>
+                  <button class="metric-card" data-metric="load"><b>Total Load</b><div class="metric-value"><span id="loadValue">2,410</span> <small>MW</small></div><div class="metric-delta">↑ 8.1%</div></button>
+                  <button class="metric-card" data-metric="renewable"><b>Renewable</b><div class="metric-value"><span id="renewableValue">46.8</span><small>%</small></div><div class="metric-delta">↑ 6.3%</div></button>
+                  <button class="metric-card" data-metric="storage"><b>Storage</b><div class="metric-value"><span id="storageValue">590</span> <small>MW</small></div><div class="metric-delta">↑ 18.6%</div></button>
                 </div>
               </section>
+              <section class="panel compact-panel">
+                <header class="panel-head"><div class="panel-title"><span class="badge">◫</span><span><h3>ACTIVE SCENARIO</h3><small>Review context</small></span></div></header>
+                <div class="inspector-body"><b id="activeScenarioLabel">Peak Demand</b><p>Baseline review with live telemetry and temporal comparison.</p><button class="secondary-button" data-workspace-target="scenarios">OPEN SCENARIO LAB</button></div>
+              </section>
+            </aside>
+          </div>
+        </section>
 
-              <section class="panel quantum-panel" id="quantum">
-                <header class="panel-head"><div class="panel-title"><span class="badge">✣</span><span><h3>QUANTUM OPTIMIZATION</h3><small>Multi-objective energy optimization</small></span></div><span class="pill">● Running</span></header>
-                <div class="quantum-body">
-                  <canvas class="quantum-canvas" id="quantumCanvas" aria-label="Animated optimization landscape"></canvas>
-                  <div class="quantum-stats">
-                    <label>Objective</label><b>Minimize Cost + Emissions</b>
-                    <label>Current Solution</label><b>$<span id="currentCost">12,480</span> /hr</b>
-                    <label>Potential</label><b>$<span id="candidateCost">10,230</span> /hr</b>
-                    <label>Emissions Reduction</label><b>↓ <span id="emissionsValue">24.3</span>%</b>
-                    <label>Renewable Utilization</label><b>+<span id="renewableGain">16.7</span>%</b>
-                    <button class="run-button" data-action="run-optimization">▶ Run New Optimization</button>
+        <section class="workspace-view" data-workspace="holographic" aria-labelledby="holoTitle">
+          <div class="workspace-head">
+            <div><span class="eyebrow">HOLOGRAPHIC / SPATIAL INTELLIGENCE</span><h1 id="holoTitle">4D Holographic Analysis</h1><p>Explore topology, flow, risk and future-state geometry with independent camera and temporal controls.</p></div>
+            <div class="workspace-actions"><button class="secondary-button" data-holo-action="save-camera">SAVE CAMERA</button><button class="primary-button" data-export="3d-visualization">EXPORT SCENE</button></div>
+          </div>
+          <div class="holo-workspace">
+            <section class="panel holo-stage-panel">
+              <canvas id="holographicGrid" aria-label="Holographic 4D spatial analysis canvas"></canvas>
+              <div class="holo-hud">
+                <div class="holo-layers">
+                  <button class="active" data-holo-layer="grid">GRID</button><button class="active" data-holo-layer="routes">FLOW</button><button class="active" data-holo-layer="buildings">ASSETS</button><button class="active" data-holo-layer="nodes">NODES</button>
+                </div>
+                <label class="time-control holo-time"><span>TIME</span><input id="holoTimeSlider" type="range" min="0" max="24" step=".1" value="12" /><span id="holoTimeValue">12:00</span></label>
+              </div>
+            </section>
+            <aside class="holo-side">
+              <section class="panel compact-panel"><header class="panel-head"><div class="panel-title"><span class="badge">◇</span><span><h3>VISUAL MODE</h3><small>Renderer state</small></span></div></header><div class="stack-controls"><label>Projection<select id="holoProjection"><option value="perspective">Perspective</option><option value="top">Top Orthographic</option><option value="isometric">Isometric</option></select></label><label>Temporal Overlay<select id="holoTemporalMode"><option value="pulse">Phase Pulse</option><option value="trail">Flow Trail</option><option value="freeze">Frozen State</option></select></label><label>Intensity<input id="holoIntensity" type="range" min="0" max="100" value="72" /></label></div></section>
+              <section class="panel compact-panel"><header class="panel-head"><div class="panel-title"><span class="badge">⊙</span><span><h3>SELECTION</h3><small>Spatial inspector</small></span></div></header><div class="inspector-body" id="holoSelection"><b>No node selected</b><p>Choose a spatial node from Grid view or the holographic scene.</p></div></section>
+              <section class="panel compact-panel"><header class="panel-head"><div class="panel-title"><span class="badge">◫</span><span><h3>SAVED VIEWS</h3><small>Camera presets</small></span></div></header><div id="savedViews" class="saved-view-list"><button data-camera-preset="overview">Metro Overview</button><button data-camera-preset="top">Top Grid</button><button data-camera-preset="flow">Transmission Flow</button></div></section>
+            </aside>
+          </div>
+        </section>
+
+        <section class="workspace-view" data-workspace="quantum" aria-labelledby="quantumTitle">
+          <div class="workspace-head">
+            <div><span class="eyebrow">QUANTUM / OPTIMIZATION LAB</span><h1 id="quantumTitle">Bounded Optimization</h1><p>Configure objective weights, constraints and classical comparison before generating a candidate.</p></div>
+            <div class="workspace-actions"><span class="pill">CLASSICAL BASELINE REQUIRED</span></div>
+          </div>
+          <div class="quantum-workspace">
+            <section class="panel quantum-lab">
+              <div class="optimization-layout">
+                <div class="optimization-controls">
+                  <label>Objective<select id="objectiveSelect"><option value="balanced">Balanced Cost + Emissions</option><option value="cost">Minimize Cost</option><option value="emissions">Minimize Emissions</option><option value="reliability">Maximize Reliability</option><option value="renewables">Maximize Renewable Utilization</option></select></label>
+                  <label>Cost Weight <output id="costWeightValue">50</output><input id="costWeight" type="range" min="0" max="100" value="50" /></label>
+                  <label>Emissions Weight <output id="emissionsWeightValue">50</output><input id="emissionsWeight" type="range" min="0" max="100" value="50" /></label>
+                  <label>Minimum Reserve <output id="reserveValue">18%</output><input id="reserveConstraint" type="range" min="5" max="40" value="18" /></label>
+                  <label class="switch-row"><input id="requireClassical" type="checkbox" checked disabled /><span>Require classical baseline comparison</span></label>
+                  <button class="primary-button" data-action="run-optimization">RUN OPTIMIZATION</button>
+                </div>
+                <div class="optimization-visual">
+                  <canvas id="quantumCanvas" aria-label="Animated optimization objective landscape"></canvas>
+                  <div class="optimization-results">
+                    <article><small>Current</small><b>$<span id="currentCost">12,480</span>/hr</b></article>
+                    <article><small>Candidate</small><b>$<span id="candidateCost">10,230</span>/hr</b></article>
+                    <article><small>Emissions</small><b>↓ <span id="emissionsValue">24.3</span>%</b></article>
+                    <article><small>Renewables</small><b>+<span id="renewableGain">16.7</span>%</b></article>
                   </div>
                 </div>
-              </section>
-
-              <section class="panel scenario-panel" id="scenarios">
-                <header class="panel-head"><div class="panel-title"><span class="badge">⌁</span><span><h3>SCENARIO COMPARISON</h3><small>Baseline vs AI/Quantum scenarios</small></span></div><select id="scenarioSelect"><option value="peak-demand">Peak Demand (Next 24h)</option><option value="renewable-surge">Renewable Surge</option><option value="storage-stress">Storage Stress</option><option value="weather-event">Weather Event</option></select></header>
-                <div class="scenario-body">
-                  <canvas id="scenarioChart" class="scenario-chart" aria-label="Scenario comparison line chart"></canvas>
-                  <div class="scenario-legend"><span><i class="legend-dot c"></i>Baseline</span><span><i class="legend-dot g"></i>AI Optimized</span><span><i class="legend-dot v"></i>Quantum Optimized</span><span><i class="legend-dot a"></i>Renewable Supply</span></div>
-                </div>
-              </section>
-            </div>
-
-            <div class="bottom-row">
-              <section class="panel holo-panel" id="holographic">
-                <header class="panel-head"><div class="panel-title"><span class="badge">◇</span><span><h3>HOLOGRAPHIC VIEW</h3><small>Layered spatial visualization</small></span></div><button class="pill" data-action="full-3d">Full 3D View</button></header>
-                <div class="holo-grid">
-                  <button class="holo-card" data-layer="infrastructure"><div class="wire-thumb"><canvas data-wire-thumb="infrastructure"></canvas></div><b>Infrastructure</b><small>Grid assets</small></button>
-                  <button class="holo-card" data-layer="flow"><div class="wire-thumb"><canvas data-wire-thumb="flow"></canvas></div><b>Energy Flow</b><small>Live animation</small></button>
-                  <button class="holo-card" data-layer="risk"><div class="wire-thumb"><canvas data-wire-thumb="risk"></canvas></div><b>Risk Zones</b><small>Weather & events</small></button>
-                  <button class="holo-card" data-layer="future"><div class="wire-thumb"><canvas data-wire-thumb="future"></canvas></div><b>Future State</b><small>Scenario preview</small></button>
-                </div>
-              </section>
-
-              <section class="panel evidence-panel" id="evidence">
-                <header class="panel-head"><div class="panel-title"><span class="badge">▤</span><span><h3>RECENT EVIDENCE</h3><small>Verified simulations and decisions</small></span></div><button class="pill" data-action="view-evidence">View All</button></header>
-                <div class="evidence-list" id="evidenceList"></div>
-              </section>
-
-              <section class="panel export-panel">
-                <header class="panel-head"><div class="panel-title"><span class="badge">↗</span><span><h3>EXPORT & REPORT</h3><small>Shareable evidence packages</small></span></div></header>
-                <div class="export-grid">
-                  <button class="export-button" data-export="operator-report"><span>⇩</span><span><b>Operator Report</b><small>PDF-ready findings</small></span></button>
-                  <button class="export-button" data-export="simulation-package"><span>▣</span><span><b>Simulation Package</b><small>Full scenario data</small></span></button>
-                  <button class="export-button" data-export="3d-visualization"><span>◇</span><span><b>3D Visualization</b><small>Spatial scene data</small></span></button>
-                  <button class="export-button" data-export="technical-evidence"><span>▤</span><span><b>Technical Evidence</b><small>Raw provenance</small></span></button>
-                </div>
-              </section>
-            </div>
-          </div>
-
-          <aside class="ai-rail" id="ai">
-            <section class="panel ai-panel">
-              <header class="panel-head"><div class="panel-title"><span class="badge">△</span><span><h3>AI COLLABORATION</h3><small>Specialized intelligence. Better decisions.</small></span></div></header>
-              <div class="agent-list">
-                <button class="agent-card" data-agent="VÆLON"><img src="./assets/brand/vaelon.webp" alt="VÆLON logo" /><span><span class="online">ONLINE</span><h4>VÆLON</h4><div class="agent-role">Optimization & Scenario Exploration</div><div class="agent-copy">Running multi-objective optimization for peak load reduction with renewable prioritization.</div></span></button>
-                <button class="agent-card" data-agent="AUREN"><img src="./assets/brand/auren.webp" alt="AUREN logo" /><span><span class="online">ONLINE</span><h4>AUREN</h4><div class="agent-role">Semantic Analysis & Spatial Intelligence</div><div class="agent-copy">Analyzing grid resilience patterns and identifying spatial risk correlations.</div></span></button>
-                <button class="agent-card" data-agent="SOLVÆR"><img src="./assets/brand/solvaer.webp" alt="SOLVÆR logo" /><span><span class="online">ONLINE</span><h4>SOLVÆR</h4><div class="agent-role">Simulation & Evidence Generation</div><div class="agent-copy">Generating scenario simulations and validating results against historical data.</div></span></button>
               </div>
-              <div class="ai-input"><button data-action="ai-chat">✦</button><input id="quickAiInput" placeholder="Ask the AI team a question…" /><button data-action="send-ai">➤</button></div>
             </section>
-          </aside>
-        </div>
+            <section class="panel run-history-panel"><header class="panel-head"><div class="panel-title"><span class="badge">▤</span><span><h3>RUN HISTORY</h3><small>Receipts & comparisons</small></span></div></header><div id="optimizationHistory" class="history-list"><div class="empty-state">No optimization run in this session yet.</div></div></section>
+          </div>
+        </section>
+
+        <section class="workspace-view" data-workspace="ai" aria-labelledby="aiTitle">
+          <div class="workspace-head">
+            <div><span class="eyebrow">AI / MULTI-AGENT INTELLIGENCE</span><h1 id="aiTitle">Agent Collaboration Center</h1><p>Work with VÆLON, AUREN and SOLVÆR individually or ask the team to collaborate.</p></div>
+            <div class="workspace-actions"><span class="pill" id="aiRuntimeBadge">LOCAL FALLBACK</span></div>
+          </div>
+          <div class="ai-workspace">
+            <aside class="panel agent-roster">
+              <header class="panel-head"><div class="panel-title"><span class="badge">△</span><span><h3>AGENTS</h3><small>Select individual or team</small></span></div></header>
+              <div class="agent-list">
+                <button class="agent-card active" data-agent="TEAM"><span class="agent-mark team-mark">∆</span><span><b>TEAM MODE</b><small>Coordinate all agents</small><em id="teamProviderBadge">ORCHESTRATED</em></span></button>
+                <button class="agent-card" data-agent="VÆLON"><img src="./assets/brand/vaelon.webp" alt="" /><span><b>VÆLON</b><small>Optimization & Scenario Exploration</small><em data-agent-runtime="VÆLON">READY</em></span></button>
+                <button class="agent-card" data-agent="AUREN"><img src="./assets/brand/auren.webp" alt="" /><span><b>AUREN</b><small>Semantic & Spatial Intelligence</small><em data-agent-runtime="AUREN">READY</em></span></button>
+                <button class="agent-card" data-agent="SOLVÆR"><img src="./assets/brand/solvaer.webp" alt="" /><span><b>SOLVÆR</b><small>Simulation & Evidence Generation</small><em data-agent-runtime="SOLVÆR">READY</em></span></button>
+              </div>
+            </aside>
+            <section class="panel agent-console">
+              <header class="panel-head"><div class="panel-title"><span class="badge">◉</span><span><h3 id="activeAgentTitle">TEAM MODE</h3><small id="activeAgentSubtitle">VÆLON + AUREN + SOLVÆR</small></span></div><button class="secondary-button" data-action="clear-chat">CLEAR</button></header>
+              <div class="chat-log agent-chat-log" id="chatLog"><div class="chat-bubble system">Team mode ready. Ask for analysis, optimization, simulation evidence, or a combined recommendation.</div></div>
+              <form class="chat-form" id="chatForm"><textarea id="chatInput" rows="3" placeholder="Ask the selected agent or team…"></textarea><button class="primary-button">SEND</button></form>
+            </section>
+            <aside class="panel agent-context">
+              <header class="panel-head"><div class="panel-title"><span class="badge">⌘</span><span><h3>LIVE CONTEXT</h3><small>Sent with requests</small></span></div></header>
+              <div class="context-list"><span><b>Region</b><em id="aiContextRegion">New York Metro</em></span><span><b>Scenario</b><em id="aiContextScenario">Peak Demand</em></span><span><b>View</b><em id="aiContextView">Live</em></span><span><b>Authority</b><em>Advisory Only</em></span></div>
+              <button class="secondary-button" data-workspace-target="settings">MODEL SETTINGS</button>
+            </aside>
+          </div>
+        </section>
+
+        <section class="workspace-view" data-workspace="scenarios" aria-labelledby="scenarioTitle">
+          <div class="workspace-head"><div><span class="eyebrow">SCENARIOS / SIMULATION</span><h1 id="scenarioTitle">Scenario Lab</h1><p>Switch operating assumptions and compare temporal outcomes without mutating the live twin.</p></div><div class="workspace-actions"><button class="secondary-button" data-action="reset-scenario">RESET</button></div></div>
+          <div class="scenario-workspace">
+            <section class="scenario-selector" id="scenarioCards">
+              <button class="scenario-card active" data-scenario="peak-demand"><span>01</span><b>Peak Demand</b><small>High-load 24 hour stress test.</small></button>
+              <button class="scenario-card" data-scenario="renewable-surge"><span>02</span><b>Renewable Surge</b><small>High solar + wind availability.</small></button>
+              <button class="scenario-card" data-scenario="storage-stress"><span>03</span><b>Storage Stress</b><small>Reserve depletion and recovery.</small></button>
+              <button class="scenario-card" data-scenario="weather-event"><span>04</span><b>Weather Event</b><small>Spatial resilience under disruption.</small></button>
+            </section>
+            <section class="panel scenario-chart-panel"><canvas id="scenarioChart" aria-label="Scenario comparison chart"></canvas></section>
+            <section class="panel scenario-detail"><header class="panel-head"><div class="panel-title"><span class="badge">◫</span><span><h3 id="scenarioDetailTitle">Peak Demand</h3><small>Active simulation context</small></span></div></header><div class="inspector-body"><p id="scenarioDetailCopy">Baseline high-load scenario used for bounded optimization and evidence comparison.</p><button class="primary-button" data-workspace-target="quantum">OPTIMIZE THIS SCENARIO</button></div></section>
+          </div>
+        </section>
+
+        <section class="workspace-view" data-workspace="evidence" aria-labelledby="evidenceTitle">
+          <div class="workspace-head"><div><span class="eyebrow">EVIDENCE / PROVENANCE</span><h1 id="evidenceTitle">Evidence & Audit</h1><p>Review simulation records, optimization receipts and provenance before export.</p></div><div class="workspace-actions"><button class="secondary-button" data-action="refresh-evidence">REFRESH</button><button class="primary-button" data-export="technical-evidence">EXPORT PACKAGE</button></div></div>
+          <section class="panel evidence-workspace">
+            <div class="evidence-toolbar"><input id="evidenceSearch" placeholder="Filter evidence…" /><select id="evidenceStatus"><option value="all">All Statuses</option><option value="verified">Verified</option><option value="pending">Pending</option></select></div>
+            <div class="evidence-table-wrap"><table class="evidence-table"><thead><tr><th>Record</th><th>Type</th><th>When</th><th>Status</th><th></th></tr></thead><tbody id="evidenceTableBody"></tbody></table></div>
+          </section>
+        </section>
+
+        <section class="workspace-view" data-workspace="settings" aria-labelledby="settingsTitle">
+          <div class="workspace-head"><div><span class="eyebrow">SETTINGS / RUNTIME</span><h1 id="settingsTitle">Operator Settings</h1><p>Persistent visual, spatial and runtime preferences. Secrets remain server-side.</p></div><div class="workspace-actions"><span class="pill" id="settingsSavedBadge">SAVED LOCALLY</span></div></div>
+          <div class="settings-grid">
+            <section class="panel settings-card"><header class="panel-head"><div class="panel-title"><span class="badge">◉</span><span><h3>INTERFACE</h3><small>Persistent browser preferences</small></span></div></header><div class="settings-form">
+              <label>Default Workspace<select id="settingDefaultWorkspace"><option value="grid">Grid</option><option value="holographic">Holographic</option><option value="quantum">Quantum</option><option value="ai">AI</option><option value="scenarios">Scenarios</option><option value="evidence">Evidence</option></select></label>
+              <label>Interface Density<select id="settingDensity"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label>
+              <label>Animation Intensity <output id="settingAnimationValue">100%</output><input id="settingAnimation" type="range" min="0" max="100" value="100" /></label>
+              <label class="switch-row"><input id="settingReducedMotion" type="checkbox" /><span>Reduce non-essential motion</span></label>
+            </div></section>
+
+            <section class="panel settings-card"><header class="panel-head"><div class="panel-title"><span class="badge">◇</span><span><h3>SPATIAL</h3><small>Grid & holographic behavior</small></span></div></header><div class="settings-form">
+              <label class="switch-row"><input id="settingAutoRotate" type="checkbox" /><span>Auto-rotate holographic camera</span></label>
+              <label class="switch-row"><input id="settingSpatialLabels" type="checkbox" checked /><span>Show spatial labels</span></label>
+              <label>Default 4D Hour <output id="settingHourValue">12:00</output><input id="settingHour" type="range" min="0" max="24" step=".5" value="12" /></label>
+            </div></section>
+
+            <section class="panel settings-card"><header class="panel-head"><div class="panel-title"><span class="badge">△</span><span><h3>AI RUNTIME</h3><small>Safe provider visibility</small></span></div></header><div class="settings-form" id="aiRuntimeSettings"><div class="runtime-status"><span class="status-dot"></span><div><b>Loading model configuration…</b><small>No secret values are exposed to the browser.</small></div></div></div></section>
+
+            <section class="panel settings-card"><header class="panel-head"><div class="panel-title"><span class="badge">⌁</span><span><h3>TELEMETRY</h3><small>Connection behavior</small></span></div></header><div class="settings-form">
+              <label class="switch-row"><input id="settingLiveStream" type="checkbox" checked /><span>Use live server event stream when available</span></label>
+              <label>Fallback Refresh<select id="settingRefresh"><option value="2500">2.5 seconds</option><option value="5000">5 seconds</option><option value="10000">10 seconds</option></select></label>
+              <button class="secondary-button" data-action="health-check">RUN HEALTH CHECK</button>
+              <button class="danger-button" data-action="reset-settings">RESET PREFERENCES</button>
+            </div></section>
+          </div>
+        </section>
       </main>
     </div>
   </div>
@@ -194,13 +256,6 @@
   <dialog id="panelDialog">
     <button class="dialog-close" data-dialog-close aria-label="Close">×</button>
     <div class="dialog-kicker" id="dialogKicker">ÆTHERGRID</div><h2 id="dialogTitle">Operator Console</h2><div class="dialog-body" id="dialogBody"></div>
-  </dialog>
-
-  <dialog id="chatDialog">
-    <button class="dialog-close" data-dialog-close aria-label="Close">×</button>
-    <div class="dialog-kicker">AI COLLABORATION</div><h2>Ask VÆLON · AUREN · SOLVÆR</h2>
-    <div class="chat-log" id="chatLog"><div class="chat-bubble system">AI team online. Ask about the grid, scenarios, resilience, evidence, or optimization.</div></div>
-    <form class="chat-form" id="chatForm"><input id="chatInput" autocomplete="off" placeholder="Ask the AI team a question…" /><button>Send</button></form>
   </dialog>
 
   <script src="./app.js" defer></script>
