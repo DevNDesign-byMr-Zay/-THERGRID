@@ -4,8 +4,11 @@ import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { createAgentRuntime } from './ai-runtime.mjs';
+
 const root = fileURLToPath(new URL('./', import.meta.url));
 const port = Number(process.env.AETHERGRID_PORT || process.env.PORT || 8090);
+const agentRuntime = createAgentRuntime();
 
 const regions = Object.freeze([
   'New York Metro',
@@ -186,23 +189,6 @@ function telemetryTick() {
   state.metrics.storageMw = Math.round(590 + Math.cos(now / 10400) * 10);
 }
 
-function aiReply(message = '') {
-  const text = String(message).toLowerCase();
-  if (text.includes('renewable')) {
-    return 'AUREN identifies renewable integration as a primary resilience lever; VÆLON can explore bounded dispatch scenarios, while SOLVÆR produces simulation evidence. No infrastructure actuation is authorized.';
-  }
-  if (text.includes('cost') || text.includes('optimiz')) {
-    return `VÆLON's current bounded candidate is $${state.optimization.candidateCost.toLocaleString()}/hr versus the $${state.optimization.currentCost.toLocaleString()}/hr classical baseline. Operator review and evidence comparison remain mandatory.`;
-  }
-  if (text.includes('risk') || text.includes('resilien')) {
-    return 'AUREN flags spatial resilience review across weather, load, storage, and network dependencies. SOLVÆR should validate any proposed response in simulation before it reaches an operator decision package.';
-  }
-  if (text.includes('storage')) {
-    return `SOLVÆR reports approximately ${state.metrics.storageMw} MW of reviewable storage capacity in the current simulated operator state. Any dispatch remains outside this application's authority.`;
-  }
-  return 'The AI team can explore the request as an advisory scenario. VÆLON handles optimization, AUREN handles semantic/spatial interpretation, and SOLVÆR handles simulation evidence. Human review remains required.';
-}
-
 function validateChoice(value, allowed, label) {
   if (!allowed.includes(value)) {
     const error = new Error(`unsupported ${label}: ${value}`);
@@ -217,6 +203,7 @@ const server = http.createServer(async (request, response) => {
     const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/health') {
+      const runtime = agentRuntime.summary();
       return json(response, 200, {
         ok: true,
         product: 'ÆTHERGRID',
@@ -225,6 +212,10 @@ const server = http.createServer(async (request, response) => {
         view: state.system.view,
         scenario: state.system.scenario,
         agentsOnline: Object.values(state.agents).every((agent) => agent.status === 'ONLINE'),
+        aiRuntime: {
+          mode: runtime.mode,
+          liveProviders: runtime.liveProviders,
+        },
       });
     }
 
@@ -264,6 +255,10 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/evidence') {
       return json(response, 200, { evidence: state.evidence, activity: state.activity });
     }
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
+      return json(response, 200, agentRuntime.summary());
+    }
+
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/spatial') {
       const requestedHour = Number(url.searchParams.get('hour') ?? 12);
       const hour = Math.max(0, Math.min(24, Number.isFinite(requestedHour) ? requestedHour : 12));
@@ -342,13 +337,90 @@ const server = http.createServer(async (request, response) => {
       });
     }
 
+    if (
+      request.method === 'POST' &&
+      url.pathname.startsWith('/api/aethergrid/agents/')
+    ) {
+      const input = await body(request);
+      const encodedId = url.pathname.slice('/api/aethergrid/agents/'.length);
+      const agentId = decodeURIComponent(encodedId);
+      const result = await agentRuntime.runAgent(agentId, {
+        message: input.message,
+        context: {
+          ...input.context,
+          region: input.context?.region || state.system.region,
+          scenario: input.context?.scenario || state.system.scenario,
+          view: input.context?.view || state.system.view,
+          metrics: input.context?.metrics || state.metrics,
+          authority: 'advisory-only',
+        },
+        history: Array.isArray(input.history) ? input.history : [],
+      });
+      activity(
+        `${agentId} completed an advisory model request using ${result.runtime.provider}/${result.runtime.model || 'fallback'}.`,
+        'ai',
+      );
+      return json(response, 200, {
+        ...result,
+        advisoryOnly: true,
+        activity: state.activity,
+      });
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/aethergrid/team') {
+      const input = await body(request);
+      const result = await agentRuntime.runTeam({
+        message: input.message,
+        context: {
+          ...input.context,
+          region: input.context?.region || state.system.region,
+          scenario: input.context?.scenario || state.system.scenario,
+          view: input.context?.view || state.system.view,
+          metrics: input.context?.metrics || state.metrics,
+          authority: 'advisory-only',
+        },
+        history: Array.isArray(input.history) ? input.history : [],
+      });
+      activity(
+        `ÆTHERGRID team completed a coordinated advisory request with ${result.contributions.length} agent contributions.`,
+        'ai-team',
+      );
+      return json(response, 200, {
+        ...result,
+        advisoryOnly: true,
+        activity: state.activity,
+      });
+    }
+
     if (request.method === 'POST' && url.pathname === '/api/aethergrid/chat') {
       const input = await body(request);
-      const reply = aiReply(input.message);
-      activity(`AI collaboration reviewed an operator question for ${state.system.region}.`, 'ai');
+      const requestedAgent = String(input.agent || 'TEAM');
+      const result =
+        requestedAgent === 'TEAM'
+          ? await agentRuntime.runTeam({
+              message: input.message,
+              context: {
+                region: state.system.region,
+                scenario: state.system.scenario,
+                view: state.system.view,
+                metrics: state.metrics,
+                authority: 'advisory-only',
+              },
+            })
+          : await agentRuntime.runAgent(requestedAgent, {
+              message: input.message,
+              context: {
+                region: state.system.region,
+                scenario: state.system.scenario,
+                view: state.system.view,
+                metrics: state.metrics,
+                authority: 'advisory-only',
+              },
+            });
+      activity(`AI collaboration completed for ${requestedAgent}.`, 'ai');
       return json(response, 200, {
-        reply,
-        agents: ['VÆLON', 'AUREN', 'SOLVÆR'],
+        reply: result.reply || result.synthesis,
+        result,
         advisoryOnly: true,
         activity: state.activity,
       });
