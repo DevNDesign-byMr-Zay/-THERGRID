@@ -16,12 +16,24 @@ interface EnvironmentResponse {
     modelTime?: string | null;
   };
   timezone?: string | null;
+  utcOffsetSeconds?: number;
   current?: Partial<AtmosphericCurrentState> | null;
 }
 
 function finiteOrNull(value: unknown): number | null {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+function modelTimeToIso(value: string | null | undefined, utcOffsetSeconds: number): string | null {
+  if (!value) return null;
+  if (/Z$|[+-]\d\d:\d\d$/u.test(value)) {
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
+  }
+  const asUtc = Date.parse(`${value}Z`);
+  if (!Number.isFinite(asUtc)) return null;
+  return new Date(asUtc - utcOffsetSeconds * 1000).toISOString();
 }
 
 export async function loadCityEnvironment(
@@ -45,6 +57,8 @@ export async function loadCityEnvironment(
   const source = payload.source ?? {};
   const current = payload.current;
   const fetchedAt = source.fetchedAt ?? new Date().toISOString();
+  const utcOffsetSeconds = finiteOrNull(payload.utcOffsetSeconds) ?? 0;
+  const sourceTime = modelTimeToIso(source.modelTime ?? current?.time, utcOffsetSeconds);
 
   return {
     id: `environment:${latitude.toFixed(5)}:${longitude.toFixed(5)}:${fetchedAt}`,
@@ -52,13 +66,14 @@ export async function loadCityEnvironment(
       latitude: finiteOrNull(payload.coordinate?.lat) ?? latitude,
       longitude: finiteOrNull(payload.coordinate?.lon) ?? longitude
     },
-    eventTime: current?.time ?? source.modelTime ?? fetchedAt,
-    sourceTime: source.modelTime ?? current?.time ?? null,
+    eventTime: sourceTime ?? fetchedAt,
+    sourceTime,
     fetchedAt,
     live: source.live === true,
     fallback: source.live !== true,
     attribution: source.attribution ?? source.provider ?? null,
     timezone: payload.timezone ?? null,
+    utcOffsetSeconds,
     current: current
       ? {
           time: current.time ?? null,
