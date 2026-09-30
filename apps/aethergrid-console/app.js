@@ -1,6 +1,24 @@
 (() => {
-  const q = (selector, root = document) => root.querySelector(selector);
-  const qa = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const q = (s, r = document) => r.querySelector(s);
+  const qa = (s, r = document) => [...r.querySelectorAll(s)];
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  const state = {
+    system: { status: 'All Systems Nominal', region: 'New York Metro', view: 'live', scenario: 'peak-demand', mode: 'ADVISORY ONLY' },
+    metrics: { generationMw: 2130, loadMw: 2410, renewablePercent: 46.8, storageMw: 590 },
+    optimization: { currentCost: 12480, candidateCost: 10230, emissionsReduction: 24.3, renewableUtilizationGain: 16.7, runCount: 0 },
+    evidence: [
+      { title: 'Scenario: Peak Load Reduction', age: '12 min ago', status: 'Verified' },
+      { title: 'Quantum Optimization Run', age: '28 min ago', status: 'Verified' },
+      { title: 'Grid Resilience Analysis', age: '1 hour ago', status: 'Verified' },
+      { title: 'Renewable Integration Study', age: '2 hours ago', status: 'Verified' },
+    ],
+    agents: {
+      'VÆLON': { role: 'Optimization & Scenario Exploration', status: 'ONLINE' },
+      AUREN: { role: 'Semantic Analysis & Spatial Intelligence', status: 'ONLINE' },
+      'SOLVÆR': { role: 'Simulation & Evidence Generation', status: 'ONLINE' },
+    },
+  };
 
   const toast = q('#toast');
   const panelDialog = q('#panelDialog');
@@ -11,75 +29,9 @@
   const chatLog = q('#chatLog');
   const chatForm = q('#chatForm');
   const chatInput = q('#chatInput');
-  const selectionGlow = q('#selectionGlow');
-  const telemetryBadge = q('#telemetryBadge');
-  const energyCanvas = q('#gridEnergyCanvas');
-  const hudClock = q('#hudClock');
-  const streamState = q('#streamState');
-  const dashboardStage = q('#dashboardStage');
-
-  const demoState = {
-    system: {
-      status: 'All Systems Nominal',
-      region: 'New York Metro',
-      mode: 'ADVISORY ONLY',
-      view: 'live',
-      scenario: 'peak-demand',
-      physicalActuation: false,
-      infrastructureDispatch: false,
-    },
-    metrics: {
-      generationMw: 2130,
-      loadMw: 2410,
-      renewablePercent: 46.8,
-      storageMw: 590,
-    },
-    optimization: {
-      currentCost: 12480,
-      candidateCost: 10230,
-      emissionsReduction: 24.3,
-      renewableUtilizationGain: 16.7,
-      runCount: 0,
-    },
-    agents: {
-      'VÆLON': {
-        role: 'Optimization & Scenario Exploration',
-        description:
-          'Runs bounded multi-objective scenario exploration with renewable prioritization and classical-baseline comparison.',
-        status: 'ONLINE',
-      },
-      AUREN: {
-        role: 'Semantic Analysis & Spatial Intelligence',
-        description:
-          'Interprets grid-resilience patterns, spatial relationships, operator context, and evidence-linked meaning.',
-        status: 'ONLINE',
-      },
-      'SOLVÆR': {
-        role: 'Simulation & Evidence Generation',
-        description:
-          'Generates bounded simulations, validation evidence, provenance records, and candidate-comparison packages.',
-        status: 'ONLINE',
-      },
-    },
-    evidence: [
-      { id: 'peak-load-reduction', title: 'Scenario: Peak Load Reduction', age: '12 min', status: 'VERIFIED' },
-      { id: 'quantum-optimization', title: 'Quantum Optimization Run', age: '28 min', status: 'VERIFIED' },
-      { id: 'grid-resilience', title: 'Grid Resilience Analysis', age: '1 hour', status: 'VERIFIED' },
-      { id: 'renewable-integration', title: 'Renewable Integration Study', age: '2 hours', status: 'VERIFIED' },
-    ],
-    activity: [],
-  };
-
-  let serverState = structuredClone(demoState);
-  let activeHotspot = null;
-  let telemetryTimer = null;
-  let energyFrame = null;
-  let eventStream = null;
 
   function escapeHtml(value = '') {
-    return String(value).replace(/[&<>'"]/g, (character) =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character],
-    );
+    return String(value).replace(/[&<>'"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[ch]);
   }
 
   function showToast(title, copy) {
@@ -87,7 +39,7 @@
     toast.innerHTML = `<b>${escapeHtml(title)}</b><small>${escapeHtml(copy)}</small>`;
     toast.classList.add('show');
     clearTimeout(showToast.timer);
-    showToast.timer = setTimeout(() => toast.classList.remove('show'), 3200);
+    showToast.timer = setTimeout(() => toast.classList.remove('show'), 3000);
   }
 
   async function api(path, options = {}) {
@@ -96,726 +48,357 @@
       ...options,
       headers: { 'content-type': 'application/json', ...(options.headers || {}) },
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const type = response.headers.get('content-type') || '';
-    return type.includes('application/json') ? response.json() : response.text();
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+    return response.json();
   }
 
-  function mergeState(next) {
-    serverState = {
-      ...serverState,
-      ...next,
-      system: { ...serverState.system, ...(next?.system || {}) },
-      metrics: { ...serverState.metrics, ...(next?.metrics || {}) },
-      optimization: { ...serverState.optimization, ...(next?.optimization || {}) },
-      agents: { ...serverState.agents, ...(next?.agents || {}) },
-    };
+  function mergeState(next = {}) {
+    if (next.system) Object.assign(state.system, next.system);
+    if (next.metrics) Object.assign(state.metrics, next.metrics);
+    if (next.optimization) Object.assign(state.optimization, next.optimization);
+    if (next.agents) Object.assign(state.agents, next.agents);
+    if (next.evidence) state.evidence = next.evidence;
+    syncStateToUi();
   }
 
-  async function loadState() {
-    try {
-      mergeState(await api('./api/aethergrid/state'));
-    } catch {
-      serverState = structuredClone(demoState);
+  // ---------- Native WebGL 4D spatial grid ----------
+  function mat4Identity() {
+    return new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
+  }
+  function mat4Multiply(a, b) {
+    const o = new Float32Array(16);
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+      o[c + r * 4] =
+        a[r * 4] * b[c] +
+        a[r * 4 + 1] * b[c + 4] +
+        a[r * 4 + 2] * b[c + 8] +
+        a[r * 4 + 3] * b[c + 12];
     }
-    updateTelemetryBadge();
+    return o;
+  }
+  function perspective(fovy, aspect, near, far) {
+    const f = 1 / Math.tan(fovy / 2), nf = 1 / (near - far);
+    return new Float32Array([
+      f/aspect,0,0,0, 0,f,0,0, 0,0,(far+near)*nf,-1, 0,0,2*far*near*nf,0
+    ]);
+  }
+  function lookAt(eye, target, up) {
+    let zx = eye[0]-target[0], zy = eye[1]-target[1], zz = eye[2]-target[2];
+    let zl = Math.hypot(zx,zy,zz) || 1; zx/=zl; zy/=zl; zz/=zl;
+    let xx = up[1]*zz-up[2]*zy, xy = up[2]*zx-up[0]*zz, xz = up[0]*zy-up[1]*zx;
+    let xl = Math.hypot(xx,xy,xz) || 1; xx/=xl; xy/=xl; xz/=xl;
+    const yx = zy*xz-zz*xy, yy = zz*xx-zx*xz, yz = zx*xy-zy*xx;
+    return new Float32Array([
+      xx,yx,zx,0, xy,yy,zy,0, xz,yz,zz,0,
+      -(xx*eye[0]+xy*eye[1]+xz*eye[2]),
+      -(yx*eye[0]+yy*eye[1]+yz*eye[2]),
+      -(zx*eye[0]+zy*eye[1]+zz*eye[2]),1
+    ]);
   }
 
-  function updateTelemetryBadge() {
-    if (!telemetryBadge) return;
-    telemetryBadge.innerHTML = `<i></i><span>${escapeHtml(
-      serverState.system?.view || 'live',
-    )} · ${Number(serverState.metrics?.loadMw || 2410).toLocaleString()} MW</span>`;
-  }
-
-  function updateClock() {
-    if (!hudClock) return;
-    const now = new Date();
-    const date = now.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-    const time = now.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-    hudClock.innerHTML = `<span>${date}</span><b>${time}</b>`;
-  }
-
-  function setStreamState(mode) {
-    if (!streamState) return;
-    streamState.classList.toggle('offline', mode !== 'live');
-    streamState.innerHTML = `<i></i><span>${escapeHtml(mode === 'live' ? 'LIVE STREAM' : mode === 'standalone' ? 'STANDALONE' : 'POLLING')}</span>`;
-  }
-
-  function startEnergyCanvas() {
-    if (!energyCanvas || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const context = energyCanvas.getContext('2d');
-    if (!context) return;
-
-    const nodes = [
-      [0.08, 0.68],
-      [0.19, 0.45],
-      [0.31, 0.57],
-      [0.43, 0.31],
-      [0.55, 0.52],
-      [0.67, 0.35],
-      [0.79, 0.62],
-      [0.9, 0.44],
-      [0.72, 0.76],
-      [0.48, 0.73],
-    ];
-    const edges = [
-      [0, 1],
-      [1, 2],
-      [2, 3],
-      [3, 4],
-      [4, 5],
-      [5, 7],
-      [4, 6],
-      [6, 8],
-      [8, 9],
-      [9, 2],
-      [3, 6],
-      [1, 9],
-    ];
-    const colors = {
-      live: ['#35dcff', '#4d80ff', '#a75cff'],
-      forecast: ['#55cfff', '#8464ff', '#d064ff'],
-      scenario: ['#37dfff', '#9c59ff', '#ffbd55'],
-    };
-
-    function resize() {
-      const rect = energyCanvas.getBoundingClientRect();
-      const ratio = Math.min(window.devicePixelRatio || 1, 2);
-      const width = Math.max(1, Math.round(rect.width * ratio));
-      const height = Math.max(1, Math.round(rect.height * ratio));
-      if (energyCanvas.width !== width || energyCanvas.height !== height) {
-        energyCanvas.width = width;
-        energyCanvas.height = height;
+  class SpatialGrid4D {
+    constructor(canvas) {
+      this.canvas = canvas;
+      this.gl = canvas.getContext('webgl', { antialias: true, alpha: true, preserveDrawingBuffer: false });
+      this.layers = { grid: true, routes: true, buildings: true, nodes: true };
+      this.yaw = 0.74; this.pitch = 0.46; this.distance = 20; this.timeHours = 12;
+      this.drag = null; this.timeStart = performance.now();
+      this.geometry = {};
+      if (!this.gl) {
+        canvas.replaceWith(Object.assign(document.createElement('div'), { textContent: 'WebGL is required for the spatial grid.' }));
+        return;
       }
-      context.setTransform(ratio, 0, 0, ratio, 0, 0);
-      return rect;
+      this.initProgram();
+      this.buildGeometry();
+      this.bindControls();
+      this.resize();
+      this.animate();
+      addEventListener('resize', () => this.resize());
     }
 
-    function draw(time) {
-      const rect = resize();
-      const width = rect.width;
-      const height = rect.height;
-      context.clearRect(0, 0, width, height);
-      const palette = colors[serverState.system?.view] || colors.live;
-
-      edges.forEach(([a, b], index) => {
-        const [ax, ay] = nodes[a];
-        const [bx, by] = nodes[b];
-        const x1 = ax * width;
-        const y1 = ay * height;
-        const x2 = bx * width;
-        const y2 = by * height;
-        context.beginPath();
-        context.moveTo(x1, y1);
-        const cx = (x1 + x2) / 2;
-        const cy = (y1 + y2) / 2 - Math.min(28, Math.abs(x2 - x1) * 0.08);
-        context.quadraticCurveTo(cx, cy, x2, y2);
-        context.strokeStyle = palette[index % palette.length];
-        context.globalAlpha = 0.18 + (index % 3) * 0.05;
-        context.lineWidth = 0.8 + (index % 2) * 0.5;
-        context.stroke();
-
-        const phase = ((time / (2400 + index * 110)) + index * 0.13) % 1;
-        const oneMinus = 1 - phase;
-        const px = oneMinus * oneMinus * x1 + 2 * oneMinus * phase * cx + phase * phase * x2;
-        const py = oneMinus * oneMinus * y1 + 2 * oneMinus * phase * cy + phase * phase * y2;
-        context.beginPath();
-        context.arc(px, py, 1.8 + (index % 2) * 0.5, 0, Math.PI * 2);
-        context.fillStyle = palette[(index + 1) % palette.length];
-        context.globalAlpha = 0.9;
-        context.shadowColor = context.fillStyle;
-        context.shadowBlur = 10;
-        context.fill();
-        context.shadowBlur = 0;
-      });
-
-      nodes.forEach(([x, y], index) => {
-        const pulse = 2.2 + Math.sin(time / 700 + index) * 0.8;
-        context.beginPath();
-        context.arc(x * width, y * height, Math.max(1.2, pulse), 0, Math.PI * 2);
-        context.fillStyle = palette[index % palette.length];
-        context.globalAlpha = 0.48;
-        context.fill();
-      });
-
-      context.globalAlpha = 1;
-      energyFrame = requestAnimationFrame(draw);
+    shader(type, source) {
+      const s = this.gl.createShader(type); this.gl.shaderSource(s, source); this.gl.compileShader(s);
+      if (!this.gl.getShaderParameter(s, this.gl.COMPILE_STATUS)) throw new Error(this.gl.getShaderInfoLog(s));
+      return s;
     }
 
-    if (energyFrame) cancelAnimationFrame(energyFrame);
-    energyFrame = requestAnimationFrame(draw);
-  }
-
-  function connectEventStream() {
-    if (location.protocol === 'file:' || !('EventSource' in window)) {
-      setStreamState('standalone');
-      return;
-    }
-    if (eventStream) eventStream.close();
-    eventStream = new EventSource('./api/aethergrid/stream');
-    eventStream.addEventListener('open', () => setStreamState('live'));
-    eventStream.addEventListener('message', (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-        mergeState(payload.state || payload);
-        updateTelemetryBadge();
-      } catch {}
-    });
-    eventStream.addEventListener('error', () => {
-      setStreamState('polling');
-    });
-  }
-
-  async function refreshTelemetry() {
-    if (document.hidden) return;
-    if (location.protocol === 'file:') {
-      const metrics = serverState.metrics;
-      const tick = Math.sin(Date.now() / 8000);
-      metrics.generationMw = Math.round(2130 + tick * 17);
-      metrics.loadMw = Math.round(2410 + Math.cos(Date.now() / 9500) * 21);
-      metrics.renewablePercent = Number((46.8 + Math.sin(Date.now() / 12000) * 1.2).toFixed(1));
-      metrics.storageMw = Math.round(590 + Math.cos(Date.now() / 10000) * 9);
-      updateTelemetryBadge();
-      return;
-    }
-    try {
-      const telemetry = await api('./api/aethergrid/telemetry');
-      mergeState({ metrics: telemetry.metrics, system: telemetry.system });
-      updateTelemetryBadge();
-    } catch {}
-  }
-
-  function activateHotspot(button) {
-    if (!button) return;
-    if (activeHotspot) activeHotspot.classList.remove('active-hit');
-    activeHotspot = button;
-    button.classList.add('active-hit');
-    if (!selectionGlow) return;
-    for (const name of ['x', 'y', 'w', 'h']) {
-      selectionGlow.style.setProperty(`--${name}`, button.style.getPropertyValue(`--${name}`));
-    }
-    selectionGlow.style.left = `calc(${button.style.getPropertyValue('--x')} * 1%)`;
-    selectionGlow.style.top = `calc(${button.style.getPropertyValue('--y')} * 1%)`;
-    selectionGlow.style.width = `calc(${button.style.getPropertyValue('--w')} * 1%)`;
-    selectionGlow.style.height = `calc(${button.style.getPropertyValue('--h')} * 1%)`;
-    selectionGlow.classList.add('visible');
-  }
-
-  function openPanel(kicker, title, html) {
-    dialogKicker.textContent = kicker;
-    dialogTitle.textContent = title;
-    dialogBody.innerHTML = html;
-    panelDialog.showModal();
-  }
-
-  function bars(seed = 0) {
-    return Array.from({ length: 18 }, (_, index) => {
-      const height = 25 + ((index * 17 + seed * 11) % 64);
-      return `<i style="--h:${height}%"></i>`;
-    }).join('');
-  }
-
-  function timeline(items = serverState.evidence || demoState.evidence) {
-    return `<div class="timeline">${items
-      .map(
-        (item) => `
-          <div class="timeline-row">
-            <i></i>
-            <span><b>${escapeHtml(item.title)}</b><small>${escapeHtml(item.age || 'recent')}</small></span>
-            <em>${escapeHtml(item.status || 'VERIFIED')}</em>
-          </div>`,
-      )
-      .join('')}</div>`;
-  }
-
-  function overviewPanel() {
-    const metrics = serverState.metrics || demoState.metrics;
-    return `
-      <div class="detail-grid">
-        <div class="detail-card">
-          <h3>System status</h3>
-          <p>${escapeHtml(serverState.system?.status || 'All Systems Nominal')}</p>
-          <span class="pill">ADVISORY ONLY</span>
-        </div>
-        <div class="detail-card">
-          <h3>Region</h3>
-          <p>${escapeHtml(serverState.system?.region || 'New York Metro')} digital-twin review surface.</p>
-          <span class="pill">${escapeHtml((serverState.system?.view || 'live').toUpperCase())} VIEW</span>
-        </div>
-      </div>
-      <div class="detail-card">
-        <h3>System metrics</h3>
-        <div class="pill-row">
-          <span class="pill">${Number(metrics.generationMw).toLocaleString()} MW generation</span>
-          <span class="pill">${Number(metrics.loadMw).toLocaleString()} MW load</span>
-          <span class="pill">${metrics.renewablePercent}% renewable</span>
-          <span class="pill">${metrics.storageMw} MW storage</span>
-        </div>
-      </div>
-      <div class="detail-card">
-        <h3>Live activity</h3>
-        <div class="live-log" id="liveLog">
-          ${(serverState.activity || [])
-            .slice(0, 6)
-            .map((entry) => `<div class="log-line">${escapeHtml(entry.message || entry)}</div>`)
-            .join('') || '<div class="log-line">Operator console synchronized. Awaiting next event.</div>'}
-        </div>
-      </div>
-    `;
-  }
-
-  function metricPanel(action) {
-    const metrics = serverState.metrics || demoState.metrics;
-    const map = {
-      'metric-generation': ['TOTAL GENERATION', metrics.generationMw, 'MW', '+12.4%', 3],
-      'metric-load': ['TOTAL LOAD', metrics.loadMw, 'MW', '+8.1%', 6],
-      'metric-renewable': ['RENEWABLE %', metrics.renewablePercent, '%', '+6.3%', 9],
-      'metric-storage': ['STORAGE AVAILABLE', metrics.storageMw, 'MW', '+18.6%', 12],
-    };
-    const [title, value, unit, delta, seed] = map[action];
-    return `
-      <div class="detail-card metric-detail">
-        <h3>${title}</h3>
-        <div class="metric-value">${Number(value).toLocaleString()} <small>${unit}</small></div>
-        <div class="metric-delta">↑ ${delta}</div>
-        <div class="mini-bars">${bars(seed)}</div>
-        <p>Telemetry is presented for operator review only. This surface does not authorize physical grid actuation.</p>
-      </div>
-    `;
-  }
-
-  function panelFor(action) {
-    const optimization = serverState.optimization || demoState.optimization;
-    if (action?.startsWith('metric-')) {
-      return ['SYSTEM METRICS', action.replace('metric-', '').toUpperCase(), metricPanel(action)];
-    }
-
-    const sections = {
-      overview: ['SYSTEM OVERVIEW', 'New York Metro Operator View', overviewPanel()],
-      grid: [
-        'DIGITAL TWIN',
-        'Grid & Assets',
-        `
-          <div class="detail-card">
-            <h3>${escapeHtml(serverState.system?.region || 'New York Metro')} live field</h3>
-            <p>The approved ÆTHERGRID control-room canvas is the visual baseline. The live application layer tracks review mode, region, scenarios, evidence, AI collaboration, and bounded optimization without changing the system authority boundary.</p>
-            <div class="pill-row">
-              <span class="pill">Grid Operator</span><span class="pill">Weather & Climate</span>
-              <span class="pill">Renewable Forecasts</span><span class="pill">Market Data</span>
-              <span class="pill">Sensor Networks</span>
-            </div>
-          </div>
-          <div class="dialog-actions">
-            <button data-inline-action="live" class="primary">Live</button>
-            <button data-inline-action="forecast">Forecast</button>
-            <button data-inline-action="scenario-view">Scenario</button>
-            <button data-inline-action="search">Search assets</button>
-          </div>
-        `,
-      ],
-      holographic: [
-        'HOLOGRAPHIC',
-        '3D Spatial Analysis',
-        `
-          <div class="detail-card">
-            <h3>Layered spatial visualization</h3>
-            <p>Infrastructure, energy flow, risk zones, and future-state evidence remain renderer-neutral and reviewable.</p>
-            <div class="progress-line"><span style="--p:92%"></span></div>
-          </div>
-          <div class="detail-grid">
-            <button class="command-button" data-inline-action="holo-infrastructure"><b>Infrastructure</b><small>Grid assets and topology</small></button>
-            <button class="command-button" data-inline-action="holo-energy"><b>Energy Flow</b><small>Live flow animation</small></button>
-            <button class="command-button" data-inline-action="holo-risk"><b>Risk Zones</b><small>Weather & events</small></button>
-            <button class="command-button" data-inline-action="holo-future"><b>Future State</b><small>Scenario preview</small></button>
-          </div>
-        `,
-      ],
-      quantum: [
-        'QUANTUM OPTIMIZATION',
-        'Multi-objective Energy Optimization',
-        `
-          <div class="detail-grid">
-            <div class="detail-card"><h3>Current solution</h3><p>$${Number(optimization.currentCost).toLocaleString()} / hr</p></div>
-            <div class="detail-card"><h3>Candidate solution</h3><p>$${Number(optimization.candidateCost).toLocaleString()} / hr</p></div>
-          </div>
-          <div class="detail-card">
-            <h3>Evidence-bound improvement</h3>
-            <div class="pill-row">
-              <span class="pill">${optimization.emissionsReduction}% emissions reduction</span>
-              <span class="pill">+${optimization.renewableUtilizationGain}% renewable utilization</span>
-              <span class="pill">Classical baseline required</span>
-            </div>
-            <div class="mini-bars">${bars(4)}</div>
-          </div>
-          <div class="dialog-actions">
-            <button data-inline-action="run-optimization" class="primary">Run New Optimization</button>
-            <button data-inline-action="compare-classical">Compare with Classical</button>
-          </div>
-        `,
-      ],
-      ai: [
-        'AI COLLABORATION',
-        'Specialized Intelligence. Better Decisions.',
-        Object.entries(serverState.agents || demoState.agents)
-          .map(
-            ([name, agent]) => `
-              <button class="command-button" data-inline-action="agent:${escapeHtml(name)}">
-                <b>${escapeHtml(name)} · ${escapeHtml(agent.role)}</b>
-                <small>${escapeHtml(agent.description)}</small>
-              </button>`,
-          )
-          .join('') +
-          '<div class="dialog-actions"><button data-inline-action="ai-chat" class="primary">Ask the AI team</button></div>',
-      ],
-      scenarios: [
-        'SCENARIO LAB',
-        'Simulate & Compare',
-        `
-          <div class="command-grid">
-            <button class="scenario-button" data-scenario="peak-demand"><b>Peak Demand</b><small>Next 24 hours</small></button>
-            <button class="scenario-button" data-scenario="renewable-surge"><b>Renewable Surge</b><small>High wind + solar</small></button>
-            <button class="scenario-button" data-scenario="storage-stress"><b>Storage Stress</b><small>Reserve depletion</small></button>
-            <button class="scenario-button" data-scenario="weather-event"><b>Weather Event</b><small>Resilience review</small></button>
-          </div>
-          <div class="detail-card">
-            <h3>Active scenario</h3>
-            <p>${escapeHtml(serverState.system?.scenario || 'peak-demand')}</p>
-            <div class="mini-bars">${bars(8)}</div>
-          </div>
-        `,
-      ],
-      evidence: [
-        'RECENT EVIDENCE',
-        'Verified Simulations & Decisions',
-        timeline(),
-      ],
-      settings: [
-        'SYSTEM CONFIGURATION',
-        'Settings',
-        `
-          <div class="detail-card">
-            <h3>Safety boundary</h3>
-            <p>Recommendations remain advisory. Hardware actuation and infrastructure dispatch stay disabled. Evidence and provenance remain required.</p>
-            <div class="pill-row">
-              <span class="pill">NO ACTUATION</span><span class="pill">HUMAN REVIEW</span><span class="pill">EVIDENCE REQUIRED</span>
-            </div>
-          </div>
-          <div class="dialog-actions">
-            <button data-inline-action="reset-view">Reset View State</button>
-            <button data-inline-action="health-check">Run Health Check</button>
-          </div>
-        `,
-      ],
-    };
-    return sections[action] || sections.overview;
-  }
-
-  function openSearch() {
-    openPanel(
-      'COMMAND SEARCH',
-      'Search assets, regions, or scenarios',
-      `
-        <div class="detail-card">
-          <input id="commandSearchInput" autocomplete="off" placeholder="Search assets, regions, scenarios…" style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid rgba(77,174,255,.4);background:#06142d;color:#fff;outline:none" />
-        </div>
-        <div class="command-grid" id="commandResults">
-          <button class="command-button" data-search-action="grid"><b>New York Metro Grid</b><small>Digital twin & assets</small></button>
-          <button class="command-button" data-search-action="renewable"><b>Renewable Generation</b><small>Solar · wind · other</small></button>
-          <button class="command-button" data-search-action="storage"><b>Energy Storage</b><small>Battery · pumped · thermal</small></button>
-          <button class="command-button" data-search-action="scenario"><b>Peak Demand Scenario</b><small>Next 24h simulation</small></button>
-        </div>
-      `,
-    );
-    setTimeout(() => q('#commandSearchInput')?.focus(), 40);
-  }
-
-  function openRegions() {
-    openPanel(
-      'REGION CONTROL',
-      'Change Operator Region',
-      `
-        <div class="command-grid">
-          <button class="region-button" data-region="New York Metro"><b>New York Metro</b><small>Current digital twin</small></button>
-          <button class="region-button" data-region="Long Island"><b>Long Island</b><small>Coastal energy review</small></button>
-          <button class="region-button" data-region="Hudson Valley"><b>Hudson Valley</b><small>Hydro + transmission review</small></button>
-          <button class="region-button" data-region="Upstate New York"><b>Upstate New York</b><small>Generation + storage review</small></button>
-        </div>
-      `,
-    );
-  }
-
-  async function setView(view) {
-    serverState.system.view = view;
-    try {
-      const result = await api('./api/aethergrid/view', {
-        method: 'POST',
-        body: JSON.stringify({ view }),
-      });
-      mergeState(result.state || result);
-    } catch {}
-    updateTelemetryBadge();
-    showToast(`${view.toUpperCase()} VIEW`, `${serverState.system.region} switched to ${view} review mode.`);
-  }
-
-  async function setRegion(region) {
-    serverState.system.region = region;
-    try {
-      const result = await api('./api/aethergrid/region', {
-        method: 'POST',
-        body: JSON.stringify({ region }),
-      });
-      mergeState(result.state || result);
-    } catch {}
-    updateTelemetryBadge();
-    panelDialog.close();
-    showToast('REGION CHANGED', `${region} is now the active operator review region.`);
-  }
-
-  async function setScenario(scenario) {
-    serverState.system.scenario = scenario;
-    try {
-      const result = await api('./api/aethergrid/scenario', {
-        method: 'POST',
-        body: JSON.stringify({ scenario }),
-      });
-      mergeState(result.state || result);
-    } catch {}
-    showToast('SCENARIO LOADED', `${scenario.replaceAll('-', ' ')} is active for review.`);
-    const [kicker, title, html] = panelFor('scenarios');
-    openPanel(kicker, title, html);
-  }
-
-  async function runOptimization(button = null) {
-    if (button) button.classList.add('busy');
-    showToast('QUANTUM OPTIMIZATION', 'Starting bounded multi-objective scenario evaluation…');
-    try {
-      const result = await api('./api/aethergrid/optimize', {
-        method: 'POST',
-        body: JSON.stringify({
-          objective: 'minimize_cost_emissions',
-          scenario: serverState.system?.scenario,
-          region: serverState.system?.region,
-        }),
-      });
-      mergeState({ optimization: result.optimization, activity: result.activity });
-    } catch {
-      serverState.optimization.runCount = Number(serverState.optimization.runCount || 0) + 1;
-      serverState.optimization.candidateCost = Math.max(
-        9800,
-        Number(serverState.optimization.candidateCost || 10230) - 35,
-      );
-      serverState.optimization.emissionsReduction = Number(
-        (Number(serverState.optimization.emissionsReduction || 24.3) + 0.4).toFixed(1),
-      );
-    } finally {
-      if (button) setTimeout(() => button.classList.remove('busy'), 700);
-    }
-    setTimeout(
-      () =>
-        showToast(
-          'OPTIMIZATION COMPLETE',
-          `Candidate $${Number(serverState.optimization.candidateCost).toLocaleString()}/hr · classical comparison preserved.`,
-        ),
-      650,
-    );
-  }
-
-  async function exportEvidence(kind) {
-    const payload = {
-      kind,
-      generatedAt: new Date().toISOString(),
-      system: serverState.system,
-      metrics: serverState.metrics,
-      optimization: serverState.optimization,
-      evidence: serverState.evidence,
-      advisoryOnly: true,
-    };
-    try {
-      const result = await api('./api/aethergrid/export', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-      payload.serverReceipt = result.receipt;
-    } catch {}
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `aethergrid-${kind}-${Date.now()}.json`;
-    anchor.click();
-    setTimeout(() => URL.revokeObjectURL(url), 500);
-    showToast('EXPORT READY', `${kind.replaceAll('-', ' ')} generated with evidence metadata.`);
-  }
-
-  function openAgent(name) {
-    const agent = (serverState.agents || demoState.agents)[name];
-    const monogram = name === 'VÆLON' ? 'V' : name === 'AUREN' ? 'A' : 'S';
-    openPanel(
-      'AI COLLABORATION',
-      name,
-      `
-        <div class="agent-detail">
-          <div class="agent-monogram" aria-hidden="true">${monogram}</div>
-          <div>
-            <h3>${escapeHtml(agent.role)}</h3>
-            <p>${escapeHtml(agent.description)}</p>
-            <span class="pill">${escapeHtml(agent.status)}</span>
-          </div>
-        </div>
-        <div class="dialog-actions">
-          <button data-inline-action="ai-chat" class="primary">Open team chat</button>
-          <button data-inline-action="evidence">View evidence</button>
-        </div>
-      `,
-    );
-  }
-
-  async function healthCheck() {
-    let message = 'Standalone UI, interactions, and local fallback state are operational.';
-    try {
-      const health = await api('./api/aethergrid/health');
-      message = `Backend online · ${health.product} · ${health.authority}`;
-    } catch {}
-    showToast('SYSTEM HEALTH', message);
-  }
-
-  async function resetView() {
-    serverState.system.view = 'live';
-    serverState.system.scenario = 'peak-demand';
-    try {
-      const result = await api('./api/aethergrid/reset', { method: 'POST', body: '{}' });
-      mergeState(result.state || result);
-    } catch {}
-    panelDialog.close();
-    updateTelemetryBadge();
-    showToast('VIEW RESET', 'Operator review state returned to the New York Metro live baseline.');
-  }
-
-  function handleAction(action, button = null) {
-    if (!action) return;
-    if (button) activateHotspot(button);
-    if (action === 'run-optimization') return runOptimization(button);
-    if (action === 'compare-classical')
-      return showToast('CLASSICAL COMPARISON', 'Baseline comparison opened for evidence review.');
-    if (action === 'search') return openSearch();
-    if (action === 'change-region') return openRegions();
-    if (action === 'ai-chat') {
-      chatDialog.showModal();
-      chatInput.focus();
-      return;
-    }
-    if (action === 'health-check') return healthCheck();
-    if (action === 'reset-view') return resetView();
-    if (action.startsWith('agent-')) {
-      const names = {
-        'agent-vaelon': 'VÆLON',
-        'agent-auren': 'AUREN',
-        'agent-solvaer': 'SOLVÆR',
+    initProgram() {
+      const gl = this.gl;
+      const vs = this.shader(gl.VERTEX_SHADER, `
+        attribute vec4 a_position;
+        uniform mat4 u_mvp;
+        uniform float u_time;
+        uniform float u_amp;
+        uniform float u_pointSize;
+        varying float v_phase;
+        void main(){
+          vec3 p=a_position.xyz;
+          p.y += sin(a_position.w + u_time) * u_amp;
+          gl_Position=u_mvp*vec4(p,1.0);
+          gl_PointSize=u_pointSize;
+          v_phase=0.5+0.5*sin(a_position.w+u_time);
+        }`);
+      const fs = this.shader(gl.FRAGMENT_SHADER, `
+        precision mediump float;
+        uniform vec4 u_color;
+        uniform float u_pointMode;
+        varying float v_phase;
+        void main(){
+          if(u_pointMode>0.5){
+            vec2 c=gl_PointCoord-vec2(0.5);
+            if(dot(c,c)>0.25) discard;
+          }
+          gl_FragColor=vec4(u_color.rgb*(0.78+v_phase*0.35),u_color.a);
+        }`);
+      this.program = gl.createProgram(); gl.attachShader(this.program, vs); gl.attachShader(this.program, fs); gl.linkProgram(this.program);
+      this.loc = {
+        pos: gl.getAttribLocation(this.program, 'a_position'),
+        mvp: gl.getUniformLocation(this.program, 'u_mvp'),
+        time: gl.getUniformLocation(this.program, 'u_time'),
+        amp: gl.getUniformLocation(this.program, 'u_amp'),
+        color: gl.getUniformLocation(this.program, 'u_color'),
+        pointSize: gl.getUniformLocation(this.program, 'u_pointSize'),
+        pointMode: gl.getUniformLocation(this.program, 'u_pointMode'),
       };
-      return openAgent(names[action]);
     }
-    if (action.startsWith('export-')) return exportEvidence(action.replace('export-', ''));
-    if (['live', 'forecast', 'scenario-view'].includes(action)) {
-      return setView(action === 'scenario-view' ? 'scenario' : action);
+
+    makeBuffer(data) {
+      const gl = this.gl, buffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+      return { buffer, count: data.length / 4 };
     }
-    if (action.startsWith('map-')) {
-      return showToast('SPATIAL CONTROL', `${action.replace('map-', '').replaceAll('-', ' ')} control engaged in read-only review mode.`);
-    }
-    if (action.startsWith('holo-')) {
-      return showToast('HOLOGRAPHIC LAYER', `${action.replace('holo-', '').replaceAll('-', ' ')} layer selected.`);
-    }
-    const [kicker, title, html] = panelFor(action);
-    openPanel(kicker, title, html);
-  }
 
-  qa('[data-dialog-close]').forEach((button) =>
-    button.addEventListener('click', () => button.closest('dialog').close()),
-  );
+    v(out, x, y, z, w) { out.push(x,y,z,w); }
+    line(out, a, b, phase = 0) { this.v(out,...a,phase); this.v(out,...b,phase+0.3); }
 
-  qa('.hotspot').forEach((button) =>
-    button.addEventListener('click', () => handleAction(button.dataset.action, button)),
-  );
-
-  dialogBody.addEventListener('click', (event) => {
-    const target = event.target.closest('[data-inline-action],[data-region],[data-scenario],[data-search-action]');
-    if (!target) return;
-    if (target.dataset.region) return setRegion(target.dataset.region);
-    if (target.dataset.scenario) return setScenario(target.dataset.scenario);
-    if (target.dataset.searchAction) {
-      const mapping = { grid: 'grid', renewable: 'metric-renewable', storage: 'metric-storage', scenario: 'scenarios' };
-      const [kicker, title, html] = panelFor(mapping[target.dataset.searchAction] || 'overview');
-      return openPanel(kicker, title, html);
-    }
-    const action = target.dataset.inlineAction;
-    if (action?.startsWith('agent:')) return openAgent(action.slice('agent:'.length));
-    return handleAction(action, target);
-  });
-
-  dialogBody.addEventListener('input', (event) => {
-    if (event.target.id !== 'commandSearchInput') return;
-    const needle = event.target.value.trim().toLowerCase();
-    qa('#commandResults .command-button').forEach((button) => {
-      button.hidden = needle && !button.textContent.toLowerCase().includes(needle);
-    });
-  });
-
-  chatForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const message = chatInput.value.trim();
-    if (!message) return;
-    chatLog.insertAdjacentHTML('beforeend', `<div class="chat-bubble user">${escapeHtml(message)}</div>`);
-    chatInput.value = '';
-    let reply =
-      'VÆLON, AUREN, and SOLVÆR reviewed the request. This interface is advisory-only; recommendations remain evidence-bound and require operator review.';
-    try {
-      const result = await api('./api/aethergrid/chat', {
-        method: 'POST',
-        body: JSON.stringify({
-          message,
-          region: serverState.system?.region,
-          scenario: serverState.system?.scenario,
-        }),
-      });
-      reply = result.reply || reply;
-      if (result.activity) serverState.activity = result.activity;
-    } catch {}
-    chatLog.insertAdjacentHTML('beforeend', `<div class="chat-bubble system">${escapeHtml(reply)}</div>`);
-    chatLog.scrollTop = chatLog.scrollHeight;
-  });
-
-  function initEffects() {
-    if (telemetryTimer) clearInterval(telemetryTimer);
-    telemetryTimer = setInterval(refreshTelemetry, 3200);
-    refreshTelemetry();
-    updateClock();
-    setInterval(updateClock, 1000);
-    startEnergyCanvas();
-    connectEventStream();
-    window.addEventListener('resize', startEnergyCanvas, { passive: true });
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        refreshTelemetry();
-        if (!energyFrame) startEnergyCanvas();
+    buildGeometry() {
+      const grid=[], buildings=[], routes=[], nodes=[];
+      for (let n=-10;n<=10;n++) {
+        this.line(grid,[-10,0,n],[10,0,n],n*.21);
+        this.line(grid,[n,0,-10],[n,0,10],n*.23);
       }
-    });
-    const first = q('.hotspot[data-action="overview"]');
-    if (first) activateHotspot(first);
+      // deterministic wireframe buildings
+      let seed=31;
+      const rnd=()=>((seed=Math.imul(seed,1664525)+1013904223|0)>>>0)/4294967296;
+      for(let i=0;i<72;i++){
+        const x=(rnd()*18-9), z=(rnd()*18-9), w=.28+rnd()*.62, d=.28+rnd()*.62, h=.35+rnd()*2.8, p=rnd()*6.283;
+        const x0=x-w,x1=x+w,z0=z-d,z1=z+d;
+        const e=[
+          [[x0,0,z0],[x1,0,z0]],[[x1,0,z0],[x1,0,z1]],[[x1,0,z1],[x0,0,z1]],[[x0,0,z1],[x0,0,z0]],
+          [[x0,h,z0],[x1,h,z0]],[[x1,h,z0],[x1,h,z1]],[[x1,h,z1],[x0,h,z1]],[[x0,h,z1],[x0,h,z0]],
+          [[x0,0,z0],[x0,h,z0]],[[x1,0,z0],[x1,h,z0]],[[x1,0,z1],[x1,h,z1]],[[x0,0,z1],[x0,h,z1]]
+        ];
+        e.forEach(([a,b])=>this.line(buildings,a,b,p));
+      }
+      const hubs=[[-6,.3,-3],[-2,.5,1],[2,.6,-2],[5,.45,3],[0,.7,5],[7,.35,-5],[-7,.42,5]];
+      hubs.forEach((n,i)=>this.v(nodes,n[0],n[1],n[2],i*.91));
+      const routePairs=[[0,1],[1,2],[2,3],[1,4],[3,5],[4,6],[6,0],[4,3],[2,5]];
+      for(const [ai,bi] of routePairs){
+        const a=hubs[ai], b=hubs[bi]; let prev=a;
+        for(let s=1;s<=22;s++){
+          const t=s/22, bow=Math.sin(t*Math.PI)*(.55+((ai+bi)%3)*.15);
+          const cur=[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t+bow,a[2]+(b[2]-a[2])*t];
+          this.line(routes,prev,cur,(ai+bi)*.5+t*5); prev=cur;
+        }
+      }
+      this.geometry.grid=this.makeBuffer(grid);
+      this.geometry.buildings=this.makeBuffer(buildings);
+      this.geometry.routes=this.makeBuffer(routes);
+      this.geometry.nodes=this.makeBuffer(nodes);
+      this.hubs=hubs;
+    }
+
+    resize() {
+      if (!this.gl) return;
+      const dpr=Math.min(devicePixelRatio||1,2), rect=this.canvas.getBoundingClientRect();
+      const w=Math.max(1,Math.round(rect.width*dpr)), h=Math.max(1,Math.round(rect.height*dpr));
+      if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;}
+      this.gl.viewport(0,0,w,h);
+    }
+
+    bindControls() {
+      const c=this.canvas;
+      c.addEventListener('pointerdown',(e)=>{this.drag={x:e.clientX,y:e.clientY,yaw:this.yaw,pitch:this.pitch};c.setPointerCapture(e.pointerId);c.classList.add('dragging')});
+      c.addEventListener('pointermove',(e)=>{if(!this.drag)return;this.yaw=this.drag.yaw+(e.clientX-this.drag.x)*.008;this.pitch=clamp(this.drag.pitch+(e.clientY-this.drag.y)*.006,.12,1.15);this.updateCameraReadout()});
+      const end=(e)=>{if(!this.drag)return;this.drag=null;c.classList.remove('dragging');try{c.releasePointerCapture(e.pointerId)}catch{}};
+      c.addEventListener('pointerup',end);c.addEventListener('pointercancel',end);
+      c.addEventListener('wheel',(e)=>{e.preventDefault();this.distance=clamp(this.distance+e.deltaY*.014,10,34);this.updateCameraReadout()},{passive:false});
+      c.addEventListener('dblclick',()=>this.resetCamera());
+    }
+
+    resetCamera(){this.yaw=.74;this.pitch=.46;this.distance=20;this.updateCameraReadout()}
+    setTime(hours){this.timeHours=Number(hours)}
+    toggle(layer){if(layer==='reset')return this.resetCamera();if(layer==='layers'){const on=!(this.layers.grid&&this.layers.routes&&this.layers.buildings&&this.layers.nodes);Object.keys(this.layers).forEach(k=>this.layers[k]=on);return} if(layer in this.layers)this.layers[layer]=!this.layers[layer]}
+    updateCameraReadout(){const el=q('#cameraReadout');if(el)el.textContent=`Orbit ${Math.round(this.yaw*57.3)}° · ${Math.round(this.pitch*57.3)}° · ${this.distance.toFixed(1)}m`}
+
+    drawBuffer(item, primitive, color, amp, pointMode=0, pointSize=1) {
+      const gl=this.gl; gl.bindBuffer(gl.ARRAY_BUFFER,item.buffer);gl.vertexAttribPointer(this.loc.pos,4,gl.FLOAT,false,0,0);gl.enableVertexAttribArray(this.loc.pos);
+      gl.uniform4fv(this.loc.color,color);gl.uniform1f(this.loc.amp,amp);gl.uniform1f(this.loc.pointMode,pointMode);gl.uniform1f(this.loc.pointSize,pointSize);
+      gl.drawArrays(primitive,0,item.count);
+    }
+
+    animate = (now=performance.now()) => {
+      if(!this.gl)return;
+      const gl=this.gl, rect=this.canvas.getBoundingClientRect(), aspect=Math.max(.1,rect.width/Math.max(1,rect.height));
+      const eye=[
+        Math.sin(this.yaw)*Math.cos(this.pitch)*this.distance,
+        Math.sin(this.pitch)*this.distance*.78+3.0,
+        Math.cos(this.yaw)*Math.cos(this.pitch)*this.distance
+      ];
+      const view=lookAt(eye,[0,1.05,0],[0,1,0]), proj=perspective(Math.PI/3.1,aspect,.1,100), mvp=mat4Multiply(proj,view);
+      gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.clearColor(.008,.025,.06,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+      gl.useProgram(this.program);gl.uniformMatrix4fv(this.loc.mvp,false,mvp);
+      const temporal=(this.timeHours/24)*Math.PI*2+(now-this.timeStart)*.00035;
+      gl.uniform1f(this.loc.time,temporal);
+      if(this.layers.grid)this.drawBuffer(this.geometry.grid,gl.LINES,[.09,.42,.75,.42],.045);
+      if(this.layers.buildings)this.drawBuffer(this.geometry.buildings,gl.LINES,[.14,.64,1,.55],.07);
+      if(this.layers.routes)this.drawBuffer(this.geometry.routes,gl.LINES,[.83,.36,1,.9],.11);
+      if(this.layers.nodes)this.drawBuffer(this.geometry.nodes,gl.POINTS,[.22,1,.84,1],.08,1,9);
+      requestAnimationFrame(this.animate);
+    }
   }
 
-  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  // ---------- animated 2D canvases ----------
+  class WaveSurface {
+    constructor(canvas){this.c=canvas;this.ctx=canvas.getContext('2d');this.t=0;this.resize();addEventListener('resize',()=>this.resize());this.loop()}
+    resize(){const d=Math.min(devicePixelRatio||1,2),r=this.c.getBoundingClientRect();this.c.width=Math.max(1,r.width*d);this.c.height=Math.max(1,r.height*d);this.ctx.setTransform(d,0,0,d,0,0)}
+    loop=()=>{const x=this.ctx,w=this.c.clientWidth,h=this.c.clientHeight;x.clearRect(0,0,w,h);x.save();x.translate(w*.5,h*.58);for(let z=12;z>=0;z--){x.beginPath();for(let i=0;i<=60;i++){const px=(i/60-.5)*w*.92,zz=(z/12-.5)*100;const wave=Math.sin(i*.25+this.t+z*.34)*8+Math.cos(i*.11-this.t*.7)*5;const py=zz*.45-wave-(z*1.1);const y=py+(px*px)/(w*w)*30;i?x.lineTo(px,y):x.moveTo(px,y)}x.strokeStyle=`hsla(${195+z*6},95%,62%,${.2+z*.045})`;x.lineWidth=1;x.stroke()}x.restore();this.t+=.018;requestAnimationFrame(this.loop)}
   }
 
+  class ScenarioChart {
+    constructor(canvas){this.c=canvas;this.x=canvas.getContext('2d');this.phase=0;this.resize();addEventListener('resize',()=>this.resize());this.loop()}
+    resize(){const d=Math.min(devicePixelRatio||1,2),r=this.c.getBoundingClientRect();this.c.width=Math.max(1,r.width*d);this.c.height=Math.max(1,r.height*d);this.x.setTransform(d,0,0,d,0,0)}
+    loop=()=>{const c=this.x,w=this.c.clientWidth,h=this.c.clientHeight;c.clearRect(0,0,w,h);c.strokeStyle='rgba(83,130,190,.22)';c.lineWidth=1;for(let i=0;i<7;i++){const y=10+i*(h-24)/6;c.beginPath();c.moveTo(28,y);c.lineTo(w-8,y);c.stroke()}for(let i=0;i<7;i++){const x=28+i*(w-36)/6;c.beginPath();c.moveTo(x,8);c.lineTo(x,h-16);c.stroke()}
+      const series=[['#22d8ff',0,0],['#43ef91',-.12,.6],['#bd67ff',-.18,1.2],['#ffb84d',.12,2.1]];
+      series.forEach(([color,bias,p])=>{c.beginPath();for(let i=0;i<=48;i++){const t=i/48,base=.52+.14*Math.sin(t*Math.PI*2+p)+.18*Math.exp(-Math.pow((t-.62)*5,2));const val=clamp(base+bias+.018*Math.sin(this.phase+i*.45+p),.12,.92);const px=28+t*(w-36),py=8+(1-val)*(h-24);i?c.lineTo(px,py):c.moveTo(px,py)}c.strokeStyle=color;c.lineWidth=1.6;c.stroke()});this.phase+=.01;requestAnimationFrame(this.loop)}
+  }
+
+  class WireThumb {
+    constructor(canvas,variant){this.c=canvas;this.x=canvas.getContext('2d');this.variant=variant;this.t=Math.random()*10;this.resize();this.loop()}
+    resize(){const d=Math.min(devicePixelRatio||1,2),r=this.c.getBoundingClientRect();this.c.width=Math.max(1,r.width*d);this.c.height=Math.max(1,r.height*d);this.x.setTransform(d,0,0,d,0,0)}
+    loop=()=>{const c=this.x,w=this.c.clientWidth,h=this.c.clientHeight;c.clearRect(0,0,w,h);c.strokeStyle=this.variant==='risk'?'#ff9b61':this.variant==='future'?'#8d6dff':'#34cfff';c.lineWidth=.8;for(let i=0;i<8;i++){c.beginPath();for(let j=0;j<13;j++){const px=j*w/12,py=h*.72-i*3+Math.sin(j*.8+i*.5+this.t)*3;i?c.lineTo(px,py):c.moveTo(px,py)}c.stroke()}for(let x=0;x<w;x+=16){c.beginPath();c.moveTo(x,h*.24);c.lineTo(x,h*.9);c.strokeStyle='rgba(71,144,228,.18)';c.stroke()}this.t+=.015;requestAnimationFrame(this.loop)}
+  }
+
+  const spatial = new SpatialGrid4D(q('#spatialGrid'));
+  new WaveSurface(q('#quantumCanvas'));
+  new ScenarioChart(q('#scenarioChart'));
+  qa('[data-wire-thumb]').forEach((canvas)=>new WireThumb(canvas,canvas.dataset.wireThumb));
+
+  function updateClock(){
+    const now=new Date();q('#systemDate').textContent=now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});q('#systemClock').textContent=now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }
+  setInterval(updateClock,1000);updateClock();
+
+  function renderEvidence(){
+    const list=q('#evidenceList'); if(!list)return;
+    list.innerHTML=state.evidence.slice(0,4).map((item)=>`<button class="evidence-item"><span class="doc">▤</span><span>${escapeHtml(item.title)}</span><time>${escapeHtml(item.age||'recent')}</time><span class="verified">${escapeHtml(item.status||'Verified')}</span></button>`).join('');
+  }
+
+  function syncStateToUi(){
+    q('#systemStatus').textContent=state.system.status;
+    q('#regionLabel').textContent=state.system.region.toUpperCase();
+    q('#generationValue').textContent=Math.round(state.metrics.generationMw).toLocaleString();
+    q('#loadValue').textContent=Math.round(state.metrics.loadMw).toLocaleString();
+    q('#renewableValue').textContent=Number(state.metrics.renewablePercent).toFixed(1);
+    q('#storageValue').textContent=Math.round(state.metrics.storageMw).toLocaleString();
+    q('#currentCost').textContent=Math.round(state.optimization.currentCost).toLocaleString();
+    q('#candidateCost').textContent=Math.round(state.optimization.candidateCost).toLocaleString();
+    q('#emissionsValue').textContent=Number(state.optimization.emissionsReduction).toFixed(1);
+    q('#renewableGain').textContent=Number(state.optimization.renewableUtilizationGain).toFixed(1);
+    qa('[data-view]').forEach((b)=>b.classList.toggle('active',b.dataset.view===state.system.view));
+    renderEvidence();
+  }
+  syncStateToUi();
+
+  async function loadState(){
+    try{mergeState(await api('./api/aethergrid/state'));q('#streamReadout').textContent='LIVE STREAM'}catch{q('#streamReadout').textContent='LOCAL 4D SIM'}
+  }
   loadState();
-  initEffects();
+
+  let stream;
+  function connectStream(){
+    if(location.protocol==='file:'||!('EventSource'in window))return;
+    stream?.close();stream=new EventSource('./api/aethergrid/stream');
+    stream.addEventListener('telemetry',(event)=>{try{mergeState(JSON.parse(event.data))}catch{}});
+    stream.onerror=()=>{q('#streamReadout').textContent='RECONNECTING';setTimeout(connectStream,2500)};
+    stream.onopen=()=>{q('#streamReadout').textContent='LIVE STREAM'};
+  }
+  connectStream();
+
+  function localTelemetry(){
+    if(location.protocol!=='file:')return;
+    const t=Date.now()/9000;
+    state.metrics.generationMw=2130+Math.sin(t)*28;
+    state.metrics.loadMw=2410+Math.cos(t*.87)*35;
+    state.metrics.renewablePercent=46.8+Math.sin(t*.66)*1.6;
+    state.metrics.storageMw=590+Math.cos(t*.72)*12;
+    syncStateToUi();
+  }
+  setInterval(localTelemetry,2200);
+
+  function openPanel(kicker,title,html){dialogKicker.textContent=kicker;dialogTitle.textContent=title;dialogBody.innerHTML=html;panelDialog.showModal()}
+  qa('[data-dialog-close]').forEach((b)=>b.addEventListener('click',()=>b.closest('dialog').close()));
+
+  qa('.mode-tab').forEach((b)=>b.addEventListener('click',()=>{
+    qa('.mode-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+    const target=q('#'+b.dataset.mode);target?.scrollIntoView({behavior:'smooth',block:'center'});
+  }));
+  qa('.side-button').forEach((b)=>b.addEventListener('click',()=>{
+    qa('.side-button').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+    const target=q('#'+b.dataset.section)||q('#grid');target?.scrollIntoView({behavior:'smooth',block:'start'});
+  }));
+
+  qa('[data-map-tool]').forEach((b)=>b.addEventListener('click',()=>{
+    const tool=b.dataset.mapTool;spatial?.toggle(tool==='layers'?'layers':tool);if(tool!=='reset')b.classList.toggle('active');
+    showToast('WIREMAP LAYER',`${tool} ${b.classList.contains('active')?'enabled':'updated'}`);
+  }));
+
+  q('#timeSlider').addEventListener('input',(e)=>{const h=Number(e.target.value);spatial?.setTime(h);q('#timeValue').textContent=`${String(Math.floor(h)).padStart(2,'0')}:${String(Math.round((h%1)*60)).padStart(2,'0')}`});
+  qa('[data-view]').forEach((b)=>b.addEventListener('click',async()=>{
+    state.system.view=b.dataset.view;syncStateToUi();try{const r=await api('./api/aethergrid/view',{method:'POST',body:JSON.stringify({view:b.dataset.view})});mergeState(r.state||r)}catch{}showToast('VIEW CHANGED',`${b.dataset.view} review mode active`)
+  }));
+
+  q('#assetSearch').addEventListener('keydown',(e)=>{if(e.key!=='Enter')return;const v=e.currentTarget.value.trim();showToast('SPATIAL SEARCH',v?`Searching wireframe graph for “${v}”`:'Enter an asset, node, or scenario')});
+  qa('[data-node]').forEach((b)=>b.addEventListener('click',()=>openPanel('SPATIAL NODE',b.querySelector('b').textContent,`<div class="detail-card"><h3>Live node telemetry</h3><p>This card is linked to the 4D spatial graph. Rotate or zoom the wireframe map, scrub time, then compare the node against forecast and scenario states.</p><div class="pill-row"><span class="pill">3D POSITION</span><span class="pill">TIME INDEXED</span><span class="pill">EVIDENCE LINKED</span></div></div>`)));
+
+  qa('[data-metric]').forEach((b)=>b.addEventListener('click',()=>openPanel('SYSTEM METRIC',b.querySelector('b').textContent,`<div class="detail-card"><h3>${b.querySelector('.metric-value').textContent}</h3><p>Live metric bound to the operator-state stream and scenario timeline.</p></div>`)));
+  qa('[data-layer]').forEach((b)=>b.addEventListener('click',()=>{openPanel('HOLOGRAPHIC LAYER',b.querySelector('b').textContent,`<div class="detail-card"><h3>Interactive wireframe layer</h3><p>Layer is generated from geometry and temporal state, not a background image. Use the main 4D map to orbit, zoom, scrub time, and compare state.</p></div>`)}));
+
+  q('#scenarioSelect').addEventListener('change',async(e)=>{state.system.scenario=e.target.value;try{const r=await api('./api/aethergrid/scenario',{method:'POST',body:JSON.stringify({scenario:e.target.value})});mergeState(r.state||r)}catch{}showToast('SCENARIO LOADED',e.target.options[e.target.selectedIndex].text)});
+
+  async function runOptimization(){
+    showToast('QUANTUM OPTIMIZATION','Running bounded scenario search…');
+    try{const r=await api('./api/aethergrid/optimize',{method:'POST',body:JSON.stringify({scenario:state.system.scenario,region:state.system.region,objective:'minimize_cost_emissions'})});mergeState({optimization:r.optimization});}
+    catch{state.optimization.runCount++;state.optimization.candidateCost=Math.max(9800,state.optimization.candidateCost-35);state.optimization.emissionsReduction+=.3;syncStateToUi()}
+    setTimeout(()=>showToast('OPTIMIZATION COMPLETE',`Candidate $${Math.round(state.optimization.candidateCost).toLocaleString()}/hr ready for classical comparison.`),500)
+  }
+  qa('[data-action="run-optimization"]').forEach((b)=>b.addEventListener('click',runOptimization));
+
+  async function exportPackage(kind){
+    const payload={kind,generatedAt:new Date().toISOString(),system:state.system,metrics:state.metrics,optimization:state.optimization,evidence:state.evidence,spatial:{timeHours:Number(q('#timeSlider').value),camera:{yaw:spatial?.yaw,pitch:spatial?.pitch,distance:spatial?.distance}},advisoryOnly:true};
+    try{const r=await api('./api/aethergrid/export',{method:'POST',body:JSON.stringify(payload)});payload.receipt=r.receipt}catch{}
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`aethergrid-${kind}-${Date.now()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),500);showToast('EXPORT READY',kind.replaceAll('-',' '))
+  }
+  qa('[data-export]').forEach((b)=>b.addEventListener('click',()=>exportPackage(b.dataset.export)));
+
+  function openChat(){chatDialog.showModal();chatInput.focus()}
+  qa('[data-action="ai-chat"]').forEach((b)=>b.addEventListener('click',openChat));
+  q('[data-action="send-ai"]').addEventListener('click',()=>{const v=q('#quickAiInput').value.trim();if(v){chatInput.value=v;q('#quickAiInput').value='';openChat()}});
+  q('#quickAiInput').addEventListener('keydown',(e)=>{if(e.key==='Enter')q('[data-action="send-ai"]').click()});
+
+  chatForm.addEventListener('submit',async(e)=>{
+    e.preventDefault();const message=chatInput.value.trim();if(!message)return;
+    chatLog.insertAdjacentHTML('beforeend',`<div class="chat-bubble user">${escapeHtml(message)}</div>`);chatInput.value='';
+    let reply='VÆLON, AUREN, and SOLVÆR reviewed the request. Recommendations remain advisory and evidence-bound.';
+    try{const r=await api('./api/aethergrid/chat',{method:'POST',body:JSON.stringify({message,region:state.system.region,scenario:state.system.scenario})});reply=r.reply||reply}catch{}
+    chatLog.insertAdjacentHTML('beforeend',`<div class="chat-bubble system">${escapeHtml(reply)}</div>`);chatLog.scrollTop=chatLog.scrollHeight;
+  });
+
+  qa('[data-agent]').forEach((b)=>b.addEventListener('click',()=>{const name=b.dataset.agent,agent=state.agents[name]||{};openPanel('AI COLLABORATION',name,`<div class="detail-card"><h3>${escapeHtml(agent.role||'Specialized Intelligence')}</h3><p>Status: ${escapeHtml(agent.status||'ONLINE')}. This agent can inspect the active region, 4D grid state, selected scenario, evidence, and optimization outputs.</p><div class="pill-row"><span class="pill">ONLINE</span><span class="pill">ADVISORY</span><span class="pill">EVIDENCE BOUND</span></div></div>`)}));
+
+  q('[data-action="change-region"]').addEventListener('click',()=>openPanel('REGION CONTROL','Change Operator Region',`<div class="pill-row">${['New York Metro','Long Island','Hudson Valley','Upstate New York'].map(r=>`<button class="pill" data-region-choice="${r}">${r}</button>`).join('')}</div>`));
+  dialogBody.addEventListener('click',async(e)=>{const b=e.target.closest('[data-region-choice]');if(!b)return;state.system.region=b.dataset.regionChoice;try{const r=await api('./api/aethergrid/region',{method:'POST',body:JSON.stringify({region:state.system.region})});mergeState(r.state||r)}catch{}syncStateToUi();panelDialog.close();showToast('REGION CHANGED',state.system.region)});
+
+  qa('[data-action="settings"]').forEach((b)=>b.addEventListener('click',()=>openPanel('SYSTEM CONFIGURATION','Settings',`<div class="detail-card"><h3>Authority boundary</h3><p>Hardware actuation and infrastructure dispatch remain disabled. 4D spatial visualization, simulation, optimization, and AI outputs are advisory-only.</p></div>`)));
+  q('[data-action="profile"]').addEventListener('click',()=>openPanel('OPERATOR','Profile',`<div class="detail-card"><h3>IM · Operator Session</h3><p>Live ÆTHERGRID session with access to spatial, AI, scenario, evidence, and export surfaces.</p></div>`));
 })();
