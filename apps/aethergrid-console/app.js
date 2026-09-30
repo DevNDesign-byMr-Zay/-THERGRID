@@ -405,6 +405,9 @@
         buildings: true,
         infrastructure: true,
         terrain: true,
+        water: true,
+        green: true,
+        landmarks: true,
         weather: true,
         clouds: true,
         illumination: true,
@@ -606,6 +609,15 @@
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
       this.geometry.terrain = this.makeBuffer(terrainLines);
+      this.geometry.waterLines = this.makeBuffer([]);
+      this.geometry.waterFaces = this.makeBuffer([]);
+      this.geometry.greenLines = this.makeBuffer([]);
+      this.geometry.greenFaces = this.makeBuffer([]);
+      this.geometry.landmarkLines = this.makeBuffer([]);
+      this.geometry.materialGlassFaces = this.makeBuffer([]);
+      this.geometry.materialMasonryFaces = this.makeBuffer([]);
+      this.geometry.materialMetalFaces = this.makeBuffer([]);
+      this.geometry.materialNaturalFaces = this.makeBuffer([]);
       this.geometry.weather = this.makeBuffer([]);
       this.geometry.clouds = this.makeBuffer([]);
       this.geometry.illumination = this.makeBuffer([]);
@@ -681,6 +693,15 @@
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
       this.geometry.terrain = this.makeBuffer(terrainLines);
+      this.geometry.waterLines = this.makeBuffer([]);
+      this.geometry.waterFaces = this.makeBuffer([]);
+      this.geometry.greenLines = this.makeBuffer([]);
+      this.geometry.greenFaces = this.makeBuffer([]);
+      this.geometry.landmarkLines = this.makeBuffer([]);
+      this.geometry.materialGlassFaces = this.makeBuffer([]);
+      this.geometry.materialMasonryFaces = this.makeBuffer([]);
+      this.geometry.materialMetalFaces = this.makeBuffer([]);
+      this.geometry.materialNaturalFaces = this.makeBuffer([]);
       this.geometry.weather = this.makeBuffer([]);
       this.geometry.clouds = this.makeBuffer([]);
       this.geometry.illumination = this.makeBuffer([]);
@@ -708,6 +729,15 @@
       const infrastructureLines = [];
       const infrastructureNodes = [];
       const terrainLines = [];
+      const waterLines = [];
+      const waterFaces = [];
+      const greenLines = [];
+      const greenFaces = [];
+      const landmarkLines = [];
+      const materialGlassFaces = [];
+      const materialMasonryFaces = [];
+      const materialMetalFaces = [];
+      const materialNaturalFaces = [];
       const weatherLines = [];
       const cloudParticles = [];
       const cityLights = [];
@@ -724,6 +754,18 @@
       }
 
       this.graphNodes = [];
+      const landmarkHeightThresholdM = Math.max(
+        70,
+        Number(mesh.skylineProfile?.p95HeightM || 0),
+      );
+      const materialTargetFor = (building) => {
+        const descriptor = `${building.buildingMaterial || ''} ${building.buildingColor || ''}`.toLowerCase();
+        if (/glass|mirror|glazed|blue|cyan/u.test(descriptor)) return materialGlassFaces;
+        if (/brick|stone|sandstone|terracotta|brown|red|beige/u.test(descriptor)) return materialMasonryFaces;
+        if (/metal|steel|aluminium|aluminum|silver|zinc/u.test(descriptor)) return materialMetalFaces;
+        if (/wood|timber|green|earth|clay/u.test(descriptor)) return materialNaturalFaces;
+        return null;
+      };
       mesh.buildings.forEach((building, buildingIndex) => {
         const footprint = (building.footprint || []).map(([x, z]) => [x * scale, z * scale]);
         if (footprint.length < 3) return;
@@ -746,6 +788,14 @@
         const supportedApexRoof = /^(pyramidal|hipped|conical|dome|onion)$/u.test(String(building.roofShape || ''));
         const wallTop = supportedApexRoof && roofHeight > 0 ? Math.max(baseHeight + 0.02, height - roofHeight) : height;
         const phase = buildingIndex * 0.13;
+        const materialTarget = materialTargetFor(building);
+        const sourceBackedHeight = !['inferred', 'synthetic-fallback'].includes(
+          String(building.heightSource || ''),
+        );
+        const isLandmark =
+          Boolean(String(building.name || '').trim()) &&
+          sourceBackedHeight &&
+          Number(building.heightM || 0) >= landmarkHeightThresholdM;
         for (let index = 0; index < openFootprint.length; index += 1) {
           const [ax, az] = openFootprint[index];
           const [bx, bz] = openFootprint[(index + 1) % openFootprint.length];
@@ -758,6 +808,14 @@
           this.line(buildings, aBase, aTop, phase + 0.4);
           this.triangle(buildingFaces, aBase, bBase, bTop, phase + 0.08);
           this.triangle(buildingFaces, aBase, bTop, aTop, phase + 0.16);
+          if (materialTarget) {
+            this.triangle(materialTarget, aBase, bBase, bTop, phase + 0.11);
+            this.triangle(materialTarget, aBase, bTop, aTop, phase + 0.19);
+          }
+          if (isLandmark) {
+            this.line(landmarkLines, aTop, bTop, phase + 0.52);
+            if (index % 2 === 0) this.line(landmarkLines, aBase, aTop, phase + 0.61);
+          }
 
           if (supportedApexRoof && roofHeight > 0) {
             const apex = [center[0], height, center[1]];
@@ -797,6 +855,50 @@
           };
           this.graphNodes.push(node);
           this.vertex(nodes, ...node.position, phase);
+        }
+      });
+
+      const addAreaGeometry = (feature, lineTarget, faceTarget, y, phaseBase) => {
+        const footprint = (feature.footprint || []).map(([x, z]) => [Number(x) * scale, Number(z) * scale]);
+        if (footprint.length < 3) return;
+        const open =
+          footprint.length > 3 &&
+          Math.hypot(
+            footprint[0][0] - footprint.at(-1)[0],
+            footprint[0][1] - footprint.at(-1)[1],
+          ) < 0.001
+            ? footprint.slice(0, -1)
+            : footprint;
+        if (open.length < 3) return;
+        const center = open
+          .reduce((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0])
+          .map((value) => value / open.length);
+        const center3 = [center[0], y, center[1]];
+        for (let index = 0; index < open.length; index += 1) {
+          const a = [open[index][0], y, open[index][1]];
+          const b = [open[(index + 1) % open.length][0], y, open[(index + 1) % open.length][1]];
+          this.line(lineTarget, a, b, phaseBase + index * 0.03);
+          this.triangle(faceTarget, a, b, center3, phaseBase + index * 0.02);
+        }
+      };
+
+      (mesh.waterAreas || []).forEach((feature, index) =>
+        addAreaGeometry(feature, waterLines, waterFaces, 0.012, index * 0.19),
+      );
+      (mesh.greenAreas || []).forEach((feature, index) =>
+        addAreaGeometry(feature, greenLines, greenFaces, 0.016, index * 0.23),
+      );
+      [...(mesh.waterways || []), ...(mesh.coastlines || [])].forEach((feature, lineIndex) => {
+        const path = (feature.path || []).map(([x, z]) => [Number(x) * scale, Number(z) * scale]);
+        for (let index = 1; index < path.length; index += 1) {
+          const [ax, az] = path[index - 1];
+          const [bx, bz] = path[index];
+          this.line(
+            waterLines,
+            [ax, 0.022, az],
+            [bx, 0.022, bz],
+            lineIndex * 0.17 + index * 0.025,
+          );
         }
       });
 
@@ -991,6 +1093,15 @@
       this.geometry.infrastructureLines = this.makeBuffer(infrastructureLines);
       this.geometry.infrastructureNodes = this.makeBuffer(infrastructureNodes);
       this.geometry.terrain = this.makeBuffer(terrainLines);
+      this.geometry.waterLines = this.makeBuffer(waterLines);
+      this.geometry.waterFaces = this.makeBuffer(waterFaces);
+      this.geometry.greenLines = this.makeBuffer(greenLines);
+      this.geometry.greenFaces = this.makeBuffer(greenFaces);
+      this.geometry.landmarkLines = this.makeBuffer(landmarkLines);
+      this.geometry.materialGlassFaces = this.makeBuffer(materialGlassFaces);
+      this.geometry.materialMasonryFaces = this.makeBuffer(materialMasonryFaces);
+      this.geometry.materialMetalFaces = this.makeBuffer(materialMetalFaces);
+      this.geometry.materialNaturalFaces = this.makeBuffer(materialNaturalFaces);
       this.geometry.weather = this.makeBuffer(weatherLines);
       this.geometry.clouds = this.makeBuffer(cloudParticles);
       this.geometry.illumination = this.makeBuffer(cityLights);
@@ -1305,11 +1416,63 @@
           0.025 * amplitude,
         );
       }
+      if (this.layers.water) {
+        this.drawBuffer(
+          this.geometry.waterFaces,
+          gl.TRIANGLES,
+          isLightTheme() ? [0.18, 0.62, 0.82, 0.18] : [0.04, 0.38, 0.68, 0.24],
+          0.008 * amplitude,
+        );
+        this.drawBuffer(
+          this.geometry.waterLines,
+          gl.LINES,
+          isLightTheme() ? [0.08, 0.46, 0.68, 0.62] : [0.12, 0.72, 1, 0.7],
+          0.018 * amplitude,
+        );
+      }
+      if (this.layers.green) {
+        this.drawBuffer(
+          this.geometry.greenFaces,
+          gl.TRIANGLES,
+          isLightTheme() ? [0.2, 0.58, 0.28, 0.14] : [0.08, 0.48, 0.24, 0.18],
+          0.006 * amplitude,
+        );
+        this.drawBuffer(
+          this.geometry.greenLines,
+          gl.LINES,
+          isLightTheme() ? [0.12, 0.48, 0.22, 0.44] : [0.22, 0.8, 0.42, 0.46],
+          0.014 * amplitude,
+        );
+      }
       if (this.layers.grid) this.drawBuffer(this.geometry.grid, gl.LINES, [0.09, 0.42, 0.75, this.cityVisualMode === 'operations' ? 0.18 : 0.42], 0.045 * amplitude);
       if (this.layers.buildings && this.cityVisualMode !== 'xray') {
         const faceAlpha = this.cityVisualMode === 'operations' ? 0.13 : 0.28;
         const faceColor = isLightTheme() ? [0.15, 0.42, 0.62, faceAlpha] : [0.035, 0.31, 0.58, faceAlpha];
         this.drawBuffer(this.geometry.buildingFaces, gl.TRIANGLES, faceColor, 0.025 * amplitude);
+        this.drawBuffer(
+          this.geometry.materialGlassFaces,
+          gl.TRIANGLES,
+          isLightTheme() ? [0.14, 0.56, 0.82, 0.12] : [0.14, 0.68, 1, 0.16],
+          0.018 * amplitude,
+        );
+        this.drawBuffer(
+          this.geometry.materialMasonryFaces,
+          gl.TRIANGLES,
+          isLightTheme() ? [0.62, 0.3, 0.18, 0.1] : [0.78, 0.34, 0.2, 0.12],
+          0.016 * amplitude,
+        );
+        this.drawBuffer(
+          this.geometry.materialMetalFaces,
+          gl.TRIANGLES,
+          isLightTheme() ? [0.38, 0.45, 0.55, 0.1] : [0.62, 0.72, 0.84, 0.12],
+          0.014 * amplitude,
+        );
+        this.drawBuffer(
+          this.geometry.materialNaturalFaces,
+          gl.TRIANGLES,
+          isLightTheme() ? [0.42, 0.3, 0.18, 0.08] : [0.54, 0.42, 0.24, 0.1],
+          0.012 * amplitude,
+        );
         this.drawBuffer(this.geometry.roofFaces, gl.TRIANGLES, isLightTheme() ? [0.23, 0.49, 0.7, Math.min(0.48, faceAlpha + 0.12)] : [0.08, 0.46, 0.78, Math.min(0.52, faceAlpha + 0.12)], 0.018 * amplitude);
       }
       if (this.layers.buildings) {
@@ -1317,6 +1480,14 @@
         const edgeColor = isLightTheme() ? [0.03, 0.31, 0.52, edgeAlpha] : [0.14, 0.64, 1, edgeAlpha];
         this.drawBuffer(this.geometry.buildings, gl.LINES, edgeColor, 0.07 * amplitude);
         this.drawBuffer(this.geometry.roofLines, gl.LINES, isLightTheme() ? [0.21, 0.19, 0.55, edgeAlpha] : [0.55, 0.64, 1, edgeAlpha], 0.05 * amplitude);
+      }
+      if (this.layers.landmarks) {
+        this.drawBuffer(
+          this.geometry.landmarkLines,
+          gl.LINES,
+          isLightTheme() ? [0.68, 0.42, 0.08, 0.78] : [1, 0.72, 0.22, 0.9],
+          0.03 * amplitude,
+        );
       }
       if (this.layers.routes) this.drawBuffer(this.geometry.routes, gl.LINES, [0.67, 0.48, 0.98, Math.min(1, 0.64 * trailBoost)], 0.075 * amplitude * trailBoost);
       if (this.layers.infrastructure) {
