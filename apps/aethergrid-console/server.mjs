@@ -22,6 +22,7 @@ const scenarios = Object.freeze([
   'renewable-surge',
   'storage-stress',
   'weather-event',
+  'custom',
 ]);
 
 const views = Object.freeze(['live', 'forecast', 'scenario']);
@@ -33,6 +34,12 @@ const state = {
     mode: 'ADVISORY ONLY',
     view: 'live',
     scenario: 'peak-demand',
+    scenarioParameters: {
+      loadMultiplierPercent: 110,
+      renewableAvailabilityPercent: 100,
+      storageReservePercent: 18,
+      weatherRiskPercent: 20,
+    },
     physicalActuation: false,
     infrastructureDispatch: false,
   },
@@ -294,7 +301,43 @@ const server = http.createServer(async (request, response) => {
       const scenario = validateChoice(String(input.scenario || ''), scenarios, 'scenario');
       state.system.scenario = scenario;
       state.system.view = 'scenario';
-      activity(`Scenario loaded: ${scenario}.`, 'scenario');
+      if (scenario === 'custom') {
+        const parameters = input.parameters || {};
+        const clampNumber = (value, fallback, min, max) => {
+          const parsed = Number(value);
+          return Math.max(min, Math.min(max, Number.isFinite(parsed) ? parsed : fallback));
+        };
+        state.system.scenarioParameters = {
+          loadMultiplierPercent: clampNumber(
+            parameters.loadMultiplierPercent,
+            state.system.scenarioParameters.loadMultiplierPercent,
+            70,
+            150,
+          ),
+          renewableAvailabilityPercent: clampNumber(
+            parameters.renewableAvailabilityPercent,
+            state.system.scenarioParameters.renewableAvailabilityPercent,
+            40,
+            160,
+          ),
+          storageReservePercent: clampNumber(
+            parameters.storageReservePercent,
+            state.system.scenarioParameters.storageReservePercent,
+            5,
+            45,
+          ),
+          weatherRiskPercent: clampNumber(
+            parameters.weatherRiskPercent,
+            state.system.scenarioParameters.weatherRiskPercent,
+            0,
+            100,
+          ),
+        };
+      }
+      activity(
+        `Scenario loaded: ${scenario}${scenario === 'custom' ? ` ${JSON.stringify(state.system.scenarioParameters)}` : ''}.`,
+        'scenario',
+      );
       return json(response, 200, { state: snapshot() });
     }
 
@@ -302,6 +345,12 @@ const server = http.createServer(async (request, response) => {
       state.system.region = 'New York Metro';
       state.system.view = 'live';
       state.system.scenario = 'peak-demand';
+      state.system.scenarioParameters = {
+        loadMultiplierPercent: 110,
+        renewableAvailabilityPercent: 100,
+        storageReservePercent: 18,
+        weatherRiskPercent: 20,
+      };
       state.optimization.currentCost = 12480;
       state.optimization.candidateCost = 10230;
       state.optimization.emissionsReduction = 24.3;
@@ -332,11 +381,18 @@ const server = http.createServer(async (request, response) => {
       const classicalBaselineRequired =
         input.constraints?.classicalBaselineRequired !== false;
 
+      const custom = state.system.scenarioParameters;
+      const customFactor =
+        (custom.loadMultiplierPercent / 100) *
+        (1 + custom.weatherRiskPercent / 1000) *
+        (1 + Math.max(0, custom.storageReservePercent - 18) / 500) *
+        (1 - Math.max(0, custom.renewableAvailabilityPercent - 100) / 1000);
       const scenarioFactor = {
         'peak-demand': 1.0,
         'renewable-surge': 0.88,
         'storage-stress': 1.12,
         'weather-event': 1.18,
+        custom: customFactor,
       }[state.system.scenario] ?? 1.0;
 
       const objectiveBias = {
@@ -374,7 +430,10 @@ const server = http.createServer(async (request, response) => {
           10 +
           normalizedEmissions * 11 +
           objectiveBias.emissions * 7 +
-          (state.system.scenario === 'renewable-surge' ? 4 : 0)
+          (state.system.scenario === 'renewable-surge' ? 4 : 0) +
+          (state.system.scenario === 'custom'
+            ? Math.max(0, state.system.scenarioParameters.renewableAvailabilityPercent - 100) * 0.08
+            : 0)
         ).toFixed(1),
       );
       const renewableUtilizationGain = Number(
@@ -382,7 +441,10 @@ const server = http.createServer(async (request, response) => {
           6 +
           objectiveBias.renewable * 10 +
           normalizedEmissions * 4 +
-          (state.system.scenario === 'renewable-surge' ? 5 : 0)
+          (state.system.scenario === 'renewable-surge' ? 5 : 0) +
+          (state.system.scenario === 'custom'
+            ? Math.max(0, state.system.scenarioParameters.renewableAvailabilityPercent - 100) * 0.12
+            : 0)
         ).toFixed(1),
       );
       const reliabilityScore = Number(
