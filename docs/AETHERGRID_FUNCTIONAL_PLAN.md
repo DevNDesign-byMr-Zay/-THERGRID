@@ -153,7 +153,7 @@ A fresh ZIP is considered functional when:
 
 ## Current verified state
 
-Batches 1–12 are implemented and have passed the maintained feature-branch verification gates; the exact merge candidate must remain green before entering `main`.
+Batches 1–12 are verified on `main`; Batch 13 is implemented on the feature branch and must pass the maintained gates before entering `main`.
 
 - Grid, Global, Holographic, Quantum, AI, Scenarios, Evidence and Settings are distinct routed workspaces.
 - WebGL node picking, scenario editing/duplication, evidence drill-down, agent receipts, persistent settings/profile, global coordinate exploration, mapped grid infrastructure, terrain and quantum provider workflows are all present.
@@ -370,3 +370,55 @@ The city twin is only as exact as the open-source geometry and metadata availabl
 - release readiness requires roof buffers, city-specific camera framing, live-time controls and Light/Dark/System settings;
 - the full ZIP requires the new city environment runtime as a non-empty file;
 - all existing safety, coverage, smoke, packaging and CodeQL gates remain mandatory.
+
+## Batch 13 — Live animated cities, globe intelligence, and source-driven use cases
+
+Status: IMPLEMENTED / VERIFYING
+
+### Animated planet
+- secondary native-WebGL atmospheric shell;
+- current UTC sweep around the globe;
+- current modeled AQI pulses for maintained world-city nodes;
+- recent USGS M2.5+ event pulses grouped by magnitude;
+- global live-context badge showing city AQ coverage and seismic-feed activity;
+- live-context rendering remains separate from base city coordinates and OpenStreetMap geometry.
+
+### Animated city atmosphere
+- wind vectors derive from current modeled wind speed and direction;
+- precipitation streak density derives from current precipitation and leans with wind;
+- air-quality particles derive from current modeled US AQI and change visual emphasis by AQ category;
+- nearby seismic events render as directional pulsing rings using real event coordinates, distance and magnitude;
+- WEATHER / AIR / SEISMIC are independent WebGL layers;
+- reduced-motion preference suppresses pulse animation while preserving source state.
+
+### Source-driven city operations
+Eight maintained workflows:
+- Grid Resilience;
+- Outage Impact;
+- Emergency Access;
+- Renewable Siting;
+- Load Growth;
+- Weather Readiness;
+- Air Quality Exposure;
+- Seismic Awareness.
+
+Each workflow combines only the bounded sources relevant to the operation, returns transparent metrics/live signals, selects renderer layers, selects an animation profile, records a receipt and remains advisory-only. Weather/AQ/seismic context never becomes physical authority.
+
+### Live-source adapters
+- current Open-Meteo weather context;
+- current Open-Meteo Air Quality / CAMS context;
+- USGS M2.5+ past-day GeoJSON feed with a bounded one-minute local cache;
+- OpenStreetMap geometry and infrastructure remain separately attributed;
+- explicit local fallback structures are returned when a provider cannot be reached.
+
+### Verification requirements
+- unit tests must exercise Air Quality and USGS adapters without external network dependencies;
+- city-operation tests must exercise all eight workflows with live-source fixtures;
+- semantic HTML must expose all three live layers and three new use cases;
+- native WebGL source must preserve globe AQ/seismic pulses plus city wind/rain/AQ/seismic geometry;
+- release readiness must require the new routes, manifests, environment variables and `city-live-runtime.mjs`;
+- the full app ZIP must include the live-context runtime as a non-empty file;
+- test, lint, typecheck, coverage, fresh-clone, container, quality/release-readiness, package and CodeQL gates must remain green.
+
+### Accuracy boundary
+The animated layers visualize the freshest bounded feed/model data received by ÆTHERGRID. They are not synthetic claims of street-level sensing. Model weather/AQ resolution and source timestamps remain visible, seismic events are geospatial context rather than damage predictions, and absent live data must remain absent or explicitly fallback.
