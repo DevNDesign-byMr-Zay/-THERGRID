@@ -320,3 +320,23 @@ test('v4 city inspector surfaces source-backed skyline identity and coverage', a
   assert.match(app, /HEIGHT COVERAGE/u);
   assert.match(app, /cityIdentity\.namedStructures/u);
 });
+
+test('v4 spatial AI dock calls real agent endpoints with scene context and receipts', async () => {
+  const [client, dock, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/services/agent-client.ts'),
+    text('apps/aethergrid-console/web/src/components/AgentDock.tsx'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(client, /\/api\/aethergrid\/team/u);
+  assert.match(client, /\/api\/aethergrid\/agents\//u);
+  assert.match(client, /fallbackUsed/u);
+  assert.match(client, /history: history\.slice\(-12\)/u);
+  assert.match(dock, /ADVISORY ONLY/u);
+  assert.match(dock, /lastRun\.runtime\.provider/u);
+  assert.match(dock, /lastRun\.receipt\.slice/u);
+  assert.match(app, /temporalCursor: temporal\.cursorIso/u);
+  assert.match(app, /selectedEntity/u);
+  assert.match(app, /cityIdentity/u);
+  assert.match(app, /<AgentDock context=\{agentContext\}/u);
+});
