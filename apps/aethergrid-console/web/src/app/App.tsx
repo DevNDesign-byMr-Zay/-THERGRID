@@ -3,6 +3,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { SpatialViewport } from '../components/SpatialViewport';
 import { TemporalRail } from '../components/TemporalRail';
 import { useTemporalClock } from '../hooks/use-temporal-clock';
+import {
+  weatherPhenomenon,
+  type AtmosphericOverlaySnapshot
+} from '../renderer/overlays/atmospheric-overlay';
 import type { SpatialOverlaySnapshot } from '../renderer/overlays/spatial-overlay';
 import type {
   LayerState,
@@ -10,6 +14,7 @@ import type {
   SpatialTarget,
   VisualMode
 } from '../renderer/spatial-renderer';
+import { loadCityEnvironment } from '../services/city-environment';
 import { loadCityPowerOverlay } from '../services/city-power-overlay';
 
 interface CityTarget extends SpatialTarget {
@@ -118,6 +123,8 @@ export function App() {
   const [selection, setSelection] = useState<SpatialFeatureSelection | null>(null);
   const [powerOverlay, setPowerOverlay] = useState<SpatialOverlaySnapshot | null>(null);
   const [powerOverlayError, setPowerOverlayError] = useState<string | null>(null);
+  const [atmosphere, setAtmosphere] = useState<AtmosphericOverlaySnapshot | null>(null);
+  const [environmentError, setEnvironmentError] = useState<string | null>(null);
 
   const temporalInstant = useMemo(
     () => ({
@@ -133,6 +140,8 @@ export function App() {
     const controller = new AbortController();
     setPowerOverlay(null);
     setPowerOverlayError(null);
+    setAtmosphere(null);
+    setEnvironmentError(null);
 
     void loadCityPowerOverlay(city.id, controller.signal)
       .then((snapshot) => setPowerOverlay(snapshot))
@@ -141,8 +150,15 @@ export function App() {
         setPowerOverlayError(error instanceof Error ? error.message : String(error));
       });
 
+    void loadCityEnvironment(city.latitude, city.longitude, controller.signal)
+      .then((snapshot) => setAtmosphere(snapshot))
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        setEnvironmentError(error instanceof Error ? error.message : String(error));
+      });
+
     return () => controller.abort();
-  }, [city.id]);
+  }, [city.id, city.latitude, city.longitude]);
 
   const toggleLayer = (id: string) => {
     setLayers((current) =>
@@ -242,6 +258,7 @@ export function App() {
             layers={layers}
             visualMode={visualMode}
             overlays={powerOverlay ? [powerOverlay] : []}
+            atmosphere={atmosphere}
             onSelection={setSelection}
           />
 
@@ -272,6 +289,37 @@ export function App() {
         </section>
 
         <aside className="intel-rail">
+          <section className="weather-card" data-source-state={
+            environmentError ? 'unavailable' : atmosphere?.live ? 'live' : atmosphere ? 'fallback' : 'loading'
+          }>
+            <div className="weather-card-head">
+              <span>
+                <small>ATMOSPHERE</small>
+                <strong>{weatherPhenomenon(atmosphere).toUpperCase()}</strong>
+              </span>
+              <span className={atmosphere?.live ? 'status-dot live' : 'status-dot'} />
+            </div>
+            <div className="weather-metrics">
+              <span>
+                <small>TEMP</small>
+                <strong>{atmosphere?.current?.temperatureC != null ? `${atmosphere.current.temperatureC.toFixed(1)}°C` : '—'}</strong>
+              </span>
+              <span>
+                <small>WIND</small>
+                <strong>{atmosphere?.current?.windSpeedKph != null ? `${atmosphere.current.windSpeedKph.toFixed(0)} km/h` : '—'}</strong>
+              </span>
+              <span>
+                <small>CLOUD</small>
+                <strong>{atmosphere?.current?.cloudCoverPercent != null ? `${atmosphere.current.cloudCoverPercent.toFixed(0)}%` : '—'}</strong>
+              </span>
+            </div>
+            <p>
+              {environmentError
+                ? environmentError
+                : atmosphere?.attribution ?? 'Weather source pending'}
+            </p>
+          </section>
+
           <section className="intel-card">
             <div className="intel-head">
               <span className="status-dot live" />
