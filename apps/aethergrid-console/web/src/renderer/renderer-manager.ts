@@ -11,6 +11,7 @@ import type {
   SpatialRenderer,
   SpatialRendererConfig,
   SpatialRendererStatus,
+  SpatialSurfacePoint,
   SpatialTarget,
   TemporalInstant,
   VisualMode
@@ -144,6 +145,10 @@ export class RendererManager {
 
   async pick(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null> {
     return this.#current.pick(point);
+  }
+
+  async pickSurface(point: SpatialPickPoint): Promise<SpatialSurfacePoint | null> {
+    return this.#current.pickSurface(point);
   }
 
   resize(): void {
