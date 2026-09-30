@@ -396,6 +396,40 @@ button {
   letter-spacing: 0.12em;
 }
 
+
+.stage-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scope-modes {
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(5, 9, 15, 0.78);
+  backdrop-filter: blur(10px);
+}
+
+.scope-modes button {
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #75889a;
+  background: transparent;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.scope-modes button.active {
+  border-color: rgba(112, 231, 255, 0.4);
+  color: #e7fbff;
+  background: rgba(112, 231, 255, 0.09);
+}
+
 .visual-modes {
   display: flex;
   gap: 4px;
@@ -1849,6 +1883,7 @@ button {
 
 :root[data-theme='light'] .global-search,
 :root[data-theme='light'] .appearance-button,
+:root[data-theme='light'] .scope-modes,
 :root[data-theme='light'] .visual-modes,
 :root[data-theme='light'] .viewport-status,
 :root[data-theme='light'] .source-badge {
@@ -2016,9 +2051,14 @@ button {
     right: 10px;
   }
 
-  .visual-modes {
-    max-width: 65vw;
+  .stage-controls {
+    max-width: 78vw;
     overflow-x: auto;
+  }
+
+  .scope-modes,
+  .visual-modes {
+    flex: 0 0 auto;
   }
 
   .scene-caption {
