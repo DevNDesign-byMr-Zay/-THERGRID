@@ -52,6 +52,7 @@ export function SpatialViewport({
   const managerRef = useRef<RendererManager | null>(null);
   const overlayIdsRef = useRef<Set<string>>(new Set());
   const journeyGenerationRef = useRef(0);
+  const lastJourneyKeyRef = useRef<string | null>(null);
   const [status, setStatus] = useState<SpatialRendererStatus>(STARTING_STATUS);
 
   useEffect(() => {
@@ -81,6 +82,16 @@ export function SpatialViewport({
       if (atmosphere) manager.applyAtmosphere(atmosphere);
       if (airQuality) manager.applyAirQuality(airQuality);
       overlayIdsRef.current = new Set(overlays.map((snapshot) => snapshot.layerId));
+      const targetKey = [
+        target.latitude,
+        target.longitude,
+        target.rangeMeters ?? '',
+        target.heightMeters ?? '',
+        target.pitchDegrees ?? '',
+        target.headingDegrees ?? '',
+        target.journey ?? ''
+      ].join(':');
+      lastJourneyKeyRef.current = targetKey;
       const generation = ++journeyGenerationRef.current;
       const journey = manager.flyTo(target);
       setStatus(manager.status());
@@ -188,6 +199,18 @@ export function SpatialViewport({
   useEffect(() => {
     const manager = managerRef.current;
     if (!manager || !status.ready) return;
+
+    const targetKey = [
+      target.latitude,
+      target.longitude,
+      target.rangeMeters ?? '',
+      target.heightMeters ?? '',
+      target.pitchDegrees ?? '',
+      target.headingDegrees ?? '',
+      target.journey ?? ''
+    ].join(':');
+    if (lastJourneyKeyRef.current === targetKey) return;
+    lastJourneyKeyRef.current = targetKey;
 
     const generation = ++journeyGenerationRef.current;
     const journey = manager.flyTo(target);
