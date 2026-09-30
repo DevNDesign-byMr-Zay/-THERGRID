@@ -250,7 +250,11 @@ Implemented v4 behavior includes:
 - operational view presets using only implemented layers: City Ops, Grid Resilience, Environment, Seismic and Skyline;
 - browser-persistent saved spatial views that restore scope, target, layers, visual mode, operation mode and the 4D cursor without silently re-submitting backend scenarios;
 - selected-entity provenance handoff into AUREN, prefilled for operator review but never auto-submitted;
-- independent city-load readiness for geometry, atmosphere and live context.
+- independent city-load readiness for geometry, atmosphere and live context;
+- renderer-neutral INSPECT / MEASURE interaction with geographic surface picking in Cesium and explicitly labeled projection estimates in native fallback;
+- operator geodesic measurement for distance, bearing and optional elevation delta/slope, with the measurement tied to its captured 4D frame rather than drifting with LIVE time;
+- Frame A / Frame B spatial comparison across cities or times using only metrics available in both captures;
+- non-authoritative local comparison export plus operator-controlled AUREN review that is explicitly separate from the server evidence ledger.
 
 Fidelity boundaries remain explicit. OpenStreetMap / terrain / Open-Meteo / air-quality / USGS data retain their source status and timestamps. Synthetic presentation effects never become authoritative observations. Scenario styling never mutates source data. Native failover preserves the operator-review surface but is not claimed to provide the same photorealistic detail as the Cesium path. Physical infrastructure actuation remains disabled.
 
