@@ -24,6 +24,7 @@ import type {
   VisualMode
 } from '../renderer/spatial-renderer';
 import { loadCityEnvironment } from '../services/city-environment';
+import type { ScenarioVisualState } from '../services/scenario-client';
 import {
   loadGlobalLiveContext,
   type GlobalLiveContext
@@ -175,6 +176,7 @@ export function App() {
   const [liveContext, setLiveContext] = useState<CityLiveSnapshot | null>(null);
   const [globalLive, setGlobalLive] = useState<GlobalLiveContext | null>(null);
   const [liveContextError, setLiveContextError] = useState<string | null>(null);
+  const [scenarioVisual, setScenarioVisual] = useState<ScenarioVisualState | null>(null);
   const [cityLoad, setCityLoad] = useState<CityLoadState>({
     spatial: true,
     environment: true,
@@ -186,9 +188,10 @@ export function App() {
       iso: temporal.cursorIso,
       mode: temporal.mode,
       sourceTime: temporal.liveIso,
-      scenarioId: temporal.scenarioId
+      scenarioId: temporal.scenarioId,
+      scenarioVisual
     }),
-    [temporal]
+    [temporal, scenarioVisual]
   );
 
   useEffect(() => {
