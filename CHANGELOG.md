@@ -9,6 +9,11 @@
 - Added scheduled dependency-freshness evidence without automatic dependency mutation.
 
 ### Added
+- Added a real-time solar terminator, current subsolar marker, and night-side city illumination to the native-WebGL global globe.
+- Added wind-driven cloud decks, directional weather translation, falling precipitation motion, and procedural skyline lights derived from mapped building geometry plus day/night state.
+- Expanded Open-Meteo city context with modeled relative humidity, surface pressure, sunrise, sunset, daylight duration, and sunshine duration.
+- Added Heat Stress and Visibility Operations as evidence-bound advisory city workflows, expanding the maintained operation catalog from eight to ten.
+- Added explicit provenance that procedural skyline lights do not represent measured occupancy, window state, or utility demand.
 - Added a live solar terminator, subsolar point and night-side city illumination to the native-WebGL globe.
 - Added wind-driven cloud decks, directional wind/AQ motion, falling precipitation, and procedural mapped-geometry skyline lights to city twins.
 - Added current relative humidity, surface pressure, sunrise, sunset, daylight duration and sunshine duration to the city environment contract.
