@@ -239,6 +239,7 @@ test('v4 spatial selection visibly highlights real features and can be cleared',
   assert.match(renderer, /picked\.color = Color\.fromCssColorString/u);
   assert.match(renderer, /viewer\.selectedEntity = entity/u);
   assert.match(renderer, /#clearSelection/u);
+  assert.match(viewport, /addEventListener\('click', onPointer\)/u);
   assert.match(viewport, /event\.key !== 'Escape'/u);
   assert.match(viewport, /manager\.selectFeature\(null\)/u);
   assert.match(app, /ESC TO CLEAR/u);
