@@ -5,85 +5,122 @@ const CITY_PRESETS = Object.freeze([
     id: 'new-york',
     name: 'New York',
     country: 'United States',
-    lat: 40.7128,
-    lon: -74.006,
-    radiusM: 900,
+    district: 'Midtown Manhattan',
+    lat: 40.7549,
+    lon: -73.984,
+    radiusM: 1600,
   },
   {
     id: 'london',
     name: 'London',
     country: 'United Kingdom',
-    lat: 51.5074,
-    lon: -0.1278,
-    radiusM: 900,
+    district: 'City of London / South Bank',
+    lat: 51.5136,
+    lon: -0.0917,
+    radiusM: 1700,
   },
   {
     id: 'tokyo',
     name: 'Tokyo',
     country: 'Japan',
-    lat: 35.6762,
-    lon: 139.6503,
-    radiusM: 900,
+    district: 'Shinjuku',
+    lat: 35.6896,
+    lon: 139.6917,
+    radiusM: 1700,
   },
   {
     id: 'dubai',
     name: 'Dubai',
     country: 'United Arab Emirates',
-    lat: 25.2048,
-    lon: 55.2708,
-    radiusM: 900,
+    district: 'Downtown Dubai',
+    lat: 25.1972,
+    lon: 55.2744,
+    radiusM: 1800,
   },
   {
     id: 'singapore',
     name: 'Singapore',
     country: 'Singapore',
-    lat: 1.3521,
-    lon: 103.8198,
-    radiusM: 900,
+    district: 'Marina Bay / Downtown Core',
+    lat: 1.2838,
+    lon: 103.8515,
+    radiusM: 1700,
   },
   {
     id: 'sao-paulo',
     name: 'São Paulo',
     country: 'Brazil',
-    lat: -23.5505,
-    lon: -46.6333,
-    radiusM: 900,
+    district: 'Paulista / Bela Vista',
+    lat: -23.5614,
+    lon: -46.6559,
+    radiusM: 1700,
   },
   {
     id: 'lagos',
     name: 'Lagos',
     country: 'Nigeria',
-    lat: 6.5244,
-    lon: 3.3792,
-    radiusM: 900,
+    district: 'Victoria Island / Eko Atlantic',
+    lat: 6.4281,
+    lon: 3.4219,
+    radiusM: 1800,
   },
   {
     id: 'sydney',
     name: 'Sydney',
     country: 'Australia',
-    lat: -33.8688,
-    lon: 151.2093,
-    radiusM: 900,
+    district: 'CBD / Circular Quay',
+    lat: -33.8651,
+    lon: 151.2099,
+    radiusM: 1700,
   },
-]);
+])
 
 const POWER_LINE_TYPES = new Set(['line', 'minor_line', 'cable']);
 const POWER_ASSET_TYPES = new Set(['substation', 'plant', 'generator', 'transformer']);
 
-function numericHeight(tags = {}, id = 'building') {
-  const explicit = Number.parseFloat(String(tags.height || '').replace(/[^0-9.]/gu, ''));
-  if (Number.isFinite(explicit) && explicit > 0) return Math.min(450, explicit);
+function parseMetricHeight(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (!raw) return null;
+  const numeric = Number.parseFloat(raw.replace(',', '.'));
+  if (!Number.isFinite(numeric)) return null;
+  if (/\b(ft|feet|foot)\b/u.test(raw) || /'\s*$/u.test(raw)) return numeric * 0.3048;
+  return numeric;
+}
+
+function heightProfile(tags = {}, id = 'building') {
+  const explicit = parseMetricHeight(tags.height);
+  if (Number.isFinite(explicit) && explicit > 0) {
+    return { heightM: Math.min(1200, explicit), source: 'height' };
+  }
+  const estimated = parseMetricHeight(tags.est_height);
+  if (Number.isFinite(estimated) && estimated > 0) {
+    return { heightM: Math.min(1200, estimated), source: 'est_height' };
+  }
   const levels = Number.parseFloat(String(tags['building:levels'] || ''));
-  if (Number.isFinite(levels) && levels > 0) return Math.min(450, levels * 3.2);
+  if (Number.isFinite(levels) && levels > 0) {
+    return { heightM: Math.min(1200, levels * 3.2), source: 'building:levels' };
+  }
   const hash = createHash('sha256').update(String(id)).digest();
-  return 8 + (hash[0] / 255) * 34;
+  return { heightM: 8 + (hash[0] / 255) * 34, source: 'inferred' };
+}
+
+function numericHeight(tags = {}, id = 'building') {
+  return heightProfile(tags, id).heightM;
 }
 
 function numericMinHeight(tags = {}) {
-  const explicit = Number.parseFloat(String(tags.min_height || '').replace(/[^0-9.]/gu, ''));
-  if (Number.isFinite(explicit) && explicit >= 0) return Math.min(300, explicit);
+  const explicit = parseMetricHeight(tags.min_height);
+  if (Number.isFinite(explicit) && explicit >= 0) return Math.min(1200, explicit);
   const minLevel = Number.parseFloat(String(tags['building:min_level'] || ''));
-  if (Number.isFinite(minLevel) && minLevel > 0) return Math.min(300, minLevel * 3.2);
+  if (Number.isFinite(minLevel) && minLevel > 0) return Math.min(1200, minLevel * 3.2);
+  return 0;
+}
+
+function numericRoofHeight(tags = {}) {
+  const explicit = parseMetricHeight(tags['roof:height']);
+  if (Number.isFinite(explicit) && explicit >= 0) return Math.min(250, explicit);
+  const levels = Number.parseFloat(String(tags['roof:levels'] || ''));
+  if (Number.isFinite(levels) && levels > 0) return Math.min(250, levels * 3.2);
   return 0;
 }
 
@@ -123,6 +160,10 @@ function seededFallback(city, count = 110) {
       id: `fallback-${index + 1}`,
       name: '',
       heightM: 10 + random() * 95,
+      heightSource: 'synthetic-fallback',
+      minHeightM: 0,
+      roofShape: '',
+      roofHeightM: 0,
       footprint: [
         [x - width, z - depth],
         [x + width, z - depth],
@@ -198,43 +239,120 @@ function fallbackPower(city) {
   return { powerLines, powerAssets };
 }
 
+function buildingGeometries(element) {
+  if (element.type === 'way' && Array.isArray(element.geometry)) return [element.geometry];
+  if (element.type !== 'relation' || !Array.isArray(element.members)) return [];
+  return element.members
+    .filter((member) => member?.type === 'way' && member?.role !== 'inner' && Array.isArray(member.geometry))
+    .map((member) => member.geometry);
+}
+
+function representativeBuildings(buildings, limit = 1400) {
+  if (buildings.length <= limit) return buildings;
+  const priority = [...buildings]
+    .sort((left, right) => {
+      const score = (building) =>
+        (building.heightSource === 'height' ? 4000 : 0) +
+        (building.heightSource === 'est_height' ? 3000 : 0) +
+        (building.heightSource === 'building:levels' ? 2000 : 0) +
+        (building.buildingPart ? 1000 : 0) +
+        Number(building.heightM || 0);
+      return score(right) - score(left);
+    })
+    .slice(0, Math.floor(limit * 0.58));
+  const selected = new Set(priority.map((building) => building.id));
+  const remainder = buildings.filter((building) => !selected.has(building.id));
+  const need = limit - priority.length;
+  const sampled = [];
+  for (let index = 0; index < need; index += 1) {
+    const position = Math.min(
+      remainder.length - 1,
+      Math.floor((index / Math.max(1, need - 1)) * Math.max(0, remainder.length - 1)),
+    );
+    const building = remainder[position];
+    if (building && !selected.has(building.id)) {
+      selected.add(building.id);
+      sampled.push(building);
+    }
+  }
+  return [...priority, ...sampled].slice(0, limit);
+}
+
+function percentile(values, amount) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const index = Math.min(sorted.length - 1, Math.max(0, Math.floor((sorted.length - 1) * amount)));
+  return sorted[index];
+}
+
+function skylineProfile(city, buildings, source = {}) {
+  const heights = buildings.map((building) => Number(building.heightM || 0)).filter((height) => height > 0);
+  const sourceBacked = buildings.filter((building) => building.heightSource !== 'inferred' && building.heightSource !== 'synthetic-fallback').length;
+  const roofTagged = buildings.filter((building) => building.roofShape || building.roofHeightM > 0).length;
+  const parts = buildings.filter((building) => building.buildingPart).length;
+  return {
+    district: city.district || null,
+    buildingCount: buildings.length,
+    maxHeightM: Number(Math.max(0, ...heights).toFixed(1)),
+    p95HeightM: Number(percentile(heights, 0.95).toFixed(1)),
+    medianHeightM: Number(percentile(heights, 0.5).toFixed(1)),
+    sourceBackedHeightCoveragePercent: buildings.length
+      ? Number(((sourceBacked / buildings.length) * 100).toFixed(1))
+      : 0,
+    buildingPartCount: parts,
+    roofTaggedCount: roofTagged,
+    upstreamTimestamp: source.upstreamTimestamp || null,
+    sourceProvider: source.provider || null,
+    live: Boolean(source.live),
+  };
+}
+
 function parseOverpassBuildings(payload, city) {
   const buildings = [];
   const seen = new Set();
   for (const element of payload?.elements || []) {
-    if (
-      element.type !== 'way' ||
-      !(element.tags?.building || element.tags?.['building:part']) ||
-      !Array.isArray(element.geometry) ||
-      element.geometry.length < 4
-    ) {
-      continue;
-    }
-    if (seen.has(element.id)) continue;
-    seen.add(element.id);
-    const footprint = element.geometry
-      .map((point) => projectPoint(Number(point.lat), Number(point.lon), city))
-      .filter(([x, z]) => Number.isFinite(x) && Number.isFinite(z));
-    if (footprint.length < 4) continue;
-    const first = footprint[0];
-    const last = footprint.at(-1);
-    if (Math.hypot(first[0] - last[0], first[1] - last[1]) > 0.01) {
-      footprint.push([...first]);
-    }
-    buildings.push({
-      id: `osm-way-${element.id}`,
-      osmId: element.id,
-      name: String(element.tags?.name || ''),
-      heightM: numericHeight(element.tags, element.id),
-      minHeightM: numericMinHeight(element.tags),
-      levels: Number(element.tags?.['building:levels']) || null,
-      buildingType: String(element.tags?.building || element.tags?.['building:part'] || 'yes'),
-      buildingPart: Boolean(element.tags?.['building:part']),
-      footprint,
+    if (!(element.tags?.building || element.tags?.['building:part'])) continue;
+    const geometries = buildingGeometries(element);
+    if (!geometries.length) continue;
+    geometries.forEach((geometry, geometryIndex) => {
+      if (!Array.isArray(geometry) || geometry.length < 4) return;
+      const uniqueId = `${element.type}-${element.id}-${geometryIndex}`;
+      if (seen.has(uniqueId)) return;
+      seen.add(uniqueId);
+      const footprint = geometry
+        .map((point) => projectPoint(Number(point.lat), Number(point.lon), city))
+        .filter(([x, z]) => Number.isFinite(x) && Number.isFinite(z));
+      if (footprint.length < 4) return;
+      const first = footprint[0];
+      const last = footprint.at(-1);
+      if (Math.hypot(first[0] - last[0], first[1] - last[1]) > 0.01) {
+        footprint.push([...first]);
+      }
+      const height = heightProfile(element.tags, uniqueId);
+      buildings.push({
+        id: `osm-${uniqueId}`,
+        osmId: element.id,
+        osmType: element.type,
+        name: String(element.tags?.name || ''),
+        heightM: height.heightM,
+        heightSource: height.source,
+        minHeightM: numericMinHeight(element.tags),
+        levels: Number(element.tags?.['building:levels']) || null,
+        buildingType: String(element.tags?.building || element.tags?.['building:part'] || 'yes'),
+        buildingPart: Boolean(element.tags?.['building:part']),
+        buildingMaterial: String(element.tags?.['building:material'] || ''),
+        buildingColor: String(element.tags?.['building:colour'] || ''),
+        roofShape: String(element.tags?.['roof:shape'] || ''),
+        roofHeightM: numericRoofHeight(element.tags),
+        roofLevels: Number(element.tags?.['roof:levels']) || null,
+        roofMaterial: String(element.tags?.['roof:material'] || ''),
+        roofColor: String(element.tags?.['roof:colour'] || ''),
+        startDate: String(element.tags?.start_date || ''),
+        footprint,
+      });
     });
-    if (buildings.length >= 350) break;
   }
-  return buildings;
+  return representativeBuildings(buildings);
 }
 
 function parseOverpassRoads(payload, city) {
@@ -402,7 +520,9 @@ export function createGeoRuntime({
       attribution: '© OpenStreetMap contributors',
       cities: CITY_PRESETS,
       supportsCustomCoordinates: true,
-      layers: ['buildings', 'building-parts', 'roads', 'power-lines', 'power-assets'],
+      layers: ['buildings', 'building-parts', 'roofs', 'roads', 'power-lines', 'power-assets'],
+      skylineFields: ['height', 'est_height', 'building:levels', 'min_height', 'building:min_level', 'roof:shape', 'roof:height', 'roof:levels', 'building:material', 'building:colour', 'roof:material', 'roof:colour'],
+      upstreamFreshness: 'OpenStreetMap replication-backed upstream state when queried',
     };
   }
 
@@ -413,11 +533,14 @@ export function createGeoRuntime({
 
     if (provider !== 'osm-overpass') {
       const power = fallbackPower(city);
+      const buildings = seededFallback(city);
+      const source = { provider: 'local-fallback', live: false, attribution: null };
       return {
-        schemaVersion: 2,
+        schemaVersion: 3,
         city,
-        source: { provider: 'local-fallback', live: false, attribution: null },
-        buildings: seededFallback(city),
+        source,
+        buildings,
+        skylineProfile: skylineProfile(city, buildings, source),
         roads: fallbackRoads(city),
         ...power,
       };
@@ -427,8 +550,8 @@ export function createGeoRuntime({
       const apiUrl = validateEndpoint(endpoint);
       const query =
         `[out:json][timeout:25];(` +
-        `way["building"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `way["building:part"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `nwr["building"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `nwr["building:part"](around:${city.radiusM},${city.lat},${city.lon});` +
         `way["highway"](around:${city.radiusM},${city.lat},${city.lon});` +
         `way["power"~"^(line|minor_line|cable)$"](around:${city.radiusM},${city.lat},${city.lon});` +
         `nwr["power"~"^(substation|plant|generator|transformer)$"](around:${city.radiusM},${city.lat},${city.lon});` +
@@ -451,16 +574,20 @@ export function createGeoRuntime({
       if (buildings.length < 5) {
         throw new Error('Overpass returned too few building footprints');
       }
+      const source = {
+        provider: 'OpenStreetMap Overpass',
+        live: true,
+        attribution: '© OpenStreetMap contributors',
+        fetchedAt: new Date().toISOString(),
+        upstreamTimestamp: payload?.osm3s?.timestamp_osm_base || null,
+        freshnessModel: 'OpenStreetMap upstream database at request time',
+      };
       const value = {
-        schemaVersion: 2,
+        schemaVersion: 3,
         city,
-        source: {
-          provider: 'OpenStreetMap Overpass',
-          live: true,
-          attribution: '© OpenStreetMap contributors',
-          fetchedAt: new Date().toISOString(),
-        },
+        source,
         buildings,
+        skylineProfile: skylineProfile(city, buildings, source),
         roads,
         ...power,
       };
@@ -468,16 +595,19 @@ export function createGeoRuntime({
       return value;
     } catch (error) {
       const power = fallbackPower(city);
+      const buildings = seededFallback(city);
+      const source = {
+        provider: 'local-fallback',
+        live: false,
+        attribution: 'Live OpenStreetMap geometry unavailable for this request.',
+        error: error instanceof Error ? error.message : String(error),
+      };
       return {
-        schemaVersion: 2,
+        schemaVersion: 3,
         city,
-        source: {
-          provider: 'local-fallback',
-          live: false,
-          attribution: 'Live OpenStreetMap geometry unavailable for this request.',
-          error: error instanceof Error ? error.message : String(error),
-        },
-        buildings: seededFallback(city),
+        source,
+        buildings,
+        skylineProfile: skylineProfile(city, buildings, source),
         roads: fallbackRoads(city),
         ...power,
       };
