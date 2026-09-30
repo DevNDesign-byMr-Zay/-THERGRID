@@ -580,6 +580,68 @@
       this.geometry.nodes = this.makeBuffer(nodes);
     }
 
+    loadCityMesh(mesh) {
+      if (!this.gl || !mesh?.buildings?.length) return;
+      for (const item of Object.values(this.geometry)) if (item?.buffer) this.gl.deleteBuffer(item.buffer);
+      const grid = [];
+      const buildings = [];
+      const nodes = [];
+      const routes = [];
+      const radius = Math.max(200, Number(mesh.city?.radiusM || 900));
+      const scale = 8.5 / radius;
+
+      for (let n = -10; n <= 10; n += 1) {
+        this.line(grid, [-10, 0, n], [10, 0, n], n * 0.13);
+        this.line(grid, [n, 0, -10], [n, 0, 10], n * 0.17);
+      }
+
+      this.graphNodes = [];
+      mesh.buildings.forEach((building, buildingIndex) => {
+        const footprint = (building.footprint || []).map(([x, z]) => [x * scale, z * scale]);
+        if (footprint.length < 3) return;
+        const height = Math.max(0.035, Number(building.heightM || 12) * scale);
+        const phase = buildingIndex * 0.13;
+        for (let index = 1; index < footprint.length; index += 1) {
+          const [ax, az] = footprint[index - 1];
+          const [bx, bz] = footprint[index];
+          this.line(buildings, [ax, 0, az], [bx, 0, bz], phase);
+          this.line(buildings, [ax, height, az], [bx, height, bz], phase + 0.2);
+          if (index % 2 === 0 || index === footprint.length - 1) {
+            this.line(buildings, [ax, 0, az], [ax, height, az], phase + 0.4);
+          }
+        }
+
+        if (buildingIndex < 80 && (building.name || buildingIndex % 8 === 0)) {
+          const center = footprint.reduce(
+            (acc, point) => [acc[0] + point[0], acc[1] + point[1]],
+            [0, 0],
+          ).map((value) => value / footprint.length);
+          const node = {
+            id: building.id,
+            label: building.name || `Building ${buildingIndex + 1}`,
+            type: 'building',
+            heightM: building.heightM,
+            osmId: building.osmId || null,
+            position: [center[0], height + 0.08, center[1]],
+          };
+          this.graphNodes.push(node);
+          this.vertex(nodes, ...node.position, phase);
+        }
+      });
+
+      this.geometry.grid = this.makeBuffer(grid);
+      this.geometry.buildings = this.makeBuffer(buildings);
+      this.geometry.routes = this.makeBuffer(routes);
+      this.geometry.nodes = this.makeBuffer(nodes);
+      this.selectedNode = null;
+      if (this.selectionBuffer?.buffer) this.gl.deleteBuffer(this.selectionBuffer.buffer);
+      this.selectionBuffer = null;
+      this.yaw = 0.78;
+      this.pitch = 0.57;
+      this.distance = 18;
+      this.updateReadout();
+    }
+
     resize() {
       if (!this.gl || !this.canvas) return;
       const dpr = Math.min(devicePixelRatio || 1, 2);
@@ -795,6 +857,263 @@
       }
 
       if (this.selectionBuffer) this.drawBuffer(this.selectionBuffer, gl.POINTS, [1, 0.72, 0.22, 1], 0, 1, 16);
+      requestAnimationFrame(this.animate);
+    };
+  }
+
+  class GlobalGlobe3D {
+    constructor(canvas, options = {}) {
+      this.canvas = canvas;
+      this.options = options;
+      this.gl = canvas?.getContext('webgl', { antialias: true, alpha: true });
+      this.yaw = 0.35;
+      this.pitch = 0.28;
+      this.distance = 11.5;
+      this.drag = null;
+      this.cities = [];
+      this.selectedCity = null;
+      this.currentMvp = null;
+      this.selectedBuffer = null;
+      if (!this.gl) return;
+      this.initProgram();
+      this.buildGlobe();
+      this.bindControls();
+      this.resize();
+      this.animate();
+      addEventListener('resize', () => this.resize());
+    }
+
+    shader(type, source) {
+      const shader = this.gl.createShader(type);
+      this.gl.shaderSource(shader, source);
+      this.gl.compileShader(shader);
+      if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
+        throw new Error(this.gl.getShaderInfoLog(shader));
+      }
+      return shader;
+    }
+
+    initProgram() {
+      const gl = this.gl;
+      const vertex = this.shader(
+        gl.VERTEX_SHADER,
+        `attribute vec3 a_position;
+         uniform mat4 u_mvp;
+         uniform float u_pointSize;
+         void main(){
+           gl_Position=u_mvp*vec4(a_position,1.0);
+           gl_PointSize=u_pointSize;
+         }`,
+      );
+      const fragment = this.shader(
+        gl.FRAGMENT_SHADER,
+        `precision mediump float;
+         uniform vec4 u_color;
+         uniform float u_pointMode;
+         void main(){
+           if(u_pointMode>0.5){
+             vec2 c=gl_PointCoord-vec2(0.5);
+             if(dot(c,c)>0.25) discard;
+           }
+           gl_FragColor=u_color;
+         }`,
+      );
+      this.program = gl.createProgram();
+      gl.attachShader(this.program, vertex);
+      gl.attachShader(this.program, fragment);
+      gl.linkProgram(this.program);
+      this.loc = {
+        pos: gl.getAttribLocation(this.program, 'a_position'),
+        mvp: gl.getUniformLocation(this.program, 'u_mvp'),
+        color: gl.getUniformLocation(this.program, 'u_color'),
+        pointSize: gl.getUniformLocation(this.program, 'u_pointSize'),
+        pointMode: gl.getUniformLocation(this.program, 'u_pointMode'),
+      };
+    }
+
+    makeBuffer(data) {
+      const buffer = this.gl.createBuffer();
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer);
+      this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(data), this.gl.STATIC_DRAW);
+      return { buffer, count: data.length / 3 };
+    }
+
+    spherePoint(latDeg, lonDeg, radius = 4) {
+      const lat = (latDeg * Math.PI) / 180;
+      const lon = (lonDeg * Math.PI) / 180;
+      return [
+        radius * Math.cos(lat) * Math.cos(lon),
+        radius * Math.sin(lat),
+        radius * Math.cos(lat) * Math.sin(lon),
+      ];
+    }
+
+    pushLine(out, a, b) {
+      out.push(...a, ...b);
+    }
+
+    buildGlobe() {
+      const lines = [];
+      for (let lat = -75; lat <= 75; lat += 15) {
+        let previous = this.spherePoint(lat, -180);
+        for (let lon = -175; lon <= 180; lon += 5) {
+          const current = this.spherePoint(lat, lon);
+          this.pushLine(lines, previous, current);
+          previous = current;
+        }
+      }
+      for (let lon = -180; lon < 180; lon += 15) {
+        let previous = this.spherePoint(-90, lon);
+        for (let lat = -85; lat <= 90; lat += 5) {
+          const current = this.spherePoint(lat, lon);
+          this.pushLine(lines, previous, current);
+          previous = current;
+        }
+      }
+      this.gridBuffer = this.makeBuffer(lines);
+      this.cityBuffer = this.makeBuffer([]);
+    }
+
+    setCities(cities = []) {
+      this.cities = cities.map((city) => ({
+        ...city,
+        position: this.spherePoint(Number(city.lat), Number(city.lon), 4.08),
+      }));
+      if (this.cityBuffer?.buffer) this.gl.deleteBuffer(this.cityBuffer.buffer);
+      this.cityBuffer = this.makeBuffer(this.cities.flatMap((city) => city.position));
+    }
+
+    resize() {
+      if (!this.gl || !this.canvas) return;
+      const dpr = Math.min(devicePixelRatio || 1, 2);
+      const rect = this.canvas.getBoundingClientRect();
+      const width = Math.max(1, Math.round(rect.width * dpr));
+      const height = Math.max(1, Math.round(rect.height * dpr));
+      if (this.canvas.width !== width || this.canvas.height !== height) {
+        this.canvas.width = width;
+        this.canvas.height = height;
+      }
+      this.gl.viewport(0, 0, width, height);
+    }
+
+    bindControls() {
+      this.canvas.addEventListener('pointerdown', (event) => {
+        this.drag = { x: event.clientX, y: event.clientY, yaw: this.yaw, pitch: this.pitch, moved: false };
+        this.canvas.setPointerCapture(event.pointerId);
+        this.canvas.classList.add('dragging');
+      });
+      this.canvas.addEventListener('pointermove', (event) => {
+        if (!this.drag) return;
+        const dx = event.clientX - this.drag.x;
+        const dy = event.clientY - this.drag.y;
+        if (Math.hypot(dx, dy) > 4) this.drag.moved = true;
+        this.yaw = this.drag.yaw + dx * 0.008;
+        this.pitch = clamp(this.drag.pitch + dy * 0.006, -1.15, 1.15);
+      });
+      const end = (event) => {
+        if (!this.drag) return;
+        const wasClick = !this.drag.moved;
+        this.drag = null;
+        this.canvas.classList.remove('dragging');
+        try { this.canvas.releasePointerCapture(event.pointerId); } catch {}
+        if (wasClick) this.pickCity(event.clientX, event.clientY);
+      };
+      this.canvas.addEventListener('pointerup', end);
+      this.canvas.addEventListener('pointercancel', end);
+      this.canvas.addEventListener('wheel', (event) => {
+        event.preventDefault();
+        this.distance = clamp(this.distance + event.deltaY * 0.01, 6.6, 18);
+      }, { passive: false });
+      this.canvas.addEventListener('dblclick', () => {
+        if (this.selectedCity) this.options.onEnterCity?.(this.selectedCity);
+      });
+    }
+
+    reset() {
+      this.yaw = 0.35;
+      this.pitch = 0.28;
+      this.distance = 11.5;
+    }
+
+    focusCity(city) {
+      if (!city) return;
+      this.selectedCity = city;
+      this.yaw = -((Number(city.lon) * Math.PI) / 180) - Math.PI / 2;
+      this.pitch = clamp((Number(city.lat) * Math.PI) / 180, -1.05, 1.05);
+      this.distance = 8.2;
+      if (this.selectedBuffer?.buffer) this.gl.deleteBuffer(this.selectedBuffer.buffer);
+      const position = city.position || this.spherePoint(Number(city.lat), Number(city.lon), 4.12);
+      this.selectedBuffer = this.makeBuffer(position);
+      this.options.onSelectCity?.(city);
+    }
+
+    projectCity(city) {
+      if (!this.currentMvp || !city?.position) return null;
+      const [x, y, z] = city.position;
+      const matrix = this.currentMvp;
+      const clipX = matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12];
+      const clipY = matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13];
+      const clipW = matrix[3] * x + matrix[7] * y + matrix[11] * z + matrix[15];
+      if (clipW <= 0.001) return null;
+      const rect = this.canvas.getBoundingClientRect();
+      return {
+        x: rect.left + (clipX / clipW * 0.5 + 0.5) * rect.width,
+        y: rect.top + (-clipY / clipW * 0.5 + 0.5) * rect.height,
+      };
+    }
+
+    pickCity(clientX, clientY) {
+      let best = null;
+      for (const city of this.cities) {
+        const point = this.projectCity(city);
+        if (!point) continue;
+        const distance = Math.hypot(point.x - clientX, point.y - clientY);
+        if (distance < 30 && (!best || distance < best.distance)) best = { city, distance };
+      }
+      if (best) this.focusCity(best.city);
+      return best?.city || null;
+    }
+
+    draw(item, primitive, color, pointMode = 0, pointSize = 1) {
+      if (!item?.count) return;
+      const gl = this.gl;
+      gl.bindBuffer(gl.ARRAY_BUFFER, item.buffer);
+      gl.vertexAttribPointer(this.loc.pos, 3, gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(this.loc.pos);
+      gl.uniform4fv(this.loc.color, color);
+      gl.uniform1f(this.loc.pointMode, pointMode);
+      gl.uniform1f(this.loc.pointSize, pointSize);
+      gl.drawArrays(primitive, 0, item.count);
+    }
+
+    animate = () => {
+      if (!this.gl) return;
+      const gl = this.gl;
+      const rect = this.canvas.getBoundingClientRect();
+      const aspect = Math.max(0.1, rect.width / Math.max(1, rect.height));
+      if (!this.drag && !state.settings.reducedMotion) {
+        this.yaw += 0.00018 * Math.max(0.1, state.settings.animationIntensity / 100);
+      }
+      const eye = [
+        Math.sin(this.yaw) * Math.cos(this.pitch) * this.distance,
+        Math.sin(this.pitch) * this.distance,
+        Math.cos(this.yaw) * Math.cos(this.pitch) * this.distance,
+      ];
+      const mvp = mat4Multiply(
+        perspective(Math.PI / 3.2, aspect, 0.1, 60),
+        lookAt(eye, [0, 0, 0], [0, 1, 0]),
+      );
+      this.currentMvp = mvp;
+      gl.enable(gl.DEPTH_TEST);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gl.clearColor(0.004, 0.015, 0.04, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.useProgram(this.program);
+      gl.uniformMatrix4fv(this.loc.mvp, false, mvp);
+      this.draw(this.gridBuffer, gl.LINES, [0.08, 0.55, 0.95, 0.52], 0, 1);
+      this.draw(this.cityBuffer, gl.POINTS, [0.18, 1, 0.82, 1], 1, 9);
+      if (this.selectedBuffer) this.draw(this.selectedBuffer, gl.POINTS, [1, 0.7, 0.18, 1], 1, 16);
       requestAnimationFrame(this.animate);
     };
   }
