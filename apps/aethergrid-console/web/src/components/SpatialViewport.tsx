@@ -1,3 +1,5 @@
+import type { SpatialOverlaySnapshot } from '../renderer/overlays/spatial-overlay';
+
 import { useEffect, useRef, useState } from 'react';
 
 import { CesiumSpatialRenderer } from '../renderer/cesium/cesium-renderer';
@@ -18,6 +20,7 @@ interface SpatialViewportProps {
   time: TemporalInstant;
   layers: readonly LayerState[];
   visualMode: VisualMode;
+  overlays?: readonly SpatialOverlaySnapshot[];
   onSelection?(selection: SpatialFeatureSelection | null): void;
 }
 
@@ -34,10 +37,12 @@ export function SpatialViewport({
   time,
   layers,
   visualMode,
+  overlays = [],
   onSelection
 }: SpatialViewportProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const managerRef = useRef<RendererManager | null>(null);
+  const overlayIdsRef = useRef<Set<string>>(new Set());
   const [status, setStatus] = useState<SpatialRendererStatus>(STARTING_STATUS);
 
   useEffect(() => {
@@ -63,6 +68,8 @@ export function SpatialViewport({
       manager.setLayers(layers);
       manager.setVisualMode(visualMode);
       manager.setTime(time);
+      for (const snapshot of overlays) manager.applyOverlay(snapshot);
+      overlayIdsRef.current = new Set(overlays.map((snapshot) => snapshot.layerId));
       await manager.flyTo(target);
       if (!cancelled) setStatus(manager.status());
     })().catch((error) => {
@@ -116,6 +123,18 @@ export function SpatialViewport({
     if (!manager || !status.ready) return;
     manager.setTime(time);
   }, [time, status.ready]);
+
+  useEffect(() => {
+    const manager = managerRef.current;
+    if (!manager || !status.ready) return;
+
+    const nextIds = new Set(overlays.map((snapshot) => snapshot.layerId));
+    for (const layerId of overlayIdsRef.current) {
+      if (!nextIds.has(layerId)) manager.clearOverlay(layerId);
+    }
+    for (const snapshot of overlays) manager.applyOverlay(snapshot);
+    overlayIdsRef.current = nextIds;
+  }, [overlays, status.ready]);
 
   useEffect(() => {
     const manager = managerRef.current;
