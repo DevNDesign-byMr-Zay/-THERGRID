@@ -1,3 +1,4 @@
+import type { AirQualityOverlaySnapshot } from '../renderer/overlays/atmospheric-overlay';
 import type {
   SpatialOverlayNode,
   SpatialOverlaySnapshot
@@ -59,6 +60,43 @@ export interface CityLiveSnapshot {
 function finite(value: unknown): number | null {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+
+export function airQualityToOverlay(
+  snapshot: CityLiveSnapshot,
+  wind: {
+    windSpeedKph?: number | null;
+    windDirectionDegrees?: number | null;
+  } = {}
+): AirQualityOverlaySnapshot {
+  const source = snapshot.airQuality.source;
+  const current = snapshot.airQuality.current;
+  const fetchedAt = source.fetchedAt ?? new Date().toISOString();
+  return {
+    id: `air:${snapshot.coordinate.lat}:${snapshot.coordinate.lon}:${fetchedAt}`,
+    coordinate: {
+      latitude: snapshot.coordinate.lat,
+      longitude: snapshot.coordinate.lon
+    },
+    eventTime: source.modelTime ?? current?.time ?? fetchedAt,
+    sourceTime: source.modelTime ?? current?.time ?? null,
+    fetchedAt,
+    live: source.live === true,
+    fallback: source.live !== true,
+    attribution: source.attribution ?? source.provider,
+    current: current
+      ? {
+          usAqi: current.usAqi,
+          category: current.category,
+          pm25UgM3: current.pm25UgM3,
+          pm10UgM3: current.pm10UgM3,
+          ozoneUgM3: current.ozoneUgM3,
+          windSpeedKph: finite(wind.windSpeedKph),
+          windDirectionDegrees: finite(wind.windDirectionDegrees)
+        }
+      : null
+  };
 }
 
 export function seismicToOverlay(snapshot: CityLiveSnapshot): SpatialOverlaySnapshot {
