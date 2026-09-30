@@ -62,9 +62,6 @@
   }
 
   // ---------- Native WebGL 4D spatial grid ----------
-  function mat4Identity() {
-    return new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
-  }
   function mat4Multiply(a, b) {
     const o = new Float32Array(16);
     for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) {
