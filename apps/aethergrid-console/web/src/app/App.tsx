@@ -44,6 +44,11 @@ import {
   type CityIdentitySummary
 } from '../services/city-power-overlay';
 import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
+import {
+  USE_CASE_PRESETS,
+  type UseCaseId,
+  type UseCasePreset
+} from './use-case-presets';
 
 interface CityLoadState {
   spatial: boolean;
@@ -161,6 +166,7 @@ export function App() {
   const [city, setCity] = useState<CityTarget>(CITY_TARGETS[0]);
   const [scope, setScope] = useState<'world' | 'city'>('city');
   const [visualMode, setVisualMode] = useState<VisualMode>('solid');
+  const [activeUseCase, setActiveUseCase] = useState<UseCaseId | null>(null);
   const [layers, setLayers] = useState<readonly LayerState[]>(INITIAL_LAYERS);
   const [selection, setSelection] = useState<SpatialFeatureSelection | null>(null);
   const [powerOverlay, setPowerOverlay] = useState<SpatialOverlaySnapshot | null>(null);
@@ -515,7 +521,20 @@ export function App() {
     powerOverlay
   ]);
 
+  const applyUseCase = (preset: UseCasePreset) => {
+    setScope('city');
+    setActiveUseCase(preset.id);
+    setVisualMode(preset.visualMode);
+    setLayers((current) =>
+      current.map((layer) => ({
+        ...layer,
+        visible: preset.layers.includes(layer.id)
+      }))
+    );
+  };
+
   const toggleLayer = (id: string) => {
+    setActiveUseCase(null);
     setLayers((current) =>
       current.map((layer) =>
         layer.id === id ? { ...layer, visible: !layer.visible } : layer
@@ -635,7 +654,10 @@ export function App() {
                 <button
                   type="button"
                   className={scope === 'world' ? 'active' : ''}
-                  onClick={() => setScope('world')}
+                  onClick={() => {
+                    setActiveUseCase(null);
+                    setScope('world');
+                  }}
                 >
                   WORLD
                 </button>
@@ -653,7 +675,10 @@ export function App() {
                   key={mode}
                   type="button"
                   className={mode === visualMode ? 'active' : ''}
-                  onClick={() => setVisualMode(mode)}
+                  onClick={() => {
+                    setActiveUseCase(null);
+                    setVisualMode(mode);
+                  }}
                 >
                   {mode.toUpperCase()}
                 </button>
