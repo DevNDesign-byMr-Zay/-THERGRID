@@ -1,10 +1,12 @@
-import type { SpatialSurfacePoint } from '../renderer/spatial-renderer';
+import type {
+  SpatialInteractionMode,
+  SpatialSurfacePoint
+} from '../renderer/spatial-renderer';
 import {
   formatMeasurementDistance,
   type SpatialMeasurement
 } from '../services/spatial-analysis';
 
-export type SpatialInteractionMode = 'inspect' | 'measure';
 
 interface SpatialAnalysisPanelProps {
   mode: SpatialInteractionMode;
