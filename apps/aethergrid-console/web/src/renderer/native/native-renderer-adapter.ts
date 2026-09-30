@@ -11,6 +11,7 @@ import type {
   SpatialRenderer,
   SpatialRendererConfig,
   SpatialRendererStatus,
+  SpatialSurfacePoint,
   SpatialTarget,
   TemporalInstant,
   VisualMode
@@ -30,6 +31,7 @@ export interface LegacyNativeSpatialBridge {
   applyAirQuality?(snapshot: AirQualityOverlaySnapshot): void;
   clearAirQuality?(): void;
   pick?(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null> | SpatialFeatureSelection | null;
+  pickSurface?(point: SpatialPickPoint): Promise<SpatialSurfacePoint | null> | SpatialSurfacePoint | null;
   resize?(): void;
   destroy?(): void;
 }
@@ -105,6 +107,10 @@ export class NativeSpatialRendererAdapter implements SpatialRenderer {
 
   async pick(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null> {
     return (await this.#bridge.pick?.(point)) ?? null;
+  }
+
+  async pickSurface(point: SpatialPickPoint): Promise<SpatialSurfacePoint | null> {
+    return (await this.#bridge.pickSurface?.(point)) ?? null;
   }
 
   resize(): void {
