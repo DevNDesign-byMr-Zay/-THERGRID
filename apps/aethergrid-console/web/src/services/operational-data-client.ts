@@ -112,9 +112,11 @@ function normalizeCommon(
   metrics: readonly { label: string; value: string }[]
 ): OperationalSourceSnapshot {
   const receipt = receiptFrom(payload);
+  const state = stateFrom(payload, receipt);
+  const sourceBackedMetrics = state === 'live' || state === 'stale' ? metrics : [];
   return {
     id,
-    state: stateFrom(payload, receipt),
+    state,
     provider: text(receipt.provider) ?? text(payload.provider),
     dataset: text(receipt.dataset),
     sourceTime:
@@ -127,8 +129,11 @@ function normalizeCommon(
       text(receipt.fetchedAt) ??
       text(payload.fetchedAt),
     attribution: text(receipt.attribution) ?? text(payload.attribution),
-    summary,
-    metrics,
+    summary:
+      state === 'fallback'
+        ? 'Fallback response present; operational metrics withheld until a source-backed receipt is available.'
+        : summary,
+    metrics: sourceBackedMetrics,
     error: text(payload.error)
   };
 }
