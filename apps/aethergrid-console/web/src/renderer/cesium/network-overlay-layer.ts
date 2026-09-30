@@ -88,7 +88,26 @@ function areaFarDistance(area: SpatialOverlayArea): number {
   return area.kind === 'water' ? 100_000 : 80_000;
 }
 
-function nodeEntity(node: SpatialOverlayNode): Entity {
+function provenanceProperties(
+  snapshot: SpatialOverlaySnapshot
+): Readonly<Record<string, unknown>> {
+  return {
+    layerId: snapshot.layerId,
+    overlayId: snapshot.id,
+    eventTime: snapshot.eventTime,
+    sourceTime: snapshot.sourceTime,
+    fetchedAt: snapshot.fetchedAt,
+    live: snapshot.live,
+    stale: snapshot.stale,
+    fallback: snapshot.fallback,
+    attribution: snapshot.attribution
+  };
+}
+
+function nodeEntity(
+  node: SpatialOverlayNode,
+  provenance: Readonly<Record<string, unknown>>
+): Entity {
   const intensity = overlayIntensity(node.intensity);
   return new Entity({
     id: node.id,
@@ -111,6 +130,7 @@ function nodeEntity(node: SpatialOverlayNode): Entity {
       overlayKind: node.kind,
       value: node.value ?? null,
       unit: node.unit ?? null,
+      ...provenance,
       ...node.properties
     }
   });
@@ -156,7 +176,10 @@ function scenarioColor(
   return colorForIntensity(intensity, alpha);
 }
 
-function edgeEntity(edge: SpatialOverlayEdge): Entity {
+function edgeEntity(
+  edge: SpatialOverlayEdge,
+  provenance: Readonly<Record<string, unknown>>
+): Entity {
   const intensity = overlayIntensity(edge.intensity);
   return new Entity({
     id: edge.id,
@@ -177,12 +200,16 @@ function edgeEntity(edge: SpatialOverlayEdge): Entity {
       overlayKind: edge.kind,
       value: edge.value ?? null,
       unit: edge.unit ?? null,
+      ...provenance,
       ...edge.properties
     }
   });
 }
 
-function areaEntity(area: SpatialOverlayArea): Entity {
+function areaEntity(
+  area: SpatialOverlayArea,
+  provenance: Readonly<Record<string, unknown>>
+): Entity {
   const positions = area.positions.map((position) => coordinate(position));
   const water = area.kind === 'water';
   return new Entity({
@@ -206,6 +233,7 @@ function areaEntity(area: SpatialOverlayArea): Entity {
     }),
     properties: {
       overlayKind: area.kind,
+      ...provenance,
       ...area.properties
     }
   });
@@ -232,17 +260,19 @@ export class NetworkOverlayLayer {
     this.#edgeEntities.clear();
     this.#areaEntities.clear();
 
+    const provenance = provenanceProperties(snapshot);
+
     for (const node of snapshot.nodes) {
-      const entity = this.#source.entities.add(nodeEntity(node));
+      const entity = this.#source.entities.add(nodeEntity(node, provenance));
       this.#nodeEntities.set(node.id, entity);
     }
     for (const edge of snapshot.edges) {
-      const entity = this.#source.entities.add(edgeEntity(edge));
+      const entity = this.#source.entities.add(edgeEntity(edge, provenance));
       this.#edgeEntities.set(edge.id, entity);
     }
     for (const area of snapshot.areas ?? []) {
       if (area.positions.length < 3) continue;
-      const entity = this.#source.entities.add(areaEntity(area));
+      const entity = this.#source.entities.add(areaEntity(area, provenance));
       this.#areaEntities.set(area.id, entity);
     }
 
