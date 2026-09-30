@@ -133,6 +133,20 @@
     return Number(match[1]) + Number(match[2]) / 60;
   }
 
+  function weatherPhenomenon(environment) {
+    const code = Number(environment?.current?.weatherCode ?? environment?.weatherCode ?? 0);
+    if ([45, 48].includes(code)) return 'Fog';
+    if ([71, 73, 75, 77, 85, 86].includes(code)) return 'Snow';
+    if (code >= 95 && code <= 99) return 'Thunderstorm';
+    if (
+      [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code)
+    ) {
+      return 'Rain';
+    }
+    if (code >= 1 && code <= 3) return 'Cloudy';
+    return code === 0 ? 'Clear' : 'Mixed';
+  }
+
   function showToast(title, copy) {
     if (!toast) return;
     toast.innerHTML = `<b>${escapeHtml(title)}</b><small>${escapeHtml(copy)}</small>`;
@@ -1465,6 +1479,26 @@
           12,
         );
       }
+      if (this.layers.landmarks) {
+        const landmarkPulse =
+          state.settings.reducedMotion ? 0.35 : 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(now * 0.0032));
+        this.drawBuffer(
+          this.geometry.landmarkSpines,
+          gl.LINES,
+          isLightTheme()
+            ? [0.35, 0.23, 0.62, 0.42 + landmarkPulse * 0.18]
+            : [0.63, 0.55, 1, 0.42 + landmarkPulse * 0.26],
+          0.035 * amplitude,
+        );
+        this.drawBuffer(
+          this.geometry.landmarkNodes,
+          gl.POINTS,
+          [0.72, 0.55, 1, 0.82],
+          0.035 * amplitude,
+          1,
+          9 + landmarkPulse * 5,
+        );
+      }
       const focus = this.operationProfile || '';
       const windSpeed = Math.max(0, Number(this.environment?.current?.windSpeedKph || 0));
       const windDirection =
@@ -1472,6 +1506,13 @@
       const flowX = Math.sin(windDirection);
       const flowZ = Math.cos(windDirection);
       const precipitation = Math.max(0, Number(this.environment?.current?.precipitationMm || 0));
+      const weatherCode = Number(this.environment?.current?.weatherCode || 0);
+      const snowMode = [71, 73, 75, 77, 85, 86].includes(weatherCode);
+      const fogMode =
+        [45, 48].includes(weatherCode) ||
+        (Number.isFinite(Number(this.environment?.current?.visibilityM)) &&
+          Number(this.environment.current.visibilityM) < 6000);
+      const stormMode = weatherCode >= 95 && weatherCode <= 99;
       const currentCloud = clamp(
         Number(this.environment?.current?.cloudCoverPercent || 0) / 100,
         0,
@@ -1539,7 +1580,7 @@
           0.25,
           0,
         );
-        if (precipitation > 0) {
+        if (precipitation > 0 && !snowMode) {
           this.drawBuffer(
             this.geometry.precipitation,
             gl.LINES,
@@ -1553,6 +1594,49 @@
             flowZ * 0.22,
             0.08,
             1.05 * Math.min(1.8, 0.7 + precipitation * 0.08),
+          );
+        }
+        if (snowMode) {
+          this.drawBuffer(
+            this.geometry.snow,
+            gl.POINTS,
+            isLightTheme() ? [0.55, 0.66, 0.75, 0.72] : [0.84, 0.94, 1, 0.82],
+            0.035 * amplitude * weatherBoost,
+            1,
+            5.5,
+            flowX * 0.18,
+            flowZ * 0.18,
+            0.22,
+            0.36,
+          );
+        }
+        if (fogMode) {
+          const visibility = Math.max(200, Number(this.environment?.current?.visibilityM || 5000));
+          const fogAlpha = clamp((8000 - visibility) / 9000, 0.08, 0.42);
+          this.drawBuffer(
+            this.geometry.fog,
+            gl.POINTS,
+            isLightTheme()
+              ? [0.52, 0.58, 0.64, fogAlpha]
+              : [0.58, 0.7, 0.78, fogAlpha],
+            0.02 * amplitude,
+            1,
+            14,
+            flowX * 0.1,
+            flowZ * 0.1,
+            0.08,
+            0,
+          );
+        }
+        if (stormMode) {
+          const strikePulse = state.settings.reducedMotion
+            ? 0.24
+            : Math.pow(Math.max(0, Math.sin(now * 0.012)), 12);
+          this.drawBuffer(
+            this.geometry.storm,
+            gl.LINES,
+            [0.72, 0.82, 1, 0.12 + strikePulse * 0.88],
+            0.02 * amplitude,
           );
         }
         gl.uniform1f(this.loc.time, temporal);
