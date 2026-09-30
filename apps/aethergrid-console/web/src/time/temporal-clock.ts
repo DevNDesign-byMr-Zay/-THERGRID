@@ -11,6 +11,7 @@ export class AethergridTemporalClock {
   #state: TemporalState;
   #listeners = new Set<TemporalListener>();
   #timer: ReturnType<typeof globalThis.setInterval> | null = null;
+  #liveTimer: ReturnType<typeof globalThis.setInterval> | null = null;
   #lastTickMs = 0;
 
   constructor(now = new Date()) {
@@ -23,6 +24,7 @@ export class AethergridTemporalClock {
       playbackRate: 60,
       scenarioId: null
     };
+    this.#startLiveTimer();
   }
 
   snapshot(): Readonly<TemporalState> {
@@ -101,7 +103,21 @@ export class AethergridTemporalClock {
 
   destroy(): void {
     this.#stopTimer();
+    if (this.#liveTimer != null) globalThis.clearInterval(this.#liveTimer);
+    this.#liveTimer = null;
     this.#listeners.clear();
+  }
+
+  #startLiveTimer(): void {
+    if (this.#liveTimer != null) return;
+    this.#liveTimer = globalThis.setInterval(() => {
+      const liveIso = new Date().toISOString();
+      this.#state.liveIso = liveIso;
+      if (this.#state.mode === 'live' && !this.#state.playing) {
+        this.#state.cursorIso = liveIso;
+      }
+      this.#emit();
+    }, 1_000);
   }
 
   #tick(): void {
