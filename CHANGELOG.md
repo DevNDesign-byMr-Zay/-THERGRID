@@ -9,6 +9,11 @@
 - Added scheduled dependency-freshness evidence without automatic dependency mutation.
 
 ### Added
+- Added the draft v4 typed React/Cesium spatial operator surface with a renderer-neutral WGS84 scene contract and continuous globe-to-district travel.
+- Added a real source-backed native WebGL renderer as the Cesium failover path, including reversible engine switching, failure diagnostics, shared overlays, 4D time, selection and scenario state.
+- Added continuously advancing LIVE 4D time, truthful non-live source gating, source-driven wind vectors, bounded thunderstorm illumination, mapped-building nighttime illumination and explicit presentation-vs-observation boundaries.
+- Added backend-aligned 4D scenario network effects with source-baseline comparison, operational layer presets, persistent saved spatial views, source provenance inspection and operator-controlled AUREN handoff.
+- Added adaptive city detail/load telemetry, solar-aware scene presentation and city-specific skyline arrival framing derived from mapped building geometry.
 - Added the typed ÆTHERGRID v4 React/Cesium spatial operator surface under `apps/aethergrid-console/web/` while preserving the maintained Node backend and renderer-neutral contracts.
 - Added a functional native WebGL spatial failover that consumes the same normalized overlays, 4D time, layers, selections, weather context and scenario state as Cesium, with Canvas2D only as a final local rendering fallback.
 - Added reversible CESIUM / NATIVE renderer switching, preserved failover diagnostics, and safe retry behavior that returns to native instead of blanking the scene when Cesium cannot initialize.
