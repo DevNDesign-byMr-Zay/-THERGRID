@@ -95,15 +95,26 @@ export function SpatialViewport({
       const rect = host.getBoundingClientRect();
       void manager
         .pick({ x: pointer.clientX - rect.left, y: pointer.clientY - rect.top })
-        .then((selection) => onSelection?.(selection))
+        .then((selection) => {
+          manager.selectFeature(selection?.id ?? null);
+          onSelection?.(selection);
+        })
         .catch(() => onSelection?.(null));
     };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      manager.selectFeature(null);
+      onSelection?.(null);
+    };
+
     host.addEventListener('dblclick', onPointer);
+    globalThis.addEventListener('keydown', onKeyDown);
 
     return () => {
       cancelled = true;
       observer.disconnect();
       host.removeEventListener('dblclick', onPointer);
+      globalThis.removeEventListener('keydown', onKeyDown);
       manager.destroy();
       if (managerRef.current === manager) managerRef.current = null;
     };
