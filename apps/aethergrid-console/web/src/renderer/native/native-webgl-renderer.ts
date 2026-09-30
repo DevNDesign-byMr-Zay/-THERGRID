@@ -18,6 +18,7 @@ import type {
   SpatialRenderer,
   SpatialRendererConfig,
   SpatialRendererStatus,
+  SpatialSurfacePoint,
   SpatialTarget,
   TemporalInstant,
   VisualMode
@@ -316,6 +317,50 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
   clearAirQuality(): void {
     this.#airQuality = null;
     this.#render();
+  }
+
+  async pickSurface(point: SpatialPickPoint): Promise<SpatialSurfacePoint | null> {
+    const canvas = this.#canvas;
+    if (!canvas || canvas.clientWidth <= 0 || canvas.clientHeight <= 0) return null;
+
+    const x = clamp((point.x / canvas.clientWidth) * 2 - 1, -1, 1);
+    const y = clamp(1 - (point.y / canvas.clientHeight) * 2, -1, 1);
+    const range = this.#target.rangeMeters ?? 11_800_000;
+    const world = range > 1_500_000 || this.#target.journey === 'global';
+
+    if (world) {
+      return {
+        latitude: clamp(y * 90, -90, 90),
+        longitude:
+          ((this.#target.longitude + x * 180 + 540) % 360) - 180,
+        heightMeters: null,
+        source: 'native-projection'
+      };
+    }
+
+    const scale = Math.max(1_500, range * 0.92);
+    const eastMeters = x * scale;
+    const northMeters = y * scale;
+    const metersPerLongitude =
+      111_320 *
+      Math.max(
+        0.15,
+        Math.cos((this.#target.latitude * Math.PI) / 180)
+      );
+
+    return {
+      latitude: clamp(
+        this.#target.latitude + northMeters / 110_540,
+        -90,
+        90
+      ),
+      longitude:
+        ((this.#target.longitude + eastMeters / metersPerLongitude + 540) %
+          360) -
+        180,
+      heightMeters: null,
+      source: 'native-projection'
+    };
   }
 
   async pick(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null> {
