@@ -147,6 +147,28 @@ Promotion requirements:
 - v4 docs and release-readiness tests stay synchronized with implemented behavior;
 - v4 remains draft until the maintained package path is explicitly promoted.
 
+## v4 spatial analysis and comparison batch
+
+Status: IMPLEMENTED ON DRAFT BRANCH
+
+Deliver:
+- renderer-neutral geographic surface picking across Cesium and native fallback;
+- explicit surface provenance: depth surface, terrain, ellipsoid or native projection;
+- operator geodesic measurement with distance, bearing, midpoint and optional elevation/slope when both picked surfaces provide heights;
+- measurement geometry rendered through the same normalized overlay system at city and world scope;
+- measurement results captured against a fixed 4D frame rather than silently advancing with LIVE time;
+- Frame A / Frame B observation capture across different locations, times, scenarios, selections and operation modes;
+- comparison of mutually available numeric metrics only, with missing values preserved as missing;
+- local operator-analysis JSON export labeled non-authoritative and separate from the server evidence ledger;
+- operator-controlled AUREN comparison review with explicit instruction not to infer causation from correlation.
+
+Accuracy boundaries:
+- native surface picks are projection estimates and do not claim terrain elevation;
+- elevation delta and slope are omitted unless both picked points provide finite heights;
+- non-LIVE captures do not inherit current-only weather, AQI or seismic values;
+- local analysis exports are not server evidence receipts and do not replace the provenance ledger;
+- comparison deltas describe captured values only and do not establish causal relationships.
+
 ## Replaceable model contract
 
 Each agent resolves through configuration with this shape:
