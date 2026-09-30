@@ -851,7 +851,14 @@ const server = http.createServer(async (request, response) => {
       .replace(/^[/\\]+/, '');
     const filePath = join(root, safe);
 
-    if (!filePath.startsWith(root)) return json(response, 403, { error: 'forbidden' });
+    if (
+      !filePath.startsWith(root) ||
+      safe === '.aethergrid-data' ||
+      safe.startsWith('.aethergrid-data/') ||
+      safe.startsWith('.aethergrid-data\\')
+    ) {
+      return json(response, 403, { error: 'forbidden' });
+    }
 
     const info = await stat(filePath);
     if (!info.isFile()) return json(response, 404, { error: 'not_found' });
