@@ -145,3 +145,29 @@ export async function loadCityPowerOverlay(
   }
   return cityMeshToPowerOverlay((await response.json()) as CityMeshResponse);
 }
+
+
+export async function loadCoordinatePowerOverlay(
+  latitude: number,
+  longitude: number,
+  name = 'Coordinate Explorer',
+  signal?: AbortSignal
+): Promise<SpatialOverlaySnapshot> {
+  const query = new URLSearchParams({
+    lat: String(latitude),
+    lon: String(longitude),
+    name,
+    radiusM: '1200'
+  });
+  const response = await fetch(
+    `/api/aethergrid/geospatial/point?${query.toString()}`,
+    {
+      headers: { accept: 'application/json' },
+      signal
+    }
+  );
+  if (!response.ok) {
+    throw new Error(`coordinate power overlay request failed with HTTP ${response.status}`);
+  }
+  return cityMeshToPowerOverlay((await response.json()) as CityMeshResponse);
+}
