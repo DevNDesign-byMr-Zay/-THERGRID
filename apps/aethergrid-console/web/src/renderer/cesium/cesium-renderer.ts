@@ -3,6 +3,7 @@ import {
   Cartesian2,
   Cesium3DTileFeature,
   Cesium3DTileset,
+  Color,
   Entity,
   Ion,
   JulianDate,
@@ -60,6 +61,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #weather: WeatherAtmosphereLayer | null = null;
   #overlays = new Map<string, NetworkOverlayLayer>();
   #visualMode: VisualMode = 'solid';
+  #selectedTile: { feature: Cesium3DTileFeature; color: Color } | null = null;
   #layers = new Map<string, LayerState>();
   #ready = false;
   #degraded = false;
@@ -88,7 +90,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       infoBox: false,
       navigationHelpButton: false,
       sceneModePicker: false,
-      selectionIndicator: false,
+      selectionIndicator: true,
       timeline: false,
       terrain: Terrain.fromWorldTerrain({
         requestVertexNormals: true,
@@ -144,10 +146,17 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#applyLayerVisibility();
   }
 
-  selectFeature(_id: string | null): void {
-    // Selection styling will be bound to the semantic entity resolver in the
-    // next integration batch. The contract exists now so Cesium and native
-    // renderers share the same state transition.
+  selectFeature(id: string | null): void {
+    const viewer = this.#viewer;
+    if (!viewer) return;
+    if (id == null) {
+      this.#clearSelection();
+      viewer.scene.requestRender();
+      return;
+    }
+
+    if (viewer.selectedEntity?.id === id) return;
+    if (this.#selectedTile && featureId(this.#selectedTile.feature) === id) return;
   }
 
   setVisualMode(mode: VisualMode): void {
@@ -198,6 +207,13 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       : null;
 
     if (picked instanceof Cesium3DTileFeature) {
+      this.#clearSelection();
+      this.#selectedTile = {
+        feature: picked,
+        color: Color.clone(picked.color, new Color())
+      };
+      picked.color = Color.fromCssColorString('#78efff').withAlpha(1);
+      viewer.scene.requestRender();
       return {
         id: featureId(picked) ?? 'cesium-feature',
         kind: String(picked.getProperty('building') || picked.getProperty('type') || '3d-tile'),
@@ -211,6 +227,8 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
     const entity = picked?.id;
     if (entity instanceof Entity) {
+      this.#clearSelection();
+      viewer.selectedEntity = entity;
       const properties = entity.properties?.getValue(viewer.clock.currentTime) as
         | Record<string, unknown>
         | undefined;
@@ -225,6 +243,8 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       };
     }
 
+    this.#clearSelection();
+    viewer.scene.requestRender();
     return null;
   }
 
@@ -243,6 +263,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   }
 
   destroy(): void {
+    this.#clearSelection();
     this.#cameraJourney?.cancel();
     this.#cameraJourney = null;
     this.#visualController = null;
@@ -256,6 +277,14 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#viewer = null;
     this.#buildings = null;
     this.#ready = false;
+  }
+
+  #clearSelection(): void {
+    if (this.#selectedTile) {
+      this.#selectedTile.feature.color = Color.clone(this.#selectedTile.color, new Color());
+      this.#selectedTile = null;
+    }
+    if (this.#viewer) this.#viewer.selectedEntity = undefined;
   }
 
   #requireViewer(): Viewer {
