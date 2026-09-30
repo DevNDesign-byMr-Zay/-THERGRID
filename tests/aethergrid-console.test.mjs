@@ -22,13 +22,29 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.equal(response.status, 200);
     const html = await response.text();
     assert.match(html, /<canvas id="spatialGrid"/u);
-    assert.match(html, /data-mode="holographic"/u);
+    assert.match(html, /data-workspace-target="holographic"/u);
+    assert.match(html, /data-workspace="grid"/u);
+    assert.match(html, /data-workspace="holographic"/u);
+    assert.match(html, /data-workspace="quantum"/u);
+    assert.match(html, /data-workspace="ai"/u);
+    assert.match(html, /data-workspace="scenarios"/u);
+    assert.match(html, /data-workspace="evidence"/u);
+    assert.match(html, /data-workspace="settings"/u);
     assert.match(html, /data-view="forecast"/u);
     assert.match(html, /id="timeSlider"/u);
     assert.match(html, /data-map-tool="buildings"/u);
+    assert.match(html, /data-agent="TEAM"/u);
     assert.match(html, /data-agent="VÆLON"/u);
     assert.match(html, /id="quantumCanvas"/u);
     assert.match(html, /id="scenarioChart"/u);
+    assert.match(html, /id="settingDefaultWorkspace"/u);
+    assert.match(html, /id="settingLiveStream"/u);
+    assert.match(html, /data-scenario="custom"/u);
+    assert.match(html, /id="customLoad"/u);
+    assert.match(html, /data-action="apply-custom-scenario"/u);
+    assert.match(html, /data-action="duplicate-scenario"/u);
+    assert.match(html, /id="auditTimeline"/u);
+    assert.match(html, /id="holoCompareEnabled"/u);
     assert.match(html, /href="\.\/styles\.css"/u);
     assert.match(html, /src="\.\/app\.js"/u);
     assert.doesNotMatch(html, /dashboard-reference/iu);
@@ -42,6 +58,16 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(appSource, /gl\.drawArrays/u);
     assert.match(appSource, /pointerdown/u);
     assert.match(appSource, /wheel/u);
+    assert.match(appSource, /function switchWorkspace/u);
+    assert.match(appSource, /localStorage\.setItem\(SETTINGS_KEY/u);
+    assert.match(appSource, /pickNode\(clientX, clientY\)/u);
+    assert.match(appSource, /projectNode\(node\)/u);
+    assert.match(appSource, /activateScenario\(name, parameters/u);
+    assert.match(appSource, /scenarioTemplateParameters/u);
+    assert.match(appSource, /function renderActivity/u);
+    assert.match(appSource, /setCompare\(enabled, hours/u);
+    assert.match(appSource, /function renderSavedViews/u);
+    assert.match(appSource, /data-workspace/u);
 
     const logo = await fetch(`${baseUrl}/assets/brand/aethergrid-logo.webp`);
     assert.equal(logo.status, 200);
@@ -69,6 +95,58 @@ test('ÆTHERGRID backend exposes bounded state and evidence APIs', async () => {
     const evidence = await evidenceResponse.json();
     assert.ok(evidence.evidence.length >= 4);
     assert.ok(evidence.evidence.every((item) => item.status === 'VERIFIED'));
+  });
+});
+
+test('ÆTHERGRID exposes replaceable agent runtime without leaking provider secrets', async () => {
+  await withServer(async (baseUrl) => {
+    const runtimeResponse = await fetch(`${baseUrl}/api/aethergrid/runtime`);
+    assert.equal(runtimeResponse.status, 200);
+    const runtime = await runtimeResponse.json();
+    assert.equal(runtime.mode, 'replaceable-provider-runtime');
+    assert.deepEqual(runtime.supportedProviders, ['local', 'openai-compatible', 'ollama']);
+    assert.deepEqual(Object.keys(runtime.agents), ['VÆLON', 'AUREN', 'SOLVÆR', 'TEAM']);
+    assert.equal(runtime.agents['VÆLON'].provider, 'local');
+    assert.equal(runtime.agents['VÆLON'].status, 'local-fallback');
+    const serialized = JSON.stringify(runtime);
+    assert.doesNotMatch(serialized, /API_KEY/iu);
+    assert.doesNotMatch(serialized, /Bearer /u);
+
+    const agentResponse = await fetch(`${baseUrl}/api/aethergrid/agents/${encodeURIComponent('AUREN')}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'Inspect spatial resilience risk.' }),
+    });
+    assert.equal(agentResponse.status, 200);
+    const agent = await agentResponse.json();
+    assert.match(agent.reply, /AUREN/u);
+    assert.equal(agent.runtime.agent, 'AUREN');
+    assert.equal(agent.runtime.provider, 'local');
+    assert.equal(agent.advisoryOnly, true);
+    assert.match(agent.receipt, /^[a-f0-9]{64}$/u);
+
+    const teamResponse = await fetch(`${baseUrl}/api/aethergrid/team`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'Evaluate renewable load reduction.' }),
+    });
+    assert.equal(teamResponse.status, 200);
+    const team = await teamResponse.json();
+    assert.equal(team.contributions.length, 3);
+    assert.deepEqual(team.contributions.map((item) => item.agent), ['VÆLON', 'AUREN', 'SOLVÆR']);
+    assert.equal(team.runtime.agent, 'TEAM');
+    assert.equal(team.advisoryOnly, true);
+    assert.match(team.receipt, /^[a-f0-9]{64}$/u);
+    assert.equal(team.evidence.type, 'AI_TEAM');
+    assert.equal(team.evidence.details.contributionReceipts.length, 3);
+
+    const evidenceDetail = await fetch(
+      `${baseUrl}/api/aethergrid/evidence/${encodeURIComponent(team.evidence.id)}`,
+    );
+    assert.equal(evidenceDetail.status, 200);
+    const detailPayload = await evidenceDetail.json();
+    assert.equal(detailPayload.evidence.receipt, team.receipt);
+    assert.equal(detailPayload.evidence.details.advisoryOnly, true);
   });
 });
 
@@ -119,6 +197,31 @@ test('ÆTHERGRID backend supports live view, region, scenario and telemetry stat
     assert.equal(scenarioPayload.state.system.scenario, 'renewable-surge');
     assert.equal(scenarioPayload.state.system.view, 'scenario');
 
+    const custom = await fetch(`${baseUrl}/api/aethergrid/scenario`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        scenario: 'custom',
+        parameters: {
+          loadMultiplierPercent: 132,
+          renewableAvailabilityPercent: 148,
+          storageReservePercent: 27,
+          weatherRiskPercent: 64,
+        },
+      }),
+    });
+    assert.equal(custom.status, 200);
+    const customPayload = await custom.json();
+    assert.equal(customPayload.state.system.scenario, 'custom');
+    assert.deepEqual(customPayload.state.system.scenarioParameters, {
+      loadMultiplierPercent: 132,
+      renewableAvailabilityPercent: 148,
+      storageReservePercent: 27,
+      weatherRiskPercent: 64,
+    });
+    assert.equal(customPayload.evidence.type, 'SCENARIO');
+    assert.match(customPayload.evidence.receipt, /^[a-f0-9]{64}$/u);
+
     const telemetry = await fetch(`${baseUrl}/api/aethergrid/telemetry`);
     assert.equal(telemetry.status, 200);
     const telemetryPayload = await telemetry.json();
@@ -157,13 +260,22 @@ test('ÆTHERGRID optimization creates a receipt without actuation authority', as
     const response = await fetch(`${baseUrl}/api/aethergrid/optimize`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ objective: 'minimize_cost_emissions' }),
+      body: JSON.stringify({
+        objective: 'emissions',
+        weights: { cost: 30, emissions: 85 },
+        constraints: { minimumReservePercent: 24, classicalBaselineRequired: true },
+        scenario: 'custom',
+      }),
     });
     assert.equal(response.status, 200);
     const payload = await response.json();
     assert.equal(payload.status, 'completed');
     assert.equal(payload.advisoryOnly, true);
     assert.equal(payload.classicalBaselineRequired, true);
+    assert.equal(payload.comparison.classical.method, 'deterministic-classical-baseline');
+    assert.equal(payload.comparison.experimental.method, 'bounded-experimental-search');
+    assert.ok(payload.comparison.experimental.candidateCost > 0);
+    assert.ok(payload.comparison.experimental.reliabilityScore > 0);
     assert.match(payload.receipt, /^[a-f0-9]{64}$/u);
     assert.equal(state.optimization.runCount, priorRuns + 1);
   });
@@ -179,6 +291,8 @@ test('ÆTHERGRID AI collaboration and export are functional', async () => {
     assert.equal(chat.status, 200);
     const answer = await chat.json();
     assert.match(answer.reply, /VÆLON/u);
+    assert.match(answer.reply, /AUREN/u);
+    assert.match(answer.reply, /SOLVÆR/u);
     assert.equal(answer.advisoryOnly, true);
 
     const exported = await fetch(`${baseUrl}/api/aethergrid/export`, {

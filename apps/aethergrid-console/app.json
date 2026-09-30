@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "aethergrid.operator-console",
   "name": "ÆTHERGRID Operator Console",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "format": "html+pwa+node-app",
   "entrypoints": {
     "standaloneHtml": "standalone.html",
@@ -33,10 +33,14 @@
       "GET /api/aethergrid/telemetry",
       "GET /api/aethergrid/spatial",
       "GET /api/aethergrid/evidence",
+      "GET /api/aethergrid/evidence/:id",
+      "GET /api/aethergrid/runtime",
       "POST /api/aethergrid/view",
       "POST /api/aethergrid/region",
       "POST /api/aethergrid/scenario",
       "POST /api/aethergrid/optimize",
+      "POST /api/aethergrid/agents/:id",
+      "POST /api/aethergrid/team",
       "POST /api/aethergrid/chat",
       "POST /api/aethergrid/export",
       "POST /api/aethergrid/reset"
@@ -73,6 +77,40 @@
     "aiCollaboration": true,
     "boundedOptimization": true,
     "evidenceExport": true,
-    "localStandaloneFallback": true
+    "localStandaloneFallback": true,
+    "workspaceRouter": true,
+    "persistentOperatorSettings": true,
+    "individualAgentRuntime": true,
+    "teamAgentRuntime": true,
+    "replaceableModelProviders": true,
+    "safeRuntimeIntrospection": true,
+    "directWebGlNodePicking": true,
+    "customScenarioBuilder": true,
+    "weightedOptimizationControls": true,
+    "evidenceDrillDown": true,
+    "agentEvidenceReceipts": true,
+    "holographicTemporalCompare": true,
+    "savedCameraViews": true,
+    "scenarioDuplication": true,
+    "auditTimeline": true,
+    "classicalExperimentalComparison": true
+  },
+  "aiRuntime": {
+    "providers": [
+      "local",
+      "openai-compatible",
+      "ollama"
+    ],
+    "configModule": "agent-config.mjs",
+    "runtimeModule": "ai-runtime.mjs",
+    "agents": [
+      "VÆLON",
+      "AUREN",
+      "SOLVÆR",
+      "TEAM"
+    ],
+    "secretsExposedToBrowser": false,
+    "fallback": "deterministic-local",
+    "replaceableByConfiguration": true
   }
 }

@@ -10,6 +10,14 @@
 
 ### Added
 
+- Added exclusive ÆTHERGRID workspace routing so Grid, Holographic, Quantum, AI, Scenarios, Evidence, and Settings operate as distinct usable views instead of a single scrolling dashboard.
+- Added persistent operator settings for default workspace, density, motion, holographic auto-rotation, labels, default 4D time, event streaming, and polling fallback.
+- Added replaceable `local`, `openai-compatible`, and `ollama` AI provider adapters with per-agent VÆLON/AUREN/SOLVÆR/TEAM model configuration, safe runtime introspection, provider timeout/fallback evidence, individual-agent endpoints, and three-agent parallel team synthesis.
+- Added real model-adapter tests against local fake OpenAI-compatible and Ollama HTTP servers so provider wiring is exercised without external credentials.
+- Added direct WebGL node picking, synchronized Grid/Holographic selection, editable custom scenarios, weighted optimization controls, deterministic classical-vs-experimental comparison, optimization history, and evidence receipts.
+- Added Evidence drill-down records for custom scenarios, individual agent runs, team synthesis, and optimization runs, including contribution receipts and provider/model provenance.
+- Added app-local `.env.example`, PowerShell start/stop scripts, and a CMD launcher so the packaged ZIP can launch the full backend-connected app on Windows with Node 22+.
+
 - Replaced the screenshot-backed ÆTHERGRID runtime with semantic HTML panels, real controls, native WebGL wireframe geometry, animated canvas/SVG charts, and canonical logo assets.
 - Added a true time-indexed spatial graph model represented as x/y/z + time, including interactive orbit/zoom controls, a 24-hour temporal scrubber, layer toggles, wireframe buildings, transmission routes, live nodes, and backend-served geometry at `/api/aethergrid/spatial`.
 - Added generated `standalone.html` packaging that inlines CSS, JavaScript and brand assets while preserving the actual WebGL renderer; the old dashboard reference image is excluded from the runtime ZIP and retained only as a design reference.

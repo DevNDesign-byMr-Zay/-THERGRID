@@ -48,7 +48,23 @@
     "technical-evidence",
     "health-check",
     "view-reset",
-    "live-event-stream"
+    "live-event-stream",
+    "workspace-router",
+    "persistent-settings",
+    "individual-agent-runtime",
+    "team-agent-runtime",
+    "replaceable-model-providers",
+    "runtime-provider-status",
+    "direct-node-picking",
+    "custom-scenario-builder",
+    "weighted-optimization-controls",
+    "evidence-drill-down",
+    "agent-evidence-receipts",
+    "holographic-temporal-compare",
+    "saved-camera-views",
+    "scenario-duplication",
+    "audit-timeline",
+    "classical-experimental-comparison"
   ],
   "agents": [
     {
@@ -110,11 +126,118 @@
       "wheel-zoom",
       "double-click-reset",
       "time-slider",
-      "layer-toggle"
+      "layer-toggle",
+      "direct-node-picking"
     ],
     "backendEndpoint": "GET /api/aethergrid/spatial",
     "backgroundImageRequired": false
   },
   "designReferenceRepositoryPath": "assets/dashboard-reference.webp",
-  "designReferenceIncludedInRuntimePackage": false
+  "designReferenceIncludedInRuntimePackage": false,
+  "workspaceRouting": {
+    "mode": "exclusive-view",
+    "workspaces": [
+      "grid",
+      "holographic",
+      "quantum",
+      "ai",
+      "scenarios",
+      "evidence",
+      "settings"
+    ],
+    "persistentSessionRoute": true
+  },
+  "settings": {
+    "persistence": "localStorage",
+    "controls": [
+      "default-workspace",
+      "density",
+      "animation-intensity",
+      "reduced-motion",
+      "auto-rotate",
+      "spatial-labels",
+      "default-4d-hour",
+      "live-stream",
+      "fallback-refresh"
+    ],
+    "secretsStoredInBrowser": false
+  },
+  "aiRuntime": {
+    "individualAgents": [
+      "VÆLON",
+      "AUREN",
+      "SOLVÆR"
+    ],
+    "teamMode": true,
+    "providers": [
+      "local",
+      "openai-compatible",
+      "ollama"
+    ],
+    "replaceableModels": true,
+    "runtimeSummaryEndpoint": "GET /api/aethergrid/runtime",
+    "individualEndpoint": "POST /api/aethergrid/agents/:id",
+    "teamEndpoint": "POST /api/aethergrid/team",
+    "providerSecretsClientVisible": false
+  },
+  "scenarioModel": {
+    "templates": [
+      "peak-demand",
+      "renewable-surge",
+      "storage-stress",
+      "weather-event"
+    ],
+    "custom": true,
+    "editableParameters": [
+      "load-multiplier",
+      "renewable-availability",
+      "storage-reserve",
+      "weather-risk"
+    ]
+  },
+  "evidenceModel": {
+    "listEndpoint": "GET /api/aethergrid/evidence",
+    "detailEndpoint": "GET /api/aethergrid/evidence/:id",
+    "records": [
+      "SCENARIO",
+      "OPTIMIZATION",
+      "AI_AGENT",
+      "AI_TEAM"
+    ],
+    "contributionReceipts": true,
+    "advisoryOnly": true
+  },
+  "holographicWorkspace": {
+    "independentRenderer": true,
+    "projectionModes": [
+      "perspective",
+      "orthographic",
+      "isometric"
+    ],
+    "temporalModes": [
+      "pulse",
+      "trail",
+      "freeze"
+    ],
+    "temporalComparison": true,
+    "persistentCameraViews": true,
+    "directNodePicking": true
+  },
+  "quantumWorkspace": {
+    "objectiveSelector": true,
+    "weightedObjectives": [
+      "cost",
+      "emissions"
+    ],
+    "constraints": [
+      "minimum-reserve",
+      "classical-baseline-required"
+    ],
+    "comparison": [
+      "classical",
+      "bounded-experimental"
+    ],
+    "runHistory": true,
+    "receipts": true
+  }
 }

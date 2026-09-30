@@ -15,11 +15,17 @@ const REQUIRED_FILES = Object.freeze([
   'styles.css',
   'app.js',
   'server.mjs',
+  'agent-config.mjs',
+  'ai-runtime.mjs',
   'app.json',
   'ui.json',
   'manifest.webmanifest',
   'sw.js',
   'README.md',
+  '.env.example',
+  'START-AETHERGRID.ps1',
+  'STOP-AETHERGRID.ps1',
+  'START-AETHERGRID.cmd',
   'assets/brand/aethergrid-logo.webp',
   'assets/brand/vaelon.webp',
   'assets/brand/auren.webp',
@@ -153,7 +159,9 @@ assert(uiManifest.spatialModel?.renderEngine === 'native-webgl', 'UI must declar
 const sourceHtml = payload.get('index.html').toString('utf8');
 assert(!/dashboard-reference/iu.test(sourceHtml), 'runtime index.html must not reference the old dashboard screenshot');
 assert(/<canvas id="spatialGrid"/u.test(sourceHtml), 'runtime index.html must expose the real spatial WebGL canvas');
-assert(/data-mode="holographic"/u.test(sourceHtml), 'runtime index.html must expose semantic mode controls');
+assert(/data-workspace-target="holographic"/u.test(sourceHtml), 'runtime index.html must expose functional workspace controls');
+assert(/data-workspace="settings"/u.test(sourceHtml), 'runtime index.html must include a real settings workspace');
+assert(/data-agent="TEAM"/u.test(sourceHtml), 'runtime index.html must expose team-agent mode');
 
 const inlineCss = payload.get('styles.css').toString('utf8');
 const inlineJs = payload.get('app.js').toString('utf8');
@@ -176,6 +184,8 @@ assert(!/src="\.\/app\.js"/u.test(standaloneHtml), 'standalone HTML cannot depen
 assert(!/href="\.\/styles\.css"/u.test(standaloneHtml), 'standalone HTML cannot depend on styles.css');
 assert(!/assets\/brand\//u.test(standaloneHtml), 'standalone HTML must embed brand assets');
 assert(/attribute vec4 a_position/u.test(standaloneHtml), 'standalone HTML must embed the native 4D WebGL shader');
+assert(/data-workspace="holographic"/u.test(standaloneHtml), 'standalone HTML must retain routed workspaces');
+assert(/id="settingDefaultWorkspace"/u.test(standaloneHtml), 'standalone HTML must retain functional settings controls');
 payload.set('standalone.html', Buffer.from(standaloneHtml, 'utf8'));
 
 const inventory = [...payload.entries()]

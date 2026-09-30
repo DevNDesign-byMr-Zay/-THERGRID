@@ -4,8 +4,11 @@ import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { createAgentRuntime } from './ai-runtime.mjs';
+
 const root = fileURLToPath(new URL('./', import.meta.url));
 const port = Number(process.env.AETHERGRID_PORT || process.env.PORT || 8090);
+const agentRuntime = createAgentRuntime();
 
 const regions = Object.freeze([
   'New York Metro',
@@ -19,6 +22,7 @@ const scenarios = Object.freeze([
   'renewable-surge',
   'storage-stress',
   'weather-event',
+  'custom',
 ]);
 
 const views = Object.freeze(['live', 'forecast', 'scenario']);
@@ -30,6 +34,12 @@ const state = {
     mode: 'ADVISORY ONLY',
     view: 'live',
     scenario: 'peak-demand',
+    scenarioParameters: {
+      loadMultiplierPercent: 110,
+      renewableAvailabilityPercent: 100,
+      storageReservePercent: 18,
+      weatherRiskPercent: 20,
+    },
     physicalActuation: false,
     infrastructureDispatch: false,
   },
@@ -42,9 +52,12 @@ const state = {
   optimization: {
     currentCost: 12480,
     candidateCost: 10230,
+    classicalCandidateCost: 11790,
     emissionsReduction: 24.3,
     renewableUtilizationGain: 16.7,
+    reliabilityScore: 90.0,
     runCount: 0,
+    history: [],
   },
   agents: {
     'VÆLON': {
@@ -186,23 +199,6 @@ function telemetryTick() {
   state.metrics.storageMw = Math.round(590 + Math.cos(now / 10400) * 10);
 }
 
-function aiReply(message = '') {
-  const text = String(message).toLowerCase();
-  if (text.includes('renewable')) {
-    return 'AUREN identifies renewable integration as a primary resilience lever; VÆLON can explore bounded dispatch scenarios, while SOLVÆR produces simulation evidence. No infrastructure actuation is authorized.';
-  }
-  if (text.includes('cost') || text.includes('optimiz')) {
-    return `VÆLON's current bounded candidate is $${state.optimization.candidateCost.toLocaleString()}/hr versus the $${state.optimization.currentCost.toLocaleString()}/hr classical baseline. Operator review and evidence comparison remain mandatory.`;
-  }
-  if (text.includes('risk') || text.includes('resilien')) {
-    return 'AUREN flags spatial resilience review across weather, load, storage, and network dependencies. SOLVÆR should validate any proposed response in simulation before it reaches an operator decision package.';
-  }
-  if (text.includes('storage')) {
-    return `SOLVÆR reports approximately ${state.metrics.storageMw} MW of reviewable storage capacity in the current simulated operator state. Any dispatch remains outside this application's authority.`;
-  }
-  return 'The AI team can explore the request as an advisory scenario. VÆLON handles optimization, AUREN handles semantic/spatial interpretation, and SOLVÆR handles simulation evidence. Human review remains required.';
-}
-
 function validateChoice(value, allowed, label) {
   if (!allowed.includes(value)) {
     const error = new Error(`unsupported ${label}: ${value}`);
@@ -217,6 +213,7 @@ const server = http.createServer(async (request, response) => {
     const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/health') {
+      const runtime = agentRuntime.summary();
       return json(response, 200, {
         ok: true,
         product: 'ÆTHERGRID',
@@ -225,6 +222,10 @@ const server = http.createServer(async (request, response) => {
         view: state.system.view,
         scenario: state.system.scenario,
         agentsOnline: Object.values(state.agents).every((agent) => agent.status === 'ONLINE'),
+        aiRuntime: {
+          mode: runtime.mode,
+          liveProviders: runtime.liveProviders,
+        },
       });
     }
 
@@ -264,6 +265,21 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/evidence') {
       return json(response, 200, { evidence: state.evidence, activity: state.activity });
     }
+    if (
+      request.method === 'GET' &&
+      url.pathname.startsWith('/api/aethergrid/evidence/') &&
+      url.pathname !== '/api/aethergrid/evidence/'
+    ) {
+      const id = decodeURIComponent(url.pathname.slice('/api/aethergrid/evidence/'.length));
+      const record = state.evidence.find((item) => item.id === id || item.receipt === id);
+      if (!record) return json(response, 404, { error: 'evidence_not_found' });
+      return json(response, 200, { evidence: record, advisoryOnly: true });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
+      return json(response, 200, agentRuntime.summary());
+    }
+
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/spatial') {
       const requestedHour = Number(url.searchParams.get('hour') ?? 12);
       const hour = Math.max(0, Math.min(24, Number.isFinite(requestedHour) ? requestedHour : 12));
@@ -298,18 +314,79 @@ const server = http.createServer(async (request, response) => {
       const scenario = validateChoice(String(input.scenario || ''), scenarios, 'scenario');
       state.system.scenario = scenario;
       state.system.view = 'scenario';
-      activity(`Scenario loaded: ${scenario}.`, 'scenario');
-      return json(response, 200, { state: snapshot() });
+      if (scenario === 'custom') {
+        const parameters = input.parameters || {};
+        const clampNumber = (value, fallback, min, max) => {
+          const parsed = Number(value);
+          return Math.max(min, Math.min(max, Number.isFinite(parsed) ? parsed : fallback));
+        };
+        state.system.scenarioParameters = {
+          loadMultiplierPercent: clampNumber(
+            parameters.loadMultiplierPercent,
+            state.system.scenarioParameters.loadMultiplierPercent,
+            70,
+            150,
+          ),
+          renewableAvailabilityPercent: clampNumber(
+            parameters.renewableAvailabilityPercent,
+            state.system.scenarioParameters.renewableAvailabilityPercent,
+            40,
+            160,
+          ),
+          storageReservePercent: clampNumber(
+            parameters.storageReservePercent,
+            state.system.scenarioParameters.storageReservePercent,
+            5,
+            45,
+          ),
+          weatherRiskPercent: clampNumber(
+            parameters.weatherRiskPercent,
+            state.system.scenarioParameters.weatherRiskPercent,
+            0,
+            100,
+          ),
+        };
+      }
+      activity(
+        `Scenario loaded: ${scenario}${scenario === 'custom' ? ` ${JSON.stringify(state.system.scenarioParameters)}` : ''}.`,
+        'scenario',
+      );
+      const scenarioRecord = {
+        id: `scenario-${Date.now()}`,
+        title: `Scenario: ${scenario}`,
+        type: 'SCENARIO',
+        age: 'just now',
+        status: 'VERIFIED',
+        details: {
+          region: state.system.region,
+          scenario,
+          parameters: scenario === 'custom' ? { ...state.system.scenarioParameters } : null,
+          view: state.system.view,
+          advisoryOnly: true,
+        },
+      };
+      scenarioRecord.receipt = createHash('sha256').update(JSON.stringify(scenarioRecord)).digest('hex');
+      state.evidence.unshift(scenarioRecord);
+      state.evidence = state.evidence.slice(0, 24);
+      return json(response, 200, { state: snapshot(), evidence: scenarioRecord });
     }
 
     if (request.method === 'POST' && url.pathname === '/api/aethergrid/reset') {
       state.system.region = 'New York Metro';
       state.system.view = 'live';
       state.system.scenario = 'peak-demand';
+      state.system.scenarioParameters = {
+        loadMultiplierPercent: 110,
+        renewableAvailabilityPercent: 100,
+        storageReservePercent: 18,
+        weatherRiskPercent: 20,
+      };
       state.optimization.currentCost = 12480;
       state.optimization.candidateCost = 10230;
+      state.optimization.classicalCandidateCost = 11790;
       state.optimization.emissionsReduction = 24.3;
       state.optimization.renewableUtilizationGain = 16.7;
+      state.optimization.reliabilityScore = 90.0;
       activity('Operator review state reset to the New York Metro live baseline.', 'reset');
       return json(response, 200, { state: snapshot() });
     }
@@ -320,35 +397,302 @@ const server = http.createServer(async (request, response) => {
       if (input.scenario && scenarios.includes(String(input.scenario))) {
         state.system.scenario = String(input.scenario);
       }
+
+      const objective = String(input.objective || 'balanced');
+      const rawCostWeight = Number(input.weights?.cost ?? 50);
+      const rawEmissionsWeight = Number(input.weights?.emissions ?? 50);
+      const costWeight = Math.max(0, Math.min(100, Number.isFinite(rawCostWeight) ? rawCostWeight : 50));
+      const emissionsWeight = Math.max(
+        0,
+        Math.min(100, Number.isFinite(rawEmissionsWeight) ? rawEmissionsWeight : 50),
+      );
+      const minimumReservePercent = Math.max(
+        5,
+        Math.min(40, Number(input.constraints?.minimumReservePercent ?? 18)),
+      );
+      const classicalBaselineRequired =
+        input.constraints?.classicalBaselineRequired !== false;
+
+      const custom = state.system.scenarioParameters;
+      const customFactor =
+        (custom.loadMultiplierPercent / 100) *
+        (1 + custom.weatherRiskPercent / 1000) *
+        (1 + Math.max(0, custom.storageReservePercent - 18) / 500) *
+        (1 - Math.max(0, custom.renewableAvailabilityPercent - 100) / 1000);
+      const scenarioFactor = {
+        'peak-demand': 1.0,
+        'renewable-surge': 0.88,
+        'storage-stress': 1.12,
+        'weather-event': 1.18,
+        custom: customFactor,
+      }[state.system.scenario] ?? 1.0;
+
+      const objectiveBias = {
+        balanced: { cost: 0.5, emissions: 0.5, reliability: 0.5, renewable: 0.5 },
+        cost: { cost: 0.9, emissions: 0.2, reliability: 0.45, renewable: 0.35 },
+        emissions: { cost: 0.25, emissions: 0.95, reliability: 0.45, renewable: 0.7 },
+        reliability: { cost: 0.25, emissions: 0.3, reliability: 0.95, renewable: 0.4 },
+        renewables: { cost: 0.3, emissions: 0.75, reliability: 0.5, renewable: 0.95 },
+      }[objective] ?? { cost: 0.5, emissions: 0.5, reliability: 0.5, renewable: 0.5 };
+
+      const normalizedCost = costWeight / 100;
+      const normalizedEmissions = emissionsWeight / 100;
+      const reservePenalty = Math.max(0, minimumReservePercent - 18) * 0.0028;
+      const currentCost = 12480 * scenarioFactor;
+      const classicalImprovement =
+        0.045 +
+        normalizedCost * 0.028 +
+        objectiveBias.cost * 0.022 -
+        reservePenalty * 0.35;
+      const experimentalImprovement =
+        classicalImprovement +
+        0.018 +
+        objectiveBias.renewable * 0.014 +
+        normalizedEmissions * 0.008 -
+        reservePenalty * 0.2;
+
+      const classicalCandidateCost = Math.round(
+        currentCost * (1 - Math.max(0.02, Math.min(0.14, classicalImprovement))),
+      );
+      const candidateCost = Math.round(
+        currentCost * (1 - Math.max(0.03, Math.min(0.19, experimentalImprovement))),
+      );
+      const emissionsReduction = Number(
+        (
+          10 +
+          normalizedEmissions * 11 +
+          objectiveBias.emissions * 7 +
+          (state.system.scenario === 'renewable-surge' ? 4 : 0) +
+          (state.system.scenario === 'custom'
+            ? Math.max(0, state.system.scenarioParameters.renewableAvailabilityPercent - 100) * 0.08
+            : 0)
+        ).toFixed(1),
+      );
+      const renewableUtilizationGain = Number(
+        (
+          6 +
+          objectiveBias.renewable * 10 +
+          normalizedEmissions * 4 +
+          (state.system.scenario === 'renewable-surge' ? 5 : 0) +
+          (state.system.scenario === 'custom'
+            ? Math.max(0, state.system.scenarioParameters.renewableAvailabilityPercent - 100) * 0.12
+            : 0)
+        ).toFixed(1),
+      );
+      const reliabilityScore = Number(
+        Math.max(
+          0,
+          Math.min(
+            100,
+            82 +
+              objectiveBias.reliability * 9 +
+              minimumReservePercent * 0.22 -
+              (state.system.scenario === 'weather-event' ? 7 : 0),
+          ),
+        ).toFixed(1),
+      );
+
       state.optimization.runCount += 1;
-      const wiggle = state.optimization.runCount % 4;
-      state.optimization.candidateCost = 10230 - wiggle * 35;
-      state.optimization.emissionsReduction = Number((24.3 + wiggle * 0.4).toFixed(1));
-      state.optimization.renewableUtilizationGain = Number((16.7 + wiggle * 0.3).toFixed(1));
+      state.optimization.currentCost = Math.round(currentCost);
+      state.optimization.classicalCandidateCost = classicalCandidateCost;
+      state.optimization.candidateCost = candidateCost;
+      state.optimization.emissionsReduction = emissionsReduction;
+      state.optimization.renewableUtilizationGain = renewableUtilizationGain;
+      state.optimization.reliabilityScore = reliabilityScore;
+
+      const completedAt = new Date().toISOString();
+      const run = {
+        id: `optimization-${state.optimization.runCount}`,
+        completedAt,
+        objective,
+        weights: { cost: costWeight, emissions: emissionsWeight },
+        constraints: { minimumReservePercent, classicalBaselineRequired },
+        scenario: state.system.scenario,
+        region: state.system.region,
+        baseline: {
+          currentCost: Math.round(currentCost),
+          classicalCandidateCost,
+        },
+        candidate: {
+          cost: candidateCost,
+          emissionsReduction,
+          renewableUtilizationGain,
+          reliabilityScore,
+        },
+      };
       const receipt = createHash('sha256')
-        .update(JSON.stringify({ input, optimization: state.optimization, ts: new Date().toISOString() }))
+        .update(JSON.stringify(run))
         .digest('hex');
+      run.receipt = receipt;
+      state.optimization.history.unshift(run);
+      state.optimization.history = state.optimization.history.slice(0, 20);
+      state.evidence.unshift({
+        id: receipt.slice(0, 16),
+        title: `Optimization: ${objective} / ${state.system.scenario}`,
+        type: 'OPTIMIZATION',
+        age: 'just now',
+        status: 'VERIFIED',
+        receipt,
+      });
+      state.evidence = state.evidence.slice(0, 24);
+
       activity(
-        `Bounded optimization completed for ${state.system.region} / ${state.system.scenario}; classical baseline retained.`,
+        `Bounded optimization completed for ${state.system.region} / ${state.system.scenario}; classical baseline ${classicalCandidateCost} and experimental candidate ${candidateCost} recorded.`,
         'optimization',
       );
       return json(response, 200, {
         status: 'completed',
         optimization: state.optimization,
+        comparison: {
+          classical: {
+            candidateCost: classicalCandidateCost,
+            method: 'deterministic-classical-baseline',
+          },
+          experimental: {
+            candidateCost,
+            emissionsReduction,
+            renewableUtilizationGain,
+            reliabilityScore,
+            method: 'bounded-experimental-search',
+          },
+        },
         receipt,
         advisoryOnly: true,
-        classicalBaselineRequired: true,
+        classicalBaselineRequired,
+        activity: state.activity,
+      });
+    }
+
+    if (
+      request.method === 'POST' &&
+      url.pathname.startsWith('/api/aethergrid/agents/')
+    ) {
+      const input = await body(request);
+      const encodedId = url.pathname.slice('/api/aethergrid/agents/'.length);
+      const agentId = decodeURIComponent(encodedId);
+      const result = await agentRuntime.runAgent(agentId, {
+        message: input.message,
+        context: {
+          ...input.context,
+          region: input.context?.region || state.system.region,
+          scenario: input.context?.scenario || state.system.scenario,
+          view: input.context?.view || state.system.view,
+          metrics: input.context?.metrics || state.metrics,
+          authority: 'advisory-only',
+        },
+        history: Array.isArray(input.history) ? input.history : [],
+      });
+      activity(
+        `${agentId} completed an advisory model request using ${result.runtime.provider}/${result.runtime.model || 'fallback'}.`,
+        'ai',
+      );
+      const agentRecord = {
+        id: result.receipt.slice(0, 16),
+        title: `${agentId} Advisory Analysis`,
+        type: 'AI_AGENT',
+        age: 'just now',
+        status: 'VERIFIED',
+        receipt: result.receipt,
+        details: {
+          agent: agentId,
+          provider: result.runtime.provider,
+          model: result.runtime.model,
+          fallbackUsed: result.runtime.fallbackUsed,
+          latencyMs: result.runtime.latencyMs,
+          region: state.system.region,
+          scenario: state.system.scenario,
+          advisoryOnly: true,
+        },
+      };
+      state.evidence.unshift(agentRecord);
+      state.evidence = state.evidence.slice(0, 24);
+      return json(response, 200, {
+        ...result,
+        evidence: agentRecord,
+        advisoryOnly: true,
+        activity: state.activity,
+      });
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/aethergrid/team') {
+      const input = await body(request);
+      const result = await agentRuntime.runTeam({
+        message: input.message,
+        context: {
+          ...input.context,
+          region: input.context?.region || state.system.region,
+          scenario: input.context?.scenario || state.system.scenario,
+          view: input.context?.view || state.system.view,
+          metrics: input.context?.metrics || state.metrics,
+          authority: 'advisory-only',
+        },
+        history: Array.isArray(input.history) ? input.history : [],
+      });
+      activity(
+        `ÆTHERGRID team completed a coordinated advisory request with ${result.contributions.length} agent contributions.`,
+        'ai-team',
+      );
+      const teamRecord = {
+        id: result.receipt.slice(0, 16),
+        title: 'ÆTHERGRID Multi-Agent Synthesis',
+        type: 'AI_TEAM',
+        age: 'just now',
+        status: 'VERIFIED',
+        receipt: result.receipt,
+        details: {
+          provider: result.runtime.provider,
+          model: result.runtime.model,
+          fallbackUsed: result.runtime.fallbackUsed,
+          contributionReceipts: result.contributions.map((item) => ({
+            agent: item.agent,
+            receipt: item.receipt,
+            provider: item.runtime.provider,
+            model: item.runtime.model,
+          })),
+          region: state.system.region,
+          scenario: state.system.scenario,
+          advisoryOnly: true,
+        },
+      };
+      state.evidence.unshift(teamRecord);
+      state.evidence = state.evidence.slice(0, 24);
+      return json(response, 200, {
+        ...result,
+        evidence: teamRecord,
+        advisoryOnly: true,
         activity: state.activity,
       });
     }
 
     if (request.method === 'POST' && url.pathname === '/api/aethergrid/chat') {
       const input = await body(request);
-      const reply = aiReply(input.message);
-      activity(`AI collaboration reviewed an operator question for ${state.system.region}.`, 'ai');
+      const requestedAgent = String(input.agent || 'TEAM');
+      const result =
+        requestedAgent === 'TEAM'
+          ? await agentRuntime.runTeam({
+              message: input.message,
+              context: {
+                region: state.system.region,
+                scenario: state.system.scenario,
+                view: state.system.view,
+                metrics: state.metrics,
+                authority: 'advisory-only',
+              },
+            })
+          : await agentRuntime.runAgent(requestedAgent, {
+              message: input.message,
+              context: {
+                region: state.system.region,
+                scenario: state.system.scenario,
+                view: state.system.view,
+                metrics: state.metrics,
+                authority: 'advisory-only',
+              },
+            });
+      activity(`AI collaboration completed for ${requestedAgent}.`, 'ai');
       return json(response, 200, {
-        reply,
-        agents: ['VÆLON', 'AUREN', 'SOLVÆR'],
+        reply: result.reply || result.synthesis,
+        result,
         advisoryOnly: true,
         activity: state.activity,
       });

@@ -30,15 +30,22 @@ const REQUIRED_FILES = Object.freeze([
   'apps/aethergrid-console/styles.css',
   'apps/aethergrid-console/app.js',
   'apps/aethergrid-console/server.mjs',
+  'apps/aethergrid-console/agent-config.mjs',
+  'apps/aethergrid-console/ai-runtime.mjs',
   'apps/aethergrid-console/app.json',
   'apps/aethergrid-console/ui.json',
   'apps/aethergrid-console/manifest.webmanifest',
   'apps/aethergrid-console/sw.js',
   'apps/aethergrid-console/README.md',
+  'apps/aethergrid-console/.env.example',
+  'apps/aethergrid-console/START-AETHERGRID.ps1',
+  'apps/aethergrid-console/STOP-AETHERGRID.ps1',
+  'apps/aethergrid-console/START-AETHERGRID.cmd',
   'apps/aethergrid-console/assets/brand/aethergrid-logo.webp',
   'apps/aethergrid-console/assets/brand/vaelon.webp',
   'apps/aethergrid-console/assets/brand/auren.webp',
   'apps/aethergrid-console/assets/brand/solvaer.webp',
+  'docs/AETHERGRID_FUNCTIONAL_PLAN.md',
   'docs/BRAND_ASSETS.md',
   'docs/OPERATOR_CONSOLE.md',
   'CHANGELOG.md',
@@ -413,7 +420,17 @@ async function main() {
     /<canvas id="spatialGrid"/u.test(exactAethergridHtml) &&
       /id="timeSlider"/u.test(exactAethergridHtml) &&
       /data-map-tool="buildings"/u.test(exactAethergridHtml) &&
-      /data-mode="holographic"/u.test(exactAethergridHtml) &&
+      /data-workspace="grid"/u.test(exactAethergridHtml) &&
+      /data-workspace="holographic"/u.test(exactAethergridHtml) &&
+      /data-workspace="quantum"/u.test(exactAethergridHtml) &&
+      /data-workspace="ai"/u.test(exactAethergridHtml) &&
+      /data-workspace="scenarios"/u.test(exactAethergridHtml) &&
+      /data-workspace="evidence"/u.test(exactAethergridHtml) &&
+      /data-workspace="settings"/u.test(exactAethergridHtml) &&
+      /id="settingDefaultWorkspace"/u.test(exactAethergridHtml) &&
+      /data-agent="TEAM"/u.test(exactAethergridHtml) &&
+      /data-scenario="custom"/u.test(exactAethergridHtml) &&
+      /id="customLoad"/u.test(exactAethergridHtml) &&
       /id="quantumCanvas"/u.test(exactAethergridHtml) &&
       /id="scenarioChart"/u.test(exactAethergridHtml),
     'ÆTHERGRID runtime HTML must expose real semantic controls and canvas surfaces',
@@ -431,7 +448,11 @@ async function main() {
       /gl\.drawArrays/u.test(exactAethergridJs) &&
       /pointerdown/u.test(exactAethergridJs) &&
       /wheel/u.test(exactAethergridJs) &&
-      /loadGraph\(graph\)/u.test(exactAethergridJs),
+      /loadGraph\(graph\)/u.test(exactAethergridJs) &&
+      /function switchWorkspace/u.test(exactAethergridJs) &&
+      /localStorage\.setItem\(SETTINGS_KEY/u.test(exactAethergridJs) &&
+      /pickNode\(clientX, clientY\)/u.test(exactAethergridJs) &&
+      /activateScenario\(name, parameters/u.test(exactAethergridJs),
     'ÆTHERGRID must keep native WebGL 4D geometry, interaction controls, and backend graph loading',
   );
   assert(
@@ -446,6 +467,22 @@ async function main() {
       exactAethergridApp.entrypoints?.backend === 'server.mjs' &&
       exactAethergridApp.capabilities?.nativeWebGL4DGrid === true &&
       exactAethergridApp.capabilities?.interactiveWireframeMap === true &&
+      exactAethergridApp.capabilities?.workspaceRouter === true &&
+      exactAethergridApp.capabilities?.persistentOperatorSettings === true &&
+      exactAethergridApp.capabilities?.individualAgentRuntime === true &&
+      exactAethergridApp.capabilities?.teamAgentRuntime === true &&
+      exactAethergridApp.capabilities?.directWebGlNodePicking === true &&
+      exactAethergridApp.capabilities?.customScenarioBuilder === true &&
+      exactAethergridApp.capabilities?.weightedOptimizationControls === true &&
+      exactAethergridApp.capabilities?.evidenceDrillDown === true &&
+      exactAethergridApp.capabilities?.agentEvidenceReceipts === true &&
+      exactAethergridApp.capabilities?.holographicTemporalCompare === true &&
+      exactAethergridApp.capabilities?.savedCameraViews === true &&
+      exactAethergridApp.capabilities?.scenarioDuplication === true &&
+      exactAethergridApp.capabilities?.auditTimeline === true &&
+      exactAethergridApp.capabilities?.classicalExperimentalComparison === true &&
+      exactAethergridApp.aiRuntime?.replaceableByConfiguration === true &&
+      exactAethergridUi.workspaceRouting?.mode === 'exclusive-view' &&
       exactAethergridUi.spatialModel?.renderEngine === 'native-webgl' &&
       JSON.stringify(exactAethergridUi.spatialModel?.dimensions) ===
         JSON.stringify(['x', 'y', 'z', 'time']),
@@ -455,6 +492,10 @@ async function main() {
     '/api/aethergrid/telemetry',
     '/api/aethergrid/stream',
     '/api/aethergrid/spatial',
+    '/api/aethergrid/evidence/',
+    '/api/aethergrid/runtime',
+    '/api/aethergrid/agents/',
+    '/api/aethergrid/team',
     '/api/aethergrid/view',
     '/api/aethergrid/region',
     '/api/aethergrid/scenario',
@@ -473,13 +514,51 @@ async function main() {
       /const spatialGraph = buildSpatialGraph\(\)/u.test(exactAethergridServer),
     'ÆTHERGRID backend must build a time-indexed spatial graph',
   );
+  const aethergridAgentConfig = await text('apps/aethergrid-console/agent-config.mjs');
+  const aethergridAiRuntime = await text('apps/aethergrid-console/ai-runtime.mjs');
+  assert(
+    /openai-compatible/u.test(aethergridAgentConfig) &&
+      /ollama/u.test(aethergridAgentConfig) &&
+      /local/u.test(aethergridAgentConfig) &&
+      /AETHERGRID_VAELON/u.test(aethergridAgentConfig) &&
+      /AETHERGRID_AUREN/u.test(aethergridAgentConfig) &&
+      /AETHERGRID_SOLVAER/u.test(aethergridAgentConfig),
+    'ÆTHERGRID agent configuration must preserve replaceable provider and per-agent model wiring',
+  );
+  assert(
+    /async function callOpenAiCompatible/u.test(aethergridAiRuntime) &&
+      /async function callOllama/u.test(aethergridAiRuntime) &&
+      /async function runTeam/u.test(aethergridAiRuntime) &&
+      /Promise\.all/u.test(aethergridAiRuntime) &&
+      /fallbackUsed/u.test(aethergridAiRuntime),
+    'ÆTHERGRID AI runtime must keep real provider adapters, team orchestration, and fallback evidence',
+  );
   assert(
     /standalone\.html/u.test(exactAethergridPackager) &&
       /runtime must not use a dashboard reference image/u.test(exactAethergridPackager) &&
       /attribute vec4 a_position/u.test(exactAethergridPackager) &&
       !/^\s*'assets\/dashboard-reference\.webp',/mu.test(exactAethergridPackager) &&
-      /path === 'assets\/dashboard-reference\.webp'\) continue/u.test(exactAethergridPackager),
-    'ÆTHERGRID packager must generate standalone WebGL HTML without requiring the reference screenshot',
+      /path === 'assets\/dashboard-reference\.webp'\) continue/u.test(exactAethergridPackager) &&
+      /START-AETHERGRID\.ps1/u.test(exactAethergridPackager) &&
+      /STOP-AETHERGRID\.ps1/u.test(exactAethergridPackager) &&
+      /START-AETHERGRID\.cmd/u.test(exactAethergridPackager) &&
+      /agent-config\.mjs/u.test(exactAethergridPackager) &&
+      /ai-runtime\.mjs/u.test(exactAethergridPackager),
+    'ÆTHERGRID packager must generate standalone WebGL HTML and complete backend/launcher runtime without the reference screenshot',
+  );
+  const aethergridStartScript = await text('apps/aethergrid-console/START-AETHERGRID.ps1');
+  const aethergridAppEnv = await text('apps/aethergrid-console/.env.example');
+  assert(
+    /Node\.js 22\+/u.test(aethergridStartScript) &&
+      /--env-file=\.env/u.test(aethergridStartScript) &&
+      /server\.mjs/u.test(aethergridStartScript),
+    'ÆTHERGRID Windows launcher must verify Node 22 and launch the packaged backend',
+  );
+  assert(
+    /AETHERGRID_AI_PROVIDER=local/u.test(aethergridAppEnv) &&
+      /AETHERGRID_OPENAI_API_KEY=/u.test(aethergridAppEnv) &&
+      /AETHERGRID_OLLAMA_BASE_URL=/u.test(aethergridAppEnv),
+    'ÆTHERGRID package config must document replaceable providers without embedding credentials',
   );
 
   const operatorConsole = await text('apps/operator-console/index.html');

@@ -85,18 +85,30 @@ A missing presentation device must not invalidate the underlying simulation or d
 
 ## 3. Model-family integration
 
-ROARY, VÆLON, AUREN, and SOLVÆR should connect through `packages/model-routing/` contracts rather than importing each other's internal implementation.
+ROARY-family models must stay downstream of authoritative grid/twin state. Model output is advisory context, analysis, optimization guidance, or evidence assistance; it is never grid truth.
 
-The routing layer should define:
-- capability name
-- input schema
-- output schema
-- safety classification
-- model/version identity
-- timeout and fallback behavior
-- audit metadata
+The current ÆTHERGRID operator application implements a provider-neutral runtime in `apps/aethergrid-console/agent-config.mjs` and `apps/aethergrid-console/ai-runtime.mjs`. VÆLON, AUREN, SOLVÆR, and the TEAM synthesizer each resolve provider/model identity from configuration rather than from UI code.
 
-Do not hardwire a model name into grid truth. The digital twin and safety plane must remain authoritative even if a model is unavailable or replaced.
+Maintained providers:
+- deterministic `local` fallback;
+- `openai-compatible` HTTP chat-completions adapter;
+- local/network `ollama` chat adapter.
+
+The routing contract records:
+- agent capability/role;
+- provider and model identity;
+- input context;
+- timeout and fallback behavior;
+- latency and usage metadata when supplied by a provider;
+- provider request identity when available;
+- SHA-256 receipt;
+- advisory-only authority classification.
+
+Team mode invokes VÆLON, AUREN, and SOLVÆR independently and in parallel, retains each contribution receipt, then sends the combined contributions through a separately configurable TEAM synthesis provider. Provider failure degrades to explicit local fallback and records that fact.
+
+Provider secrets remain server-side and are never returned from `GET /api/aethergrid/runtime`, browser settings, UI manifests, or evidence exports.
+
+A future shared `packages/model-routing/` package may extract these contracts for other products, but the authoritative digital twin and safety plane must remain independent even if every model is unavailable or replaced.
 
 ## 4. Initial shared contracts
 
