@@ -1552,11 +1552,74 @@
           0.025 * amplitude,
         );
       }
+      if (this.layers.water) {
+        const waterBoost = this.operationProfile === 'flood-context' ? 1.55 : 1;
+        this.drawBuffer(
+          this.geometry.waterFaces,
+          gl.TRIANGLES,
+          isLightTheme()
+            ? [0.18, 0.62, 0.82, 0.18 * waterBoost]
+            : [0.04, 0.38, 0.68, 0.24 * waterBoost],
+          0.012 * amplitude * waterBoost,
+        );
+        this.drawBuffer(
+          this.geometry.waterLines,
+          gl.LINES,
+          isLightTheme()
+            ? [0.08, 0.46, 0.68, 0.62 * waterBoost]
+            : [0.12, 0.72, 1, 0.7 * waterBoost],
+          0.026 * amplitude * waterBoost,
+        );
+      }
+      if (this.layers.green) {
+        const greenBoost =
+          this.operationProfile === 'green-infrastructure' ? 1.6 : 1;
+        this.drawBuffer(
+          this.geometry.greenFaces,
+          gl.TRIANGLES,
+          isLightTheme()
+            ? [0.2, 0.58, 0.28, 0.14 * greenBoost]
+            : [0.08, 0.48, 0.24, 0.18 * greenBoost],
+          0.01 * amplitude * greenBoost,
+        );
+        this.drawBuffer(
+          this.geometry.greenLines,
+          gl.LINES,
+          isLightTheme()
+            ? [0.12, 0.48, 0.22, 0.44 * greenBoost]
+            : [0.22, 0.8, 0.42, 0.46 * greenBoost],
+          0.022 * amplitude * greenBoost,
+        );
+      }
       if (this.layers.grid) this.drawBuffer(this.geometry.grid, gl.LINES, [0.09, 0.42, 0.75, this.cityVisualMode === 'operations' ? 0.18 : 0.42], 0.045 * amplitude);
       if (this.layers.buildings && this.cityVisualMode !== 'xray') {
         const faceAlpha = this.cityVisualMode === 'operations' ? 0.13 : 0.28;
         const faceColor = isLightTheme() ? [0.15, 0.42, 0.62, faceAlpha] : [0.035, 0.31, 0.58, faceAlpha];
         this.drawBuffer(this.geometry.buildingFaces, gl.TRIANGLES, faceColor, 0.025 * amplitude);
+        this.drawBuffer(
+          this.geometry.materialGlassFaces,
+          gl.TRIANGLES,
+          isLightTheme() ? [0.14, 0.56, 0.82, 0.12] : [0.14, 0.68, 1, 0.16],
+          0.018 * amplitude,
+        );
+        this.drawBuffer(
+          this.geometry.materialMasonryFaces,
+          gl.TRIANGLES,
+          isLightTheme() ? [0.62, 0.3, 0.18, 0.1] : [0.78, 0.34, 0.2, 0.12],
+          0.016 * amplitude,
+        );
+        this.drawBuffer(
+          this.geometry.materialMetalFaces,
+          gl.TRIANGLES,
+          isLightTheme() ? [0.38, 0.45, 0.55, 0.1] : [0.62, 0.72, 0.84, 0.12],
+          0.014 * amplitude,
+        );
+        this.drawBuffer(
+          this.geometry.materialNaturalFaces,
+          gl.TRIANGLES,
+          isLightTheme() ? [0.42, 0.3, 0.18, 0.08] : [0.54, 0.42, 0.24, 0.1],
+          0.012 * amplitude,
+        );
         this.drawBuffer(this.geometry.roofFaces, gl.TRIANGLES, isLightTheme() ? [0.23, 0.49, 0.7, Math.min(0.48, faceAlpha + 0.12)] : [0.08, 0.46, 0.78, Math.min(0.52, faceAlpha + 0.12)], 0.018 * amplitude);
       }
       if (this.layers.buildings) {
@@ -1623,7 +1686,10 @@
       );
 
       if (this.layers.clouds) {
-        const cloudBoost = focus === 'weather' || focus === 'visibility' ? 1 : 0.58;
+        const cloudBoost =
+          focus === 'weather' || focus === 'visibility' || focus === 'flood-context'
+            ? 1
+            : 0.58;
         const cloudSize = 10 + currentCloud * 12;
         this.drawBuffer(
           this.geometry.clouds,
@@ -1665,7 +1731,8 @@
           focus === 'weather' ||
           focus === 'resource-flow' ||
           focus === 'grid-flow' ||
-          focus === 'visibility'
+          focus === 'visibility' ||
+          focus === 'flood-context'
             ? 1
             : 0.58;
         gl.uniform1f(this.loc.time, temporal * (1 + Math.min(2.4, windSpeed / 30)));
@@ -1748,7 +1815,12 @@
       if (this.layers.air) {
         const aqi = clamp(Number(this.liveContext?.airQuality?.current?.usAqi || 0), 0, 500);
         const airBoost =
-          focus === 'air-quality' || focus === 'visibility' || focus === 'heat' ? 1 : 0.42;
+          focus === 'air-quality' ||
+          focus === 'visibility' ||
+          focus === 'heat' ||
+          focus === 'green-infrastructure'
+            ? 1
+            : 0.42;
         const airColor =
           aqi >= 151
             ? [1, 0.34, 0.4, 0.74 * airBoost]
@@ -2755,7 +2827,7 @@
     const fallbackPercentile = (amount) =>
       fallbackHeights[Math.min(fallbackHeights.length - 1, Math.floor((fallbackHeights.length - 1) * amount))] || 0;
     return {
-      schemaVersion: 3,
+      schemaVersion: 4,
       city,
       source: {
         provider: 'standalone-local-fallback',
@@ -2792,6 +2864,10 @@
       roads,
       powerLines,
       powerAssets,
+      waterAreas: [],
+      waterways: [],
+      coastlines: [],
+      greenAreas: [],
       terrain: {
         source: {
           provider: 'flat-local-fallback',
@@ -2842,9 +2918,14 @@
     const sunriseSunset = mesh.environment?.solar
       ? `${compactSolarTime(mesh.environment.solar.sunrise)} / ${compactSolarTime(mesh.environment.solar.sunset)}`
       : '—';
+    const waterFeatureCount =
+      (mesh.waterAreas || []).length +
+      (mesh.waterways || []).length +
+      (mesh.coastlines || []).length;
+    const greenFeatureCount = (mesh.greenAreas || []).length;
     const seismic = mesh.liveContext?.seismic || null;
     const seismicLabel = seismic ? `${Number(seismic.eventCount || 0)} nearby · M${Number(seismic.maxMagnitude || 0).toFixed(1)} max` : '—';
-    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Skyline Max</b><em>${skylineMax}</em></span><span><b>P95 Height</b><em>${p95}</em></span><span><b>Height Data</b><em>${heightCoverage}</em></span><span><b>Weather</b><em>${weather}</em></span><span><b>Air</b><em>${airQuality}</em></span><span><b>Humidity</b><em>${humidity}</em></span><span><b>Sunrise / Sunset</b><em>${sunriseSunset}</em></span><span><b>Seismic</b><em>${seismicLabel}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
+    stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Skyline Max</b><em>${skylineMax}</em></span><span><b>P95 Height</b><em>${p95}</em></span><span><b>Height Data</b><em>${heightCoverage}</em></span><span><b>Weather</b><em>${weather}</em></span><span><b>Air</b><em>${airQuality}</em></span><span><b>Humidity</b><em>${humidity}</em></span><span><b>Sunrise / Sunset</b><em>${sunriseSunset}</em></span><span><b>Water Features</b><em>${waterFeatureCount}</em></span><span><b>Green Areas</b><em>${greenFeatureCount}</em></span><span><b>Seismic</b><em>${seismicLabel}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
   }
 
   function updateCityIdentity(mesh) {
@@ -2862,6 +2943,18 @@
         : null;
     const anchors = (skyline.namedStructures || []).slice(0, 8);
     const weather = weatherPhenomenon(mesh.environment);
+    const waterFeatureCount =
+      (mesh.waterAreas || []).length +
+      (mesh.waterways || []).length +
+      (mesh.coastlines || []).length;
+    const greenFeatureCount = (mesh.greenAreas || []).length;
+    const materialTagged = (mesh.buildings || []).filter(
+      (building) =>
+        building.buildingMaterial ||
+        building.buildingColor ||
+        building.roofMaterial ||
+        building.roofColor,
+    ).length;
     const profile = [
       ['Max', Number(skyline.maxHeightM || 0) > 0 ? `${Number(skyline.maxHeightM).toFixed(0)} m` : '—'],
       ['P95', Number(skyline.p95HeightM || 0) > 0 ? `${Number(skyline.p95HeightM).toFixed(0)} m` : '—'],
@@ -2870,6 +2963,9 @@
       ['Roof Tags', Number(skyline.roofTaggedCount || 0).toLocaleString()],
       ['Relief', terrainRelief == null ? '—' : `${terrainRelief.toFixed(0)} m`],
       ['Weather', weather],
+      ['Water', waterFeatureCount.toLocaleString()],
+      ['Green', greenFeatureCount.toLocaleString()],
+      ['Materials', materialTagged.toLocaleString()],
       ['Height Data', `${Number(skyline.sourceBackedHeightCoveragePercent || 0).toFixed(0)}%`],
     ];
     const anchorHtml = anchors.length
@@ -2885,7 +2981,7 @@
         ([label, value]) =>
           `<span><b>${escapeHtml(label)}</b><em>${escapeHtml(value)}</em></span>`,
       )
-      .join('')}</div><div class="identity-anchor-list"><small>SOURCE-BACKED IDENTITY ANCHORS</small>${anchorHtml}</div><p class="identity-boundary">Named/tall anchors come from the loaded OpenStreetMap building sample. Weather identity comes from current provider model context; no landmark or weather layer is treated as direct sensing.</p>`;
+      .join('')}</div><div class="identity-anchor-list"><small>SOURCE-BACKED IDENTITY ANCHORS</small>${anchorHtml}</div><p class="identity-boundary">Named/tall anchors, mapped water/green geometry and material tags come from the loaded OpenStreetMap sample. Weather identity comes from current provider model context; no landmark, environmental geometry or weather layer is treated as direct sensing.</p>`;
   }
 
   function showCityTransition(city, stage = 'Aligning global coordinate…', progress = 8) {
