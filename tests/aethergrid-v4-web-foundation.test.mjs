@@ -427,3 +427,21 @@ test('v4 runtime diagnostics report provider readiness without exposing credenti
   assert.doesNotMatch(panel, /API_KEY|apikey|Bearer /u);
   assert.match(app, /<RuntimeDiagnosticsPanel/u);
 });
+
+test('v4 God’s-eye mode renders live global city AQI and seismic context', async () => {
+  const [service, app, camera] = await Promise.all([
+    text('apps/aethergrid-console/web/src/services/global-live-context.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/camera-journey-controller.ts'),
+  ]);
+
+  assert.match(service, /\/api\/aethergrid\/global-live/u);
+  assert.match(service, /layerId: 'world'/u);
+  assert.match(service, /kind: 'city'/u);
+  assert.match(service, /eventType: 'earthquake'/u);
+  assert.match(app, /GLOBAL GOD’S-EYE/u);
+  assert.match(app, /scope === 'world'/u);
+  assert.match(app, /setScope\('world'\)/u);
+  assert.match(app, /journey: 'global'/u);
+  assert.match(camera, /target\.journey === 'global'/u);
+});
