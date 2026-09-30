@@ -4,6 +4,7 @@ import { AgentDock } from '../components/AgentDock';
 import { DataSourceBadge } from '../components/DataSourceBadge';
 import { EvidencePanel } from '../components/EvidencePanel';
 import { QuantumPanel } from '../components/QuantumPanel';
+import { ScenarioPanel } from '../components/ScenarioPanel';
 import { SpatialViewport } from '../components/SpatialViewport';
 import { TemporalRail } from '../components/TemporalRail';
 import { useAppearance } from '../hooks/use-appearance';
@@ -652,6 +653,11 @@ export function App() {
           </section>
 
           <AgentDock context={agentContext} />
+          <ScenarioPanel
+            activeTemporalMode={temporal.mode}
+            onScenarioApplied={(scenarioId) => clock.setMode('scenario', scenarioId)}
+            onReturnLive={() => clock.goLive()}
+          />
           <QuantumPanel />
           <EvidencePanel />
 
