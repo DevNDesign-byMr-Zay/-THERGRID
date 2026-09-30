@@ -43,7 +43,8 @@
     "3d-visualization",
     "technical-evidence",
     "health-check",
-    "view-reset"
+    "view-reset",
+    "live-event-stream"
   ],
   "agents": [
     {
@@ -72,7 +73,10 @@
       "energy-sheen",
       "grid-node-pulses",
       "status-pulse",
-      "selection-glow"
+      "selection-glow",
+      "energy-flow-canvas",
+      "dynamic-clock",
+      "stream-status"
     ],
     "reducedMotionSupported": true
   },

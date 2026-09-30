@@ -413,7 +413,10 @@ async function main() {
       /data-action="change-region"/u.test(exactAethergridHtml) &&
       /data-action="metric-generation"/u.test(exactAethergridHtml) &&
       /id="selectionGlow"/u.test(exactAethergridHtml) &&
-      /class="scanline"/u.test(exactAethergridHtml),
+      /class="scanline"/u.test(exactAethergridHtml) &&
+      /id="gridEnergyCanvas"/u.test(exactAethergridHtml) &&
+      /id="hudClock"/u.test(exactAethergridHtml) &&
+      /id="streamState"/u.test(exactAethergridHtml),
     'ÆTHERGRID standalone HTML must embed the approved canvas, live motion, and functional controls',
   );
   assert(
@@ -438,6 +441,7 @@ async function main() {
   const exactAethergridServer = await text('apps/aethergrid-console/server.mjs');
   for (const route of [
     '/api/aethergrid/telemetry',
+    '/api/aethergrid/stream',
     '/api/aethergrid/view',
     '/api/aethergrid/region',
     '/api/aethergrid/scenario',

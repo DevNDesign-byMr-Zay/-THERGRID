@@ -34,6 +34,8 @@ The approved dashboard remains the visual baseline, but the interface now has a 
 - bounded optimization with classical-baseline preservation;
 - evidence review and JSON export packages;
 - health-check and reset controls;
-- subtle scanline, node-pulse, energy-sheen, and active-selection animation that preserves the approved idle composition.
+- subtle scanline, node-pulse, energy-sheen, active-selection animation, and a live canvas energy-flow layer that preserves the approved idle composition;
+- a dynamic HUD clock and connection indicator;
+- server-sent live telemetry streaming when the Node backend is running, with polling/standalone fallback behavior.
 
 When opened directly from disk, the self-contained HTML uses local fallback state so the controls still work. When served through `server.mjs`, the same controls are backed by the Node APIs and a short in-memory audit/activity log.

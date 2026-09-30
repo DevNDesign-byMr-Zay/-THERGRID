@@ -183,6 +183,25 @@ const server = http.createServer(async (request, response) => {
       });
     }
 
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/stream') {
+      response.writeHead(200, {
+        'content-type': 'text/event-stream; charset=utf-8',
+        'cache-control': 'no-cache, no-transform',
+        connection: 'keep-alive',
+        'x-content-type-options': 'nosniff',
+      });
+      const sendEvent = () => {
+        telemetryTick();
+        response.write(
+          `data: ${JSON.stringify({ state: snapshot(), at: new Date().toISOString() })}\n\n`,
+        );
+      };
+      sendEvent();
+      const interval = setInterval(sendEvent, 2500);
+      request.once('close', () => clearInterval(interval));
+      return;
+    }
+
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/state') {
       telemetryTick();
       return json(response, 200, snapshot());

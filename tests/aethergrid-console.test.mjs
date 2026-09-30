@@ -34,6 +34,9 @@ test('ÆTHERGRID serves the approved interactive dashboard shell', async () => {
     assert.match(html, /data-action="metric-generation"/u);
     assert.match(html, /id="selectionGlow"/u);
     assert.match(html, /class="scanline"/u);
+    assert.match(html, /id="gridEnergyCanvas"/u);
+    assert.match(html, /id="hudClock"/u);
+    assert.match(html, /id="streamState"/u);
   });
 });
 
@@ -100,6 +103,24 @@ test('ÆTHERGRID backend supports live view, region, scenario and telemetry stat
       body: JSON.stringify({ view: 'actuate' }),
     });
     assert.equal(invalid.status, 400);
+  });
+});
+
+test('ÆTHERGRID backend streams live telemetry events', async () => {
+  await withServer(async (baseUrl) => {
+    const controller = new AbortController();
+    const response = await fetch(`${baseUrl}/api/aethergrid/stream`, {
+      signal: controller.signal,
+    });
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-type'), /^text\/event-stream/u);
+    const reader = response.body.getReader();
+    const first = await reader.read();
+    controller.abort();
+    const text = new TextDecoder().decode(first.value);
+    assert.match(text, /^data: /u);
+    assert.match(text, /New York Metro/u);
+    assert.match(text, /ADVISORY ONLY/u);
   });
 });
 

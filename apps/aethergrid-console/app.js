@@ -13,6 +13,10 @@
   const chatInput = q('#chatInput');
   const selectionGlow = q('#selectionGlow');
   const telemetryBadge = q('#telemetryBadge');
+  const energyCanvas = q('#gridEnergyCanvas');
+  const hudClock = q('#hudClock');
+  const streamState = q('#streamState');
+  const dashboardStage = q('#dashboardStage');
 
   const demoState = {
     system: {
@@ -69,6 +73,8 @@
   let serverState = structuredClone(demoState);
   let activeHotspot = null;
   let telemetryTimer = null;
+  let energyFrame = null;
+  let eventStream = null;
 
   function escapeHtml(value = '') {
     return String(value).replace(/[&<>'"]/g, (character) =>
@@ -120,6 +126,154 @@
     telemetryBadge.innerHTML = `<i></i><span>${escapeHtml(
       serverState.system?.view || 'live',
     )} · ${Number(serverState.metrics?.loadMw || 2410).toLocaleString()} MW</span>`;
+  }
+
+  function updateClock() {
+    if (!hudClock) return;
+    const now = new Date();
+    const date = now.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    const time = now.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    hudClock.innerHTML = `<span>${date}</span><b>${time}</b>`;
+  }
+
+  function setStreamState(mode) {
+    if (!streamState) return;
+    streamState.classList.toggle('offline', mode !== 'live');
+    streamState.innerHTML = `<i></i><span>${escapeHtml(mode === 'live' ? 'LIVE STREAM' : mode === 'standalone' ? 'STANDALONE' : 'POLLING')}</span>`;
+  }
+
+  function startEnergyCanvas() {
+    if (!energyCanvas || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const context = energyCanvas.getContext('2d');
+    if (!context) return;
+
+    const nodes = [
+      [0.08, 0.68],
+      [0.19, 0.45],
+      [0.31, 0.57],
+      [0.43, 0.31],
+      [0.55, 0.52],
+      [0.67, 0.35],
+      [0.79, 0.62],
+      [0.9, 0.44],
+      [0.72, 0.76],
+      [0.48, 0.73],
+    ];
+    const edges = [
+      [0, 1],
+      [1, 2],
+      [2, 3],
+      [3, 4],
+      [4, 5],
+      [5, 7],
+      [4, 6],
+      [6, 8],
+      [8, 9],
+      [9, 2],
+      [3, 6],
+      [1, 9],
+    ];
+    const colors = {
+      live: ['#35dcff', '#4d80ff', '#a75cff'],
+      forecast: ['#55cfff', '#8464ff', '#d064ff'],
+      scenario: ['#37dfff', '#9c59ff', '#ffbd55'],
+    };
+
+    function resize() {
+      const rect = energyCanvas.getBoundingClientRect();
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const width = Math.max(1, Math.round(rect.width * ratio));
+      const height = Math.max(1, Math.round(rect.height * ratio));
+      if (energyCanvas.width !== width || energyCanvas.height !== height) {
+        energyCanvas.width = width;
+        energyCanvas.height = height;
+      }
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+      return rect;
+    }
+
+    function draw(time) {
+      const rect = resize();
+      const width = rect.width;
+      const height = rect.height;
+      context.clearRect(0, 0, width, height);
+      const palette = colors[serverState.system?.view] || colors.live;
+
+      edges.forEach(([a, b], index) => {
+        const [ax, ay] = nodes[a];
+        const [bx, by] = nodes[b];
+        const x1 = ax * width;
+        const y1 = ay * height;
+        const x2 = bx * width;
+        const y2 = by * height;
+        context.beginPath();
+        context.moveTo(x1, y1);
+        const cx = (x1 + x2) / 2;
+        const cy = (y1 + y2) / 2 - Math.min(28, Math.abs(x2 - x1) * 0.08);
+        context.quadraticCurveTo(cx, cy, x2, y2);
+        context.strokeStyle = palette[index % palette.length];
+        context.globalAlpha = 0.18 + (index % 3) * 0.05;
+        context.lineWidth = 0.8 + (index % 2) * 0.5;
+        context.stroke();
+
+        const phase = ((time / (2400 + index * 110)) + index * 0.13) % 1;
+        const oneMinus = 1 - phase;
+        const px = oneMinus * oneMinus * x1 + 2 * oneMinus * phase * cx + phase * phase * x2;
+        const py = oneMinus * oneMinus * y1 + 2 * oneMinus * phase * cy + phase * phase * y2;
+        context.beginPath();
+        context.arc(px, py, 1.8 + (index % 2) * 0.5, 0, Math.PI * 2);
+        context.fillStyle = palette[(index + 1) % palette.length];
+        context.globalAlpha = 0.9;
+        context.shadowColor = context.fillStyle;
+        context.shadowBlur = 10;
+        context.fill();
+        context.shadowBlur = 0;
+      });
+
+      nodes.forEach(([x, y], index) => {
+        const pulse = 2.2 + Math.sin(time / 700 + index) * 0.8;
+        context.beginPath();
+        context.arc(x * width, y * height, Math.max(1.2, pulse), 0, Math.PI * 2);
+        context.fillStyle = palette[index % palette.length];
+        context.globalAlpha = 0.48;
+        context.fill();
+      });
+
+      context.globalAlpha = 1;
+      energyFrame = requestAnimationFrame(draw);
+    }
+
+    if (energyFrame) cancelAnimationFrame(energyFrame);
+    energyFrame = requestAnimationFrame(draw);
+  }
+
+  function connectEventStream() {
+    if (location.protocol === 'file:' || !('EventSource' in window)) {
+      setStreamState('standalone');
+      return;
+    }
+    if (eventStream) eventStream.close();
+    eventStream = new EventSource('./api/aethergrid/stream');
+    eventStream.addEventListener('open', () => setStreamState('live'));
+    eventStream.addEventListener('message', (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        mergeState(payload.state || payload);
+        updateTelemetryBadge();
+      } catch {}
+    });
+    eventStream.addEventListener('error', () => {
+      setStreamState('polling');
+    });
   }
 
   async function refreshTelemetry() {
@@ -643,8 +797,16 @@
     if (telemetryTimer) clearInterval(telemetryTimer);
     telemetryTimer = setInterval(refreshTelemetry, 3200);
     refreshTelemetry();
+    updateClock();
+    setInterval(updateClock, 1000);
+    startEnergyCanvas();
+    connectEventStream();
+    window.addEventListener('resize', startEnergyCanvas, { passive: true });
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) refreshTelemetry();
+      if (!document.hidden) {
+        refreshTelemetry();
+        if (!energyFrame) startEnergyCanvas();
+      }
     });
     const first = q('.hotspot[data-action="overview"]');
     if (first) activateHotspot(first);
