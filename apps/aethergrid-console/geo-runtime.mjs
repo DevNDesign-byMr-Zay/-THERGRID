@@ -30,7 +30,7 @@ function projectPoint(lat, lon, center) {
 }
 
 function seededFallback(city, count = 110) {
-  let seed = createHash('sha256').update(city.id).readUInt32LE(0);
+  let seed = createHash('sha256').update(city.id).digest().readUInt32LE(0);
   const random = () => {
     seed = (Math.imul(seed, 1664525) + 1013904223) | 0;
     return (seed >>> 0) / 4294967296;
