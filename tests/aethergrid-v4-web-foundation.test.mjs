@@ -938,3 +938,23 @@ test('v4 night illumination follows mapped building geometry with explicit prese
   assert.match(cesium, /#ffd37d/u);
   assert.match(nativeRenderer, /#ffd37d/u);
 });
+
+
+test('v4 native failover preserves source-driven weather geometry and layer toggles', async () => {
+  const nativeRenderer = await text(
+    'apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts',
+  );
+
+  assert.match(nativeRenderer, /weatherPhenomenon/u);
+  assert.match(nativeRenderer, /#weatherGeometry/u);
+  assert.match(nativeRenderer, /cloudCoverPercent/u);
+  assert.match(nativeRenderer, /precipitationMm/u);
+  assert.match(nativeRenderer, /phenomenon === 'snow'/u);
+  assert.match(nativeRenderer, /phenomenon === 'fog'/u);
+  assert.match(nativeRenderer, /phenomenon === 'thunderstorm'/u);
+  assert.match(nativeRenderer, /this\.#layerVisible\('weather', true\)/u);
+  assert.match(nativeRenderer, /this\.#layerVisible\('air', true\)/u);
+  assert.match(nativeRenderer, /const weather = this\.#weatherGeometry\(\)/u);
+  assert.match(nativeRenderer, /gl\.drawArrays/u);
+  assert.match(nativeRenderer, /context\.arc/u);
+});
