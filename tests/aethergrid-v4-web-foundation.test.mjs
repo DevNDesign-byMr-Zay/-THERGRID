@@ -639,3 +639,14 @@ test('v4 city transitions report geometry atmosphere and live-context readiness 
   assert.match(app, /LIVE CONTEXT/u);
   assert.match(app, /setCityLoad\(\(current\) => \(\{ \.\.\.current, spatial: false \}\)\)/u);
 });
+
+test('v4 streamed 3d buildings defer until city or district detail', async () => {
+  const renderer = await text(
+    'apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'
+  );
+
+  assert.match(renderer, /#buildingsShouldShow/u);
+  assert.match(renderer, /this\.#detailLevel === 'city'/u);
+  assert.match(renderer, /this\.#detailLevel === 'district'/u);
+  assert.match(renderer, /this\.#buildings\.show = this\.#buildingsShouldShow\(\)/u);
+});
