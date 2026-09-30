@@ -13,19 +13,54 @@ import {
 } from '../time/operational-temporal-capabilities';
 import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
 
+interface ExistingCurrentSource {
+  live: boolean;
+  provider: string | null;
+  sourceTime: string | null;
+  fetchedAt: string | null;
+  attribution: string | null;
+  summary: string;
+}
+
 interface OperationalDataPanelProps {
   latitude: number;
   longitude: number;
   cityId: string;
   temporalMode: TemporalMode;
   cursorIso: string;
+  weatherCurrent?: ExistingCurrentSource | null;
+  airQualityCurrent?: ExistingCurrentSource | null;
+  seismicCurrent?: ExistingCurrentSource | null;
+}
+
+function existingSourceSnapshot(
+  id: OperationalSourceId,
+  current: ExistingCurrentSource | null | undefined
+): OperationalSourceSnapshot | null {
+  if (!current) return null;
+  return {
+    id,
+    state: current.live ? 'live' : 'fallback',
+    provider: current.provider,
+    dataset: null,
+    sourceTime: current.sourceTime,
+    fetchedAt: current.fetchedAt,
+    attribution: current.attribution,
+    summary: current.summary,
+    metrics: [],
+    error: null
+  };
 }
 
 function sourceById(
   snapshot: OperationalSnapshot | null,
-  id: OperationalSourceId
+  id: OperationalSourceId,
+  existing: OperationalSourceSnapshot | null
 ): OperationalSourceSnapshot | null {
-  return snapshot?.sources.find((source) => source.id === id) ?? null;
+  const candidate = snapshot?.sources.find((source) => source.id === id) ?? null;
+  if (candidate?.state === 'live' || candidate?.state === 'stale') return candidate;
+  if (existing?.state === 'live') return existing;
+  return candidate ?? existing;
 }
 
 export function OperationalDataPanel({
@@ -33,7 +68,10 @@ export function OperationalDataPanel({
   longitude,
   cityId,
   temporalMode,
-  cursorIso
+  cursorIso,
+  weatherCurrent,
+  airQualityCurrent,
+  seismicCurrent
 }: OperationalDataPanelProps) {
   const [snapshot, setSnapshot] = useState<OperationalSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
@@ -93,11 +131,19 @@ export function OperationalDataPanel({
 
       <div className="provider-list">
         {OPERATIONAL_TEMPORAL_CAPABILITIES.map((capability) => {
-          const source = sourceById(snapshot, capability.id);
+          const existing =
+            capability.id === 'weather'
+              ? existingSourceSnapshot('weather', weatherCurrent)
+              : capability.id === 'air-quality'
+                ? existingSourceSnapshot('air-quality', airQualityCurrent)
+                : capability.id === 'seismic'
+                  ? existingSourceSnapshot('seismic', seismicCurrent)
+                  : null;
+          const source = sourceById(snapshot, capability.id, existing);
           const support = temporalSupportFor(capability, temporalMode);
           const state =
-            support === 'available'
-              ? source?.state ?? (loading ? 'loading' : 'unavailable')
+            temporalMode === 'live'
+              ? source?.state ?? (loading ? 'loading' : support)
               : support;
 
           return (
