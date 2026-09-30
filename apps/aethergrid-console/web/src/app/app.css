@@ -2296,6 +2296,26 @@ button {
   font-size: 12px;
 }
 
+
+.selection-ai-action {
+  width: 100%;
+  min-height: 32px;
+  margin-top: 10px;
+  border: 1px solid rgba(155, 124, 255, 0.28);
+  border-radius: 7px;
+  color: #d9d1ff;
+  background: rgba(155, 124, 255, 0.08);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  cursor: pointer;
+}
+
+.selection-ai-action:hover {
+  border-color: rgba(155, 124, 255, 0.46);
+  background: rgba(155, 124, 255, 0.12);
+}
+
 .selection-hint {
   display: inline-block;
   margin-top: 9px;
