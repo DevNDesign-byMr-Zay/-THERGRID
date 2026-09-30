@@ -862,3 +862,22 @@ test('v4 temporal modes hide current-only environment feeds outside live time', 
   assert.match(rail, /MODELED \+ STATIC/u);
   assert.match(rail, /current weather\/AQI\/seismic hidden/u);
 });
+
+test('v4 live 4d clock advances automatically while non-live cursors remain independent', async () => {
+  const [clock, rail] = await Promise.all([
+    text('apps/aethergrid-console/web/src/time/temporal-clock.ts'),
+    text('apps/aethergrid-console/web/src/components/TemporalRail.tsx'),
+  ]);
+
+  assert.match(clock, /#liveTimer/u);
+  assert.match(clock, /setInterval\(\(\) => \{/u);
+  assert.match(clock, /this\.#state\.liveIso = liveIso/u);
+  assert.match(
+    clock,
+    /this\.#state\.mode === 'live' && !this\.#state\.playing/u,
+  );
+  assert.match(clock, /this\.#state\.cursorIso = liveIso/u);
+  assert.match(clock, /clearInterval\(this\.#liveTimer\)/u);
+  assert.match(rail, /disabled=\{state\.mode === 'live'\}/u);
+  assert.match(rail, /Live time advances automatically/u);
+});
