@@ -490,3 +490,21 @@ test('v4 God’s-eye city nodes encode AQI categories and descend into selected 
   assert.match(app, /setScope\('city'\)/u);
   assert.match(app, /onSelection=\{handleSpatialSelection\}/u);
 });
+
+test('v4 operator shortcuts keep world city live intel and search keyboard-accessible', async () => {
+  const [shortcuts, app, styles] = await Promise.all([
+    text('apps/aethergrid-console/web/src/hooks/use-operator-shortcuts.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/app/app.css'),
+  ]);
+
+  assert.match(shortcuts, /event\.metaKey \|\| event\.ctrlKey/u);
+  assert.match(shortcuts, /key === 'g'/u);
+  assert.match(shortcuts, /key === 'c'/u);
+  assert.match(shortcuts, /key === 'l'/u);
+  assert.match(shortcuts, /key === 'i'/u);
+  assert.match(shortcuts, /editableTarget/u);
+  assert.match(app, /searchInputRef\.current\?\.focus/u);
+  assert.match(app, /<kbd aria-hidden="true">⌘K<\/kbd>/u);
+  assert.match(styles, /grid-template-columns: 24px 1fr auto auto/u);
+});
