@@ -9,6 +9,10 @@
 - Added scheduled dependency-freshness evidence without automatic dependency mutation.
 
 ### Added
+- Added source-backed OpenStreetMap water areas, waterways, coastline, parks and green-space geometry to distinguish city twins using mapped geography.
+- Added independent WATER, GREEN and LANDMARKS renderer controls with no invented environmental geometry in local fallback mode.
+- Added source-tagged building material overlays and source-bound named-tall-building landmark emphasis.
+- Added Flood Context and Green Infrastructure as bounded advisory workflows, bringing maintained city operations to 12.
 - Added a real-time solar terminator, current subsolar marker, and night-side city illumination to the native-WebGL global globe.
 - Added wind-driven cloud decks, directional weather translation, falling precipitation motion, and procedural skyline lights derived from mapped building geometry plus day/night state.
 - Expanded Open-Meteo city context with modeled relative humidity, surface pressure, sunrise, sunset, daylight duration, and sunshine duration.
