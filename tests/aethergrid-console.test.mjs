@@ -39,6 +39,9 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(html, /id="scenarioChart"/u);
     assert.match(html, /id="settingDefaultWorkspace"/u);
     assert.match(html, /id="settingLiveStream"/u);
+    assert.match(html, /data-scenario="custom"/u);
+    assert.match(html, /id="customLoad"/u);
+    assert.match(html, /data-action="apply-custom-scenario"/u);
     assert.match(html, /href="\.\/styles\.css"/u);
     assert.match(html, /src="\.\/app\.js"/u);
     assert.doesNotMatch(html, /dashboard-reference/iu);
@@ -54,6 +57,9 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(appSource, /wheel/u);
     assert.match(appSource, /function switchWorkspace/u);
     assert.match(appSource, /localStorage\.setItem\(SETTINGS_KEY/u);
+    assert.match(appSource, /pickNode\(clientX, clientY\)/u);
+    assert.match(appSource, /projectNode\(node\)/u);
+    assert.match(appSource, /activateScenario\(name, parameters/u);
     assert.match(appSource, /data-workspace/u);
 
     const logo = await fetch(`${baseUrl}/assets/brand/aethergrid-logo.webp`);
@@ -174,6 +180,29 @@ test('ÆTHERGRID backend supports live view, region, scenario and telemetry stat
     assert.equal(scenarioPayload.state.system.scenario, 'renewable-surge');
     assert.equal(scenarioPayload.state.system.view, 'scenario');
 
+    const custom = await fetch(`${baseUrl}/api/aethergrid/scenario`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        scenario: 'custom',
+        parameters: {
+          loadMultiplierPercent: 132,
+          renewableAvailabilityPercent: 148,
+          storageReservePercent: 27,
+          weatherRiskPercent: 64,
+        },
+      }),
+    });
+    assert.equal(custom.status, 200);
+    const customPayload = await custom.json();
+    assert.equal(customPayload.state.system.scenario, 'custom');
+    assert.deepEqual(customPayload.state.system.scenarioParameters, {
+      loadMultiplierPercent: 132,
+      renewableAvailabilityPercent: 148,
+      storageReservePercent: 27,
+      weatherRiskPercent: 64,
+    });
+
     const telemetry = await fetch(`${baseUrl}/api/aethergrid/telemetry`);
     assert.equal(telemetry.status, 200);
     const telemetryPayload = await telemetry.json();
@@ -212,13 +241,22 @@ test('ÆTHERGRID optimization creates a receipt without actuation authority', as
     const response = await fetch(`${baseUrl}/api/aethergrid/optimize`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ objective: 'minimize_cost_emissions' }),
+      body: JSON.stringify({
+        objective: 'emissions',
+        weights: { cost: 30, emissions: 85 },
+        constraints: { minimumReservePercent: 24, classicalBaselineRequired: true },
+        scenario: 'custom',
+      }),
     });
     assert.equal(response.status, 200);
     const payload = await response.json();
     assert.equal(payload.status, 'completed');
     assert.equal(payload.advisoryOnly, true);
     assert.equal(payload.classicalBaselineRequired, true);
+    assert.equal(payload.comparison.classical.method, 'deterministic-classical-baseline');
+    assert.equal(payload.comparison.experimental.method, 'bounded-experimental-search');
+    assert.ok(payload.comparison.experimental.candidateCost > 0);
+    assert.ok(payload.comparison.experimental.reliabilityScore > 0);
     assert.match(payload.receipt, /^[a-f0-9]{64}$/u);
     assert.equal(state.optimization.runCount, priorRuns + 1);
   });
