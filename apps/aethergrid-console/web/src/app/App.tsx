@@ -311,11 +311,18 @@ export function App() {
       view: visualMode,
       temporalMode: temporal.mode,
       temporalCursor: temporal.cursorIso,
-      coordinate: {
-        latitude: city.latitude,
-        longitude: city.longitude
-      },
-      cityIdentity: cityIdentity ? { ...cityIdentity } : null,
+      coordinate:
+        scope === 'world'
+          ? {
+              latitude: 20,
+              longitude: 0
+            }
+          : {
+              latitude: city.latitude,
+              longitude: city.longitude
+            },
+      cityIdentity:
+        scope === 'city' && cityIdentity ? { ...cityIdentity } : null,
       selectedEntity: selection
         ? {
             id: selection.id,
@@ -327,14 +334,14 @@ export function App() {
             properties: selection.properties ?? null
           }
         : null,
-      environment: atmosphere
+      environment: scope === 'city' && atmosphere
         ? {
             sourceTime: atmosphere.sourceTime,
             live: atmosphere.live,
             current: atmosphere.current
           }
         : null,
-      liveContext: liveContext
+      liveContext: scope === 'city' && liveContext
         ? {
             airQuality: liveContext.airQuality,
             seismic: {
@@ -366,10 +373,13 @@ export function App() {
 
   const activeOverlays = useMemo(
     () =>
-      [worldOverlay, ...semanticOverlays, powerOverlay, seismicOverlay].filter(
+      (scope === 'world'
+        ? [worldOverlay]
+        : [...semanticOverlays, powerOverlay, seismicOverlay]
+      ).filter(
         (snapshot): snapshot is SpatialOverlaySnapshot => Boolean(snapshot)
       ),
-    [worldOverlay, semanticOverlays, powerOverlay, seismicOverlay]
+    [scope, worldOverlay, semanticOverlays, powerOverlay, seismicOverlay]
   );
 
   const toggleLayer = (id: string) => {
@@ -522,7 +532,7 @@ export function App() {
             layers={layers}
             visualMode={visualMode}
             overlays={activeOverlays}
-            atmosphere={atmosphere}
+            atmosphere={scope === 'city' ? atmosphere : null}
             onSelection={setSelection}
           />
 
