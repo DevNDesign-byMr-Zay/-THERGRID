@@ -14,11 +14,6 @@
 - Expanded Open-Meteo city context with modeled relative humidity, surface pressure, sunrise, sunset, daylight duration, and sunshine duration.
 - Added Heat Stress and Visibility Operations as evidence-bound advisory city workflows, expanding the maintained operation catalog from eight to ten.
 - Added explicit provenance that procedural skyline lights do not represent measured occupancy, window state, or utility demand.
-- Added a live solar terminator, subsolar point and night-side city illumination to the native-WebGL globe.
-- Added wind-driven cloud decks, directional wind/AQ motion, falling precipitation, and procedural mapped-geometry skyline lights to city twins.
-- Added current relative humidity, surface pressure, sunrise, sunset, daylight duration and sunshine duration to the city environment contract.
-- Added Heat Stress and Visibility Operations city workflows, bringing the maintained city-operation set to ten bounded use cases.
-- Added an explicit visualization contract that procedural city lights do not represent measured occupancy or real building lighting state.
 
 - Added a source-driven live globe layer with an animated atmosphere shell, UTC sweep, current AQI-coded city pulses, and recent USGS M2.5+ seismic pulses.
 - Added native-WebGL city weather vectors, precipitation streaks, AQI-driven atmospheric particles, and directional seismic rings built from the active city's current feed context.
