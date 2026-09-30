@@ -1,4 +1,7 @@
-import type { AtmosphericOverlaySnapshot } from '../overlays/atmospheric-overlay';
+import type {
+  AirQualityOverlaySnapshot,
+  AtmosphericOverlaySnapshot
+} from '../overlays/atmospheric-overlay';
 import {
   Cartesian2,
   Cesium3DTileFeature,
@@ -27,6 +30,7 @@ import type {
   VisualMode
 } from '../spatial-renderer';
 
+import { AirQualityLayer } from './air-quality-layer';
 import { CameraJourneyController } from './camera-journey-controller';
 import { GeodeticGridLayer } from './geodetic-grid-layer';
 import { NetworkOverlayLayer } from './network-overlay-layer';
@@ -59,6 +63,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #cameraJourney: CameraJourneyController | null = null;
   #visualController: VisualModeController | null = null;
   #weather: WeatherAtmosphereLayer | null = null;
+  #airQuality: AirQualityLayer | null = null;
   #overlays = new Map<string, NetworkOverlayLayer>();
   #visualMode: VisualMode = 'solid';
   #selectedTile: { feature: Cesium3DTileFeature; color: Color } | null = null;
@@ -106,6 +111,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       realityEnabled: config.realityEnabled
     });
     this.#weather = new WeatherAtmosphereLayer(this.#viewer);
+    this.#airQuality = new AirQualityLayer(this.#viewer);
 
     try {
       this.#buildings = await createOsmBuildingsAsync({
@@ -138,6 +144,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#grid?.setTime(time.iso);
     for (const overlay of this.#overlays.values()) overlay.setTime(time.iso);
     this.#weather?.setTime(time);
+    this.#airQuality?.setTime(time);
     viewer.scene.requestRender();
   }
 
@@ -194,6 +201,15 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
   clearAtmosphere(): void {
     this.#weather?.setVisible(false);
+  }
+
+  applyAirQuality(snapshot: AirQualityOverlaySnapshot): void {
+    this.#airQuality?.apply(snapshot);
+    this.#airQuality?.setVisible(this.#layerVisible('air', true));
+  }
+
+  clearAirQuality(): void {
+    this.#airQuality?.setVisible(false);
   }
 
   async pick(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null> {
@@ -269,6 +285,8 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#visualController = null;
     this.#weather?.destroy();
     this.#weather = null;
+    this.#airQuality?.destroy();
+    this.#airQuality = null;
     for (const overlay of this.#overlays.values()) overlay.destroy();
     this.#overlays.clear();
     this.#grid?.destroy();
@@ -302,6 +320,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     if (this.#buildings) this.#buildings.show = this.#layerVisible('buildings', true);
     this.#grid?.setVisible(this.#layerVisible('grid', true));
     this.#weather?.setVisible(this.#layerVisible('weather', true));
+    this.#airQuality?.setVisible(this.#layerVisible('air', true));
     for (const [layerId, overlay] of this.#overlays) {
       overlay.setVisible(this.#layerVisible(layerId, true));
     }
