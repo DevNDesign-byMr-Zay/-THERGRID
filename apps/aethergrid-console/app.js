@@ -2027,6 +2027,7 @@
           ? `${liveAir}/${state.geospatial.cities.length} CITY AQ · ${quakeCount} M2.5+ EVENTS / 24H`
           : 'LIVE CONTEXT UNAVAILABLE';
       }
+      const liveByCity = new Map((globalLive?.cities || []).map((city) => [city.id, city]));
       if (select) {
         select.innerHTML = state.geospatial.cities
           .map(
@@ -2040,7 +2041,7 @@
         list.innerHTML = state.geospatial.cities
           .map(
             (city) =>
-              `<button class="global-city-button${city.id === state.geospatial.selectedCityId ? ' active' : ''}" data-global-city="${escapeHtml(city.id)}"><b>${escapeHtml(city.name)}</b><small>${escapeHtml(city.district || city.country)} · ${Number(city.lat).toFixed(2)}, ${Number(city.lon).toFixed(2)}</small><em>ENTER</em></button>`,
+              `<button class="global-city-button${city.id === state.geospatial.selectedCityId ? ' active' : ''}" data-global-city="${escapeHtml(city.id)}"><b>${escapeHtml(city.name)}</b><small>${escapeHtml(city.district || city.country)} · ${Number(city.lat).toFixed(2)}, ${Number(city.lon).toFixed(2)}${liveByCity.get(city.id)?.airQuality?.usAqi == null ? '' : ` · AQI ${Number(liveByCity.get(city.id).airQuality.usAqi).toFixed(0)}`}</small><em>ENTER</em></button>`,
           )
           .join('');
       }
