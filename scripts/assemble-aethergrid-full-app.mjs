@@ -184,6 +184,8 @@ assert(/data-global-layer="weather"/u.test(sourceHtml), 'runtime index.html must
 assert(/data-global-layer="clouds"/u.test(sourceHtml), 'runtime index.html must expose the live cloud layer');
 assert(/data-global-layer="illumination"/u.test(sourceHtml), 'runtime index.html must expose the city-light layer');
 assert(/data-global-layer="landmarks"/u.test(sourceHtml), 'runtime index.html must expose the source-backed landmark layer');
+assert(/data-global-layer="water"/u.test(sourceHtml), 'runtime index.html must expose mapped water');
+assert(/data-global-layer="green"/u.test(sourceHtml), 'runtime index.html must expose mapped green space');
 assert(/id="cityIdentity"/u.test(sourceHtml), 'runtime index.html must expose the city identity inspector');
 assert(/data-global-layer="air"/u.test(sourceHtml), 'runtime index.html must expose the live air-quality layer');
 assert(/data-global-layer="seismic"/u.test(sourceHtml), 'runtime index.html must expose the live seismic layer');
@@ -192,6 +194,8 @@ assert(/value="air-quality-exposure"/u.test(sourceHtml), 'runtime index.html mus
 assert(/value="seismic-awareness"/u.test(sourceHtml), 'runtime index.html must expose seismic awareness analysis');
 assert(/value="heat-stress"/u.test(sourceHtml), 'runtime index.html must expose heat-stress analysis');
 assert(/value="visibility-operations"/u.test(sourceHtml), 'runtime index.html must expose visibility analysis');
+assert(/value="flood-context"/u.test(sourceHtml), 'runtime index.html must expose flood-context analysis');
+assert(/value="green-infrastructure"/u.test(sourceHtml), 'runtime index.html must expose green-infrastructure analysis');
 assert(/id="globalSolarStatus"/u.test(sourceHtml), 'runtime index.html must expose solar-position status');
 assert(/id="settingTheme"/u.test(sourceHtml), 'runtime index.html must expose persistent appearance modes');
 assert(/id="profileForm"/u.test(sourceHtml), 'runtime index.html must expose the persistent operator profile form');
@@ -241,6 +245,13 @@ assert(/cloudParticles/u.test(standaloneHtml), 'standalone HTML must retain nati
 assert(/cityLights/u.test(standaloneHtml), 'standalone HTML must retain procedural skyline light geometry');
 assert(/landmarkCandidates/u.test(standaloneHtml), 'standalone HTML must retain source-backed identity anchor extraction');
 assert(/landmarkSpines/u.test(standaloneHtml), 'standalone HTML must retain landmark spine geometry');
+assert(/waterLines/u.test(standaloneHtml), 'standalone HTML must retain mapped water geometry');
+assert(/waterFaces/u.test(standaloneHtml), 'standalone HTML must retain mapped water surfaces');
+assert(/greenLines/u.test(standaloneHtml), 'standalone HTML must retain mapped green geometry');
+assert(/greenFaces/u.test(standaloneHtml), 'standalone HTML must retain mapped green surfaces');
+assert(/materialGlassFaces/u.test(standaloneHtml), 'standalone HTML must retain source-tagged material geometry');
+assert(/value="flood-context"/u.test(standaloneHtml), 'standalone HTML must retain flood-context operation');
+assert(/value="green-infrastructure"/u.test(standaloneHtml), 'standalone HTML must retain green-infrastructure operation');
 assert(/snowParticles/u.test(standaloneHtml), 'standalone HTML must retain modeled snow geometry');
 assert(/fogParticles/u.test(standaloneHtml), 'standalone HTML must retain modeled fog geometry');
 assert(/stormLines/u.test(standaloneHtml), 'standalone HTML must retain modeled thunderstorm geometry');
@@ -307,7 +318,15 @@ payload.set(
           'semantic-weather-rendering',
           'modeled-snow-animation',
           'modeled-fog-animation',
-          'modeled-thunderstorm-animation'
+          'modeled-thunderstorm-animation',
+          'source-backed-water-areas',
+          'source-backed-waterways',
+          'source-backed-coastline',
+          'source-backed-green-areas',
+          'source-tagged-building-materials',
+          'flood-context-operation',
+          'green-infrastructure-operation',
+          'no-invented-environmental-geometry'
         ],
         files: inventory,
       },
