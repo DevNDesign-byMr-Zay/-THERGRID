@@ -7,7 +7,7 @@ import type { SpatialOverlaySnapshot } from '../renderer/overlays/spatial-overla
 import { useEffect, useRef, useState } from 'react';
 
 import { CesiumSpatialRenderer } from '../renderer/cesium/cesium-renderer';
-import { NativeSpatialRendererAdapter } from '../renderer/native/native-renderer-adapter';
+import { NativeWebglSpatialRenderer } from '../renderer/native/native-webgl-renderer';
 import { RendererManager } from '../renderer/renderer-manager';
 import type {
   LayerState,
@@ -62,7 +62,7 @@ export function SpatialViewport({
     let cancelled = false;
     const manager = new RendererManager(
       new CesiumSpatialRenderer(),
-      new NativeSpatialRendererAdapter()
+      new NativeWebglSpatialRenderer()
     );
     managerRef.current = manager;
     manager.mount(host);
