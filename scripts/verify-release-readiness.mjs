@@ -437,6 +437,8 @@ async function main() {
       /data-global-layer="weather"/u.test(exactAethergridHtml) &&
       /data-global-layer="clouds"/u.test(exactAethergridHtml) &&
       /data-global-layer="illumination"/u.test(exactAethergridHtml) &&
+      /data-global-layer="landmarks"/u.test(exactAethergridHtml) &&
+      /id="cityIdentity"/u.test(exactAethergridHtml) &&
       /data-global-layer="air"/u.test(exactAethergridHtml) &&
       /data-global-layer="seismic"/u.test(exactAethergridHtml) &&
       /id="globalLiveStatus"/u.test(exactAethergridHtml) &&
@@ -500,6 +502,13 @@ async function main() {
       /weatherLines/u.test(exactAethergridJs) &&
       /cloudParticles/u.test(exactAethergridJs) &&
       /cityLights/u.test(exactAethergridJs) &&
+      /landmarkCandidates/u.test(exactAethergridJs) &&
+      /landmarkSpines/u.test(exactAethergridJs) &&
+      /snowParticles/u.test(exactAethergridJs) &&
+      /fogParticles/u.test(exactAethergridJs) &&
+      /stormLines/u.test(exactAethergridJs) &&
+      /weatherPhenomenon/u.test(exactAethergridJs) &&
+      /function updateCityIdentity/u.test(exactAethergridJs) &&
       /precipitationLines/u.test(exactAethergridJs) &&
       /airParticles/u.test(exactAethergridJs) &&
       /u_flow/u.test(exactAethergridJs) &&
@@ -534,7 +543,9 @@ async function main() {
       /html\[data-theme="light"\]/u.test(exactAethergridStyles) &&
       /\.operation-live-badge/u.test(exactAethergridStyles) &&
       /live-layer-pulse/u.test(exactAethergridStyles) &&
-      /#globalSolarStatus/u.test(exactAethergridStyles),
+      /#globalSolarStatus/u.test(exactAethergridStyles) &&
+      /\.city-identity/u.test(exactAethergridStyles) &&
+      /\.identity-anchor/u.test(exactAethergridStyles),
     'ÆTHERGRID styles must target real runtime elements',
   );
   assert(
@@ -612,7 +623,17 @@ async function main() {
       exactAethergridApp.capabilities?.humidityPressureContext === true &&
       exactAethergridApp.capabilities?.heatStressUseCase === true &&
       exactAethergridApp.capabilities?.visibilityOperationsUseCase === true &&
+      exactAethergridApp.capabilities?.sourceBackedCityIdentity === true &&
+      exactAethergridApp.capabilities?.namedStructureAnchors === true &&
+      exactAethergridApp.capabilities?.interactiveLandmarkLayer === true &&
+      exactAethergridApp.capabilities?.semanticWeatherRendering === true &&
+      exactAethergridApp.capabilities?.modeledSnowAnimation === true &&
+      exactAethergridApp.capabilities?.modeledFogAnimation === true &&
+      exactAethergridApp.capabilities?.modeledThunderstormAnimation === true &&
       exactAethergridApp.visualContract?.proceduralCityLightsRepresentOccupancy === false &&
+      exactAethergridApp.visualContract?.landmarkIdentityRequiresSourceNameOrTallGeometry === true &&
+      exactAethergridApp.visualContract?.thunderstormLinesRepresentDetectedStrikes === false &&
+      exactAethergridApp.visualContract?.fogSnowRainVisualsRepresentStreetLevelSensors === false &&
       exactAethergridApp.aiRuntime?.replaceableByConfiguration === true &&
       Array.isArray(exactAethergridApp.aiRuntime?.externalContext) &&
       exactAethergridApp.aiRuntime.externalContext.includes('geospatial-summary') &&
@@ -642,6 +663,9 @@ async function main() {
       exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('weather') &&
       exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('clouds') &&
       exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('illumination') &&
+      exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('landmarks') &&
+      exactAethergridApp.geospatialRuntime?.skylineIdentity?.namedStructures === true &&
+      exactAethergridApp.geospatialRuntime?.skylineIdentity?.interactiveAnchors === true &&
       exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('air') &&
       exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('seismic') &&
       Array.isArray(exactAethergridApp.settingsRuntime?.appearanceModes) &&
@@ -751,6 +775,9 @@ async function main() {
       /buildingGeometries/u.test(aethergridGeoRuntime) &&
       /representativeBuildings/u.test(aethergridGeoRuntime) &&
       /skylineProfile/u.test(aethergridGeoRuntime) &&
+      /namedStructures/u.test(aethergridGeoRuntime) &&
+      /namedStructureCount/u.test(aethergridGeoRuntime) &&
+      /tallStructureCount/u.test(aethergridGeoRuntime) &&
       /timestamp_osm_base/u.test(aethergridGeoRuntime) &&
       /way\["highway"\]/u.test(aethergridGeoRuntime) &&
       /way\["power"~"\^\(line\|minor_line\|cable\)\$"\]/u.test(aethergridGeoRuntime) &&
@@ -836,6 +863,12 @@ async function main() {
       /data-global-layer="weather"/u.test(exactAethergridPackager) &&
       /data-global-layer="clouds"/u.test(exactAethergridPackager) &&
       /data-global-layer="illumination"/u.test(exactAethergridPackager) &&
+      /data-global-layer="landmarks"/u.test(exactAethergridPackager) &&
+      /id="cityIdentity"/u.test(exactAethergridPackager) &&
+      /landmarkCandidates/u.test(exactAethergridPackager) &&
+      /snowParticles/u.test(exactAethergridPackager) &&
+      /fogParticles/u.test(exactAethergridPackager) &&
+      /stormLines/u.test(exactAethergridPackager) &&
       /value="heat-stress"/u.test(exactAethergridPackager) &&
       /value="visibility-operations"/u.test(exactAethergridPackager) &&
       /solarPosition/u.test(exactAethergridPackager) &&
