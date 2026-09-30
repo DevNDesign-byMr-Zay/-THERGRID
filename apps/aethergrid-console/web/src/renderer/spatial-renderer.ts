@@ -20,6 +20,7 @@ export interface SpatialTarget {
   rangeMeters?: number;
   headingDegrees?: number;
   pitchDegrees?: number;
+  journey?: 'full' | 'global' | 'direct';
 }
 
 export interface TemporalInstant {
