@@ -8,12 +8,14 @@ import { createAgentRuntime } from './ai-runtime.mjs';
 import { createGeoRuntime } from './geo-runtime.mjs';
 import { createProfileStore } from './profile-store.mjs';
 import { createQuantumRuntime } from './quantum-runtime.mjs';
+import { createTerrainRuntime } from './terrain-runtime.mjs';
 
 const root = fileURLToPath(new URL('./', import.meta.url));
 const port = Number(process.env.AETHERGRID_PORT || process.env.PORT || 8090);
 const agentRuntime = createAgentRuntime();
 const geoRuntime = createGeoRuntime();
 const quantumRuntime = createQuantumRuntime();
+const terrainRuntime = createTerrainRuntime();
 const profileStore = createProfileStore({
   dataDir: process.env.AETHERGRID_DATA_DIR || join(root, '.aethergrid-data'),
 });
@@ -317,6 +319,7 @@ const server = http.createServer(async (request, response) => {
         ...ai,
         ai,
         geospatial: geoRuntime.summary(),
+        terrain: terrainRuntime.summary(),
         quantum: quantumRuntime.summary(),
         profile: profileStore.safeSummary(),
       });
@@ -409,6 +412,34 @@ const server = http.createServer(async (request, response) => {
       );
       return json(response, 200, {
         ...mesh,
+        externalContext: state.externalContext,
+        activity: state.activity,
+      });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/terrain') {
+      const terrain = await terrainRuntime.sample({
+        lat: url.searchParams.get('lat'),
+        lon: url.searchParams.get('lon'),
+        radiusM: url.searchParams.get('radiusM') || 900,
+        gridSize: url.searchParams.get('gridSize') || 7,
+      });
+      state.externalContext.geospatial = {
+        ...(state.externalContext.geospatial || {}),
+        terrain: {
+          provider: terrain.source.provider,
+          live: Boolean(terrain.source.live),
+          minElevationM: terrain.minElevationM,
+          maxElevationM: terrain.maxElevationM,
+          gridSize: terrain.gridSize,
+        },
+      };
+      activity(
+        `Terrain sample loaded via ${terrain.source.provider} (${terrain.gridSize}×${terrain.gridSize}, ${terrain.minElevationM}–${terrain.maxElevationM} m).`,
+        'terrain',
+      );
+      return json(response, 200, {
+        ...terrain,
         externalContext: state.externalContext,
         activity: state.activity,
       });
