@@ -197,6 +197,22 @@ Weather rendering is now semantic rather than generic:
 - modeled thunderstorm codes add a bounded lightning-style pulse while rain continues independently.
 
 The thunderstorm pulse is **not** a detected lightning strike. Rain, snow and fog effects visualize current provider model context and are not street-level weather instrumentation.
+## v2.9.1 geographic city identity
+
+v2.9.1 reconciles the source-backed CITY IDENTITY / semantic-weather work already on `main` with additional mapped geography, so each city can differ through both its skyline and its surrounding physical context.
+
+When returned by the live OpenStreetMap sample, the city twin now adds:
+- water polygons from mapped `natural=water` / water-type tags;
+- rivers, canals, streams and tidal channels;
+- mapped coastline segments;
+- parks, gardens, reserves, recreation/grass/meadow areas, woods and grassland;
+- restrained façade tint groups when building material/colour tags exist.
+
+These layers coexist with the existing named/tall skyline anchors and semantic rain, snow, fog and thunderstorm rendering. WATER and GREEN are independently toggleable, while LANDMARKS continues to use the stronger source-backed identity-anchor path already established on `main`.
+
+Fallback behavior is deliberately conservative: local fallback geometry does **not** invent water, coastline, parks or green space. Missing mapped geography remains empty/unknown.
+
+The operation catalog expands to 12 with **Flood Context** and **Green Infrastructure**. Both are bounded planning-context proxies: Flood Context is not inundation/storm-surge/drainage forecasting, and Green Infrastructure is not measured canopy, heat exposure, public-health risk or a siting directive.
 ## Windows ZIP workflow
 
 After extracting the package:
