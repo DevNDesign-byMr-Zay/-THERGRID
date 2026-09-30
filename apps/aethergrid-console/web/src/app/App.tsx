@@ -18,6 +18,11 @@ import type {
 } from '../renderer/spatial-renderer';
 import { loadCityEnvironment } from '../services/city-environment';
 import {
+  loadCityLiveContext,
+  seismicToOverlay,
+  type CityLiveSnapshot
+} from '../services/city-live-context';
+import {
   loadCityPowerOverlay,
   loadCoordinatePowerOverlay
 } from '../services/city-power-overlay';
@@ -110,6 +115,8 @@ const INITIAL_LAYERS: readonly LayerState[] = [
   { id: 'buildings', visible: true },
   { id: 'grid', visible: true },
   { id: 'weather', visible: true },
+  { id: 'air', visible: true },
+  { id: 'seismic', visible: true },
   { id: 'energy', visible: true },
   { id: 'transit', visible: false }
 ];
@@ -135,6 +142,8 @@ export function App() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [atmosphere, setAtmosphere] = useState<AtmosphericOverlaySnapshot | null>(null);
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
+  const [liveContext, setLiveContext] = useState<CityLiveSnapshot | null>(null);
+  const [liveContextError, setLiveContextError] = useState<string | null>(null);
 
   const temporalInstant = useMemo(
     () => ({
@@ -152,6 +161,8 @@ export function App() {
     setPowerOverlayError(null);
     setAtmosphere(null);
     setEnvironmentError(null);
+    setLiveContext(null);
+    setLiveContextError(null);
 
     const powerRequest = city.custom
       ? loadCoordinatePowerOverlay(
@@ -174,6 +185,13 @@ export function App() {
       .catch((error) => {
         if (controller.signal.aborted) return;
         setEnvironmentError(error instanceof Error ? error.message : String(error));
+      });
+
+    void loadCityLiveContext(city.latitude, city.longitude, controller.signal)
+      .then((snapshot) => setLiveContext(snapshot))
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        setLiveContextError(error instanceof Error ? error.message : String(error));
       });
 
     return () => controller.abort();
@@ -221,6 +239,18 @@ export function App() {
 
     setSearchError('Enter a supported city or latitude, longitude.');
   };
+
+  const seismicOverlay = useMemo(
+    () => (liveContext && temporal.mode === 'live' ? seismicToOverlay(liveContext) : null),
+    [liveContext, temporal.mode]
+  );
+
+  const activeOverlays = useMemo(
+    () => [powerOverlay, seismicOverlay].filter(
+      (snapshot): snapshot is SpatialOverlaySnapshot => Boolean(snapshot)
+    ),
+    [powerOverlay, seismicOverlay]
+  );
 
   const toggleLayer = (id: string) => {
     setLayers((current) =>
@@ -340,7 +370,7 @@ export function App() {
             time={temporalInstant}
             layers={layers}
             visualMode={visualMode}
-            overlays={powerOverlay ? [powerOverlay] : []}
+            overlays={activeOverlays}
             atmosphere={atmosphere}
             onSelection={setSelection}
           />
@@ -414,6 +444,77 @@ export function App() {
             <div className="weather-source-meta">
               <span>{formatSourceTime(atmosphere?.sourceTime, atmosphere?.timezone)}</span>
               <span>FETCHED {formatDataAge(atmosphere?.fetchedAt)}</span>
+            </div>
+          </section>
+
+          <section className="live-context-card">
+            <div className="live-context-head">
+              <span>
+                <small>AIR QUALITY</small>
+                <strong>
+                  {temporal.mode === 'live'
+                    ? liveContext?.airQuality.current?.usAqi != null
+                      ? `AQI ${liveContext.airQuality.current.usAqi.toFixed(0)}`
+                      : 'AQI —'
+                    : `${temporal.mode.toUpperCase()} · DATA PENDING`}
+                </strong>
+              </span>
+              <span
+                className={
+                  temporal.mode === 'live' && liveContext?.airQuality.source.live
+                    ? 'status-dot live'
+                    : 'status-dot'
+                }
+              />
+            </div>
+            <div className="live-context-metrics">
+              <span>
+                <small>PM2.5</small>
+                <strong>
+                  {temporal.mode === 'live' && liveContext?.airQuality.current?.pm25UgM3 != null
+                    ? `${liveContext.airQuality.current.pm25UgM3.toFixed(1)}`
+                    : '—'}
+                </strong>
+              </span>
+              <span>
+                <small>SEISMIC</small>
+                <strong>
+                  {temporal.mode === 'live'
+                    ? `${liveContext?.seismic.eventCount ?? 0} EVENTS`
+                    : 'HIDDEN'}
+                </strong>
+              </span>
+              <span>
+                <small>MAX M</small>
+                <strong>
+                  {temporal.mode === 'live' && liveContext?.seismic.maxMagnitude != null
+                    ? liveContext.seismic.maxMagnitude.toFixed(1)
+                    : '—'}
+                </strong>
+              </span>
+            </div>
+            <p>
+              {liveContextError
+                ? liveContextError
+                : temporal.mode !== 'live'
+                  ? 'Current AQI and seismic context are hidden outside LIVE mode.'
+                  : liveContext?.airQuality.source.attribution ||
+                    liveContext?.seismic.source.attribution ||
+                    'Live context pending'}
+            </p>
+            <div className="weather-source-meta">
+              <span>
+                {formatSourceTime(
+                  liveContext?.airQuality.source.modelTime ||
+                    liveContext?.seismic.source.generatedAt
+                )}
+              </span>
+              <span>
+                FETCHED {formatDataAge(
+                  liveContext?.airQuality.source.fetchedAt ||
+                    liveContext?.seismic.source.fetchedAt
+                )}
+              </span>
             </div>
           </section>
 
