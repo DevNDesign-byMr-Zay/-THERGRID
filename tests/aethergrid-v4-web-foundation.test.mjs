@@ -411,3 +411,19 @@ test('v4 scenario controls synchronize bounded server scenarios with 4d time', a
   assert.match(app, /clock\.setMode\('scenario', scenarioId\)/u);
   assert.match(app, /onReturnLive=\{\(\) => clock\.goLive\(\)\}/u);
 });
+
+test('v4 runtime diagnostics report provider readiness without exposing credentials', async () => {
+  const [client, panel, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/services/runtime-client.ts'),
+    text('apps/aethergrid-console/web/src/components/RuntimeDiagnosticsPanel.tsx'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(client, /\/api\/aethergrid\/runtime/u);
+  assert.match(panel, /PROVIDER DIAGNOSTICS/u);
+  assert.match(panel, /CLIENT SECRET EXPOSURE/u);
+  assert.match(panel, /credentialsExposed/u);
+  assert.match(panel, /NONE REPORTED/u);
+  assert.doesNotMatch(panel, /API_KEY|apikey|Bearer /u);
+  assert.match(app, /<RuntimeDiagnosticsPanel/u);
+});
