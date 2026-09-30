@@ -42,6 +42,8 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(html, /data-action="city-live-now"/u);
     assert.match(html, /data-global-layer="infrastructure"/u);
     assert.match(html, /data-global-layer="terrain"/u);
+    assert.match(html, /data-global-layer="water"/u);
+    assert.match(html, /data-global-layer="green"/u);
     assert.match(html, /data-global-layer="weather"/u);
     assert.match(html, /data-global-layer="clouds"/u);
     assert.match(html, /data-global-layer="illumination"/u);
@@ -56,6 +58,8 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(html, /value="seismic-awareness"/u);
     assert.match(html, /value="heat-stress"/u);
     assert.match(html, /value="visibility-operations"/u);
+    assert.match(html, /value="flood-context"/u);
+    assert.match(html, /value="green-infrastructure"/u);
     assert.match(html, /id="globalGridStats"/u);
     assert.match(html, /id="cityTransitionOverlay"/u);
     assert.match(html, /data-city-visual="solid"/u);
@@ -131,6 +135,14 @@ test('ÆTHERGRID serves semantic dashboard elements instead of a screenshot-back
     assert.match(appSource, /cityLights/u);
     assert.match(appSource, /landmarkCandidates/u);
     assert.match(appSource, /landmarkSpines/u);
+    assert.match(appSource, /waterLines/u);
+    assert.match(appSource, /waterFaces/u);
+    assert.match(appSource, /greenLines/u);
+    assert.match(appSource, /greenFaces/u);
+    assert.match(appSource, /materialGlassFaces/u);
+    assert.match(appSource, /materialMasonryFaces/u);
+    assert.match(appSource, /materialMetalFaces/u);
+    assert.match(appSource, /materialNaturalFaces/u);
     assert.match(appSource, /snowParticles/u);
     assert.match(appSource, /fogParticles/u);
     assert.match(appSource, /stormLines/u);
@@ -361,6 +373,25 @@ test('ÆTHERGRID city operations derive bounded planning indicators from the act
       { id: 'r1', highwayType: 'primary', path: [[-400, 0], [0, 0], [400, 0]] },
       { id: 'r2', highwayType: 'residential', path: [[0, -300], [0, 300]] },
     ],
+    waterAreas: [
+      {
+        id: 'w1',
+        waterType: 'lake',
+        footprint: [[-220, -220], [-40, -220], [-40, -80], [-220, -80], [-220, -220]],
+      },
+    ],
+    waterways: [
+      { id: 'wr1', waterwayType: 'river', path: [[-420, 210], [0, 160], [420, 120]] },
+    ],
+    coastlines: [{ id: 'c1', path: [[-420, -340], [0, -310], [420, -280]] }],
+    greenAreas: [
+      {
+        id: 'g1',
+        greenType: 'park',
+        footprint: [[130, 90], [260, 90], [260, 210], [130, 210], [130, 90]],
+      },
+    ],
+    skylineProfile: { namedStructureCount: 1 },
     powerLines: [
       { id: 'p1', voltage: 138000, path: [[-350, -120], [0, -90], [350, -40]] },
     ],
@@ -422,13 +453,21 @@ test('ÆTHERGRID city operations derive bounded planning indicators from the act
   assert.equal(metrics.substations, 1);
   assert.equal(metrics.generationAssets, 1);
   assert.equal(metrics.terrainReliefM, 27);
+  assert.equal(metrics.waterFeatureCount, 3);
+  assert.ok(metrics.waterAreaM2 > 0);
+  assert.ok(metrics.waterwayLengthKm > 0);
+  assert.equal(metrics.greenFeatureCount, 1);
+  assert.ok(metrics.greenAreaM2 > 0);
+  assert.equal(metrics.namedLandmarkCount, 1);
 
-  assert.equal(Object.keys(CITY_USE_CASES).length, 10);
+  assert.equal(Object.keys(CITY_USE_CASES).length, 12);
   assert.ok(CITY_USE_CASES['weather-readiness']);
   assert.ok(CITY_USE_CASES['air-quality-exposure']);
   assert.ok(CITY_USE_CASES['seismic-awareness']);
   assert.ok(CITY_USE_CASES['heat-stress']);
   assert.ok(CITY_USE_CASES['visibility-operations']);
+  assert.ok(CITY_USE_CASES['flood-context']);
+  assert.ok(CITY_USE_CASES['green-infrastructure']);
 
   for (const id of Object.keys(CITY_USE_CASES)) {
     const analysis = analyzeCityUseCase(mesh, id);
@@ -447,6 +486,10 @@ test('ÆTHERGRID city operations derive bounded planning indicators from the act
     assert.equal(analysis.dataQuality.liveWeather, true);
     assert.equal(analysis.dataQuality.liveAirQuality, true);
     assert.equal(analysis.dataQuality.liveSeismic, true);
+    assert.equal(analysis.dataQuality.mappedWaterFeatures, 3);
+    assert.equal(analysis.dataQuality.mappedGreenFeatures, 1);
+    assert.equal(analysis.dataQuality.mappedNamedLandmarks, 1);
+    assert.equal(analysis.dataQuality.environmentalGeometryInvented, false);
     assert.equal(analysis.advisoryOnly, true);
   }
 });
