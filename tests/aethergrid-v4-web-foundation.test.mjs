@@ -355,3 +355,23 @@ test('v4 intelligence rail remains usable as a tablet and mobile drawer', async 
   assert.match(styles, /transform: translateX\(105%\)/u);
   assert.match(styles, /transform: translateY\(105%\)/u);
 });
+
+test('v4 quantum panel distinguishes local simulation submitted QPU and executed QPU states', async () => {
+  const [client, panel, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/services/quantum-client.ts'),
+    text('apps/aethergrid-console/web/src/components/QuantumPanel.tsx'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(client, /\/api\/aethergrid\/quantum\/runtime/u);
+  assert.match(client, /\/api\/aethergrid\/quantum\/backends/u);
+  assert.match(client, /\/api\/aethergrid\/quantum\/jobs/u);
+  assert.match(client, /OPENQASM 3\.0/u);
+  assert.match(panel, /HARDWARE EXECUTED/u);
+  assert.match(panel, /HARDWARE SUBMITTED/u);
+  assert.match(panel, /LOCAL COMPLETED/u);
+  assert.match(panel, /globalThis\.confirm/u);
+  assert.match(panel, /SUBMIT BELL TEST TO QPU/u);
+  assert.match(panel, /RUN LOCAL BELL TEST/u);
+  assert.match(app, /<QuantumPanel/u);
+});
