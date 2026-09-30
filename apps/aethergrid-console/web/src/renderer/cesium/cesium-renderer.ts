@@ -135,7 +135,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     viewer.clock.currentTime = JulianDate.fromIso8601(time.iso);
     this.#grid?.setTime(time.iso);
     for (const overlay of this.#overlays.values()) overlay.setTime(time.iso);
-    this.#weather?.setTime(time.iso);
+    this.#weather?.setTime(time);
     viewer.scene.requestRender();
   }
 
