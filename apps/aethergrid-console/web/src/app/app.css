@@ -2578,7 +2578,7 @@ button {
 
 .temporal-rail {
   display: grid;
-  grid-template-columns: auto 36px 30px minmax(120px, 1fr) 30px auto 180px;
+  grid-template-columns: auto 36px 30px minmax(120px, 1fr) 30px auto minmax(190px, 260px) 180px;
   align-items: center;
   gap: 10px;
   padding: 10px 16px;
@@ -2620,6 +2620,47 @@ button {
 .time-edge {
   color: #5f7285;
   font-size: 8px;
+}
+
+
+.temporal-data-status {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.temporal-data-status strong {
+  color: #8ea4b6;
+  font-size: 6px;
+  letter-spacing: 0.08em;
+}
+
+.temporal-data-status span {
+  overflow: hidden;
+  color: #566c7f;
+  font-size: 6px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.temporal-data-status[data-mode='live'] {
+  border-color: rgba(99, 255, 197, 0.12);
+}
+
+.temporal-data-status[data-mode='live'] strong {
+  color: var(--success);
+}
+
+.temporal-data-status[data-mode='scenario'] {
+  border-color: rgba(155, 124, 255, 0.16);
+}
+
+.temporal-data-status[data-mode='scenario'] strong {
+  color: #b7aaff;
 }
 
 .time-readout {
@@ -2757,7 +2798,7 @@ button {
   }
 
   .temporal-rail {
-    grid-template-columns: auto 36px 30px minmax(120px, 1fr) 30px auto;
+    grid-template-columns: auto 36px 30px minmax(120px, 1fr) 30px auto minmax(160px, 1fr);
   }
 
   .time-readout {
@@ -2846,7 +2887,8 @@ button {
     padding: 9px;
   }
 
-  .temporal-modes {
+  .temporal-modes,
+  .temporal-data-status {
     display: none;
   }
 
