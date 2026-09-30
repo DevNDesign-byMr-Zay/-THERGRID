@@ -183,6 +183,8 @@ assert(/data-action="city-live-now"/u.test(sourceHtml), 'runtime index.html must
 assert(/data-global-layer="weather"/u.test(sourceHtml), 'runtime index.html must expose the live weather layer');
 assert(/data-global-layer="clouds"/u.test(sourceHtml), 'runtime index.html must expose the live cloud layer');
 assert(/data-global-layer="illumination"/u.test(sourceHtml), 'runtime index.html must expose the city-light layer');
+assert(/data-global-layer="landmarks"/u.test(sourceHtml), 'runtime index.html must expose the source-backed landmark layer');
+assert(/id="cityIdentity"/u.test(sourceHtml), 'runtime index.html must expose the city identity inspector');
 assert(/data-global-layer="air"/u.test(sourceHtml), 'runtime index.html must expose the live air-quality layer');
 assert(/data-global-layer="seismic"/u.test(sourceHtml), 'runtime index.html must expose the live seismic layer');
 assert(/value="weather-readiness"/u.test(sourceHtml), 'runtime index.html must expose weather readiness analysis');
@@ -237,6 +239,13 @@ assert(/setLiveActivity/u.test(standaloneHtml), 'standalone HTML must retain ani
 assert(/weatherLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL wind geometry');
 assert(/cloudParticles/u.test(standaloneHtml), 'standalone HTML must retain native WebGL cloud geometry');
 assert(/cityLights/u.test(standaloneHtml), 'standalone HTML must retain procedural skyline light geometry');
+assert(/landmarkCandidates/u.test(standaloneHtml), 'standalone HTML must retain source-backed identity anchor extraction');
+assert(/landmarkSpines/u.test(standaloneHtml), 'standalone HTML must retain landmark spine geometry');
+assert(/snowParticles/u.test(standaloneHtml), 'standalone HTML must retain modeled snow geometry');
+assert(/fogParticles/u.test(standaloneHtml), 'standalone HTML must retain modeled fog geometry');
+assert(/stormLines/u.test(standaloneHtml), 'standalone HTML must retain modeled thunderstorm geometry');
+assert(/weatherPhenomenon/u.test(standaloneHtml), 'standalone HTML must retain weather semantics');
+assert(/updateCityIdentity/u.test(standaloneHtml), 'standalone HTML must retain the city identity inspector');
 assert(/solarPosition/u.test(standaloneHtml), 'standalone HTML must retain solar-position calculation');
 assert(/updateSolarGeometry/u.test(standaloneHtml), 'standalone HTML must retain the live solar terminator');
 assert(/u_flow/u.test(standaloneHtml), 'standalone HTML must retain directional atmosphere flow');
@@ -291,7 +300,14 @@ payload.set(
           'procedural-skyline-lighting',
           'solar-daylight-context',
           'heat-stress-operation',
-          'visibility-operations'
+          'visibility-operations',
+          'source-backed-city-identity',
+          'named-structure-anchors',
+          'interactive-landmark-layer',
+          'semantic-weather-rendering',
+          'modeled-snow-animation',
+          'modeled-fog-animation',
+          'modeled-thunderstorm-animation'
         ],
         files: inventory,
       },

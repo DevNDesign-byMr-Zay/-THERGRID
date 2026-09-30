@@ -133,6 +133,20 @@
     return Number(match[1]) + Number(match[2]) / 60;
   }
 
+  function weatherPhenomenon(environment) {
+    const code = Number(environment?.current?.weatherCode ?? environment?.weatherCode ?? 0);
+    if ([45, 48].includes(code)) return 'Fog';
+    if ([71, 73, 75, 77, 85, 86].includes(code)) return 'Snow';
+    if (code >= 95 && code <= 99) return 'Thunderstorm';
+    if (
+      [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code)
+    ) {
+      return 'Rain';
+    }
+    if (code >= 1 && code <= 3) return 'Cloudy';
+    return code === 0 ? 'Clear' : 'Mixed';
+  }
+
   function showToast(title, copy) {
     if (!toast) return;
     toast.innerHTML = `<b>${escapeHtml(title)}</b><small>${escapeHtml(copy)}</small>`;
@@ -408,6 +422,7 @@
         weather: true,
         clouds: true,
         illumination: true,
+        landmarks: true,
         air: true,
         seismic: true,
         nodes: true,
@@ -609,6 +624,11 @@
       this.geometry.weather = this.makeBuffer([]);
       this.geometry.clouds = this.makeBuffer([]);
       this.geometry.illumination = this.makeBuffer([]);
+      this.geometry.landmarkSpines = this.makeBuffer([]);
+      this.geometry.landmarkNodes = this.makeBuffer([]);
+      this.geometry.snow = this.makeBuffer([]);
+      this.geometry.fog = this.makeBuffer([]);
+      this.geometry.storm = this.makeBuffer([]);
       this.geometry.precipitation = this.makeBuffer([]);
       this.geometry.air = this.makeBuffer([]);
       this.geometry.seismicLines = this.makeBuffer([]);
@@ -684,6 +704,11 @@
       this.geometry.weather = this.makeBuffer([]);
       this.geometry.clouds = this.makeBuffer([]);
       this.geometry.illumination = this.makeBuffer([]);
+      this.geometry.landmarkSpines = this.makeBuffer([]);
+      this.geometry.landmarkNodes = this.makeBuffer([]);
+      this.geometry.snow = this.makeBuffer([]);
+      this.geometry.fog = this.makeBuffer([]);
+      this.geometry.storm = this.makeBuffer([]);
       this.geometry.precipitation = this.makeBuffer([]);
       this.geometry.air = this.makeBuffer([]);
       this.geometry.seismicLines = this.makeBuffer([]);
@@ -711,6 +736,12 @@
       const weatherLines = [];
       const cloudParticles = [];
       const cityLights = [];
+      const landmarkSpines = [];
+      const landmarkNodes = [];
+      const landmarkCandidates = [];
+      const snowParticles = [];
+      const fogParticles = [];
+      const stormLines = [];
       const precipitationLines = [];
       const airParticles = [];
       const seismicLines = [];
@@ -782,6 +813,32 @@
           this.vertex(cityLights, lightX, lightY, lightZ, phase + band * 0.67);
         }
 
+        const skylineThresholdM = Math.max(
+          80,
+          Number(mesh.skylineProfile?.p95HeightM || 0),
+        );
+        const hasSourceName = Boolean(String(building.name || '').trim());
+        if (hasSourceName || Number(building.heightM || 0) >= skylineThresholdM) {
+          landmarkCandidates.push({
+            id: building.id,
+            label: String(building.name || `Tall structure ${buildingIndex + 1}`),
+            type: 'landmark-building',
+            heightM: Number(building.heightM || 0),
+            heightSource: building.heightSource || null,
+            roofShape: building.roofShape || null,
+            startDate: building.startDate || null,
+            osmId: building.osmId || null,
+            osmType: building.osmType || null,
+            named: hasSourceName,
+            position: [center[0], height + 0.14, center[1]],
+            basePosition: [center[0], Math.max(0.03, baseHeight), center[1]],
+            score:
+              (hasSourceName ? 10000 : 0) +
+              (building.heightSource && building.heightSource !== 'inferred' ? 2500 : 0) +
+              Number(building.heightM || 0),
+          });
+        }
+
         if (buildingIndex < 120 && (building.name || buildingIndex % 10 === 0)) {
           const node = {
             id: building.id,
@@ -799,6 +856,29 @@
           this.vertex(nodes, ...node.position, phase);
         }
       });
+
+      const landmarkSelection = landmarkCandidates
+        .sort((left, right) => right.score - left.score)
+        .slice(0, 18);
+      const existingNodeIds = new Set(this.graphNodes.map((node) => node.id));
+      landmarkSelection.forEach((landmark, landmarkIndex) => {
+        this.line(
+          landmarkSpines,
+          landmark.basePosition,
+          landmark.position,
+          landmarkIndex * 0.73,
+        );
+        this.vertex(
+          landmarkNodes,
+          ...landmark.position,
+          landmarkIndex * 0.91 + landmark.heightM * 0.01,
+        );
+        if (!existingNodeIds.has(landmark.id)) {
+          this.graphNodes.push(landmark);
+          existingNodeIds.add(landmark.id);
+        }
+      });
+      this.landmarkNodes = landmarkSelection;
 
       (mesh.roads || []).forEach((road, roadIndex) => {
         const path = (road.path || []).map(([x, z]) => [x * scale, z * scale]);
@@ -924,8 +1004,17 @@
       }
 
       const precipitation = Math.max(0, Number(environment.precipitationMm || 0));
+      const weatherCode = Number(environment.weatherCode || 0);
+      const snowMode = [71, 73, 75, 77, 85, 86].includes(weatherCode);
+      const fogMode =
+        [45, 48].includes(weatherCode) ||
+        (Number.isFinite(Number(environment.visibilityM)) &&
+          Number(environment.visibilityM) < 6000);
+      const stormMode = weatherCode >= 95 && weatherCode <= 99;
       const rainCount =
-        precipitation > 0.02 ? Math.round(clamp(24 + precipitation * 32, 24, 180)) : 0;
+        !snowMode && precipitation > 0.02
+          ? Math.round(clamp(24 + precipitation * 32, 24, 180))
+          : 0;
       for (let index = 0; index < rainCount; index += 1) {
         const x = (deterministic(index, 4) - 0.5) * 17;
         const z = (deterministic(index, 5) - 0.5) * 17;
@@ -938,6 +1027,56 @@
           [x + lean, y - 0.72, z + drift],
           index * 0.43,
         );
+      }
+
+      const snowCount =
+        snowMode && precipitation > 0
+          ? Math.round(clamp(34 + precipitation * 26, 34, 170))
+          : 0;
+      for (let index = 0; index < snowCount; index += 1) {
+        this.vertex(
+          snowParticles,
+          (deterministic(index, 13) - 0.5) * 17,
+          1.1 + deterministic(index, 14) * 5.9,
+          (deterministic(index, 15) - 0.5) * 17,
+          index * 0.31,
+        );
+      }
+
+      const visibilityM = Number(environment.visibilityM);
+      const fogStrength = fogMode
+        ? clamp(
+            Number.isFinite(visibilityM) ? (8000 - visibilityM) / 8000 : 0.55,
+            0.18,
+            0.92,
+          )
+        : 0;
+      const fogCount = fogMode ? Math.round(50 + fogStrength * 110) : 0;
+      for (let index = 0; index < fogCount; index += 1) {
+        this.vertex(
+          fogParticles,
+          (deterministic(index, 16) - 0.5) * 17.5,
+          0.12 + deterministic(index, 17) * 2.2,
+          (deterministic(index, 18) - 0.5) * 17.5,
+          index * 0.17,
+        );
+      }
+
+      if (stormMode) {
+        for (let bolt = 0; bolt < 3; bolt += 1) {
+          const baseX = (deterministic(bolt, 19) - 0.5) * 10;
+          const baseZ = (deterministic(bolt, 20) - 0.5) * 10;
+          let previous = [baseX, 5.8, baseZ];
+          for (let step = 1; step <= 7; step += 1) {
+            const next = [
+              baseX + (deterministic(bolt * 10 + step, 21) - 0.5) * 0.9,
+              5.8 - step * 0.72,
+              baseZ + (deterministic(bolt * 10 + step, 22) - 0.5) * 0.9,
+            ];
+            this.line(stormLines, previous, next, bolt * 1.7 + step * 0.23);
+            previous = next;
+          }
+        }
       }
 
       const air = liveContext.airQuality?.current || {};
@@ -994,6 +1133,11 @@
       this.geometry.weather = this.makeBuffer(weatherLines);
       this.geometry.clouds = this.makeBuffer(cloudParticles);
       this.geometry.illumination = this.makeBuffer(cityLights);
+      this.geometry.landmarkSpines = this.makeBuffer(landmarkSpines);
+      this.geometry.landmarkNodes = this.makeBuffer(landmarkNodes);
+      this.geometry.snow = this.makeBuffer(snowParticles);
+      this.geometry.fog = this.makeBuffer(fogParticles);
+      this.geometry.storm = this.makeBuffer(stormLines);
       this.geometry.precipitation = this.makeBuffer(precipitationLines);
       this.geometry.air = this.makeBuffer(airParticles);
       this.geometry.seismicLines = this.makeBuffer(seismicLines);
@@ -1335,6 +1479,26 @@
           12,
         );
       }
+      if (this.layers.landmarks) {
+        const landmarkPulse =
+          state.settings.reducedMotion ? 0.35 : 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(now * 0.0032));
+        this.drawBuffer(
+          this.geometry.landmarkSpines,
+          gl.LINES,
+          isLightTheme()
+            ? [0.35, 0.23, 0.62, 0.42 + landmarkPulse * 0.18]
+            : [0.63, 0.55, 1, 0.42 + landmarkPulse * 0.26],
+          0.035 * amplitude,
+        );
+        this.drawBuffer(
+          this.geometry.landmarkNodes,
+          gl.POINTS,
+          [0.72, 0.55, 1, 0.82],
+          0.035 * amplitude,
+          1,
+          9 + landmarkPulse * 5,
+        );
+      }
       const focus = this.operationProfile || '';
       const windSpeed = Math.max(0, Number(this.environment?.current?.windSpeedKph || 0));
       const windDirection =
@@ -1342,6 +1506,13 @@
       const flowX = Math.sin(windDirection);
       const flowZ = Math.cos(windDirection);
       const precipitation = Math.max(0, Number(this.environment?.current?.precipitationMm || 0));
+      const weatherCode = Number(this.environment?.current?.weatherCode || 0);
+      const snowMode = [71, 73, 75, 77, 85, 86].includes(weatherCode);
+      const fogMode =
+        [45, 48].includes(weatherCode) ||
+        (Number.isFinite(Number(this.environment?.current?.visibilityM)) &&
+          Number(this.environment.current.visibilityM) < 6000);
+      const stormMode = weatherCode >= 95 && weatherCode <= 99;
       const currentCloud = clamp(
         Number(this.environment?.current?.cloudCoverPercent || 0) / 100,
         0,
@@ -1409,7 +1580,7 @@
           0.25,
           0,
         );
-        if (precipitation > 0) {
+        if (precipitation > 0 && !snowMode) {
           this.drawBuffer(
             this.geometry.precipitation,
             gl.LINES,
@@ -1423,6 +1594,49 @@
             flowZ * 0.22,
             0.08,
             1.05 * Math.min(1.8, 0.7 + precipitation * 0.08),
+          );
+        }
+        if (snowMode) {
+          this.drawBuffer(
+            this.geometry.snow,
+            gl.POINTS,
+            isLightTheme() ? [0.55, 0.66, 0.75, 0.72] : [0.84, 0.94, 1, 0.82],
+            0.035 * amplitude * weatherBoost,
+            1,
+            5.5,
+            flowX * 0.18,
+            flowZ * 0.18,
+            0.22,
+            0.36,
+          );
+        }
+        if (fogMode) {
+          const visibility = Math.max(200, Number(this.environment?.current?.visibilityM || 5000));
+          const fogAlpha = clamp((8000 - visibility) / 9000, 0.08, 0.42);
+          this.drawBuffer(
+            this.geometry.fog,
+            gl.POINTS,
+            isLightTheme()
+              ? [0.52, 0.58, 0.64, fogAlpha]
+              : [0.58, 0.7, 0.78, fogAlpha],
+            0.02 * amplitude,
+            1,
+            14,
+            flowX * 0.1,
+            flowZ * 0.1,
+            0.08,
+            0,
+          );
+        }
+        if (stormMode) {
+          const strikePulse = state.settings.reducedMotion
+            ? 0.24
+            : Math.pow(Math.max(0, Math.sin(now * 0.012)), 12);
+          this.drawBuffer(
+            this.geometry.storm,
+            gl.LINES,
+            [0.72, 0.82, 1, 0.12 + strikePulse * 0.88],
+            0.02 * amplitude,
           );
         }
         gl.uniform1f(this.loc.time, temporal);
@@ -2509,7 +2723,7 @@
       ? `${Number(skyline.sourceBackedHeightCoveragePercent).toFixed(0)}%`
       : '—';
     const weather = environment
-      ? `${Number.isFinite(environment.temperatureC) ? `${Number(environment.temperatureC).toFixed(1)}°C` : 'current'} · ${Number.isFinite(environment.cloudCoverPercent) ? `${Number(environment.cloudCoverPercent).toFixed(0)}% cloud` : environment.isDay ? 'day' : 'night'}`
+      ? `${weatherPhenomenon(mesh.environment)} · ${Number.isFinite(environment.temperatureC) ? `${Number(environment.temperatureC).toFixed(1)}°C` : 'current'} · ${Number.isFinite(environment.cloudCoverPercent) ? `${Number(environment.cloudCoverPercent).toFixed(0)}% cloud` : environment.isDay ? 'day' : 'night'}`
       : '—';
     const air = mesh.liveContext?.airQuality?.current || null;
     const airQuality = air?.usAqi == null ? '—' : `AQI ${Number(air.usAqi).toFixed(0)} · ${titleCase(air.category || 'unknown')}`;
@@ -2528,6 +2742,47 @@
     const seismic = mesh.liveContext?.seismic || null;
     const seismicLabel = seismic ? `${Number(seismic.eventCount || 0)} nearby · M${Number(seismic.maxMagnitude || 0).toFixed(1)} max` : '—';
     stats.innerHTML = `<span><b>Power Lines</b><em>${(mesh.powerLines || []).length}</em></span><span><b>Power Assets</b><em>${(mesh.powerAssets || []).length}</em></span><span><b>Roads</b><em>${(mesh.roads || []).length}</em></span><span><b>Buildings</b><em>${(mesh.buildings || []).length}</em></span><span><b>Skyline Max</b><em>${skylineMax}</em></span><span><b>P95 Height</b><em>${p95}</em></span><span><b>Height Data</b><em>${heightCoverage}</em></span><span><b>Weather</b><em>${weather}</em></span><span><b>Air</b><em>${airQuality}</em></span><span><b>Humidity</b><em>${humidity}</em></span><span><b>Sunrise / Sunset</b><em>${sunriseSunset}</em></span><span><b>Seismic</b><em>${seismicLabel}</em></span><span><b>Elevation</b><em>${elevation}</em></span>`;
+  }
+
+  function updateCityIdentity(mesh) {
+    const container = q('#cityIdentity');
+    if (!container || !mesh) return;
+    const skyline = mesh.skylineProfile || {};
+    const terrainRelief =
+      mesh.terrain &&
+      Number.isFinite(Number(mesh.terrain.maxElevationM)) &&
+      Number.isFinite(Number(mesh.terrain.minElevationM))
+        ? Math.max(
+            0,
+            Number(mesh.terrain.maxElevationM) - Number(mesh.terrain.minElevationM),
+          )
+        : null;
+    const anchors = (skyline.namedStructures || []).slice(0, 8);
+    const weather = weatherPhenomenon(mesh.environment);
+    const profile = [
+      ['Max', Number(skyline.maxHeightM || 0) > 0 ? `${Number(skyline.maxHeightM).toFixed(0)} m` : '—'],
+      ['P95', Number(skyline.p95HeightM || 0) > 0 ? `${Number(skyline.p95HeightM).toFixed(0)} m` : '—'],
+      ['Named', Number(skyline.namedStructureCount || anchors.length).toLocaleString()],
+      ['Tall', Number(skyline.tallStructureCount || 0).toLocaleString()],
+      ['Roof Tags', Number(skyline.roofTaggedCount || 0).toLocaleString()],
+      ['Relief', terrainRelief == null ? '—' : `${terrainRelief.toFixed(0)} m`],
+      ['Weather', weather],
+      ['Height Data', `${Number(skyline.sourceBackedHeightCoveragePercent || 0).toFixed(0)}%`],
+    ];
+    const anchorHtml = anchors.length
+      ? anchors
+          .map(
+            (item) =>
+              `<button class="identity-anchor" data-city-anchor="${escapeHtml(item.id)}"><span>${escapeHtml(item.name)}</span><em>${Number(item.heightM || 0).toFixed(0)} m${item.heightSource ? ` · ${escapeHtml(item.heightSource)}` : ''}</em></button>`,
+          )
+          .join('')
+      : '<div class="empty-state">No named mapped structures were returned in this bounded sample.</div>';
+    container.innerHTML = `<div class="identity-profile">${profile
+      .map(
+        ([label, value]) =>
+          `<span><b>${escapeHtml(label)}</b><em>${escapeHtml(value)}</em></span>`,
+      )
+      .join('')}</div><div class="identity-anchor-list"><small>SOURCE-BACKED IDENTITY ANCHORS</small>${anchorHtml}</div><p class="identity-boundary">Named/tall anchors come from the loaded OpenStreetMap building sample. Weather identity comes from current provider model context; no landmark or weather layer is treated as direct sensing.</p>`;
   }
 
   function showCityTransition(city, stage = 'Aligning global coordinate…', progress = 8) {
@@ -2570,6 +2825,7 @@
     await cityGrid?.cinematicEntrance(1050);
     updateCityTransition('City digital twin ready', 100);
     updateGlobalGridStats(result);
+    updateCityIdentity(result);
     if (q('#geoSourceStatus')) {
       const airMode = result.liveContext?.airQuality?.source?.live ? 'AIR LIVE' : 'AIR FALLBACK';
       const seismicMode = result.liveContext?.seismic?.source?.live ? 'SEISMIC LIVE' : 'SEISMIC FALLBACK';
@@ -2589,7 +2845,7 @@
         attributions.join(' · ') ||
         'Live city geometry unavailable; using local fallback geometry.';
       q('#geoAttribution').textContent =
-        `${sourceText} · City-light points are procedural visualization from mapped geometry + daylight state, not measured window occupancy.`;
+        `${sourceText} · City-light points are procedural visualization from mapped geometry + daylight state, not measured window occupancy. Snow/fog/rain/storm effects visualize current model context; storm pulses are not detected lightning strikes.`;
     }
     if (status) {
       const skyline = result.skylineProfile || {};
@@ -2602,7 +2858,7 @@
       const currentContext = env
         ? ` Current environment: ${Number.isFinite(env.temperatureC) ? `${Number(env.temperatureC).toFixed(1)}°C, ` : ''}${Number.isFinite(env.relativeHumidityPercent) ? `${Number(env.relativeHumidityPercent).toFixed(0)}% humidity, ` : ''}${Number.isFinite(env.cloudCoverPercent) ? `${Number(env.cloudCoverPercent).toFixed(0)}% cloud, ` : ''}${Number.isFinite(env.windSpeedKph) ? `${Number(env.windSpeedKph).toFixed(1)} km/h wind, ` : ''}${env.isDay ? 'daylight' : 'night'}.`
         : '';
-      const liveContextCopy = `${air?.usAqi == null ? '' : ` Air quality: US AQI ${Number(air.usAqi).toFixed(0)} (${titleCase(air.category || 'unknown')}).`}${seismic ? ` USGS context: ${Number(seismic.eventCount || 0)} M2.5+ event(s) within ${Number(seismic.radiusKm || 0).toFixed(0)} km.` : ''}`;
+      const liveContextCopy = ` Weather identity: ${weatherPhenomenon(result.environment)}.${air?.usAqi == null ? '' : ` Air quality: US AQI ${Number(air.usAqi).toFixed(0)} (${titleCase(air.category || 'unknown')}).`}${seismic ? ` USGS context: ${Number(seismic.eventCount || 0)} M2.5+ event(s) within ${Number(seismic.radiusKm || 0).toFixed(0)} km.` : ''}`;
       status.innerHTML = `<b>${escapeHtml(result.city.name)}${district} · ${result.buildings.length} mapped structures${maxHeight}</b><p>${result.source?.live ? `Current OpenStreetMap geometry is rendered from source-backed footprints/parts; height coverage ${heightCoverage || 'is shown in the stats panel'}.` : 'Provider request could not be completed; clearly marked local fallback geometry is being rendered.'}${currentContext}${liveContextCopy}</p><button class="secondary-button" data-action="reload-city-live">REFRESH OPEN DATA</button>`;
     }
     if (q('#geoProvenance')) {
@@ -2878,6 +3134,22 @@
     globalGlobe?.reset();
     setGlobalMode('globe');
   });
+  q('#cityIdentity')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-city-anchor]');
+    if (!button) return;
+    const node = cityGrid?.graphNodes?.find((item) => item.id === button.dataset.cityAnchor);
+    if (!node) {
+      showToast('IDENTITY ANCHOR', 'The mapped structure is listed in the source profile but is not selectable in this sampled renderer.');
+      return;
+    }
+    cityGrid?.selectNode(node);
+    cityGrid?.setPreset('isometric');
+    showToast(
+      'CITY IDENTITY ANCHOR',
+      `${node.label || node.id}${Number(node.heightM || 0) ? ` · ${Number(node.heightM).toFixed(0)} m` : ''}`,
+    );
+  });
+
   q('#cityMeshStatus')?.addEventListener('click', (event) => {
     if (!event.target.closest('[data-action="reload-city-live"]')) return;
     const selected = state.geospatial.cities.find(

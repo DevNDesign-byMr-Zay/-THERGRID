@@ -186,6 +186,12 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
   assert.equal(first.source.upstreamTimestamp, '2026-09-30T06:30:00Z');
   assert.equal(first.skylineProfile.maxHeightM, 828);
   assert.ok(first.skylineProfile.sourceBackedHeightCoveragePercent > 0);
+  assert.equal(first.skylineProfile.namedStructureCount, 2);
+  assert.ok(first.skylineProfile.tallStructureCount >= 1);
+  assert.equal(first.skylineProfile.namedStructures[0].name, 'Skyline Tower');
+  assert.equal(first.skylineProfile.namedStructures[0].heightM, 828);
+  assert.equal(first.skylineProfile.namedStructures[0].heightSource, 'height');
+  assert.ok(first.skylineProfile.namedStructures.some((item) => item.name === 'Relation Building'));
   const skylineTower = first.buildings.find((building) => building.name === 'Skyline Tower');
   assert.ok(skylineTower);
   assert.equal(skylineTower.heightM, 828);

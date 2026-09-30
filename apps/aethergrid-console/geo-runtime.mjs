@@ -282,21 +282,55 @@ function percentile(values, amount) {
 }
 
 function skylineProfile(city, buildings, source = {}) {
-  const heights = buildings.map((building) => Number(building.heightM || 0)).filter((height) => height > 0);
-  const sourceBacked = buildings.filter((building) => building.heightSource !== 'inferred' && building.heightSource !== 'synthetic-fallback').length;
-  const roofTagged = buildings.filter((building) => building.roofShape || building.roofHeightM > 0).length;
+  const heights = buildings
+    .map((building) => Number(building.heightM || 0))
+    .filter((height) => height > 0);
+  const sourceBacked = buildings.filter(
+    (building) =>
+      building.heightSource !== 'inferred' &&
+      building.heightSource !== 'synthetic-fallback',
+  ).length;
+  const roofTagged = buildings.filter(
+    (building) => building.roofShape || building.roofHeightM > 0,
+  ).length;
   const parts = buildings.filter((building) => building.buildingPart).length;
+  const p95HeightM = Number(percentile(heights, 0.95).toFixed(1));
+  const namedStructures = buildings
+    .filter((building) => String(building.name || '').trim())
+    .sort((left, right) => {
+      const heightDelta = Number(right.heightM || 0) - Number(left.heightM || 0);
+      if (heightDelta) return heightDelta;
+      return String(left.name).localeCompare(String(right.name));
+    })
+    .slice(0, 16)
+    .map((building) => ({
+      id: building.id,
+      name: String(building.name),
+      heightM: Number(Number(building.heightM || 0).toFixed(1)),
+      heightSource: building.heightSource || null,
+      buildingType: building.buildingType || null,
+      roofShape: building.roofShape || null,
+      startDate: building.startDate || null,
+      osmId: building.osmId || null,
+      osmType: building.osmType || null,
+    }));
+  const tallStructureCount = buildings.filter(
+    (building) => Number(building.heightM || 0) >= Math.max(80, p95HeightM),
+  ).length;
   return {
     district: city.district || null,
     buildingCount: buildings.length,
     maxHeightM: Number(Math.max(0, ...heights).toFixed(1)),
-    p95HeightM: Number(percentile(heights, 0.95).toFixed(1)),
+    p95HeightM,
     medianHeightM: Number(percentile(heights, 0.5).toFixed(1)),
     sourceBackedHeightCoveragePercent: buildings.length
       ? Number(((sourceBacked / buildings.length) * 100).toFixed(1))
       : 0,
     buildingPartCount: parts,
     roofTaggedCount: roofTagged,
+    namedStructureCount: buildings.filter((building) => String(building.name || '').trim()).length,
+    tallStructureCount,
+    namedStructures,
     upstreamTimestamp: source.upstreamTimestamp || null,
     sourceProvider: source.provider || null,
     live: Boolean(source.live),
