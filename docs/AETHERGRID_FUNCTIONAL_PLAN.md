@@ -262,6 +262,14 @@ Status: IMPLEMENTED / VERIFYING
 - deterministic local fallback power topology for standalone/offline mode;
 - visible source attribution and fallback state.
 
+### Live terrain elevation
+- bounded real-coordinate elevation sampling through a replaceable terrain adapter;
+- Open-Meteo elevation provider backed by Copernicus DEM GLO-90;
+- independent TERRAIN layer in the city renderer;
+- visible min/max elevation summary and terrain provenance;
+- flat local fallback in standalone/offline mode;
+- terrain provider credentials remain server-side.
+
 ### 4D city review
 - city renderer retains x/y/z geometry plus time-phase animation;
 - GLOBAL workspace exposes a dedicated 24-hour time index;
