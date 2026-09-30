@@ -840,3 +840,28 @@ test('v4 renderer switching is reversible and preserves safe fallback diagnostic
   assert.match(viewport, /await manager\.use\(engine\)/u);
   assert.match(viewport, /await manager\.flyTo\(target\)/u);
 });
+
+test('v4 temporal modes hide current-only environment feeds outside live time', async () => {
+  const [app, rail] = await Promise.all([
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/components/TemporalRail.tsx'),
+  ]);
+
+  assert.match(
+    app,
+    /atmosphere=\{\s*scope === 'city' && temporal\.mode === 'live' \? atmosphere : null\s*\}/u,
+  );
+  assert.match(
+    app,
+    /environment:[\s\S]{0,180}temporal\.mode === 'live'/u,
+  );
+  assert.match(
+    app,
+    /liveContext:[\s\S]{0,180}temporal\.mode === 'live'/u,
+  );
+  assert.match(app, /temporal\.mode !== 'live'[\s\S]{0,120}\? 0/u);
+  assert.match(rail, /LIVE SOURCES/u);
+  assert.match(rail, /STATIC MAP CONTEXT/u);
+  assert.match(rail, /MODELED \+ STATIC/u);
+  assert.match(rail, /current weather\/AQI\/seismic hidden/u);
+});
