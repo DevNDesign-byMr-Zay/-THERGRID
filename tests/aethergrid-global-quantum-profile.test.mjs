@@ -492,8 +492,7 @@ test('local quantum estimator provides a bounded analytic fallback with explicit
     env: { AETHERGRID_QUANTUM_PROVIDER: 'local-simulator' },
   });
   const result = await runtime.submitEstimator({
-    circuit:
-      'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; h q[0]; cx q[0], q[1];',
+    circuit: 'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; h q[0]; cx q[0], q[1];',
     observable: 'ZZ',
   });
   assert.equal(result.provider, 'local-simulator');
