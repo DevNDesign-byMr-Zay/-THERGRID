@@ -2306,9 +2306,11 @@
     updateCityTransition('City digital twin ready', 100);
     updateGlobalGridStats(result);
     if (q('#geoSourceStatus')) {
+      const airMode = result.liveContext?.airQuality?.source?.live ? 'AIR LIVE' : 'AIR FALLBACK';
+      const seismicMode = result.liveContext?.seismic?.source?.live ? 'SEISMIC LIVE' : 'SEISMIC FALLBACK';
       q('#geoSourceStatus').textContent = result.source?.live
-        ? `LIVE OSM · ${result.buildings.length} BUILDINGS · ${(result.powerLines || []).length} POWER LINES`
-        : `LOCAL FALLBACK · ${result.buildings.length} BUILDINGS · ${(result.powerLines || []).length} POWER LINES`;
+        ? `LIVE OSM · ${airMode} · ${seismicMode}`
+        : `LOCAL GEOMETRY · ${airMode} · ${seismicMode}`;
     }
     if (q('#geoAttribution')) {
       const attributions = [
@@ -2328,8 +2330,13 @@
       const district = result.city?.district ? ` · ${escapeHtml(result.city.district)}` : '';
       const maxHeight = Number.isFinite(Number(skyline.maxHeightM)) ? ` · max ${Number(skyline.maxHeightM).toFixed(0)} m` : '';
       const heightCoverage = Number.isFinite(Number(skyline.sourceBackedHeightCoveragePercent)) ? ` · ${Number(skyline.sourceBackedHeightCoveragePercent).toFixed(0)}% source-backed heights` : '';
-      const currentContext = env ? ` Current environment: ${Number.isFinite(env.temperatureC) ? `${Number(env.temperatureC).toFixed(1)}°C, ` : ''}${Number.isFinite(env.cloudCoverPercent) ? `${Number(env.cloudCoverPercent).toFixed(0)}% cloud, ` : ''}${env.isDay ? 'daylight' : 'night'}.` : '';
-      status.innerHTML = `<b>${escapeHtml(result.city.name)}${district} · ${result.buildings.length} mapped structures${maxHeight}</b><p>${result.source?.live ? `Current OpenStreetMap geometry is rendered from source-backed footprints/parts; height coverage ${heightCoverage || 'is shown in the stats panel'}.` : 'Provider request could not be completed; clearly marked local fallback geometry is being rendered.'}${currentContext}</p><button class="secondary-button" data-action="reload-city-live">REFRESH OPEN DATA</button>`;
+      const air = result.liveContext?.airQuality?.current || null;
+      const seismic = result.liveContext?.seismic || null;
+      const currentContext = env
+        ? ` Current environment: ${Number.isFinite(env.temperatureC) ? `${Number(env.temperatureC).toFixed(1)}°C, ` : ''}${Number.isFinite(env.cloudCoverPercent) ? `${Number(env.cloudCoverPercent).toFixed(0)}% cloud, ` : ''}${Number.isFinite(env.windSpeedKph) ? `${Number(env.windSpeedKph).toFixed(1)} km/h wind, ` : ''}${env.isDay ? 'daylight' : 'night'}.`
+        : '';
+      const liveContextCopy = `${air?.usAqi == null ? '' : ` Air quality: US AQI ${Number(air.usAqi).toFixed(0)} (${titleCase(air.category || 'unknown')}).`}${seismic ? ` USGS context: ${Number(seismic.eventCount || 0)} M2.5+ event(s) within ${Number(seismic.radiusKm || 0).toFixed(0)} km.` : ''}`;
+      status.innerHTML = `<b>${escapeHtml(result.city.name)}${district} · ${result.buildings.length} mapped structures${maxHeight}</b><p>${result.source?.live ? `Current OpenStreetMap geometry is rendered from source-backed footprints/parts; height coverage ${heightCoverage || 'is shown in the stats panel'}.` : 'Provider request could not be completed; clearly marked local fallback geometry is being rendered.'}${currentContext}${liveContextCopy}</p><button class="secondary-button" data-action="reload-city-live">REFRESH OPEN DATA</button>`;
     }
     if (q('#geoProvenance')) {
       const upstream = result.source?.upstreamTimestamp || result.source?.fetchedAt || 'unavailable';
