@@ -983,15 +983,28 @@
       showToast('LOCAL EVIDENCE', 'Backend unavailable; showing packaged evidence state.');
     }
   });
-  q('#evidenceTableBody')?.addEventListener('click', (event) => {
+  q('#evidenceTableBody')?.addEventListener('click', async (event) => {
     const button = event.target.closest('[data-evidence-id]');
     if (!button) return;
-    const item = state.evidence.find((entry) => (entry.id || entry.title) === button.dataset.evidenceId);
+    let item = state.evidence.find(
+      (entry) => (entry.id || entry.title) === button.dataset.evidenceId,
+    );
     if (!item) return;
+    try {
+      const result = await api(
+        `./api/aethergrid/evidence/${encodeURIComponent(item.id || item.receipt)}`,
+      );
+      if (result.evidence) item = result.evidence;
+    } catch {}
+    const details = item.details || {
+      receipt: item.receipt || null,
+      type: item.type || 'Evidence',
+      status: item.status || 'Verified',
+    };
     openPanel(
       'EVIDENCE RECORD',
       item.title,
-      `<div class="detail-card"><h3>${escapeHtml(item.type || 'Evidence')}</h3><p>Status: ${escapeHtml(item.status || 'Verified')} · ${escapeHtml(item.age || 'recent')}</p><div class="pill-row"><span class="pill">PROVENANCE</span><span class="pill">READ ONLY</span><span class="pill">ADVISORY</span></div></div>`,
+      `<div class="detail-card"><h3>${escapeHtml(item.type || 'Evidence')}</h3><p>Status: ${escapeHtml(item.status || 'Verified')} · ${escapeHtml(item.age || 'recent')}</p><div class="pill-row"><span class="pill">PROVENANCE</span><span class="pill">READ ONLY</span><span class="pill">ADVISORY</span></div></div><pre class="evidence-json">${escapeHtml(JSON.stringify(details, null, 2))}</pre>`,
     );
   });
 
