@@ -452,6 +452,9 @@ function cityMeshToIlluminationOverlay(
     label: item.building.name || 'Mapped building illumination',
     intensity: Math.min(1, Math.max(0.3, item.heightM / 180)),
     properties: {
+      sourceFeatureId: item.building.id,
+      sourceDataset: 'osm-overpass',
+      cityId: mesh.city.id,
       presentationType: 'urban-illumination',
       presentationOnly: true,
       sourceBuildingId: item.building.id,
