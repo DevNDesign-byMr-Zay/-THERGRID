@@ -134,6 +134,7 @@ function nodeEntity(
     }),
     properties: {
       overlayKind: node.kind,
+      sourceName: node.label ?? node.id,
       value: node.value ?? null,
       unit: node.unit ?? null,
       ...provenance,
@@ -216,6 +217,7 @@ function edgeEntity(
     }),
     properties: {
       overlayKind: edge.kind,
+      sourceName: edge.label ?? edge.id,
       value: edge.value ?? null,
       unit: edge.unit ?? null,
       ...provenance,
@@ -282,6 +284,7 @@ function areaEntity(
     }),
     properties: {
       overlayKind: area.kind,
+      sourceName: area.label ?? area.id,
       ...provenance,
       ...area.properties
     }
