@@ -9,9 +9,7 @@ async function text(path) {
 }
 
 test('v4 operator incidents are bounded local records with explicit non-authoritative truth boundaries', async () => {
-  const incidents = await text(
-    'apps/aethergrid-console/web/src/services/spatial-incidents.ts',
-  );
+  const incidents = await text('apps/aethergrid-console/web/src/services/spatial-incidents.ts');
 
   assert.match(incidents, /aethergrid\.operator\.spatial-incidents\.v4/u);
   assert.match(incidents, /MAX_SPATIAL_INCIDENTS = 48/u);
@@ -24,9 +22,7 @@ test('v4 operator incidents are bounded local records with explicit non-authorit
 });
 
 test('v4 operator incidents preserve 4D observation and lifecycle times without claiming provider source time', async () => {
-  const incidents = await text(
-    'apps/aethergrid-console/web/src/services/spatial-incidents.ts',
-  );
+  const incidents = await text('apps/aethergrid-console/web/src/services/spatial-incidents.ts');
 
   assert.match(incidents, /observedAt: input\.temporal\.iso/u);
   assert.match(incidents, /temporalMode: input\.temporal\.mode/u);
@@ -38,9 +34,7 @@ test('v4 operator incidents preserve 4D observation and lifecycle times without 
 });
 
 test('v4 operator incidents bind to canonical entities and only record a workset link when that canonical entity is actually pinned', async () => {
-  const incidents = await text(
-    'apps/aethergrid-console/web/src/services/spatial-incidents.ts',
-  );
+  const incidents = await text('apps/aethergrid-console/web/src/services/spatial-incidents.ts');
 
   assert.match(incidents, /dossier\?\.entity\.canonicalId/u);
   assert.match(incidents, /loadSpatialWorkset/u);
@@ -51,9 +45,7 @@ test('v4 operator incidents bind to canonical entities and only record a workset
 });
 
 test('v4 incident overlay creates selectable map events with explicit local-annotation provenance', async () => {
-  const incidents = await text(
-    'apps/aethergrid-console/web/src/services/spatial-incidents.ts',
-  );
+  const incidents = await text('apps/aethergrid-console/web/src/services/spatial-incidents.ts');
 
   assert.match(incidents, /layerId: 'annotations'/u);
   assert.match(incidents, /kind: 'event' as const/u);
@@ -66,16 +58,14 @@ test('v4 incident overlay creates selectable map events with explicit local-anno
 });
 
 test('v4 incident UI supports create lifecycle notes locate workset sync AUREN review and bounded export', async () => {
-  const panel = await text(
-    'apps/aethergrid-console/web/src/components/SpatialIncidentPanel.tsx',
-  );
+  const panel = await text('apps/aethergrid-console/web/src/components/SpatialIncidentPanel.tsx');
 
   assert.match(panel, /4D OPERATOR ANNOTATIONS/u);
   assert.match(panel, /ADD TO 4D MAP/u);
-  assert.match(panel, /OPEN/u);
-  assert.match(panel, /MONITORING/u);
-  assert.match(panel, /RESOLVED/u);
-  assert.match(panel, /DISMISSED/u);
+  assert.match(panel, /'open'/u);
+  assert.match(panel, /'monitoring'/u);
+  assert.match(panel, /'resolved'/u);
+  assert.match(panel, /'dismissed'/u);
   assert.match(panel, /SYNC WORKSET/u);
   assert.match(panel, /EXPORT INCIDENTS JSON/u);
   assert.match(panel, /OPERATOR-CREATED · NON-AUTHORITATIVE/u);
