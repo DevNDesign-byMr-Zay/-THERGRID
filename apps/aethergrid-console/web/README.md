@@ -15,6 +15,7 @@ It intentionally does **not** replace `apps/aethergrid-console/index.html` or th
 - synchronized 4D playback clock
 - temporal layer registry/sampling contract
 - provider-backed FORECAST weather cursor sampling
+- live NWS active-hazard visualization using returned source geometry when present, with point-context markers only when the provider omits polygon geometry
 - explicit per-city NOAA NWPS gauge and EIA region bindings stored as non-secret operator settings
 - responsive operator shell and timeline
 
@@ -35,6 +36,8 @@ For isolated development only, a restricted Cesium public-client token may be su
 Production should prefer the server-generated public configuration contract. Never expose IBM Quantum, AI, Tomorrow.io, D-Wave, EIA or other private credentials through Vite/browser environment variables.
 
 Operational source bindings are identifiers, not credentials. The browser may persist an operator-verified NOAA NWPS gauge ID or EIA balancing-region code per city/coordinate, but the UI never infers those identifiers from map position and never stores the corresponding provider secret.
+
+NWS active hazards remain LIVE-only. Polygon or MultiPolygon geometry returned by the provider is rendered as source boundary geometry. If the point query returns an active alert without geometry, ÆTHERGRID shows only a marker at the queried coordinate and does not fabricate an affected-area polygon or radius.
 
 ## Local development
 
