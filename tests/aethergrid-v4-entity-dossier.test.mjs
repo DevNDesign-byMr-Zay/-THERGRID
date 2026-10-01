@@ -9,9 +9,7 @@ async function text(path) {
 }
 
 test('v4 entity dossiers preserve canonical identity and remain explicitly non-authoritative', async () => {
-  const dossier = await text(
-    'apps/aethergrid-console/web/src/services/spatial-entity-dossier.ts',
-  );
+  const dossier = await text('apps/aethergrid-console/web/src/services/spatial-entity-dossier.ts');
 
   assert.match(dossier, /aethergrid\.operator-entity-dossier\.v1/u);
   assert.match(dossier, /authoritative: false/u);
@@ -26,9 +24,7 @@ test('v4 entity dossiers preserve canonical identity and remain explicitly non-a
 });
 
 test('v4 entity dossiers keep entity provenance separate from surrounding contextual sources', async () => {
-  const dossier = await text(
-    'apps/aethergrid-console/web/src/services/spatial-entity-dossier.ts',
-  );
+  const dossier = await text('apps/aethergrid-console/web/src/services/spatial-entity-dossier.ts');
 
   assert.match(dossier, /role: 'entity'/u);
   assert.match(dossier, /role: 'city-geometry'/u);
@@ -43,9 +39,7 @@ test('v4 entity dossiers keep entity provenance separate from surrounding contex
 });
 
 test('v4 entity dossier export filters scalar scene properties and defensive secret-shaped keys', async () => {
-  const dossier = await text(
-    'apps/aethergrid-console/web/src/services/spatial-entity-dossier.ts',
-  );
+  const dossier = await text('apps/aethergrid-console/web/src/services/spatial-entity-dossier.ts');
 
   assert.match(dossier, /SENSITIVE_KEY/u);
   assert.match(dossier, /api\.\?key/u);
