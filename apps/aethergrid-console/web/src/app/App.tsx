@@ -59,6 +59,7 @@ import {
   measurementToOverlay,
   type SpatialMeasurement
 } from '../services/spatial-analysis';
+import { bindSpatialSelectionIdentity } from '../services/spatial-entity-identity';
 import {
   captureSpatialObservation,
   compareSpatialObservations,
@@ -453,6 +454,12 @@ export function App() {
       selectedEntity: selection
         ? {
             id: selection.id,
+            canonicalId: selection.identity?.canonicalId ?? null,
+            identityBasis: selection.identity?.basis ?? null,
+            sourceFeatureId: selection.identity?.sourceFeatureId ?? null,
+            gersId: selection.identity?.gersId ?? null,
+            crossSourceJoinReady:
+              selection.identity?.crossSourceJoinReady ?? false,
             kind: selection.kind,
             source: selection.source ?? null,
             latitude: selection.latitude ?? null,
@@ -566,12 +573,18 @@ export function App() {
   );
 
   const handleSpatialSelection = (next: SpatialFeatureSelection | null) => {
-    setSelection(next);
+    const bound = next
+      ? bindSpatialSelectionIdentity(
+          next,
+          scope === 'world' ? 'global' : city.id
+        )
+      : null;
+    setSelection(bound);
 
-    if (scope !== 'world' || next?.kind !== 'city') return;
+    if (scope !== 'world' || bound?.kind !== 'city') return;
     const cityId =
-      typeof next.properties?.cityId === 'string'
-        ? next.properties.cityId
+      typeof bound.properties?.cityId === 'string'
+        ? bound.properties.cityId
         : null;
     if (!cityId) return;
 
@@ -1459,10 +1472,31 @@ export function App() {
             <span className="rail-kicker">SELECTED ENTITY</span>
             {selection ? (
               <>
-                <h3>{selection.id}</h3>
+                <h3>{selection.identity?.displayName ?? selection.id}</h3>
                 <p>{selection.kind}</p>
                 <small className="selection-hint">ESC TO CLEAR</small>
                 <dl>
+                  <div>
+                    <dt>CANONICAL ID</dt>
+                    <dd>{selection.identity?.canonicalId ?? selection.id}</dd>
+                  </div>
+                  <div>
+                    <dt>IDENTITY BASIS</dt>
+                    <dd>{selection.identity?.basis?.toUpperCase() ?? 'SCENE'}</dd>
+                  </div>
+                  <div>
+                    <dt>CROSS-SOURCE JOIN</dt>
+                    <dd>
+                      {selection.identity?.crossSourceJoinReady
+                        ? 'GERS LINKED'
+                        : 'NOT LINKED'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>SOURCE FEATURE</dt>
+                    <dd>{selection.identity?.sourceFeatureId ?? '—'}</dd>
+                  </div>
+                  <div><dt>SCENE ID</dt><dd>{selection.id}</dd></div>
                   <div><dt>SOURCE</dt><dd>{selection.source ?? 'UNKNOWN'}</dd></div>
                   <div>
                     <dt>LAYER</dt>
@@ -1495,6 +1529,10 @@ export function App() {
                   onClick={() => {
                     const layer = String(selection.properties?.layerId ?? 'unknown layer');
                     const sourceTime = String(selection.properties?.sourceTime ?? 'unknown');
+                    const canonicalId =
+                      selection.identity?.canonicalId ?? selection.id;
+                    const identityBasis =
+                      selection.identity?.basis ?? 'scene-derived';
                     const sourceState =
                       selection.properties?.live === true
                         ? 'live'
@@ -1506,7 +1544,8 @@ export function App() {
                       id: (current?.id ?? 0) + 1,
                       agent: 'AUREN',
                       prompt:
-                        `Analyze the selected ${selection.kind} "${selection.id}" in ${layer}. ` +
+                        `Analyze the selected ${selection.kind} "${canonicalId}" in ${layer}. ` +
+                        `Identity basis: ${identityBasis}; scene id: ${selection.id}. ` +
                         `Its source state is ${sourceState} and source time is ${sourceTime}. ` +
                         'Use the active spatial context and evidence receipts. Separate observed facts, modeled context, assumptions, uncertainty, and suggested operator follow-up.'
                     }));
