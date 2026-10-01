@@ -734,6 +734,28 @@ export function App() {
     setIntelOpen(true);
   };
 
+  const analyzeEntityDossier = (dossier: SpatialEntityDossier) => {
+    const sourceChain = [dossier.entitySource, ...dossier.contextSources]
+      .map(
+        (source) =>
+          `${source.role}:${source.provider ?? source.dataset ?? 'unknown'}:${source.state}`
+      )
+      .join('; ');
+
+    setAgentHandoff((current) => ({
+      id: (current?.id ?? 0) + 1,
+      agent: 'AUREN',
+      prompt:
+        `Review the ${dossier.frozen ? 'frozen' : 'active'} operator entity dossier for "${dossier.entity.canonicalId}" (${dossier.entity.kind}) in ${dossier.region}. ` +
+        `Identity basis: ${dossier.entity.identityBasis}; GERS-linked: ${dossier.entity.crossSourceJoinReady ? 'yes' : 'no'}. ` +
+        `4D frame: ${dossier.temporal.mode} at ${dossier.temporal.iso}. Entity source state: ${dossier.entitySource.state}. ` +
+        `Source chain: ${sourceChain || 'none'}. Core coverage: ${dossier.coverage.percent}%. ` +
+        `Matching captured frames: ${dossier.matchingObservations.map((item) => item.slot).join(', ') || 'none'}. ` +
+        'Treat the dossier as non-authoritative operator analysis. Separate entity-specific facts from surrounding context, preserve missing fields, do not infer a GERS join or causation where none is proven, and identify the next evidence needed before an operator decision.'
+    }));
+    setIntelWorkspace('ai');
+    setIntelOpen(true);
+  };
   const changeInteractionMode = (mode: SpatialInteractionMode) => {
     setInteractionMode(mode);
     if (mode === 'measure') {
@@ -1536,98 +1558,17 @@ export function App() {
             <p>Simulation, provenance, uncertainty and reproducible validation.</p>
           </section>
 
-          <section className="selection-card intel-context-panel">
-            <span className="rail-kicker">SELECTED ENTITY</span>
-            {selection ? (
-              <>
-                <h3>{selection.identity?.displayName ?? selection.id}</h3>
-                <p>{selection.kind}</p>
-                <small className="selection-hint">ESC TO CLEAR</small>
-                <dl>
-                  <div>
-                    <dt>CANONICAL ID</dt>
-                    <dd>{selection.identity?.canonicalId ?? selection.id}</dd>
-                  </div>
-                  <div>
-                    <dt>IDENTITY BASIS</dt>
-                    <dd>{selection.identity?.basis?.toUpperCase() ?? 'SCENE'}</dd>
-                  </div>
-                  <div>
-                    <dt>CROSS-SOURCE JOIN</dt>
-                    <dd>
-                      {selection.identity?.crossSourceJoinReady
-                        ? 'GERS LINKED'
-                        : 'NOT LINKED'}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>SOURCE FEATURE</dt>
-                    <dd>{selection.identity?.sourceFeatureId ?? '—'}</dd>
-                  </div>
-                  <div><dt>SCENE ID</dt><dd>{selection.id}</dd></div>
-                  <div><dt>SOURCE</dt><dd>{selection.source ?? 'UNKNOWN'}</dd></div>
-                  <div>
-                    <dt>LAYER</dt>
-                    <dd>{String(selection.properties?.layerId ?? '—')}</dd>
-                  </div>
-                  <div>
-                    <dt>STATE</dt>
-                    <dd>
-                      {selection.properties?.live === true
-                        ? 'LIVE'
-                        : selection.properties?.fallback === true
-                          ? 'FALLBACK'
-                          : 'RECORDED'}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>SOURCE TIME</dt>
-                    <dd>{String(selection.properties?.sourceTime ?? '—')}</dd>
-                  </div>
-                  <div>
-                    <dt>FETCHED</dt>
-                    <dd>{String(selection.properties?.fetchedAt ?? '—')}</dd>
-                  </div>
-                  <div><dt>LAT</dt><dd>{selection.latitude?.toFixed(5) ?? '—'}</dd></div>
-                  <div><dt>LON</dt><dd>{selection.longitude?.toFixed(5) ?? '—'}</dd></div>
-                </dl>
-                <button
-                  className="selection-ai-action"
-                  type="button"
-                  onClick={() => {
-                    const layer = String(selection.properties?.layerId ?? 'unknown layer');
-                    const sourceTime = String(selection.properties?.sourceTime ?? 'unknown');
-                    const canonicalId =
-                      selection.identity?.canonicalId ?? selection.id;
-                    const identityBasis =
-                      selection.identity?.basis ?? 'scene-derived';
-                    const sourceState =
-                      selection.properties?.live === true
-                        ? 'live'
-                        : selection.properties?.fallback === true
-                          ? 'fallback'
-                          : 'recorded';
-
-                    setAgentHandoff((current) => ({
-                      id: (current?.id ?? 0) + 1,
-                      agent: 'AUREN',
-                      prompt:
-                        `Analyze the selected ${selection.kind} "${canonicalId}" in ${layer}. ` +
-                        `Identity basis: ${identityBasis}; scene id: ${selection.id}. ` +
-                        `Its source state is ${sourceState} and source time is ${sourceTime}. ` +
-                        'Use the active spatial context and evidence receipts. Separate observed facts, modeled context, assumptions, uncertainty, and suggested operator follow-up.'
-                    }));
-                    setIntelWorkspace('ai');
-                    setIntelOpen(true);
-                  }}
-                >
-                  ANALYZE WITH AI
-                </button>
-              </>
-            ) : (
-              <p>No feature selected.</p>
-            )}
-          </section>
+          <EntityDossierPanel
+            current={entityDossier}
+            frozen={frozenDossier}
+            onFreeze={() => {
+              if (entityDossier) {
+                setFrozenDossier(freezeSpatialEntityDossier(entityDossier));
+              }
+            }}
+            onClearFrozen={() => setFrozenDossier(null)}
+            onAnalyze={analyzeEntityDossier}
+          />
         </aside>
       </section>
 
