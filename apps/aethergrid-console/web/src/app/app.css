@@ -5055,3 +5055,312 @@ button {
   }
 }
 
+/* Spatial investigation board — operator analysis, evidence-referenced */
+.spatial-investigation-board {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(183, 159, 255, 0.08);
+  border-radius: 9px;
+  background: linear-gradient(
+    145deg,
+    rgba(15, 12, 25, 0.68),
+    rgba(8, 11, 18, 0.74)
+  );
+}
+
+.investigation-head,
+.investigation-case > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.investigation-head span small,
+.investigation-head span strong,
+.investigation-case > header span small,
+.investigation-case > header span strong {
+  display: block;
+}
+
+.investigation-head small,
+.investigation-case > header small {
+  color: #716889;
+  font-size: 6px;
+  letter-spacing: 0.09em;
+}
+
+.investigation-head strong,
+.investigation-case > header strong {
+  margin-top: 2px;
+  color: #e1d9f6;
+  font-size: 8px;
+}
+
+.investigation-head > em {
+  border: 1px solid rgba(183, 159, 255, 0.12);
+  border-radius: 999px;
+  padding: 3px 6px;
+  color: #9c8fc3;
+  font-size: 5px;
+  font-style: normal;
+}
+
+.investigation-create,
+.investigation-compose {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px;
+}
+
+.investigation-create textarea,
+.investigation-compose textarea {
+  grid-column: 1 / -1;
+}
+
+.investigation-create input,
+.investigation-create textarea,
+.investigation-compose input,
+.investigation-compose textarea,
+.investigation-case select,
+.investigation-hypotheses input,
+.investigation-hypotheses select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 6px;
+  color: #ded9e9;
+  background: rgba(255, 255, 255, 0.018);
+  font: inherit;
+  font-size: 6px;
+}
+
+.investigation-create input,
+.investigation-compose input,
+.investigation-case select,
+.investigation-hypotheses input,
+.investigation-hypotheses select {
+  min-height: 29px;
+  padding: 0 7px;
+}
+
+.investigation-create textarea,
+.investigation-compose textarea {
+  min-height: 56px;
+  padding: 7px;
+  resize: vertical;
+}
+
+.investigation-create button,
+.investigation-compose button,
+.investigation-context-actions button,
+.investigation-actions button {
+  min-height: 29px;
+  border: 1px solid rgba(183, 159, 255, 0.13);
+  border-radius: 6px;
+  color: #b6a9db;
+  background: rgba(183, 159, 255, 0.026);
+  font-size: 5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+.investigation-context-actions button:disabled,
+.investigation-actions button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.investigation-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.investigation-tabs button {
+  flex: 0 0 auto;
+  min-width: 112px;
+  max-width: 180px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  color: #847b99;
+  background: rgba(255, 255, 255, 0.012);
+  text-align: left;
+  cursor: pointer;
+}
+
+.investigation-tabs button.active {
+  border-color: rgba(183, 159, 255, 0.24);
+  color: #d8cdf4;
+  background: rgba(183, 159, 255, 0.05);
+}
+
+.investigation-tabs small,
+.investigation-tabs strong {
+  display: block;
+}
+
+.investigation-tabs small {
+  font-size: 5px;
+}
+
+.investigation-tabs strong {
+  overflow: hidden;
+  margin-top: 2px;
+  font-size: 6px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.investigation-case {
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.investigation-case > header select {
+  width: auto;
+}
+
+.investigation-objective,
+.investigation-empty,
+.investigation-geometry-ref span,
+.investigation-questions p,
+.investigation-notes p {
+  margin: 0;
+  color: #776f89;
+  font-size: 6px;
+  line-height: 1.45;
+}
+
+.investigation-reference-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.investigation-reference-grid span,
+.investigation-geometry-ref {
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.investigation-reference-grid small,
+.investigation-reference-grid strong,
+.investigation-geometry-ref small,
+.investigation-geometry-ref strong {
+  display: block;
+}
+
+.investigation-reference-grid small,
+.investigation-geometry-ref small,
+.investigation-questions > small,
+.investigation-notes > small {
+  color: #6f6681;
+  font-size: 5px;
+  letter-spacing: 0.06em;
+}
+
+.investigation-reference-grid strong,
+.investigation-geometry-ref strong {
+  margin-top: 3px;
+  color: #d1c8e5;
+  font-size: 7px;
+}
+
+.investigation-context-actions,
+.investigation-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.investigation-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.investigation-geometry-ref {
+  display: grid;
+  gap: 2px;
+}
+
+.investigation-hypotheses {
+  display: grid;
+  gap: 5px;
+}
+
+.investigation-hypotheses > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 0.7fr;
+  gap: 4px;
+  padding: 6px;
+  border-left: 2px solid rgba(183, 159, 255, 0.18);
+  background: rgba(183, 159, 255, 0.012);
+}
+
+.investigation-hypotheses > div[data-assessment='supported'] {
+  border-left-color: rgba(99, 255, 197, 0.56);
+}
+
+.investigation-hypotheses > div[data-assessment='contradicted'] {
+  border-left-color: rgba(255, 99, 112, 0.6);
+}
+
+.investigation-hypotheses > div[data-assessment='inconclusive'] {
+  border-left-color: rgba(240, 180, 95, 0.6);
+}
+
+.investigation-hypotheses p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #cfc7df;
+  font-size: 6px;
+  line-height: 1.45;
+}
+
+.investigation-questions,
+.investigation-notes {
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.035);
+  border-radius: 6px;
+}
+
+.investigation-boundary {
+  margin-top: 0;
+}
+
+:root[data-theme='light'] .spatial-investigation-board,
+:root[data-theme='light'] .investigation-case,
+:root[data-theme='light'] .investigation-reference-grid span,
+:root[data-theme='light'] .investigation-geometry-ref {
+  background: rgba(251, 249, 255, 0.84);
+}
+
+@media (max-width: 760px) {
+  .investigation-create,
+  .investigation-compose,
+  .investigation-reference-grid,
+  .investigation-context-actions,
+  .investigation-actions,
+  .investigation-hypotheses > div {
+    grid-template-columns: 1fr;
+  }
+
+  .investigation-create textarea,
+  .investigation-compose textarea,
+  .investigation-hypotheses p {
+    grid-column: 1;
+  }
+}
+
