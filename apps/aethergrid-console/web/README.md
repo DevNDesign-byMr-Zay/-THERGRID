@@ -14,6 +14,8 @@ It intentionally does **not** replace `apps/aethergrid-console/index.html` or th
 - LIVE / HISTORICAL / FORECAST / SCENARIO temporal model
 - synchronized 4D playback clock
 - temporal layer registry/sampling contract
+- provider-backed FORECAST weather cursor sampling
+- explicit per-city NOAA NWPS gauge and EIA region bindings stored as non-secret operator settings
 - responsive operator shell and timeline
 
 ## Boundary with the provider-foundation work
@@ -31,6 +33,8 @@ For isolated development only, a restricted Cesium public-client token may be su
 `VITE_AETHERGRID_CESIUM_ION_TOKEN`
 
 Production should prefer the server-generated public configuration contract. Never expose IBM Quantum, AI, Tomorrow.io, D-Wave, EIA or other private credentials through Vite/browser environment variables.
+
+Operational source bindings are identifiers, not credentials. The browser may persist an operator-verified NOAA NWPS gauge ID or EIA balancing-region code per city/coordinate, but the UI never infers those identifiers from map position and never stores the corresponding provider secret.
 
 ## Local development
 
