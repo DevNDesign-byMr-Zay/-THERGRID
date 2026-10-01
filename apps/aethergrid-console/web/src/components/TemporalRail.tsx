@@ -32,6 +32,7 @@ interface TemporalRailProps {
   clock: AethergridTemporalClock;
   state: Readonly<TemporalState>;
   events?: readonly TemporalNavigatorEvent[];
+  onScenarioEvent?(event: TemporalNavigatorEvent): void;
 }
 
 function dataModeCopy(mode: TemporalMode): {
@@ -56,7 +57,12 @@ function dataModeCopy(mode: TemporalMode): {
   };
 }
 
-export function TemporalRail({ clock, state, events = [] }: TemporalRailProps) {
+export function TemporalRail({
+  clock,
+  state,
+  events = [],
+  onScenarioEvent
+}: TemporalRailProps) {
   const offset = offsetMinutes(state);
   const dataMode = dataModeCopy(state.mode);
   const railEvents = events.filter((event) =>
@@ -71,6 +77,10 @@ export function TemporalRail({ clock, state, events = [] }: TemporalRailProps) {
       return;
     }
     if (mode === 'scenario') {
+      if (event.scenarioId && onScenarioEvent) {
+        onScenarioEvent(event);
+        return;
+      }
       clock.setMode('scenario', event.scenarioId);
       clock.scrub(event.timeIso, 'scenario');
       return;
