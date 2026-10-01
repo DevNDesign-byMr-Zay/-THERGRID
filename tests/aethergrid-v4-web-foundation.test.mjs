@@ -260,7 +260,7 @@ test('v4 provenance UI separates source time from retrieval age', async () => {
   assert.match(app, /sourceTime=\{/u);
   assert.match(app, /globalLive\?\.overlay\.sourceTime/u);
   assert.match(app, /powerOverlay\?\.sourceTime/u);
-  assert.match(app, /FETCHED \\{formatDataAge\\(activeAtmosphere\\?\\.fetchedAt\\)\\}/u);
+  assert.match(app, /FETCHED \{formatDataAge\(activeAtmosphere\?\.fetchedAt\)\}/u);
 });
 
 test('v4 city-live context renders source-backed AQI and seismic events only in LIVE mode', async () => {
@@ -480,7 +480,7 @@ test('v4 world scope isolates global live context from selected-city overlays', 
   assert.match(app, /atmosphere=\{scope === 'city' \? activeAtmosphere : null\}/u);
   assert.match(app, /scope === 'world'\s*\? \{\s*latitude: 20,\s*longitude: 0/u);
   assert.match(app, /scope === 'city' && cityIdentity/u);
-  assert.match(app, /scope === 'city' && atmosphere/u);
+  assert.match(app, /scope === 'city' && activeAtmosphere/u);
   assert.match(app, /scope === 'city' && liveContext/u);
 });
 
