@@ -4737,6 +4737,17 @@ button {
   background: #f0b45f;
 }
 
+.time-event-marker[data-event-type='scenario-start'],
+.time-event-marker[data-event-type='scenario-end'] {
+  border-color: rgba(217, 145, 255, 0.82);
+  background: #d991ff;
+  box-shadow: 0 0 9px rgba(217, 145, 255, 0.46);
+}
+
+.time-event-marker[data-event-type='scenario-end'] {
+  background: transparent;
+}
+
 .temporal-event-navigator {
   display: grid;
   gap: 8px;
@@ -4785,7 +4796,7 @@ button {
 
 .temporal-event-controls {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 4px;
 }
 
@@ -4840,6 +4851,11 @@ button {
 
 .temporal-event-list > button[data-event-type='operator-incident'] {
   border-left: 2px solid rgba(255, 128, 107, 0.3);
+}
+
+.temporal-event-list > button[data-event-type='scenario-start'],
+.temporal-event-list > button[data-event-type='scenario-end'] {
+  border-left: 2px solid rgba(217, 145, 255, 0.48);
 }
 
 .temporal-event-list > button[data-event-severity='critical'] {
