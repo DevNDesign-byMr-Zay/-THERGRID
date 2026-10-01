@@ -9,10 +9,7 @@ import {
 import type { SpatialIncident } from './spatial-incidents';
 import type { SpatialObservation } from './spatial-comparison';
 import type { SpatialWorksetItem } from './spatial-workset';
-import type {
-  SpatialWorksetGeometryNode,
-  SpatialWorksetGeometrySummary
-} from './spatial-workset-geometry';
+import type { SpatialWorksetGeometrySummary } from './spatial-workset-geometry';
 
 export type OperatorScenarioStatus = 'draft' | 'active' | 'archived';
 
@@ -436,22 +433,12 @@ export function compareOperatorScenario(
   };
 }
 
-function scenarioNodeIntensity(
-  scenario: OperatorScenario,
-  node: SpatialWorksetGeometryNode
-): number {
+function scenarioNodeIntensity(scenario: OperatorScenario): number {
   const comparison = compareOperatorScenario(scenario);
-  const seed =
-    [...node.canonicalId].reduce(
-      (total, character) => total + character.charCodeAt(0),
-      0
-    ) % 17;
-  const variability = seed / 100;
   return clamp(
     0.35 +
       (comparison.visual.stressFactor - 0.65) / 1.7 +
-      comparison.visual.weatherRisk * 0.2 +
-      variability,
+      comparison.visual.weatherRisk * 0.2,
     0.2,
     1
   );
@@ -485,7 +472,7 @@ export function operatorScenarioToOverlay(
         heightMeters: node.heightMeters + 36
       },
       label: `${scenario.name} · ${node.displayName}`,
-      intensity: scenarioNodeIntensity(scenario, node),
+      intensity: scenarioNodeIntensity(scenario),
       validFrom: scenario.startIso,
       validTo: scenario.endIso,
       properties: {
