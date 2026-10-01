@@ -20,9 +20,7 @@ test('v4 spatial worksets are bounded local operator state keyed by canonical id
 });
 
 test('v4 workset pins frozen entity dossiers without mutating their original capture time on load', async () => {
-  const service = await text(
-    'apps/aethergrid-console/web/src/services/spatial-workset.ts',
-  );
+  const service = await text('apps/aethergrid-console/web/src/services/spatial-workset.ts');
 
   assert.match(service, /freezeSpatialEntityDossier\(dossier\)/u);
   assert.match(service, /cloneFrozenDossier/u);
@@ -80,6 +78,6 @@ test('v4 workset panel keeps local persistence separate from server evidence and
   assert.match(panel, /Pinned dossiers are frozen local snapshots/u);
   assert.match(
     panel,
-    /does not claim the original source feature has been reselected or is still live/u,
+    /does not claim the original source\s+feature has been reselected or is still live/u,
   );
 });
