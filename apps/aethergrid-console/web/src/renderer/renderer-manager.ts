@@ -29,6 +29,7 @@ export class RendererManager {
   #overlays = new Map<string, SpatialOverlaySnapshot>();
   #atmosphere: AtmosphericOverlaySnapshot | null = null;
   #airQuality: AirQualityOverlaySnapshot | null = null;
+  #selectedFeatureId: string | null = null;
   #failoverReason: string | null = null;
 
   constructor(primary: SpatialRenderer, fallback: SpatialRenderer) {
@@ -105,6 +106,7 @@ export class RendererManager {
   }
 
   selectFeature(id: string | null): void {
+    this.#selectedFeatureId = id;
     this.#current.selectFeature(id);
   }
 
@@ -185,6 +187,9 @@ export class RendererManager {
     if (this.#atmosphere) renderer.applyAtmosphere(this.#atmosphere);
     if (this.#airQuality) renderer.applyAirQuality(this.#airQuality);
     if (this.#time) renderer.setTime(this.#time);
+    if (this.#selectedFeatureId) {
+      renderer.selectFeature(this.#selectedFeatureId);
+    }
     this.#current = renderer;
   }
 }
