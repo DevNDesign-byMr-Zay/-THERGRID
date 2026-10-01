@@ -58,19 +58,20 @@ export function createProviderExecutor(options = {}) {
               rateLimitRemaining: limiter ? limiter.getStatus().remaining : null,
             });
           }
+          const isLiveData = cached.value?.live !== false && cached.value?.status !== 'unconfigured';
           const receipt = createProviderReceipt({
             provider: providerId,
             capability,
             dataset,
             cacheState: 'hit',
-            live: true,
+            live: isLiveData,
             stale: false,
-            fallback: false,
+            fallback: !isLiveData,
             attribution,
           });
           return { data: cached.value, receipt };
         } else {
-          // Stale entry found! SWR behavior: Return stale cached data with stale: true and trigger background refresh if fetcher provided
+          // Stale entry found -> SWR: Return stale cached data with stale: true, live: false
           if (typeof fetcher === 'function') {
             Promise.resolve().then(async () => {
               try {
@@ -122,7 +123,7 @@ export function createProviderExecutor(options = {}) {
           throw new Error(`No fetcher supplied for provider '${providerId}'`);
         }
         const data = await fetcher();
-        if (cache) {
+        if (cache && data?.live !== false && data?.status !== 'unconfigured') {
           cache.set(cacheKey, data, ttlMs);
         }
         return data;
@@ -179,9 +180,12 @@ export function createProviderExecutor(options = {}) {
         return { data, receipt };
       }
 
+      const isLiveData = result?.live !== false && result?.status !== 'unconfigured' && !result?.fallback;
+
       if (health) {
         health.recordExecution(providerId, {
           success: true,
+          fallbackActive: !isLiveData,
           cacheHit: false,
           latencyMs,
           circuitState: breaker ? breaker.getState() : 'CLOSED',
@@ -194,9 +198,9 @@ export function createProviderExecutor(options = {}) {
         capability,
         dataset,
         cacheState: 'miss',
-        live: true,
+        live: isLiveData,
         stale: false,
-        fallback: false,
+        fallback: !isLiveData,
         attribution,
       });
 

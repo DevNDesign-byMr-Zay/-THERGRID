@@ -180,5 +180,84 @@ export function createCityEnvironmentRuntime({
     }
   }
 
-  return { summary, current };
+  async function forecast(input = {}) {
+    const lat = validateCoordinate(input.lat, -90, 90, 'latitude');
+    const lon = validateCoordinate(input.lon, -180, 180, 'longitude');
+    if (provider !== 'open-meteo') {
+      return {
+        schemaVersion: 2,
+        coordinate: { lat, lon },
+        source: {
+          provider: 'local-forecast-fallback',
+          live: false,
+          fetchedAt: new Date().toISOString(),
+        },
+        hourly: [],
+      };
+    }
+
+    try {
+      const url = validateEndpoint(endpoint);
+      url.searchParams.set('latitude', String(lat));
+      url.searchParams.set('longitude', String(lon));
+      url.searchParams.set(
+        'hourly',
+        ['temperature_2m', 'relative_humidity_2m', 'weather_code', 'wind_speed_10m', 'precipitation_probability'].join(','),
+      );
+      url.searchParams.set('forecast_days', '7');
+      url.searchParams.set('timezone', 'auto');
+
+      const response = await fetchImpl(url, {
+        headers: {
+          accept: 'application/json',
+          'user-agent': 'AETHERGRID/2.6 (city-environment-runtime)',
+        },
+        signal: AbortSignal.timeout(12_000),
+      });
+
+      if (!response.ok) throw new Error(`Open-Meteo Forecast HTTP ${response.status}`);
+      const payload = await response.json();
+      const hourly = payload?.hourly || {};
+      const times = Array.isArray(hourly.time) ? hourly.time : [];
+      const temps = Array.isArray(hourly.temperature_2m) ? hourly.temperature_2m : [];
+      const humidities = Array.isArray(hourly.relative_humidity_2m) ? hourly.relative_humidity_2m : [];
+      const codes = Array.isArray(hourly.weather_code) ? hourly.weather_code : [];
+      const winds = Array.isArray(hourly.wind_speed_10m) ? hourly.wind_speed_10m : [];
+
+      const timeSeries = times.slice(0, 48).map((time, idx) => ({
+        eventTime: time,
+        temperatureC: Number.isFinite(Number(temps[idx])) ? Number(temps[idx]) : null,
+        relativeHumidityPercent: Number.isFinite(Number(humidities[idx])) ? Number(humidities[idx]) : null,
+        weatherCode: Number.isFinite(Number(codes[idx])) ? Number(codes[idx]) : null,
+        windSpeedKph: Number.isFinite(Number(winds[idx])) ? Number(winds[idx]) : null,
+      }));
+
+      return {
+        schemaVersion: 2,
+        coordinate: { lat, lon },
+        source: {
+          provider: 'Open-Meteo Hourly Forecast',
+          live: true,
+          attribution: 'Hourly forecast data via Open-Meteo',
+          retrievedAt: new Date().toISOString(),
+          modelRunAt: times[0] || null,
+        },
+        hourly: timeSeries,
+      };
+    } catch (error) {
+      return {
+        schemaVersion: 2,
+        coordinate: { lat, lon },
+        source: {
+          provider: 'local-forecast-fallback',
+          live: false,
+          error: error.message,
+          retrievedAt: new Date().toISOString(),
+        },
+        hourly: [],
+      };
+    }
+  }
+
+  return { summary, current, forecast };
 }
