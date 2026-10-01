@@ -4681,3 +4681,231 @@ button {
   }
 }
 
+/* 4D temporal event navigator */
+.time-slider-wrap {
+  position: relative;
+  display: grid;
+  align-items: center;
+  min-width: 0;
+}
+
+.time-slider-wrap .time-slider {
+  grid-area: 1 / 1;
+  z-index: 1;
+}
+
+.time-event-markers {
+  grid-area: 1 / 1;
+  position: relative;
+  height: 18px;
+  margin-inline: 7px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.time-event-marker {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border: 1px solid rgba(142, 190, 255, 0.6);
+  border-radius: 2px;
+  background: #8dc9ff;
+  box-shadow: 0 0 8px rgba(141, 201, 255, 0.42);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.time-event-marker[data-event-type='operator-incident'] {
+  border-color: rgba(255, 128, 107, 0.72);
+  background: #ff806b;
+  box-shadow: 0 0 8px rgba(255, 128, 107, 0.42);
+}
+
+.time-event-marker[data-event-severity='critical'] {
+  border-color: rgba(255, 79, 99, 0.9);
+  background: #ff4f63;
+}
+
+.time-event-marker[data-event-severity='high'] {
+  background: #ff806b;
+}
+
+.time-event-marker[data-event-severity='medium'] {
+  background: #f0b45f;
+}
+
+.temporal-event-navigator {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(141, 201, 255, 0.08);
+  border-radius: 9px;
+  background: linear-gradient(
+    145deg,
+    rgba(9, 16, 24, 0.68),
+    rgba(8, 11, 18, 0.74)
+  );
+}
+
+.temporal-event-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.temporal-event-head span small,
+.temporal-event-head span strong {
+  display: block;
+}
+
+.temporal-event-head small {
+  color: #5f7486;
+  font-size: 6px;
+  letter-spacing: 0.09em;
+}
+
+.temporal-event-head strong {
+  margin-top: 2px;
+  color: #d5e8f2;
+  font-size: 8px;
+}
+
+.temporal-event-head > em {
+  border: 1px solid rgba(141, 201, 255, 0.1);
+  border-radius: 999px;
+  padding: 3px 6px;
+  color: #7494a8;
+  font-size: 5px;
+  font-style: normal;
+}
+
+.temporal-event-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.temporal-event-controls button {
+  min-height: 27px;
+  border: 1px solid rgba(141, 201, 255, 0.09);
+  border-radius: 6px;
+  color: #6f8ca0;
+  background: rgba(141, 201, 255, 0.02);
+  font-size: 5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+.temporal-event-controls button.active {
+  border-color: rgba(141, 201, 255, 0.24);
+  color: #c8eaff;
+  background: rgba(141, 201, 255, 0.055);
+}
+
+.temporal-event-controls button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.temporal-event-list {
+  display: grid;
+  gap: 5px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.temporal-event-list > button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 7px;
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 7px;
+  color: inherit;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.012);
+  cursor: pointer;
+}
+
+.temporal-event-list > button.active {
+  border-color: rgba(141, 201, 255, 0.22);
+  background: rgba(141, 201, 255, 0.04);
+}
+
+.temporal-event-list > button[data-event-type='operator-incident'] {
+  border-left: 2px solid rgba(255, 128, 107, 0.3);
+}
+
+.temporal-event-list > button[data-event-severity='critical'] {
+  border-left-color: #ff4f63;
+}
+
+.temporal-event-list > button[data-event-severity='high'] {
+  border-left-color: #ff806b;
+}
+
+.temporal-event-list > button span {
+  min-width: 0;
+}
+
+.temporal-event-list > button span small,
+.temporal-event-list > button span strong {
+  display: block;
+}
+
+.temporal-event-list > button span small {
+  color: #60778a;
+  font-size: 5px;
+  letter-spacing: 0.07em;
+}
+
+.temporal-event-list > button span strong {
+  overflow: hidden;
+  margin-top: 2px;
+  color: #d5e5ee;
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.temporal-event-list > button > em {
+  color: #6b8193;
+  font-size: 5px;
+  font-style: normal;
+}
+
+.temporal-event-list > button > p,
+.temporal-event-empty {
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+  color: #63798b;
+  font-size: 6px;
+  line-height: 1.4;
+}
+
+.temporal-event-boundary {
+  margin-top: 0;
+}
+
+:root[data-theme='light'] .temporal-event-navigator,
+:root[data-theme='light'] .temporal-event-list > button {
+  background: rgba(248, 252, 255, 0.82);
+}
+
+@media (max-width: 760px) {
+  .temporal-event-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .time-event-marker {
+    width: 7px;
+    height: 7px;
+  }
+}
+
