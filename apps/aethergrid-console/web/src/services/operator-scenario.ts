@@ -49,6 +49,8 @@ export interface OperatorScenario {
   authoritative: false;
   modeled: true;
   id: string;
+  version: number;
+  parentScenarioId: string | null;
   name: string;
   description: string;
   status: OperatorScenarioStatus;
@@ -180,6 +182,10 @@ function validScenario(value: unknown): value is OperatorScenario {
     scenario.authoritative === false &&
     scenario.modeled === true &&
     typeof scenario.id === 'string' &&
+    Number.isInteger(scenario.version) &&
+    scenario.version >= 1 &&
+    (scenario.parentScenarioId == null ||
+      typeof scenario.parentScenarioId === 'string') &&
     typeof scenario.name === 'string' &&
     typeof scenario.description === 'string' &&
     STATUSES.has(scenario.status as OperatorScenarioStatus) &&
@@ -249,6 +255,8 @@ export function createOperatorScenario(
     authoritative: false,
     modeled: true,
     id: `scenario:${now}:${Math.random().toString(36).slice(2, 8)}`,
+    version: 1,
+    parentScenarioId: null,
     name: boundedText(name, 120) || 'Operator Scenario',
     description: boundedText(description, 1_500),
     status: 'draft',
@@ -295,6 +303,30 @@ export function createOperatorScenario(
       totalTreeDistanceMeters: context.geometry.totalTreeDistanceMeters,
       maximumPairDistanceMeters: context.geometry.maximumPairDistanceMeters
     }
+  };
+}
+
+export function branchOperatorScenario(
+  scenario: OperatorScenario
+): OperatorScenario {
+  const now = new Date().toISOString();
+  const nextVersion = scenario.version + 1;
+  return {
+    ...clone(scenario),
+    id: `scenario:${now}:${Math.random().toString(36).slice(2, 8)}`,
+    version: nextVersion,
+    parentScenarioId: scenario.id,
+    name: boundedText(`${scenario.name} · v${nextVersion}`, 120),
+    status: 'draft',
+    createdAt: now,
+    updatedAt: now,
+    assumptions: scenario.assumptions.map((assumption) => ({
+      ...assumption,
+      id: `scenario-assumption:${now}:${Math.random()
+        .toString(36)
+        .slice(2, 8)}`,
+      createdAt: now
+    }))
   };
 }
 
