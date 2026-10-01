@@ -50,6 +50,9 @@ function nodeColor(node: SpatialOverlayNode): Color {
   if (node.properties?.analysisType === 'workset-geometry') {
     return Color.fromCssColorString('#63ffc5').withAlpha(0.96);
   }
+  if (node.properties?.analysisType === 'scenario-model') {
+    return Color.fromCssColorString('#d991ff').withAlpha(0.96);
+  }
   if (node.properties?.presentationType === 'urban-illumination') {
     return Color.fromCssColorString('#ffd37d').withAlpha(0.58 + intensity * 0.34);
   }
@@ -167,6 +170,9 @@ function edgeColor(edge: SpatialOverlayEdge, intensity: number): Color {
   if (edge.kind === 'analysis-line' && edge.properties?.analysisType === 'workset-geometry') {
     return Color.fromCssColorString('#63ffc5').withAlpha(0.72 + intensity * 0.2);
   }
+  if (edge.kind === 'analysis-line' && edge.properties?.analysisType === 'scenario-model') {
+    return Color.fromCssColorString('#d991ff').withAlpha(0.64 + intensity * 0.26);
+  }
   if (edge.kind === 'flow' && edge.properties?.vectorType === 'wind') {
     return Color.fromCssColorString('#7de9ff').withAlpha(0.42 + intensity * 0.42);
   }
@@ -185,6 +191,9 @@ function edgeWidth(edge: SpatialOverlayEdge, intensity: number): number {
   }
   if (edge.kind === 'analysis-line' && edge.properties?.analysisType === 'workset-geometry') {
     return 1.6 + intensity * 1.8;
+  }
+  if (edge.kind === 'analysis-line' && edge.properties?.analysisType === 'scenario-model') {
+    return 2 + intensity * 2.2;
   }
   if (edge.kind === 'flow' && edge.properties?.vectorType === 'wind') {
     return 1.1 + intensity * 1.8;
