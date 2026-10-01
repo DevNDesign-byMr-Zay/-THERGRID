@@ -386,7 +386,7 @@ export function buildSpatialEntityDossier(
           elevationDeltaMeters: input.measurement.elevationDeltaMeters,
           slopePercent: input.measurement.slopePercent,
           precision: input.measurement.precision,
-          relation: 'scene-context-only'
+          relation: 'scene-context-only' as const
         }
       : null,
     matchingObservations: Object.freeze(matchingObservations),
