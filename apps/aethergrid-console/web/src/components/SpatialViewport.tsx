@@ -306,7 +306,7 @@ export function SpatialViewport({
   };
 
   const storm =
-    time.mode === 'live'
+    time.mode === 'live' || time.mode === 'forecast'
       ? stormPresentation(atmosphere, time.iso)
       : {
           active: false,
@@ -342,7 +342,7 @@ export function SpatialViewport({
           <div className="storm-presentation-label">
             <strong>THUNDERSTORM</strong>
             <span>
-              SOURCE WEATHER · SYNTHETIC FLASH TIMING · {Math.round(storm.intensity * 100)}%
+              {time.mode === 'forecast' ? 'FORECAST WEATHER' : 'SOURCE WEATHER'} · SYNTHETIC FLASH TIMING · {Math.round(storm.intensity * 100)}%
             </span>
           </div>
         </>
