@@ -9,9 +9,7 @@ async function text(path) {
 }
 
 test('v4 spatial worksets are bounded local operator state keyed by canonical identity', async () => {
-  const service = await text(
-    'apps/aethergrid-console/web/src/services/spatial-workset.ts',
-  );
+  const service = await text('apps/aethergrid-console/web/src/services/spatial-workset.ts');
 
   assert.match(service, /aethergrid\.operator\.spatial-workset\.v4/u);
   assert.match(service, /MAX_SPATIAL_WORKSET_ITEMS = 12/u);
@@ -29,10 +27,7 @@ test('v4 workset pins frozen entity dossiers without mutating their original cap
   assert.match(service, /freezeSpatialEntityDossier\(dossier\)/u);
   assert.match(service, /cloneFrozenDossier/u);
   assert.match(service, /JSON\.parse\(JSON\.stringify\(dossier\)\)/u);
-  assert.doesNotMatch(
-    service,
-    /dossier: freezeSpatialEntityDossier\(item\.dossier\)/u,
-  );
+  assert.doesNotMatch(service, /dossier: freezeSpatialEntityDossier\(item\.dossier\)/u);
 });
 
 test('v4 workset exports remain explicitly non-authoritative and do not claim coordinate restore reselects an entity', async () => {
@@ -48,9 +43,7 @@ test('v4 workset exports remain explicitly non-authoritative and do not claim co
 });
 
 test('v4 workset UI exposes pin locate AUREN remove and export controls with source-state disclosure', async () => {
-  const panel = await text(
-    'apps/aethergrid-console/web/src/components/SpatialWorksetPanel.tsx',
-  );
+  const panel = await text('apps/aethergrid-console/web/src/components/SpatialWorksetPanel.tsx');
 
   assert.match(panel, /MULTI-ENTITY WORKSET/u);
   assert.match(panel, /PIN ACTIVE/u);
@@ -85,5 +78,8 @@ test('v4 workset panel keeps local persistence separate from server evidence and
   assert.doesNotMatch(panel, /fetch\(/u);
   assert.doesNotMatch(service, /\/api\/aethergrid\//u);
   assert.match(panel, /Pinned dossiers are frozen local snapshots/u);
-  assert.match(panel, /does not claim the original source feature has been reselected or is still live/u);
+  assert.match(
+    panel,
+    /does not claim the original source feature has been reselected or is still live/u,
+  );
 });
