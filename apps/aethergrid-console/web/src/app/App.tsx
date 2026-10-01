@@ -115,6 +115,10 @@ import {
 } from '../services/temporal-event-navigator';
 import type { EvidenceRecord } from '../services/evidence-client';
 import type { SpatialInvestigation } from '../services/spatial-investigation';
+import {
+  loadNwsHazards,
+  type NwsHazardContext
+} from '../services/nws-hazards';
 import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
 import type { SpatialViewBookmark } from '../services/view-bookmarks';
 import {
@@ -222,6 +226,7 @@ const INITIAL_LAYERS: readonly LayerState[] = [
   { id: 'weather', visible: true },
   { id: 'air', visible: true },
   { id: 'seismic', visible: true },
+  { id: 'hazards', visible: true },
   { id: 'energy', visible: true },
   { id: 'annotations', visible: true },
   { id: 'workset-analysis', visible: true },
@@ -282,6 +287,8 @@ export function App() {
     useState<AtmosphericForecastSeries | null>(null);
   const [forecastError, setForecastError] = useState<string | null>(null);
   const [liveContext, setLiveContext] = useState<CityLiveSnapshot | null>(null);
+  const [hazardContext, setHazardContext] = useState<NwsHazardContext | null>(null);
+  const [hazardError, setHazardError] = useState<string | null>(null);
   const [globalLive, setGlobalLive] = useState<GlobalLiveContext | null>(null);
   const [liveContextError, setLiveContextError] = useState<string | null>(null);
   const [scenarioVisual, setScenarioVisual] =
@@ -434,7 +441,8 @@ export function App() {
       cityIdentity,
       atmosphere,
       activeAtmosphere,
-      liveContext
+      liveContext,
+      hazardContext
     ]
   );
 
@@ -546,6 +554,37 @@ export function App() {
 
     return () => controller.abort();
   }, [city.id, city.latitude, city.longitude]);
+
+  useEffect(() => {
+    if (temporal.mode !== 'live') {
+      setHazardContext(null);
+      setHazardError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const refresh = () => {
+      void loadNwsHazards(city.latitude, city.longitude, controller.signal)
+        .then((next) => {
+          if (!controller.signal.aborted) {
+            setHazardContext(next);
+            setHazardError(null);
+          }
+        })
+        .catch((error) => {
+          if (controller.signal.aborted) return;
+          setHazardContext(null);
+          setHazardError(error instanceof Error ? error.message : String(error));
+        });
+    };
+
+    refresh();
+    const timer = globalThis.setInterval(refresh, 60_000);
+    return () => {
+      controller.abort();
+      globalThis.clearInterval(timer);
+    };
+  }, [city.id, city.latitude, city.longitude, temporal.mode]);
 
   useEffect(() => {
     if (temporal.mode !== 'forecast') {
@@ -744,13 +783,29 @@ export function App() {
       liveContext:
         scope === 'city' && liveContext && temporal.mode === 'live'
           ? {
-            airQuality: liveContext.airQuality,
-            seismic: {
-              eventCount: liveContext.seismic.eventCount,
-              maxMagnitude: liveContext.seismic.maxMagnitude,
-              nearestDistanceKm: liveContext.seismic.nearestDistanceKm,
-              live: liveContext.seismic.source.live
+              airQuality: liveContext.airQuality,
+              seismic: {
+                eventCount: liveContext.seismic.eventCount,
+                maxMagnitude: liveContext.seismic.maxMagnitude,
+                nearestDistanceKm: liveContext.seismic.nearestDistanceKm,
+                live: liveContext.seismic.source.live
+              }
             }
+          : null,
+      hazards:
+        scope === 'city' && hazardContext && temporal.mode === 'live'
+          ? {
+              count: hazardContext.alerts.length,
+              live: hazardContext.live,
+              stale: hazardContext.stale,
+              attribution: hazardContext.attribution,
+              events: hazardContext.alerts.slice(0, 8).map((alert) => ({
+                event: alert.event,
+                severity: alert.severity,
+                urgency: alert.urgency,
+                certainty: alert.certainty,
+                expires: alert.expires
+              }))
             }
           : null
     }),
@@ -803,6 +858,17 @@ export function App() {
     [scope, liveContext, temporal.mode]
   );
 
+  const hazardOverlay = useMemo(
+    () =>
+      scope === 'city' &&
+      hazardContext &&
+      temporal.mode === 'live' &&
+      !hazardContext.fallback
+        ? hazardContext.overlay
+        : null,
+    [scope, hazardContext, temporal.mode]
+  );
+
   const airQualityOverlay = useMemo(
     () =>
       scope === 'city' && liveContext && temporal.mode === 'live'
@@ -824,6 +890,7 @@ export function App() {
             powerOverlay,
             windOverlay,
             seismicOverlay,
+            hazardOverlay,
             incidentOverlay,
             worksetGeometryOverlay,
             operatorScenarioOverlay,
@@ -840,6 +907,7 @@ export function App() {
       powerOverlay,
       windOverlay,
       seismicOverlay,
+      hazardOverlay,
       incidentOverlay,
       worksetGeometryOverlay,
       operatorScenarioOverlay,
@@ -1593,6 +1661,38 @@ export function App() {
                 <li data-ready={!cityLoad.environment}>ATMOSPHERE</li>
                 <li data-ready={!cityLoad.liveContext}>LIVE CONTEXT</li>
               </ul>
+            </div>
+          ) : null}
+
+          {scope === 'city' &&
+          temporal.mode === 'live' &&
+          hazardContext &&
+          hazardContext.alerts.length > 0 ? (
+            <div
+              className="hazard-scene-badge"
+              data-source-state={
+                hazardContext.stale
+                  ? 'stale'
+                  : hazardContext.live
+                    ? 'live'
+                    : 'fallback'
+              }
+            >
+              <span>NWS ACTIVE HAZARDS</span>
+              <strong>
+                {hazardContext.alerts.length} ALERT
+                {hazardContext.alerts.length === 1 ? '' : 'S'}
+              </strong>
+              <small>
+                {hazardContext.alerts[0]?.event ?? 'ACTIVE ALERT'} ·{' '}
+                {hazardContext.alerts[0]?.severity ?? 'UNKNOWN'} SEVERITY
+              </small>
+            </div>
+          ) : hazardError && scope === 'city' && temporal.mode === 'live' ? (
+            <div className="hazard-scene-badge" data-source-state="unavailable">
+              <span>NWS ACTIVE HAZARDS</span>
+              <strong>UNAVAILABLE</strong>
+              <small>{hazardError}</small>
             </div>
           ) : null}
 
