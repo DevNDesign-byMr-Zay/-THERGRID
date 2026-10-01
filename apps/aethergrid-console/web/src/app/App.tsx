@@ -443,7 +443,9 @@ export function App() {
     setObservationB(workspace.observationB ? { ...workspace.observationB } : null);
     setFrozenDossier(
       workspace.frozenDossier
-        ? freezeSpatialEntityDossier(workspace.frozenDossier)
+        ? (JSON.parse(
+            JSON.stringify(workspace.frozenDossier)
+          ) as SpatialEntityDossier)
         : null
     );
     setPendingSessionRestore(null);
