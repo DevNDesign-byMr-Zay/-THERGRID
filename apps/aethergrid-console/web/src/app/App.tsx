@@ -44,7 +44,10 @@ import type {
 import { solarStateAt } from '../renderer/solar-position';
 import {
   atmosphereToWindOverlay,
-  loadCityEnvironment
+  loadCityEnvironment,
+  loadCityEnvironmentForecast,
+  selectCityEnvironmentForecast,
+  type AtmosphericForecastSeries
 } from '../services/city-environment';
 import type { ScenarioVisualState } from '../services/scenario-client';
 import {
@@ -275,6 +278,9 @@ export function App() {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [atmosphere, setAtmosphere] = useState<AtmosphericOverlaySnapshot | null>(null);
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
+  const [forecastSeries, setForecastSeries] =
+    useState<AtmosphericForecastSeries | null>(null);
+  const [forecastError, setForecastError] = useState<string | null>(null);
   const [liveContext, setLiveContext] = useState<CityLiveSnapshot | null>(null);
   const [globalLive, setGlobalLive] = useState<GlobalLiveContext | null>(null);
   const [liveContextError, setLiveContextError] = useState<string | null>(null);
@@ -302,6 +308,37 @@ export function App() {
     }),
     [temporal, scenarioVisual]
   );
+
+  const forecastAtmosphere = useMemo(
+    () =>
+      temporal.mode === 'forecast' && forecastSeries
+        ? selectCityEnvironmentForecast(
+            forecastSeries,
+            temporal.cursorIso,
+            atmosphere?.utcOffsetSeconds ?? 0
+          )
+        : null,
+    [
+      temporal.mode,
+      temporal.cursorIso,
+      forecastSeries,
+      atmosphere?.utcOffsetSeconds
+    ]
+  );
+
+  const activeAtmosphere =
+    temporal.mode === 'live'
+      ? atmosphere
+      : temporal.mode === 'forecast'
+        ? forecastAtmosphere
+        : null;
+
+  const activeAtmosphereError =
+    temporal.mode === 'live'
+      ? environmentError
+      : temporal.mode === 'forecast'
+        ? forecastError
+        : null;
 
   const measurement = useMemo<SpatialMeasurement | null>(
     () =>
@@ -376,8 +413,7 @@ export function App() {
             observationA,
             observationB,
             cityIdentity: scope === 'city' ? cityIdentity : null,
-            atmosphere:
-              scope === 'city' && temporal.mode === 'live' ? atmosphere : null,
+            atmosphere: scope === 'city' ? activeAtmosphere : null,
             liveContext:
               scope === 'city' && temporal.mode === 'live'
                 ? liveContext
@@ -397,6 +433,7 @@ export function App() {
       observationB,
       cityIdentity,
       atmosphere,
+      activeAtmosphere,
       liveContext
     ]
   );
@@ -444,6 +481,8 @@ export function App() {
     setPowerOverlayError(null);
     setAtmosphere(null);
     setEnvironmentError(null);
+    setForecastSeries(null);
+    setForecastError(null);
     setLiveContext(null);
     setLiveContextError(null);
     setSelection(null);
@@ -507,6 +546,32 @@ export function App() {
 
     return () => controller.abort();
   }, [city.id, city.latitude, city.longitude]);
+
+  useEffect(() => {
+    if (temporal.mode !== 'forecast') {
+      setForecastError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    setForecastSeries(null);
+    setForecastError(null);
+
+    void loadCityEnvironmentForecast(
+      city.latitude,
+      city.longitude,
+      controller.signal
+    )
+      .then((series) => {
+        if (!controller.signal.aborted) setForecastSeries(series);
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        setForecastError(error instanceof Error ? error.message : String(error));
+      });
+
+    return () => controller.abort();
+  }, [city.id, city.latitude, city.longitude, temporal.mode]);
 
   useEffect(() => {
     if (!pendingSessionRestore) return;
@@ -667,11 +732,13 @@ export function App() {
           }
         : null,
       environment:
-        scope === 'city' && atmosphere && temporal.mode === 'live'
+        scope === 'city' && activeAtmosphere
           ? {
-            sourceTime: atmosphere.sourceTime,
-            live: atmosphere.live,
-            current: atmosphere.current
+              sourceTime: activeAtmosphere.sourceTime,
+              live: temporal.mode === 'live' && activeAtmosphere.live,
+              forecast: temporal.mode === 'forecast',
+              stale: activeAtmosphere.stale === true,
+              current: activeAtmosphere.current
             }
           : null,
       liveContext:
@@ -698,6 +765,7 @@ export function App() {
       selection,
       entityDossier,
       atmosphere,
+      activeAtmosphere,
       liveContext
     ]
   );
@@ -719,10 +787,12 @@ export function App() {
 
   const windOverlay = useMemo(
     () =>
-      scope === 'city' && atmosphere && temporal.mode === 'live'
-        ? atmosphereToWindOverlay(atmosphere)
+      scope === 'city' &&
+      activeAtmosphere &&
+      (temporal.mode === 'live' || temporal.mode === 'forecast')
+        ? atmosphereToWindOverlay(activeAtmosphere)
         : null,
-    [scope, atmosphere, temporal.mode]
+    [scope, activeAtmosphere, temporal.mode]
   );
 
   const seismicOverlay = useMemo(
@@ -1503,9 +1573,7 @@ export function App() {
             layers={layers}
             visualMode={visualMode}
             overlays={activeOverlays}
-            atmosphere={
-              scope === 'city' && temporal.mode === 'live' ? atmosphere : null
-            }
+            atmosphere={scope === 'city' ? activeAtmosphere : null}
             airQuality={airQualityOverlay}
             interactionMode={interactionMode}
             onSelection={handleSpatialSelection}
@@ -1561,6 +1629,22 @@ export function App() {
               <span>MODELED SCENARIO · SOURCE DATA UNCHANGED</span>
               <strong>{scenarioVisual.stressFactor.toFixed(2)}× NETWORK STRESS</strong>
               <small>DIM = SOURCE BASELINE · BRIGHT = MODELED SCENARIO</small>
+            </div>
+          ) : null}
+
+          {temporal.mode === 'forecast' ? (
+            <div className="forecast-scene-badge">
+              <span>PROVIDER FORECAST · 4D CURSOR</span>
+              <strong>
+                {forecastAtmosphere
+                  ? `${weatherPhenomenon(forecastAtmosphere).toUpperCase()} · ${formatSourceTime(forecastAtmosphere.sourceTime)}`
+                  : 'NO ALIGNED FORECAST SAMPLE'}
+              </strong>
+              <small>
+                {forecastAtmosphere?.stale
+                  ? 'STALE SOURCE SAMPLE · NOT LIVE OBSERVATION'
+                  : 'FORECAST SAMPLE · NOT LIVE OBSERVATION'}
+              </small>
             </div>
           ) : null}
 
@@ -1729,44 +1813,94 @@ export function App() {
             </div>
           </section>
 
-          <section className="weather-card intel-context-panel" data-source-state={
-            environmentError ? 'unavailable' : atmosphere?.live ? 'live' : atmosphere ? 'fallback' : 'loading'
-          }>
+          <section
+            className="weather-card intel-context-panel"
+            data-source-state={
+              activeAtmosphereError
+                ? 'unavailable'
+                : temporal.mode === 'forecast'
+                  ? forecastAtmosphere?.stale
+                    ? 'stale'
+                    : forecastAtmosphere
+                      ? 'forecast'
+                      : forecastSeries
+                        ? 'unavailable'
+                        : 'loading'
+                  : atmosphere?.live
+                    ? 'live'
+                    : atmosphere
+                      ? 'fallback'
+                      : 'loading'
+            }
+          >
             <div className="weather-card-head">
               <span>
                 <small>ATMOSPHERE</small>
                 <strong>
                   {temporal.mode === 'live'
                     ? weatherPhenomenon(atmosphere).toUpperCase()
-                    : `${temporal.mode.toUpperCase()} · DATA PENDING`}
+                    : temporal.mode === 'forecast'
+                      ? forecastAtmosphere
+                        ? `${weatherPhenomenon(forecastAtmosphere).toUpperCase()} · FORECAST`
+                        : 'FORECAST · NO SAMPLE'
+                      : `${temporal.mode.toUpperCase()} · DATA PENDING`}
                 </strong>
               </span>
-              <span className={atmosphere?.live ? 'status-dot live' : 'status-dot'} />
+              <span
+                className={
+                  activeAtmosphere && activeAtmosphere.fallback !== true
+                    ? 'status-dot live'
+                    : 'status-dot'
+                }
+              />
             </div>
             <div className="weather-metrics">
               <span>
                 <small>TEMP</small>
-                <strong>{atmosphere?.current?.temperatureC != null ? `${atmosphere.current.temperatureC.toFixed(1)}°C` : '—'}</strong>
+                <strong>
+                  {activeAtmosphere?.current?.temperatureC != null
+                    ? `${activeAtmosphere.current.temperatureC.toFixed(1)}°C`
+                    : '—'}
+                </strong>
               </span>
               <span>
                 <small>WIND</small>
-                <strong>{atmosphere?.current?.windSpeedKph != null ? `${atmosphere.current.windSpeedKph.toFixed(0)} km/h` : '—'}</strong>
+                <strong>
+                  {activeAtmosphere?.current?.windSpeedKph != null
+                    ? `${activeAtmosphere.current.windSpeedKph.toFixed(0)} km/h`
+                    : '—'}
+                </strong>
               </span>
               <span>
                 <small>CLOUD</small>
-                <strong>{atmosphere?.current?.cloudCoverPercent != null ? `${atmosphere.current.cloudCoverPercent.toFixed(0)}%` : '—'}</strong>
+                <strong>
+                  {activeAtmosphere?.current?.cloudCoverPercent != null
+                    ? `${activeAtmosphere.current.cloudCoverPercent.toFixed(0)}%`
+                    : '—'}
+                </strong>
               </span>
             </div>
             <p>
-              {environmentError
-                ? environmentError
-                : temporal.mode !== 'live'
-                  ? 'Current weather visuals are hidden until a source supports the selected time.'
-                  : atmosphere?.attribution ?? 'Weather source pending'}
+              {activeAtmosphereError
+                ? activeAtmosphereError
+                : temporal.mode === 'forecast'
+                  ? forecastAtmosphere
+                    ? forecastAtmosphere.attribution ?? 'Provider-backed weather forecast'
+                    : forecastSeries
+                      ? 'No returned provider forecast sample aligns to this 4D cursor.'
+                      : 'Forecast provider request pending.'
+                  : temporal.mode !== 'live'
+                    ? 'Current weather is hidden outside LIVE; provider forecast is available in FORECAST mode.'
+                    : atmosphere?.attribution ?? 'Weather source pending'}
             </p>
             <div className="weather-source-meta">
-              <span>{formatSourceTime(atmosphere?.sourceTime, atmosphere?.timezone)}</span>
-              <span>FETCHED {formatDataAge(atmosphere?.fetchedAt)}</span>
+              <span>
+                {formatSourceTime(
+                  activeAtmosphere?.sourceTime,
+                  activeAtmosphere?.timezone
+                )}
+              </span>
+              <span>FETCHED {formatDataAge(activeAtmosphere?.fetchedAt)}</span>
             </div>
           </section>
 
@@ -1849,14 +1983,25 @@ export function App() {
               temporalMode={temporal.mode}
               cursorIso={temporal.cursorIso}
               weatherCurrent={
-                atmosphere
+                activeAtmosphere
                   ? {
-                      live: atmosphere.live,
-                      provider: atmosphere.attribution,
-                      sourceTime: atmosphere.sourceTime,
-                      fetchedAt: atmosphere.fetchedAt,
-                      attribution: atmosphere.attribution,
-                      summary: weatherPhenomenon(atmosphere).toUpperCase()
+                      live: temporal.mode === 'live' && activeAtmosphere.live,
+                      state:
+                        temporal.mode === 'forecast'
+                          ? activeAtmosphere.stale
+                            ? 'stale'
+                            : activeAtmosphere.fallback
+                              ? 'fallback'
+                              : 'forecast'
+                          : undefined,
+                      provider: activeAtmosphere.attribution,
+                      sourceTime: activeAtmosphere.sourceTime,
+                      fetchedAt: activeAtmosphere.fetchedAt,
+                      attribution: activeAtmosphere.attribution,
+                      summary:
+                        temporal.mode === 'forecast'
+                          ? `${weatherPhenomenon(activeAtmosphere).toUpperCase()} FORECAST`
+                          : weatherPhenomenon(activeAtmosphere).toUpperCase()
                     }
                   : null
               }
