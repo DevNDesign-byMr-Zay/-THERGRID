@@ -15,6 +15,7 @@ import type {
   SpatialFeatureSelection,
   SpatialJourneyPhase,
   SpatialPickPoint,
+  SpatialPerformanceTier,
   SpatialRenderer,
   SpatialRendererConfig,
   SpatialRendererStatus,
@@ -166,6 +167,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
   #target: SpatialTarget = { ...INITIAL_TARGET };
   #time: TemporalInstant = { ...INITIAL_TIME };
   #mode: VisualMode = 'holographic';
+  #performanceTier: SpatialPerformanceTier = 'balanced';
   #layers = new Map<string, LayerState>();
   #overlays = new Map<string, SpatialOverlaySnapshot>();
   #atmosphere: AtmosphericOverlaySnapshot | null = null;
@@ -311,6 +313,11 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     this.#render();
   }
 
+  setPerformanceTier(tier: SpatialPerformanceTier): void {
+    this.#performanceTier = tier;
+    this.resize();
+  }
+
   applyOverlay(snapshot: SpatialOverlaySnapshot): void {
     this.#overlays.set(snapshot.layerId, snapshot);
     this.#render();
@@ -422,7 +429,13 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     const canvas = this.#canvas;
     const container = this.#container;
     if (!canvas || !container) return;
-    const dpr = Math.min(globalThis.devicePixelRatio || 1, 2);
+    const dprCap =
+      this.#performanceTier === 'quality'
+        ? 2
+        : this.#performanceTier === 'balanced'
+          ? 1.5
+          : 1;
+    const dpr = Math.min(globalThis.devicePixelRatio || 1, dprCap);
     const width = Math.max(1, Math.round(container.clientWidth * dpr));
     const height = Math.max(1, Math.round(container.clientHeight * dpr));
     if (canvas.width !== width || canvas.height !== height) {
@@ -446,6 +459,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
       busy: this.#busy,
       journeyPhase: this.#journeyPhase,
       detailLevel: this.#detailLevel,
+      performanceTier: this.#performanceTier,
       solar,
       reason: this.#reason
     };
@@ -621,6 +635,14 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     return base;
   }
 
+  #decorativeDensity(): number {
+    return this.#performanceTier === 'quality'
+      ? 1
+      : this.#performanceTier === 'balanced'
+        ? 0.72
+        : 0.42;
+  }
+
   #airGeometry(): NativeWeatherGeometry {
     if (
       this.#time.mode !== 'live' ||
@@ -657,7 +679,10 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     const speed = Math.max(0, current.windSpeedKph ?? 0);
     const driftX = Math.sin(toward) * speed * 0.00012;
     const driftY = Math.cos(toward) * speed * 0.00005;
-    const count = Math.round(22 + intensity * 86);
+    const count = Math.max(
+      8,
+      Math.round((22 + intensity * 86) * this.#decorativeDensity())
+    );
     const points: NativeWeatherPoint[] = [];
 
     for (let index = 0; index < count; index += 1) {
@@ -704,7 +729,9 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     const lines: NativeWeatherLine[] = [];
     const points: NativeWeatherPoint[] = [];
 
-    const cloudCount = Math.round((cloudCover / 100) * 72);
+    const cloudCount = Math.round(
+      (cloudCover / 100) * 72 * this.#decorativeDensity()
+    );
     const cloudDrift = seconds * Math.min(80, windSpeed) * 0.00016;
     for (let index = 0; index < cloudCount; index += 1) {
       const seedX = deterministicUnit(index, 3.17);
@@ -726,7 +753,13 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
         phenomenon === 'thunderstorm' ||
         phenomenon === 'mixed');
     if (precipitationActive) {
-      const count = Math.round(18 + clamp(precipitation / 8, 0, 1) * 90);
+      const count = Math.max(
+        8,
+        Math.round(
+          (18 + clamp(precipitation / 8, 0, 1) * 90) *
+            this.#decorativeDensity()
+        )
+      );
       const snow = phenomenon === 'snow';
       const fallRate = snow ? 0.045 : 0.13;
       const windLean = clamp(windSpeed / 85, 0, 0.7) * windX;
@@ -768,7 +801,10 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     if (phenomenon === 'fog') {
       const visibility = Math.max(250, current.visibilityM ?? 10_000);
       const fogStrength = 1 - clamp(visibility / 10_000, 0, 1);
-      const fogCount = Math.round(24 + fogStrength * 54);
+      const fogCount = Math.max(
+        10,
+        Math.round((24 + fogStrength * 54) * this.#decorativeDensity())
+      );
       for (let index = 0; index < fogCount; index += 1) {
         const x = deterministicUnit(index, 11.23) * 2 - 1;
         const y = -0.82 + deterministicUnit(index, 13.37) * 0.62;
