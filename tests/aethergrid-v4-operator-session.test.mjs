@@ -9,9 +9,7 @@ async function text(path) {
 }
 
 test('v4 operator sessions are bounded local non-authoritative workspace snapshots', async () => {
-  const service = await text(
-    'apps/aethergrid-console/web/src/services/operator-session.ts',
-  );
+  const service = await text('apps/aethergrid-console/web/src/services/operator-session.ts');
 
   assert.match(service, /aethergrid\.operator\.workspace-sessions\.v4/u);
   assert.match(service, /MAX_OPERATOR_SESSIONS = 8/u);
