@@ -95,6 +95,7 @@ export function ScenarioComposerPanel({
     const next = upsertOperatorScenario(scenarios, scenario);
     setScenarios(next);
     setSelectedId(scenario.id);
+    if (scenario.id === activeScenarioId) onActivate(scenario);
   };
 
   const create = () => {
