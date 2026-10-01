@@ -642,7 +642,7 @@ This lane is intentionally separate from provider/backend integration work. It m
 - LIVE time advances automatically;
 - historical, forecast and scenario cursors remain independent;
 - solar elevation/azimuth is computed from the active 4D instant and geographic target;
-- current-only weather, AQI and seismic feeds are hidden outside LIVE mode until time-capable provider series exist;
+- current AQI and seismic feeds remain LIVE-only; weather now has a provider-backed FORECAST lane that selects the nearest returned sample for the active 4D cursor, refuses out-of-range cursors, and preserves source/stale/fallback provenance;
 - the temporal rail states whether the operator is seeing LIVE SOURCES, STATIC MAP CONTEXT or MODELED + STATIC context.
 
 ### Source-backed city motion and identity
