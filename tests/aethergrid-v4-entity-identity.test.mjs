@@ -94,6 +94,5 @@ test('v4 source-feature selection highlights complete mapped features in both re
   assert.match(nativeRenderer, /#isSelectedSource/u);
   assert.match(nativeRenderer, /snapshot\.edges\.find/u);
   assert.match(nativeRenderer, /snapshot\.areas/u);
-  assert.match(nativeRenderer, /selected \? '#ffffff'/u);
+  assert.match(nativeRenderer, /selected\s*\?\s*'#ffffff'/u);
 });
-
