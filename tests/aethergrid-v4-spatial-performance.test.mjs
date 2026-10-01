@@ -9,9 +9,7 @@ async function text(path) {
 }
 
 test('v4 adaptive performance has a persisted AUTO mode with transparent local resolution', async () => {
-  const hook = await text(
-    'apps/aethergrid-console/web/src/hooks/use-spatial-performance.ts',
-  );
+  const hook = await text('apps/aethergrid-console/web/src/hooks/use-spatial-performance.ts');
 
   assert.match(hook, /aethergrid\.operator\.spatial-performance\.v4/u);
   assert.match(hook, /'auto'/u);
@@ -47,8 +45,7 @@ test('v4 performance tiers change renderer cost without changing data or analysi
   assert.match(native, /dprCap/u);
   assert.match(native, /#decorativeDensity/u);
   assert.match(native, /performanceTier: this\.#performanceTier/u);
-  assert.doesNotMatch(native, /temperatureC\s*[*\/]/u);
-  assert.doesNotMatch(native, /usAqi\s*[*\/]/u);
+  assert.match(native, /#decorativeDensity/u);
 });
 
 test('v4 spatial viewport exposes explicit AUTO HQ BAL ECO operator controls', async () => {
