@@ -7,6 +7,12 @@ import {
   type OperationalSourceSnapshot
 } from '../services/operational-data-client';
 import {
+  clearOperationalSourceBindings,
+  loadOperationalSourceBindings,
+  saveOperationalSourceBindings,
+  type OperationalSourceBindings
+} from '../services/operational-source-bindings';
+import {
   OPERATIONAL_TEMPORAL_CAPABILITIES,
   temporalSupportFor,
   type OperationalSourceId
@@ -84,8 +90,24 @@ export function OperationalDataPanel({
 }: OperationalDataPanelProps) {
   const [snapshot, setSnapshot] = useState<OperationalSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
+  const [bindings, setBindings] = useState<OperationalSourceBindings>(() =>
+    loadOperationalSourceBindings(cityId)
+  );
+  const [gaugeDraft, setGaugeDraft] = useState(bindings.gaugeId ?? '');
+  const [energyRegionDraft, setEnergyRegionDraft] = useState(
+    bindings.energyRegion ?? ''
+  );
+  const [bindingError, setBindingError] = useState<string | null>(null);
 
   const sampleKey = temporalMode === 'live' ? 'live' : cursorIso;
+
+  useEffect(() => {
+    const next = loadOperationalSourceBindings(cityId);
+    setBindings(next);
+    setGaugeDraft(next.gaugeId ?? '');
+    setEnergyRegionDraft(next.energyRegion ?? '');
+    setBindingError(null);
+  }, [cityId]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -97,6 +119,8 @@ export function OperationalDataPanel({
         cityId,
         temporalMode,
         cursorIso: temporalMode === 'live' ? new Date().toISOString() : cursorIso,
+        gaugeId: bindings.gaugeId,
+        energyRegion: bindings.energyRegion,
         signal: controller.signal
       })
         .then((next) => {
@@ -115,7 +139,15 @@ export function OperationalDataPanel({
       controller.abort();
       if (timer != null) globalThis.clearInterval(timer);
     };
-  }, [latitude, longitude, cityId, temporalMode, sampleKey]);
+  }, [
+    latitude,
+    longitude,
+    cityId,
+    temporalMode,
+    sampleKey,
+    bindings.gaugeId,
+    bindings.energyRegion
+  ]);
 
   const liveCount = useMemo(
     () => snapshot?.sources.filter((source) => source.state === 'live').length ?? 0,
@@ -128,6 +160,29 @@ export function OperationalDataPanel({
         : 0,
     [temporalMode, weatherCurrent]
   );
+
+  const applyBindings = () => {
+    try {
+      const next = saveOperationalSourceBindings(cityId, {
+        gaugeId: gaugeDraft,
+        energyRegion: energyRegionDraft
+      });
+      setBindings(next);
+      setGaugeDraft(next.gaugeId ?? '');
+      setEnergyRegionDraft(next.energyRegion ?? '');
+      setBindingError(null);
+    } catch (error) {
+      setBindingError(error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  const clearBindings = () => {
+    const next = clearOperationalSourceBindings(cityId);
+    setBindings(next);
+    setGaugeDraft('');
+    setEnergyRegionDraft('');
+    setBindingError(null);
+  };
 
   return (
     <section className="intel-card operational-data-panel">
@@ -146,6 +201,62 @@ export function OperationalDataPanel({
             ? `${forecastCount} provider-backed weather forecast sample${forecastCount === 1 ? '' : 's'} aligned to the selected 4D cursor. Current-only telemetry remains hidden.`
             : 'Only provider-backed samples valid for the selected 4D cursor may appear here; current-only telemetry is not replayed.'}
       </p>
+
+      <section className="operational-source-bindings" aria-label="Operational source bindings">
+        <div className="source-binding-head">
+          <span>
+            <small>SOURCE BINDINGS</small>
+            <strong>OPERATOR SELECTED</strong>
+          </span>
+          <em>LIVE ONLY</em>
+        </div>
+        <p>
+          NOAA gauge IDs and EIA region codes are never inferred from the map.
+          Bind only identifiers you have verified for this operating context.
+        </p>
+        <div className="source-binding-grid">
+          <label>
+            <span>NOAA NWPS GAUGE ID</span>
+            <input
+              type="text"
+              value={gaugeDraft}
+              placeholder="e.g. NYCN6"
+              maxLength={32}
+              autoCapitalize="characters"
+              spellCheck={false}
+              onChange={(event) => setGaugeDraft(event.target.value.toUpperCase())}
+            />
+          </label>
+          <label>
+            <span>EIA REGION CODE</span>
+            <input
+              type="text"
+              value={energyRegionDraft}
+              placeholder="e.g. NYIS"
+              maxLength={20}
+              autoCapitalize="characters"
+              spellCheck={false}
+              onChange={(event) =>
+                setEnergyRegionDraft(event.target.value.toUpperCase())
+              }
+            />
+          </label>
+        </div>
+        <div className="source-binding-actions">
+          <button type="button" onClick={applyBindings}>
+            APPLY BINDINGS
+          </button>
+          <button type="button" onClick={clearBindings}>
+            CLEAR
+          </button>
+        </div>
+        {bindingError ? <p className="source-binding-error">{bindingError}</p> : null}
+        <small>
+          {bindings.updatedAt
+            ? `BOUND ${formatDataAge(bindings.updatedAt)}`
+            : 'NO MANUAL SOURCE BINDINGS'}
+        </small>
+      </section>
 
       <div className="provider-list">
         {OPERATIONAL_TEMPORAL_CAPABILITIES.map((capability) => {
