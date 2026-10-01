@@ -9,9 +9,7 @@ async function text(path) {
 }
 
 test('v4 forecast weather uses the backend provider route and bounded nearest-sample selection', async () => {
-  const service = await text(
-    'apps/aethergrid-console/web/src/services/city-environment.ts',
-  );
+  const service = await text('apps/aethergrid-console/web/src/services/city-environment.ts');
 
   assert.match(service, /loadCityEnvironmentForecast/u);
   assert.match(service, /\/api\/aethergrid\/weather\/forecast/u);
@@ -26,9 +24,7 @@ test('v4 forecast weather uses the backend provider route and bounded nearest-sa
 });
 
 test('v4 forecast weather keeps Tomorrow and Open-Meteo shapes separate without inventing a shared code system', async () => {
-  const service = await text(
-    'apps/aethergrid-console/web/src/services/city-environment.ts',
-  );
+  const service = await text('apps/aethergrid-console/web/src/services/city-environment.ts');
 
   assert.match(service, /openMeteoHourly/u);
   assert.match(service, /providerData\.timelines/u);
