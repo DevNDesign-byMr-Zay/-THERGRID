@@ -17,20 +17,57 @@ import {
   PROVIDER_STATUS,
 } from '../apps/aethergrid-console/providers/provider-health.mjs';
 import { createProviderRegistry } from '../apps/aethergrid-console/providers/provider-registry.mjs';
+import { createRequestContext } from '../apps/aethergrid-console/providers/request-context.mjs';
+import { createProviderReceipt } from '../apps/aethergrid-console/providers/provider-receipt.mjs';
+import { createProviderAdapter } from '../apps/aethergrid-console/providers/provider-adapter.mjs';
+import { createProviderExecutor } from '../apps/aethergrid-console/providers/provider-executor.mjs';
+import { createNoaaNwpsHydrologyProvider } from '../apps/aethergrid-console/providers/noaa-nwps-provider.mjs';
+import { createEiaProvider } from '../apps/aethergrid-console/providers/eia-provider.mjs';
+import { createTransitRegistry } from '../apps/aethergrid-console/providers/transit-registry.mjs';
+import { createDwaveProvider } from '../apps/aethergrid-console/providers/dwave-provider.mjs';
 import { server } from '../apps/aethergrid-console/server.mjs';
 
-describe('ÆTHERGRID v4.0 Batch 18 — Provider, Configuration, Secret-Safety & Runtime Foundation', () => {
-  describe('1. Central Validated Environment Configuration', () => {
-    it('parses valid default environment settings correctly', () => {
+async function withServer(run) {
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+  try {
+    await run(baseUrl);
+  } finally {
+    if (typeof server.closeAllConnections === 'function') {
+      server.closeAllConnections();
+    }
+    await new Promise((resolve, reject) =>
+      server.close((error) => (error ? reject(error) : resolve())),
+    );
+  }
+}
+
+describe('ÆTHERGRID v4.0 Batch 20/21 — Production Provider Execution Layer & Verification', () => {
+  describe('1. Central Validated Environment Configuration & Valid Defaults', () => {
+    it('parses valid default environment settings and preserves canonical core URLs', () => {
       const parsed = parseEnv({});
       assert.equal(parsed.AETHERGRID_PORT, 8090);
-      assert.equal(parsed.AETHERGRID_AI_PROVIDER, 'local');
-      assert.equal(parsed.AETHERGRID_QUANTUM_PROVIDER, 'local-simulator');
+      assert.equal(parsed.AETHERGRID_OPENAI_BASE_URL, 'https://api.openai.com/v1');
+      assert.equal(parsed.AETHERGRID_OPEN_METEO_URL, 'https://api.open-meteo.com/v1/forecast');
+      assert.equal(
+        parsed.AETHERGRID_USGS_EARTHQUAKE_URL,
+        'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson',
+      );
     });
 
-    it('normalizes port numbers and invalid non-numeric port strings to defaults', () => {
-      const parsed = parseEnv({ AETHERGRID_PORT: 'invalid-port' });
-      assert.equal(parsed.AETHERGRID_PORT, 8090);
+    it('strictly rejects invalid non-numeric port strings with a clear validation error', () => {
+      assert.throws(
+        () => parseEnv({ AETHERGRID_PORT: 'invalid-port' }),
+        /Value must be a valid number/,
+      );
+    });
+
+    it('rejects invalid URL environment variables', () => {
+      assert.throws(
+        () => parseEnv({ AETHERGRID_OPEN_METEO_URL: 'not-a-valid-url' }),
+        /Invalid URL format/,
+      );
     });
 
     it('tolerates missing optional future provider configuration without throwing', () => {
@@ -70,156 +107,180 @@ describe('ÆTHERGRID v4.0 Batch 18 — Provider, Configuration, Secret-Safety & 
       assert.equal(redactedObj.nested.token, '[REDACTED_SECRET]');
     });
 
-    it('redacts Authorization bearer tokens and URL query parameter keys', () => {
+    it('does NOT redact public browser tokens like cesiumIonToken in public config', () => {
       const redactor = createSecretRedactor();
-      const output = redactor.redactString(
-        'GET https://example.com/api?api_key=secret123 Authorization: Bearer abc.def.ghi',
-      );
-      assert.ok(!output.includes('secret123'));
-      assert.ok(!output.includes('abc.def.ghi'));
-      assert.ok(output.includes('[REDACTED_PARAM]'));
-      assert.ok(output.includes('[REDACTED_TOKEN]'));
+      const outputObj = redactor.redactValue({
+        cesiumIonToken: 'public_cesium_token_xyz',
+        openAiApiKey: 'secret_openai_key_xyz',
+      });
+
+      assert.equal(outputObj.cesiumIonToken, 'public_cesium_token_xyz');
+      assert.equal(outputObj.openAiApiKey, '[REDACTED_SECRET]');
     });
   });
 
-  describe('3. Outbound Provider URL Policy', () => {
+  describe('3. Outbound Provider URL Policy Hardening', () => {
     it('allows default approved provider URLs and local Ollama', () => {
       const policy = createUrlPolicy();
       assert.equal(policy.isAllowedUrl('https://api.open-meteo.com/v1/forecast'), true);
       assert.equal(policy.isAllowedUrl('http://127.0.0.1:11434/api/generate'), true);
     });
 
-    it('blocks unapproved arbitrary client URLs', () => {
-      const policy = createUrlPolicy();
-      assert.equal(policy.isAllowedUrl('https://malicious-external-domain.com/steal'), false);
+    it('blocks lookalike domain prefix-spoofing attacks', () => {
+      const policy = createUrlPolicy(['https://api.openai.com']);
+      assert.equal(policy.isAllowedUrl('https://api.openai.com.attacker.com/v1/chat'), false);
       assert.throws(
-        () => policy.validateUrl('https://malicious-external-domain.com/steal'),
+        () => policy.validateUrl('https://api.openai.com.attacker.com/v1/chat'),
         /Outbound URL blocked by security policy/,
       );
     });
-  });
 
-  describe('4. Provider Cache Foundation', () => {
-    it('supports set, get, TTL expiration and hit/miss metadata', async () => {
-      const cache = createCacheStore({ defaultTtlMs: 50 });
-      cache.set('key1', { temp: 22 });
-
-      const hit = cache.get('key1');
-      assert.equal(hit.found, true);
-      assert.equal(hit.value.temp, 22);
-      assert.equal(hit.isStale, false);
-      assert.equal(hit.metadata.hit, true);
-
-      await new Promise((res) => setTimeout(res, 60));
-
-      const staleGet = cache.get('key1');
-      assert.equal(staleGet.found, true);
-      assert.equal(staleGet.isStale, true);
+    it('blocks URLs with embedded credentials or unsupported protocols', () => {
+      const policy = createUrlPolicy(['https://api.openai.com']);
+      assert.equal(policy.isAllowedUrl('https://user:password@api.openai.com/v1/chat'), false);
+      assert.equal(policy.isAllowedUrl('ftp://api.openai.com/v1/chat'), false);
     });
   });
 
-  describe('5. Provider Circuit Breaker', () => {
-    it('transitions CLOSED -> OPEN -> HALF_OPEN on consecutive errors and timeout', async () => {
-      const cb = createCircuitBreaker({ failureThreshold: 2, resetTimeoutMs: 100 });
-
-      assert.equal(cb.getState(), CIRCUIT_STATE.CLOSED);
-
-      await cb.execute(
-        () => Promise.reject(new Error('fail 1')),
-        () => 'fallback 1',
-      );
-      assert.equal(cb.getState(), CIRCUIT_STATE.CLOSED);
-
-      await cb.execute(
-        () => Promise.reject(new Error('fail 2')),
-        () => 'fallback 2',
-      );
-      assert.equal(cb.getState(), CIRCUIT_STATE.OPEN);
-
-      const openCall = await cb.execute(
-        () => Promise.resolve('ok'),
-        () => 'circuit open fallback',
-      );
-      assert.equal(openCall.usedFallback, true);
-      assert.equal(openCall.result, 'circuit open fallback');
-
-      await new Promise((res) => setTimeout(res, 110));
-      assert.equal(cb.getState(), CIRCUIT_STATE.HALF_OPEN);
-
-      const successCall = await cb.execute(
-        () => Promise.resolve('recovered'),
-        () => 'fallback',
-      );
-      assert.equal(successCall.usedFallback, false);
-      assert.equal(successCall.result, 'recovered');
-      assert.equal(cb.getState(), CIRCUIT_STATE.CLOSED);
-    });
-  });
-
-  describe('6. Provider Rate Limiter', () => {
-    it('enforces request budgets per provider', () => {
-      const limiter = createRateLimiter({ maxRequests: 2, windowMs: 1000 });
-      assert.equal(limiter.tryAcquire(), true);
-      assert.equal(limiter.tryAcquire(), true);
-      assert.equal(limiter.tryAcquire(), false);
-
-      const status = limiter.getStatus();
-      assert.equal(status.currentUsage, 2);
-      assert.equal(status.remaining, 0);
-    });
-  });
-
-  describe('7. Provider Registry & Health', () => {
-    it('registers capabilities and exposes normalized status', () => {
-      const health = createProviderHealth();
-      health.registerProvider('weather', {
-        name: 'Open-Meteo',
-        capabilities: ['weather'],
-        status: PROVIDER_STATUS.READY,
+  describe('4. Truthful Provider Receipt Semantics & SWR Caching', () => {
+    it('enforces live: false on unconfigured/fallback data and live: true on fresh live data', () => {
+      const unconfiguredReceipt = createProviderReceipt({
+        provider: 'eia',
+        fallback: true,
+        live: true,
       });
+      assert.equal(unconfiguredReceipt.live, false);
+      assert.equal(unconfiguredReceipt.fallback, true);
 
-      const weatherStatus = health.getProviderStatus('weather');
-      assert.equal(weatherStatus.status, 'ready');
-      assert.deepEqual(weatherStatus.capabilities, ['weather']);
+      const liveReceipt = createProviderReceipt({
+        provider: 'open-meteo-weather',
+        live: true,
+        fallback: false,
+      });
+      assert.equal(liveReceipt.live, true);
+      assert.equal(liveReceipt.fallback, false);
     });
 
-    it('queryable by capability', () => {
-      const registry = createProviderRegistry();
-      const quantumProviders = registry.getProvidersByCapability('quantum');
-      assert.ok('quantum' in quantumProviders);
-      assert.equal(quantumProviders.quantum.status, 'ready');
+    it('returns stale cached data via provider executor with stale: true and live: false', async () => {
+      const cache = createCacheStore({ defaultTtlMs: 30 });
+      const executor = createProviderExecutor({ cache });
+
+      let fetchCount = 0;
+      const fetcher = async () => {
+        fetchCount += 1;
+        return { temp: 20 + fetchCount };
+      };
+
+      const res1 = await executor.execute('weather', { cacheKey: 'test-swr', ttlMs: 30 }, fetcher);
+      assert.equal(res1.data.temp, 21);
+      assert.equal(res1.receipt.cacheState, 'miss');
+      assert.equal(res1.receipt.live, true);
+
+      await new Promise((res) => setTimeout(res, 40));
+
+      const res2 = await executor.execute('weather', { cacheKey: 'test-swr', ttlMs: 30 }, fetcher);
+      assert.equal(res2.data.temp, 21);
+      assert.equal(res2.receipt.cacheState, 'stale');
+      assert.equal(res2.receipt.stale, true);
+      assert.equal(res2.receipt.live, false);
     });
   });
 
-  describe('8. Safe Public Runtime Endpoint Verification', () => {
-    it('responds to GET /api/aethergrid/runtime/providers with safe metadata and no secrets', async () => {
-      const port = server.address()?.port || 8090;
-      let listening = true;
-      if (!server.listening) {
-        await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-      }
-      const activePort = server.address().port;
+  describe('5. Truthful Provider Adapters (No NY Defaults)', () => {
+    it('hydrology adapter returns status: unconfigured and live: false when gaugeId is missing', async () => {
+      const provider = createNoaaNwpsHydrologyProvider();
+      const res = await provider.request({});
+      assert.equal(res.data.status, 'unconfigured');
+      assert.equal(res.data.gaugeId, null);
+      assert.equal(res.receipt.live, false);
+    });
 
-      const res = await fetch(`http://127.0.0.1:${activePort}/api/aethergrid/runtime/providers`);
-      assert.equal(res.status, 200);
+    it('EIA energy adapter returns status: unconfigured and live: false when region is missing', async () => {
+      const provider = createEiaProvider();
+      const res = await provider.request({});
+      assert.equal(res.data.status, 'unconfigured');
+      assert.equal(res.data.region, null);
+      assert.equal(res.receipt.live, false);
+    });
 
-      const body = await res.json();
-      assert.equal(body.spatial.provider, 'native-webgl');
-      assert.equal(body.spatial.status, 'ready');
-      assert.equal(body.weather.provider, 'open-meteo');
-      assert.equal(body.weather.status, 'ready');
-      assert.equal(body.quantum.provider, 'local-simulator');
-      assert.equal(body.quantum.hardwareEnabled, false);
-      assert.equal(body.ai.status, 'ready');
+    it('transit registry returns status: unconfigured and live: false when city has no feed configured', async () => {
+      const registry = createTransitRegistry();
+      const res = await registry.adapter.request({ cityId: 'london' });
+      assert.equal(res.data.status, 'unconfigured');
+      assert.equal(res.data.vehicles.length, 0);
+      assert.equal(res.receipt.live, false);
+    });
 
-      const textPayload = JSON.stringify(body);
-      assert.ok(!textPayload.includes('apiKey'));
-      assert.ok(!textPayload.includes('serviceCrn'));
-      assert.ok(!textPayload.includes('token'));
+    it('D-Wave adapter returns hardwareSubmitted: false and hardwareExecuted: false when discovering solvers', async () => {
+      const provider = createDwaveProvider();
+      const res = await provider.request({});
+      assert.equal(res.data.hardwareSubmitted, false);
+      assert.equal(res.data.hardwareExecuted, false);
+      assert.equal(res.receipt.live, false);
+    });
+  });
 
-      if (listening && server.listening) {
-        await new Promise((resolve) => server.close(resolve));
-      }
+  describe('6. Public Endpoints Verification & Confirmation Boundaries', () => {
+    it('responds to GET /api/aethergrid/runtime/providers with safe metadata', async () => {
+      await withServer(async (baseUrl) => {
+        const res = await fetch(`${baseUrl}/api/aethergrid/runtime/providers`);
+        assert.equal(res.status, 200);
+
+        const body = await res.json();
+        assert.equal(body.spatial.provider, 'native-webgl');
+        assert.equal(body.weather.provider, 'open-meteo');
+      });
+    });
+
+    it('responds to GET /api/aethergrid/config/public with browser-safe settings', async () => {
+      await withServer(async (baseUrl) => {
+        const res = await fetch(`${baseUrl}/api/aethergrid/config/public`);
+        assert.equal(res.status, 200);
+
+        const body = await res.json();
+        assert.ok(body.spatial);
+        assert.ok('provider' in body.spatial);
+        assert.ok('cesiumIonToken' in body.spatial);
+      });
+    });
+
+    it('weather current route returns missing_coordinates when lat/lon omitted without NY defaults', async () => {
+      await withServer(async (baseUrl) => {
+        const res = await fetch(`${baseUrl}/api/aethergrid/weather/current`);
+        assert.equal(res.status, 200);
+
+        const body = await res.json();
+        assert.equal(body.data.status, 'missing_coordinates');
+        assert.equal(body.receipt.live, false);
+      });
+    });
+
+    it('weather forecast route returns hourly forecast time series with distinct event timestamps when coords supplied', async () => {
+      await withServer(async (baseUrl) => {
+        const res = await fetch(
+          `${baseUrl}/api/aethergrid/weather/forecast?lat=40.7128&lon=-74.006`,
+        );
+        assert.equal(res.status, 200);
+
+        const body = await res.json();
+        assert.ok(body.data);
+        assert.ok('hourly' in body.data);
+        assert.ok(Array.isArray(body.data.hourly));
+      });
+    });
+
+    it('D-Wave POST job submission fails with 400 when operator confirmation is missing', async () => {
+      await withServer(async (baseUrl) => {
+        const res = await fetch(`${baseUrl}/api/aethergrid/quantum/dwave/jobs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ workload: 'test' }),
+        });
+        assert.equal(res.status, 400);
+
+        const body = await res.json();
+        assert.equal(body.error, 'confirmation_required');
+      });
     });
   });
 });

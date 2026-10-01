@@ -1,3 +1,11 @@
+import { createRequestContext } from './providers/request-context.mjs';
+import { createPublicConfig } from './config/public-config.mjs';
+import { createTomorrowWeatherProvider } from './providers/tomorrow-weather-provider.mjs';
+import { createNwsAlertsProvider } from './providers/nws-alerts-provider.mjs';
+import { createNoaaNwpsHydrologyProvider } from './providers/noaa-nwps-provider.mjs';
+import { createEiaProvider } from './providers/eia-provider.mjs';
+import { createTransitRegistry } from './providers/transit-registry.mjs';
+import { createDwaveProvider } from './providers/dwave-provider.mjs';
 import { createProviderRegistry } from './providers/provider-registry.mjs';
 import http from 'node:http';
 import { createHash } from 'node:crypto';
@@ -14,14 +22,78 @@ import { createQuantumRuntime } from './quantum-runtime.mjs';
 import { createTerrainRuntime } from './terrain-runtime.mjs';
 
 const providerRegistry = createProviderRegistry({ env: process.env });
+
+const tomorrowWeatherProvider = createTomorrowWeatherProvider({
+  apiKey: providerRegistry.config.futureProviders.tomorrowIo.apiKey,
+  baseUrl: providerRegistry.config.futureProviders.tomorrowIo.baseUrl,
+});
+
+const nwsAlertsProvider = createNwsAlertsProvider({
+  baseUrl: providerRegistry.config.futureProviders.nws.apiUrl,
+  userAgent: providerRegistry.config.geo.userAgent,
+});
+
+const eiaProvider = createEiaProvider({
+  apiKey: providerRegistry.config.futureProviders.eia.apiKey,
+  baseUrl: providerRegistry.config.futureProviders.eia.baseUrl,
+});
+
+const noaaNwpsProvider = createNoaaNwpsHydrologyProvider({
+  baseUrl: providerRegistry.config.futureProviders.hydrology.baseUrl,
+});
+
+const dwaveProvider = createDwaveProvider({
+  token: providerRegistry.config.futureProviders.dwave.token,
+  solverUrl: providerRegistry.config.futureProviders.dwave.solverUrl,
+});
+
+const transitRegistry = createTransitRegistry();
+
 const root = fileURLToPath(new URL('./', import.meta.url));
 const port = Number(providerRegistry.config.app.port);
+
+function createPipelineFetch(providerId) {
+  return async (url, options) => {
+    const targetUrl = typeof url === 'string' ? url : url.toString();
+    providerRegistry.urlPolicy.validateUrl(targetUrl);
+
+    const breaker = providerRegistry.getBreaker(providerId);
+    const startTime = Date.now();
+    try {
+      const res = await fetch(url, options);
+      const latencyMs = Date.now() - startTime;
+      if (res.ok) {
+        providerRegistry.health.recordExecution(providerId, {
+          success: true,
+          latencyMs,
+          circuitState: breaker.getState(),
+        });
+      } else {
+        providerRegistry.health.recordExecution(providerId, {
+          error: true,
+          latencyMs,
+          circuitState: breaker.getState(),
+        });
+      }
+      return res;
+    } catch (err) {
+      const latencyMs = Date.now() - startTime;
+      providerRegistry.health.recordExecution(providerId, {
+        error: true,
+        latencyMs,
+        circuitState: breaker.getState(),
+      });
+      throw err;
+    }
+  };
+}
+
 const agentRuntime = createAgentRuntime();
-const cityEnvironmentRuntime = createCityEnvironmentRuntime();
-const cityLiveRuntime = createCityLiveRuntime();
-const geoRuntime = createGeoRuntime();
+const cityEnvironmentRuntime = createCityEnvironmentRuntime({ fetchImpl: createPipelineFetch('weather') });
+const cityLiveRuntime = createCityLiveRuntime({ fetchImpl: createPipelineFetch('air-quality') });
+const geoRuntime = createGeoRuntime({ fetchImpl: createPipelineFetch('geo') });
 const quantumRuntime = createQuantumRuntime();
-const terrainRuntime = createTerrainRuntime();
+const terrainRuntime = createTerrainRuntime({ fetchImpl: createPipelineFetch('terrain') });
 const profileStore = createProfileStore({
   dataDir: process.env.AETHERGRID_DATA_DIR || join(root, '.aethergrid-data'),
 });
@@ -756,6 +828,15 @@ function validateChoice(value, allowed, label) {
 }
 
 const server = http.createServer(async (request, response) => {
+  const reqContext = createRequestContext({
+    requestId: request.headers['x-request-id'] || undefined,
+    metadata: { method: request.method, url: request.url },
+  });
+  const execCtx = {
+    executeProviderRequest: providerRegistry.executeProviderRequest,
+    requestId: reqContext.requestId,
+  };
+
   try {
     const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
 
@@ -841,7 +922,161 @@ const server = http.createServer(async (request, response) => {
       return json(response, 200, { evidence: record, advisoryOnly: true });
     }
 
-        if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime/providers') {
+                                if (request.method === 'GET' && url.pathname === '/api/aethergrid/config/public') {
+      return json(
+        response,
+        200,
+        providerRegistry.redactor.redactValue(createPublicConfig(providerRegistry.config)),
+      );
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/weather/current') {
+      const latParam = url.searchParams.get('lat');
+      const lonParam = url.searchParams.get('lon');
+
+      if (!latParam || !lonParam) {
+        return json(response, 200, {
+          data: {
+            status: 'missing_coordinates',
+            message: 'Explicit lat and lon query parameters are required.',
+            live: false,
+          },
+          receipt: {
+            provider: 'open-meteo-weather',
+            capability: 'weather',
+            dataset: 'open-meteo-weather',
+            requestId: reqContext.requestId,
+            live: false,
+            fallback: true,
+            attribution: 'Open-Meteo Weather API (Missing Coordinates)',
+          },
+        });
+      }
+
+      const lat = Number(latParam);
+      const lon = Number(lonParam);
+
+      if (providerRegistry.config.weather.provider === 'tomorrow-io') {
+        const result = await tomorrowWeatherProvider.request(
+          { lat, lon, mode: 'realtime' },
+          execCtx,
+        );
+        return json(response, 200, providerRegistry.redactor.redactValue(result));
+      }
+
+      const fetcher = () => cityEnvironmentRuntime.current({ lat, lon });
+      const result = await providerRegistry.executeProviderRequest(
+        'open-meteo-weather',
+        { lat, lon, requestId: reqContext.requestId, capability: 'weather', dataset: 'open-meteo-weather', ttlMs: 120000, attribution: 'Open-Meteo Weather API' },
+        fetcher,
+      );
+      return json(response, 200, providerRegistry.redactor.redactValue(result));
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/weather/forecast') {
+      const latParam = url.searchParams.get('lat');
+      const lonParam = url.searchParams.get('lon');
+
+      if (!latParam || !lonParam) {
+        return json(response, 200, {
+          data: {
+            status: 'missing_coordinates',
+            message: 'Explicit lat and lon query parameters are required.',
+            live: false,
+          },
+          receipt: {
+            provider: 'open-meteo-weather',
+            capability: 'weather',
+            dataset: 'open-meteo-forecast',
+            requestId: reqContext.requestId,
+            live: false,
+            fallback: true,
+            attribution: 'Open-Meteo Weather API (Missing Coordinates)',
+          },
+        });
+      }
+
+      const lat = Number(latParam);
+      const lon = Number(lonParam);
+
+      if (providerRegistry.config.weather.provider === 'tomorrow-io') {
+        const result = await tomorrowWeatherProvider.request(
+          { lat, lon, mode: 'forecast' },
+          execCtx,
+        );
+        return json(response, 200, providerRegistry.redactor.redactValue(result));
+      }
+
+      const fetcher = () => cityEnvironmentRuntime.forecast({ lat, lon });
+      const result = await providerRegistry.executeProviderRequest(
+        'open-meteo-weather',
+        { lat, lon, requestId: reqContext.requestId, capability: 'weather', dataset: 'open-meteo-forecast', ttlMs: 300000, attribution: 'Open-Meteo Weather API' },
+        fetcher,
+      );
+      return json(response, 200, providerRegistry.redactor.redactValue(result));
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/hazards/alerts') {
+      const lat = url.searchParams.has('lat') ? Number(url.searchParams.get('lat')) : undefined;
+      const lon = url.searchParams.has('lon') ? Number(url.searchParams.get('lon')) : undefined;
+      const result = await nwsAlertsProvider.request(
+        { lat, lon },
+        execCtx,
+      );
+      return json(response, 200, providerRegistry.redactor.redactValue(result));
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/hydrology/gauges') {
+      const gaugeId = url.searchParams.get('gaugeId') || undefined;
+      const result = await noaaNwpsProvider.request(
+        { gaugeId },
+        execCtx,
+      );
+      return json(response, 200, providerRegistry.redactor.redactValue(result));
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/energy/context') {
+      const region = url.searchParams.get('region') || undefined;
+      const result = await eiaProvider.request(
+        { region },
+        execCtx,
+      );
+      return json(response, 200, providerRegistry.redactor.redactValue(result));
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/transit/vehicles') {
+      const cityId = url.searchParams.get('cityId') || undefined;
+      const result = await transitRegistry.adapter.request(
+        { cityId },
+        execCtx,
+      );
+      return json(response, 200, providerRegistry.redactor.redactValue(result));
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/quantum/dwave/solvers') {
+      const result = await dwaveProvider.request({ action: 'discover' }, execCtx);
+      return json(response, 200, providerRegistry.redactor.redactValue(result));
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/quantum/dwave/jobs') {
+      const problemId = url.searchParams.get('id') || undefined;
+      if (!problemId) {
+        return json(response, 400, { error: 'invalid_request', message: 'Explicit id query parameter is required for D-Wave job status' });
+      }
+      const result = await dwaveProvider.request({ action: 'status', problemId }, execCtx);
+      return json(response, 200, providerRegistry.redactor.redactValue(result));
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/aethergrid/quantum/dwave/jobs') {
+      const payload = await body(request);
+      if (!payload || !payload.confirmSubmission) {
+        return json(response, 400, { error: 'confirmation_required', message: 'Explicit operator confirmation (confirmSubmission: true) is required to submit D-Wave hardware jobs.' });
+      }
+      const result = await dwaveProvider.request({ action: 'submit', problemPayload: payload.problemPayload }, execCtx);
+      return json(response, 200, providerRegistry.redactor.redactValue(result));
+    }
+
+if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime/providers') {
       return json(
         response,
         200,
