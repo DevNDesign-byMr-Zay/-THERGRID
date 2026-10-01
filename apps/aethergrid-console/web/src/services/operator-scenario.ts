@@ -135,27 +135,32 @@ function iso(value: string, fallback: string): string {
   return Number.isFinite(parsed) ? new Date(parsed).toISOString() : fallback;
 }
 
+function finiteOr(value: unknown, fallback: number): number {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
 function normalizedParameters(
   parameters: ScenarioParameters
 ): ScenarioParameters {
   return {
     loadMultiplierPercent: clamp(
-      Number(parameters.loadMultiplierPercent) || 100,
+      finiteOr(parameters.loadMultiplierPercent, 100),
       50,
       200
     ),
     renewableAvailabilityPercent: clamp(
-      Number(parameters.renewableAvailabilityPercent) || 100,
+      finiteOr(parameters.renewableAvailabilityPercent, 100),
       0,
       200
     ),
     storageReservePercent: clamp(
-      Number(parameters.storageReservePercent) || 18,
+      finiteOr(parameters.storageReservePercent, 18),
       0,
       100
     ),
     weatherRiskPercent: clamp(
-      Number(parameters.weatherRiskPercent) || 0,
+      finiteOr(parameters.weatherRiskPercent, 0),
       0,
       100
     )
@@ -196,7 +201,10 @@ export function loadOperatorScenarios(): OperatorScenario[] {
     return parsed
       .filter(validScenario)
       .slice(0, MAX_OPERATOR_SCENARIOS)
-      .map((scenario) => clone(scenario));
+      .map((scenario) => ({
+        ...clone(scenario),
+        status: scenario.status === 'active' ? 'draft' : scenario.status
+      }));
   } catch {
     return [];
   }
