@@ -702,7 +702,7 @@ export function App() {
   const activeOverlays = useMemo(
     () =>
       (scope === 'world'
-        ? [worldOverlay, incidentOverlay, measurementOverlay]
+        ? [worldOverlay, incidentOverlay, worksetGeometryOverlay, measurementOverlay]
         : [
             ...semanticOverlays,
             activeIllumination,
@@ -710,6 +710,7 @@ export function App() {
             windOverlay,
             seismicOverlay,
             incidentOverlay,
+            worksetGeometryOverlay,
             measurementOverlay
           ]
       ).filter(
@@ -724,6 +725,7 @@ export function App() {
       windOverlay,
       seismicOverlay,
       incidentOverlay,
+      worksetGeometryOverlay,
       measurementOverlay
     ]
   );
@@ -948,7 +950,9 @@ export function App() {
         scope === 'city' && powerOverlay
           ? powerOverlay.nodes.length + powerOverlay.edges.length
           : 0,
-      annotations: spatialIncidents.length
+      annotations: spatialIncidents.length,
+      'workset-analysis':
+        worksetGeometry.positionedEntityCount + worksetGeometry.edgeCount
     } as Record<string, number>;
   }, [
     semanticOverlays,
@@ -960,7 +964,8 @@ export function App() {
     temporal.mode,
     windOverlay,
     powerOverlay,
-    spatialIncidents
+    spatialIncidents,
+    worksetGeometry
   ]);
 
   const currentBookmark = useMemo(
