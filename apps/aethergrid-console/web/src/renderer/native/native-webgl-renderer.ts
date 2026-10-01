@@ -171,6 +171,8 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
   #atmosphere: AtmosphericOverlaySnapshot | null = null;
   #airQuality: AirQualityOverlaySnapshot | null = null;
   #selectedId: string | null = null;
+  #selectedSourceFeatureId: string | null = null;
+  #selectedLayerId: string | null = null;
   #features: ProjectedFeature[] = [];
   #animationFrame: number | null = null;
 
@@ -282,6 +284,25 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
 
   selectFeature(id: string | null): void {
     this.#selectedId = id;
+    this.#selectedSourceFeatureId = null;
+    this.#selectedLayerId = null;
+
+    if (id) {
+      for (const snapshot of this.#overlays.values()) {
+        const item =
+          snapshot.nodes.find((candidate) => candidate.id === id) ??
+          snapshot.edges.find((candidate) => candidate.id === id) ??
+          (snapshot.areas ?? []).find((candidate) => candidate.id === id);
+        if (!item) continue;
+        this.#selectedLayerId = snapshot.layerId;
+        this.#selectedSourceFeatureId = this.#sourceFeatureId(
+          item.id,
+          item.properties
+        );
+        break;
+      }
+    }
+
     this.#render();
   }
 
@@ -434,6 +455,9 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     if (this.#animationFrame != null) cancelAnimationFrame(this.#animationFrame);
     this.#animationFrame = null;
     this.#overlays.clear();
+    this.#selectedId = null;
+    this.#selectedSourceFeatureId = null;
+    this.#selectedLayerId = null;
     this.#features = [];
     this.#program = null;
     this.#gl = null;
@@ -560,6 +584,28 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     }
 
     return color;
+  }
+
+  #sourceFeatureId(
+    id: string,
+    properties: Readonly<Record<string, unknown>> | undefined
+  ): string {
+    const value = properties?.sourceFeatureId;
+    return typeof value === 'string' && value.trim() ? value.trim() : id;
+  }
+
+  #isSelectedSource(
+    layerId: string,
+    id: string,
+    properties: Readonly<Record<string, unknown>> | undefined
+  ): boolean {
+    if (id === this.#selectedId) return true;
+    if (!this.#selectedSourceFeatureId || this.#selectedLayerId !== layerId) {
+      return false;
+    }
+    return (
+      this.#sourceFeatureId(id, properties) === this.#selectedSourceFeatureId
+    );
   }
 
   #visualColor(base: Rgba): Rgba {
@@ -843,13 +889,27 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
                   : rgba('#ffbd73', 0.92);
           addLine(edge.from, edge.to, rgba('#91a0ad', 0.22));
         }
+        if (
+          this.#isSelectedSource(
+            snapshot.layerId,
+            edge.id,
+            edge.properties
+          )
+        ) {
+          color = rgba('#ffffff', 1);
+        }
         addLine(edge.from, edge.to, color);
       }
 
       for (const area of snapshot.areas ?? []) {
-        const areaColor = this.#visualColor(
-          layerColor(snapshot.layerId, area.kind)
+        const selected = this.#isSelectedSource(
+          snapshot.layerId,
+          area.id,
+          area.properties
         );
+        const areaColor = selected
+          ? rgba('#ffffff', 0.96)
+          : this.#visualColor(layerColor(snapshot.layerId, area.kind));
         for (let index = 1; index < area.positions.length; index += 1) {
           addLine(area.positions[index - 1], area.positions[index], areaColor);
         }
@@ -877,11 +937,16 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
                 lightPulse * 0.2
             )
           : this.#visualColor(layerColor(snapshot.layerId, node.kind));
-        if (node.id === this.#selectedId) color = rgba('#ffffff', 1);
+        const selected = this.#isSelectedSource(
+          snapshot.layerId,
+          node.id,
+          node.properties
+        );
+        if (selected) color = rgba('#ffffff', 1);
         pointPositions.push(point[0], point[1]);
         pointColors.push(color.r, color.g, color.b, color.a);
         pointSizes.push(
-          node.id === this.#selectedId
+          selected
             ? 13
             : (6 + clamp(node.intensity ?? 0.5, 0, 1) * 6) *
                 (urbanLight ? 0.88 + lightPulse * 0.2 : 1)
@@ -1072,13 +1137,21 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
         const timestamp = Date.parse(this.#time.iso);
         const phase = Number.isFinite(timestamp) ? timestamp / 1000 : 0;
         const pulse = 0.5 + 0.5 * Math.sin(phase * 0.72 + (edge.intensity ?? 0.5) * 4.7);
-        context.strokeStyle = css(
-          windEdge && this.#time.mode === 'live'
-            ? rgba('#7de9ff', 0.34 + pulse * 0.48)
-            : base
+        const selected = this.#isSelectedSource(
+          snapshot.layerId,
+          edge.id,
+          edge.properties
         );
-        context.lineWidth =
-          snapshot.layerId === 'energy'
+        context.strokeStyle = selected
+          ? '#ffffff'
+          : css(
+              windEdge && this.#time.mode === 'live'
+                ? rgba('#7de9ff', 0.34 + pulse * 0.48)
+                : base
+            );
+        context.lineWidth = selected
+          ? 3
+          : snapshot.layerId === 'energy'
             ? 1.8
             : windEdge
               ? 1.2 + (edge.intensity ?? 0.5) * 1.2
@@ -1090,10 +1163,15 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
       }
 
       for (const area of snapshot.areas ?? []) {
-        context.strokeStyle = css(
-          this.#visualColor(layerColor(snapshot.layerId, area.kind))
+        const selected = this.#isSelectedSource(
+          snapshot.layerId,
+          area.id,
+          area.properties
         );
-        context.lineWidth = 1;
+        context.strokeStyle = selected
+          ? '#ffffff'
+          : css(this.#visualColor(layerColor(snapshot.layerId, area.kind)));
+        context.lineWidth = selected ? 2.5 : 1;
         context.beginPath();
         area.positions.forEach((position, index) => {
           const point = toScreen(position);
@@ -1108,7 +1186,11 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
         const point = this.#project(node.position);
         const x = ((point[0] + 1) / 2) * width;
         const y = ((1 - point[1]) / 2) * height;
-        const selected = node.id === this.#selectedId;
+        const selected = this.#isSelectedSource(
+          snapshot.layerId,
+          node.id,
+          node.properties
+        );
         const urbanLight =
           node.properties?.presentationType === 'urban-illumination';
         const timestamp = Date.parse(this.#time.iso);
