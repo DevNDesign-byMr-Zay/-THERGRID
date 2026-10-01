@@ -108,6 +108,49 @@ export const NEUTRAL_SCENARIO_PARAMETERS: ScenarioParameters = {
   weatherRiskPercent: 0
 };
 
+export function operatorScenarioTemplateParameters(
+  template: ScenarioId
+): ScenarioParameters {
+  if (template === 'peak-demand') {
+    return {
+      loadMultiplierPercent: 130,
+      renewableAvailabilityPercent: 100,
+      storageReservePercent: 18,
+      weatherRiskPercent: 10
+    };
+  }
+  if (template === 'renewable-surge') {
+    return {
+      loadMultiplierPercent: 100,
+      renewableAvailabilityPercent: 150,
+      storageReservePercent: 25,
+      weatherRiskPercent: 5
+    };
+  }
+  if (template === 'storage-stress') {
+    return {
+      loadMultiplierPercent: 115,
+      renewableAvailabilityPercent: 100,
+      storageReservePercent: 5,
+      weatherRiskPercent: 15
+    };
+  }
+  if (template === 'weather-event') {
+    return {
+      loadMultiplierPercent: 110,
+      renewableAvailabilityPercent: 85,
+      storageReservePercent: 12,
+      weatherRiskPercent: 80
+    };
+  }
+  return {
+    loadMultiplierPercent: 110,
+    renewableAvailabilityPercent: 100,
+    storageReservePercent: 18,
+    weatherRiskPercent: 20
+  };
+}
+
 const STATUSES = new Set<OperatorScenarioStatus>([
   'draft',
   'active',
@@ -429,7 +472,7 @@ export function compareOperatorScenario(
         parameters.weatherRiskPercent -
         NEUTRAL_SCENARIO_PARAMETERS.weatherRiskPercent
     },
-    visual: scenarioVisualState(scenario.template, parameters)
+    visual: scenarioVisualState('custom', parameters)
   };
 }
 
