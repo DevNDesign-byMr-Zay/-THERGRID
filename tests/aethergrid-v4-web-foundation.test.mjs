@@ -491,8 +491,8 @@ test('v4 God’s-eye city nodes encode AQI categories and descend into selected 
   assert.match(layer, /category === 'good'/u);
   assert.match(layer, /category === 'hazardous'/u);
   assert.match(app, /handleSpatialSelection/u);
-  assert.match(app, /scope !== 'world' \|\| next\?\.kind !== 'city'/u);
-  assert.match(app, /next\.properties\?\.cityId/u);
+  assert.match(app, /scope !== 'world' \|\| bound\?\.kind !== 'city'/u);
+  assert.match(app, /bound\.properties\?\.cityId/u);
   assert.match(app, /setScope\('city'\)/u);
   assert.match(app, /onSelection=\{handleSpatialSelection\}/u);
 });
