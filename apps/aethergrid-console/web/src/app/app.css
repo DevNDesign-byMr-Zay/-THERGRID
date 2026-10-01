@@ -3586,9 +3586,137 @@ button {
   gap: 10px;
 }
 
+.operational-source-bindings {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(112, 231, 255, 0.09);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(112, 231, 255, 0.025), transparent 60%),
+    rgba(255, 255, 255, 0.012);
+}
+
+.source-binding-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.source-binding-head small,
+.source-binding-head strong {
+  display: block;
+}
+
+.source-binding-head small {
+  color: #5d7488;
+  font-size: 6px;
+  letter-spacing: 0.12em;
+}
+
+.source-binding-head strong {
+  margin-top: 2px;
+  color: #b7e9f7;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+}
+
+.source-binding-head em {
+  padding: 3px 5px;
+  border: 1px solid rgba(112, 231, 255, 0.11);
+  border-radius: 999px;
+  color: #6f95a7;
+  font-size: 5px;
+  font-style: normal;
+  letter-spacing: 0.08em;
+}
+
+.operational-source-bindings > p {
+  margin: 0;
+  color: #6f8496;
+  font-size: 7px;
+  line-height: 1.45;
+}
+
+.source-binding-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.source-binding-grid label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.source-binding-grid label > span {
+  color: #5d7285;
+  font-size: 5px;
+  letter-spacing: 0.08em;
+}
+
+.source-binding-grid input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 7px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  border-radius: 6px;
+  outline: none;
+  color: #d7edf6;
+  background: rgba(0, 0, 0, 0.18);
+  font: 600 8px ui-monospace, "SFMono-Regular", Consolas, monospace;
+  letter-spacing: 0.06em;
+}
+
+.source-binding-grid input:focus {
+  border-color: rgba(112, 231, 255, 0.34);
+  box-shadow: 0 0 0 2px rgba(112, 231, 255, 0.035);
+}
+
+.source-binding-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.source-binding-actions button {
+  padding: 6px 8px;
+  border: 1px solid rgba(112, 231, 255, 0.11);
+  border-radius: 6px;
+  color: #86aabb;
+  background: rgba(112, 231, 255, 0.025);
+  font-size: 6px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  cursor: pointer;
+}
+
+.source-binding-actions button:first-child {
+  color: #bdefff;
+  border-color: rgba(112, 231, 255, 0.2);
+}
+
+.operational-source-bindings > small {
+  color: #516a7d;
+  font-size: 5px;
+  letter-spacing: 0.07em;
+}
+
+.operational-source-bindings .source-binding-error {
+  color: #ff9494;
+}
+
 .operational-data-panel .provider-list {
   display: grid;
   gap: 7px;
+}
+
+@media (max-width: 760px) {
+  .source-binding-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .operational-data-panel .provider-card {
