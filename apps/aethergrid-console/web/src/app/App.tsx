@@ -18,6 +18,7 @@ import { SpatialIncidentPanel } from '../components/SpatialIncidentPanel';
 import { SpatialWorksetPanel } from '../components/SpatialWorksetPanel';
 import { RuntimeDiagnosticsPanel } from '../components/RuntimeDiagnosticsPanel';
 import { SpatialViewport } from '../components/SpatialViewport';
+import { TemporalEventNavigator } from '../components/TemporalEventNavigator';
 import { TemporalRail } from '../components/TemporalRail';
 import { ViewBookmarksPanel } from '../components/ViewBookmarksPanel';
 import { useAppearance } from '../hooks/use-appearance';
@@ -85,6 +86,7 @@ import {
   type SpatialObservation
 } from '../services/spatial-comparison';
 import { saveSpatialWorkset } from '../services/spatial-workset';
+import { buildTemporalNavigatorEvents } from '../services/temporal-event-navigator';
 import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
 import type { SpatialViewBookmark } from '../services/view-bookmarks';
 import {
@@ -292,6 +294,16 @@ export function App() {
         ? compareSpatialObservations(observationA, observationB)
         : null,
     [observationA, observationB]
+  );
+
+  const temporalEvents = useMemo(
+    () =>
+      buildTemporalNavigatorEvents(
+        spatialIncidents,
+        observationA,
+        observationB
+      ),
+    [spatialIncidents, observationA, observationB]
   );
 
   const entityDossier = useMemo(
@@ -1749,10 +1761,15 @@ export function App() {
             onLocate={locateSpatialIncident}
             onAnalyze={analyzeSpatialIncident}
           />
+          <TemporalEventNavigator
+            clock={clock}
+            state={temporal}
+            events={temporalEvents}
+          />
         </aside>
       </section>
 
-      <TemporalRail clock={clock} state={temporal} />
+      <TemporalRail clock={clock} state={temporal} events={temporalEvents} />
     </main>
   );
 }
