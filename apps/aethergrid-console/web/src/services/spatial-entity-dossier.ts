@@ -146,8 +146,8 @@ function selectionSourceState(
   selection: SpatialFeatureSelection
 ): EntitySourceState {
   if (selection.properties?.stale === true) return 'stale';
-  if (selection.properties?.live === true) return 'live';
   if (selection.properties?.fallback === true) return 'fallback';
+  if (selection.properties?.live === true) return 'live';
   if (
     selection.source ||
     selection.properties?.sourceTime ||
@@ -184,12 +184,17 @@ export function buildSpatialEntityDossier(
   const selection = input.selection;
   const identity = selection.identity;
   const canonicalId = identity?.canonicalId ?? selection.id;
+  const sourceDataset =
+    propertyString(selection.properties, 'sourceDataset') ??
+    propertyString(selection.properties, 'layerId');
   const entitySource: EntityDossierSource = {
     role: 'entity',
-    provider: selection.source ?? null,
-    dataset:
-      propertyString(selection.properties, 'sourceDataset') ??
-      propertyString(selection.properties, 'layerId'),
+    provider:
+      propertyString(selection.properties, 'sourceProvider') ??
+      sourceDataset ??
+      selection.source ??
+      null,
+    dataset: sourceDataset,
     sourceTime: propertyString(selection.properties, 'sourceTime'),
     fetchedAt: propertyString(selection.properties, 'fetchedAt'),
     attribution: propertyString(selection.properties, 'attribution'),
@@ -401,14 +406,14 @@ export function freezeSpatialEntityDossier(
     generatedAt: new Date().toISOString(),
     frozen: true,
     temporal: { ...dossier.temporal },
-    entity: {
+    entity: Object.freeze({
       ...dossier.entity,
-      position: { ...dossier.entity.position },
+      position: Object.freeze({ ...dossier.entity.position }),
       properties: Object.freeze({ ...dossier.entity.properties })
-    },
-    entitySource: { ...dossier.entitySource },
+    }),
+    entitySource: Object.freeze({ ...dossier.entitySource }),
     contextSources: Object.freeze(
-      dossier.contextSources.map((source) => ({ ...source }))
+      dossier.contextSources.map((source) => Object.freeze({ ...source }))
     ),
     operatorMeasurement: dossier.operatorMeasurement
       ? { ...dossier.operatorMeasurement }
@@ -416,12 +421,12 @@ export function freezeSpatialEntityDossier(
     matchingObservations: Object.freeze(
       dossier.matchingObservations.map((observation) => ({ ...observation }))
     ),
-    coverage: {
+    coverage: Object.freeze({
       percent: dossier.coverage.percent,
       checks: Object.freeze(
-        dossier.coverage.checks.map((check) => ({ ...check }))
+        dossier.coverage.checks.map((check) => Object.freeze({ ...check }))
       )
-    },
+    }),
     limitations: Object.freeze([...dossier.limitations])
   });
 }
