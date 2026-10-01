@@ -113,7 +113,11 @@ export class WeatherAtmosphereLayer {
   setTime(time: TemporalInstant): void {
     this.#temporalMode = time.mode;
     this.#applyTemporalVisibility();
-    if (!this.#snapshot?.current || !this.#visible || time.mode !== 'live') return;
+    if (
+      !this.#snapshot?.current ||
+      !this.#visible ||
+      (time.mode !== 'live' && time.mode !== 'forecast')
+    ) return;
     const timestamp = Date.parse(time.iso);
     if (!Number.isFinite(timestamp)) return;
 
@@ -182,10 +186,13 @@ export class WeatherAtmosphereLayer {
   }
 
   #applyTemporalVisibility(): void {
-    const renderLiveWeather = this.#visible && this.#temporalMode === 'live';
-    this.#clouds.show = renderLiveWeather;
-    if (this.#precipitation) this.#precipitation.show = renderLiveWeather;
-    if (renderLiveWeather) this.#applyFog();
+    const renderSourceWeather =
+      this.#visible &&
+      (this.#temporalMode === 'live' || this.#temporalMode === 'forecast') &&
+      this.#snapshot?.fallback !== true;
+    this.#clouds.show = renderSourceWeather;
+    if (this.#precipitation) this.#precipitation.show = renderSourceWeather;
+    if (renderSourceWeather) this.#applyFog();
     else this.#restoreFog();
     this.#viewer.scene.requestRender();
   }
