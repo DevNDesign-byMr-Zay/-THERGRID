@@ -31,6 +31,7 @@ test('v4 operator session payload preserves workspace analysis without persistin
   assert.match(service, /observationA/u);
   assert.match(service, /observationB/u);
   assert.match(service, /frozenDossier/u);
+  assert.match(service, /operatorScenario/u);
   assert.match(service, /workset/u);
   assert.match(service, /incidents/u);
   assert.doesNotMatch(service, /selection: SpatialFeatureSelection/u);
@@ -73,6 +74,8 @@ test('v4 app restores live sessions to current live time and never restores a sa
   assert.match(app, /if \(bookmark\.temporalMode === 'live'\) \{[\s\S]*clock\.goLive\(\)/u);
   assert.match(app, /saveSpatialWorkset\(session\.workspace\.workset\)/u);
   assert.match(app, /saveSpatialIncidents\(session\.workspace\.incidents\)/u);
+  assert.match(app, /session\.workspace\.operatorScenario/u);
+  assert.match(app, /setActiveOperatorScenario/u);
   assert.match(app, /setPendingSessionRestore\(session\)/u);
   assert.match(app, /<OperatorSessionPanel/u);
 });
