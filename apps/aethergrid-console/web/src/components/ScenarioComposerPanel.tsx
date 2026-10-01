@@ -9,6 +9,7 @@ import {
   downloadOperatorScenario,
   loadOperatorScenarios,
   MAX_OPERATOR_SCENARIOS,
+  operatorScenarioTemplateParameters,
   removeOperatorScenario,
   removeOperatorScenarioAssumption,
   saveOperatorScenarios,
@@ -210,7 +211,10 @@ export function ScenarioComposerPanel({
               key={item.id}
               type="button"
               className={template === item.id ? 'active' : ''}
-              onClick={() => setTemplate(item.id)}
+              onClick={() => {
+                setTemplate(item.id);
+                setParameters(operatorScenarioTemplateParameters(item.id));
+              }}
             >
               {item.label}
             </button>
