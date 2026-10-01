@@ -8,7 +8,11 @@ import {
   type EvidenceRecord
 } from '../services/evidence-client';
 
-export function EvidencePanel() {
+interface EvidencePanelProps {
+  onSelectEvidence?(record: EvidenceRecord): void;
+}
+
+export function EvidencePanel({ onSelectEvidence }: EvidencePanelProps) {
   const [records, setRecords] = useState<EvidenceRecord[]>([]);
   const [selected, setSelected] = useState<EvidenceRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,7 +38,10 @@ export function EvidencePanel() {
     const lookup = record.receipt || record.id;
     setError(null);
     void loadEvidenceRecord(lookup)
-      .then(setSelected)
+      .then((record) => {
+        setSelected(record);
+        onSelectEvidence?.(record);
+      })
       .catch((loadError) =>
         setError(loadError instanceof Error ? loadError.message : String(loadError))
       );
