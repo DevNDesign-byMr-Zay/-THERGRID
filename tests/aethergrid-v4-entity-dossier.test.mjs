@@ -60,7 +60,10 @@ test('v4 dossiers omit current-only context outside LIVE mode and match A/B fram
   assert.match(app, /temporal\.mode === 'live'[\s\S]*\? liveContext[\s\S]*: null/u);
   assert.match(dossier, /observation\.selectedEntity\.canonicalId !== canonicalId/u);
   assert.match(dossier, /matchingObservations/u);
-  assert.match(dossier, /Current-only weather, air-quality and seismic context is intentionally omitted outside LIVE mode/u);
+  assert.match(
+    dossier,
+    /Current-only weather, air-quality and seismic context is intentionally omitted outside LIVE mode/u,
+  );
 });
 
 test('v4 dossier UI supports frozen 4D snapshots, local export and bounded AUREN review', async () => {
