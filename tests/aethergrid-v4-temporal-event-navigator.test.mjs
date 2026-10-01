@@ -16,6 +16,9 @@ test('v4 temporal navigator builds only bounded local incidents and captured A/B
   assert.match(service, /operator-incident/u);
   assert.match(service, /observation-a/u);
   assert.match(service, /observation-b/u);
+  assert.match(service, /scenario-start/u);
+  assert.match(service, /scenario-end/u);
+  assert.match(service, /modeled-scenario/u);
   assert.match(service, /authoritative: false/u);
   assert.match(service, /operator-local/u);
   assert.match(service, /captured-frame/u);
@@ -53,6 +56,7 @@ test('v4 temporal event navigator supports source filters and bounded previous n
   assert.match(panel, /4D EVENT NAVIGATOR/u);
   assert.match(panel, /INCIDENTS/u);
   assert.match(panel, /A\/B CAPTURES/u);
+  assert.match(panel, /SCENARIOS/u);
   assert.match(panel, /PREV/u);
   assert.match(panel, /NEXT/u);
   assert.match(panel, /filterTemporalNavigatorEvents/u);
@@ -94,4 +98,5 @@ test('v4 temporal navigator truth copy explicitly separates operator incidents f
   assert.match(panel, /old LIVE capture converts the view to historical context/u);
   assert.match(panel, /Operator incidents remain local annotations/u);
   assert.match(panel, /captured frames remain[\s\S]*operator analysis snapshots/u);
+  assert.match(panel, /scenario markers remain modeled[\s\S]*hypothetical bounds/u);
 });
