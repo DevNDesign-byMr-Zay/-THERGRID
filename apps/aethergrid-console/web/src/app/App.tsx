@@ -15,6 +15,7 @@ import { ScenarioPanel } from '../components/ScenarioPanel';
 import { SpatialAnalysisPanel } from '../components/SpatialAnalysisPanel';
 import { SpatialComparisonPanel } from '../components/SpatialComparisonPanel';
 import { SpatialIncidentPanel } from '../components/SpatialIncidentPanel';
+import { SpatialInvestigationBoard } from '../components/SpatialInvestigationBoard';
 import { SpatialWorksetGeometryPanel } from '../components/SpatialWorksetGeometryPanel';
 import { SpatialWorksetPanel } from '../components/SpatialWorksetPanel';
 import { RuntimeDiagnosticsPanel } from '../components/RuntimeDiagnosticsPanel';
@@ -98,6 +99,8 @@ import {
   type SpatialWorksetGeometrySummary
 } from '../services/spatial-workset-geometry';
 import { buildTemporalNavigatorEvents } from '../services/temporal-event-navigator';
+import type { EvidenceRecord } from '../services/evidence-client';
+import type { SpatialInvestigation } from '../services/spatial-investigation';
 import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
 import type { SpatialViewBookmark } from '../services/view-bookmarks';
 import {
@@ -265,6 +268,7 @@ export function App() {
   const [liveContextError, setLiveContextError] = useState<string | null>(null);
   const [scenarioVisual, setScenarioVisual] = useState<ScenarioVisualState | null>(null);
   const [agentHandoff, setAgentHandoff] = useState<AgentHandoffRequest | null>(null);
+  const [selectedEvidence, setSelectedEvidence] = useState<EvidenceRecord | null>(null);
   const [cityLoad, setCityLoad] = useState<CityLoadState>({
     spatial: true,
     environment: true,
@@ -900,6 +904,32 @@ export function App() {
       custom: true
     });
     setScope('city');
+    setIntelOpen(true);
+  };
+  const analyzeSpatialInvestigation = (
+    investigation: SpatialInvestigation
+  ) => {
+    const hypotheses = investigation.hypotheses
+      .slice(0, 12)
+      .map(
+        (item) =>
+          `${item.assessment.toUpperCase()}: ${item.text}${
+            item.rationale ? ` — rationale: ${item.rationale}` : ''
+          }`
+      )
+      .join('; ');
+    const openQuestions = investigation.openQuestions.slice(0, 12).join('; ');
+
+    setAgentHandoff((current) => ({
+      id: (current?.id ?? 0) + 1,
+      agent: 'TEAM',
+      prompt:
+        `Review operator investigation "${investigation.name}". Objective: ${investigation.objective || 'not stated'}. ` +
+        `Status: ${investigation.status}. Linked references: ${investigation.references.canonicalEntityIds.length} canonical entities, ${investigation.references.incidentIds.length} local incidents, ${investigation.references.observationIds.length} captured A/B observations, ${investigation.references.evidenceReceipts.length} provenance-ledger references. ` +
+        `Operator hypotheses: ${hypotheses || 'none'}. Open questions: ${openQuestions || 'none'}. ` +
+        'Treat every hypothesis assessment as a human-entered analytical judgment, not a verified finding. Treat local incidents and workset geometry as non-authoritative operator context. Use provenance-ledger references only as pointers to evidence that must be inspected independently. Separate confirmed observations from assumptions, contradictions, uncertainty and missing evidence before suggesting next investigative steps.'
+    }));
+    setIntelWorkspace('ai');
     setIntelOpen(true);
   };
   const centerWorksetGeometry = () => {
@@ -1775,7 +1805,7 @@ export function App() {
             <QuantumPanel />
           </div>
           <div className="intel-workspace intel-evidence">
-            <EvidencePanel />
+            <EvidencePanel onSelectEvidence={setSelectedEvidence} />
           </div>
           <div className="intel-workspace intel-system">
             <RuntimeDiagnosticsPanel />
@@ -1834,6 +1864,15 @@ export function App() {
             geometry={worksetGeometry}
             onCenter={centerWorksetGeometry}
             onAnalyze={analyzeWorksetGeometry}
+          />
+          <SpatialInvestigationBoard
+            workset={spatialWorkset}
+            incidents={spatialIncidents}
+            observationA={observationA}
+            observationB={observationB}
+            geometry={worksetGeometry}
+            selectedEvidence={selectedEvidence}
+            onAnalyze={analyzeSpatialInvestigation}
           />
           <SpatialIncidentPanel
             incidents={spatialIncidents}
