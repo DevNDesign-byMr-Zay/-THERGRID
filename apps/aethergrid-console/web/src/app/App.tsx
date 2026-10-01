@@ -515,6 +515,19 @@ export function App() {
             properties: selection.properties ?? null
           }
         : null,
+      entityDossier: entityDossier
+        ? {
+            canonicalId: entityDossier.entity.canonicalId,
+            frozen: entityDossier.frozen,
+            entitySourceState: entityDossier.entitySource.state,
+            coveragePercent: entityDossier.coverage.percent,
+            temporal: entityDossier.temporal,
+            matchingObservationSlots: entityDossier.matchingObservations.map(
+              (observation) => observation.slot
+            ),
+            limitations: entityDossier.limitations
+          }
+        : null,
       environment:
         scope === 'city' && atmosphere && temporal.mode === 'live'
           ? {
@@ -545,6 +558,7 @@ export function App() {
       activeUseCase,
       cityIdentity,
       selection,
+      entityDossier,
       atmosphere,
       liveContext
     ]
