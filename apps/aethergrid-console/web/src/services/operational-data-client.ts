@@ -66,9 +66,19 @@ function stateFrom(
   payload: Record<string, unknown>,
   receipt: ProviderReceiptLike
 ): OperationalSourceState {
-  const status = text(payload.status)?.toLowerCase();
-  if (status === 'unconfigured') return 'unconfigured';
-  if (status === 'unavailable') return 'unavailable';
+  const nested = object(payload.data);
+  const status =
+    (text(payload.status) ?? text(nested.status))?.toLowerCase() ?? null;
+  if (status === 'unconfigured' || status?.includes('unconfigured')) {
+    return 'unconfigured';
+  }
+  if (
+    status === 'unavailable' ||
+    status === 'invalid_region' ||
+    status === 'missing_coordinates'
+  ) {
+    return 'unavailable';
+  }
   if (receipt.stale === true) return 'stale';
   if (receipt.fallback === true || receipt.live === false) return 'fallback';
   if (receipt.live === true || payload.live === true) return 'live';
@@ -196,15 +206,29 @@ export async function loadHydrologyGauge(
   if (!result.ok) return unavailable('hydrology', `Hydrology endpoint unavailable (HTTP ${result.status}).`);
   const data = object(result.payload.data ?? result.payload);
   const stage = finite(data.observedStageFeet);
+  const flow = finite(data.observedFlowCfs);
+  const forecastStage = finite(data.forecastStageFeet);
+  const minorFloodStage = finite(data.minorFloodStageFeet);
   const returnedGaugeId = text(data.gaugeId);
   const metrics = [
     returnedGaugeId ? { label: 'GAUGE', value: returnedGaugeId } : null,
-    stage == null ? null : { label: 'STAGE', value: `${stage.toFixed(2)} ft` }
+    stage == null ? null : { label: 'STAGE', value: `${stage.toFixed(2)} ft` },
+    flow == null ? null : { label: 'FLOW', value: `${flow.toFixed(0)} cfs` },
+    forecastStage == null
+      ? null
+      : { label: 'FCST STAGE', value: `${forecastStage.toFixed(2)} ft` },
+    minorFloodStage == null
+      ? null
+      : { label: 'MINOR FLOOD', value: `${minorFloodStage.toFixed(2)} ft` }
   ].filter((item): item is { label: string; value: string } => Boolean(item));
   return normalizeCommon(
     'hydrology',
-    result.payload,
-    text(data.name) ?? 'Provider-backed gauge context',
+    {
+      ...result.payload,
+      observedAt: text(data.observedAt),
+      sourceTime: text(data.observedAt) ?? text(data.forecastAt)
+    },
+    text(data.name) ?? 'Provider-backed NOAA gauge context',
     metrics
   );
 }
@@ -220,16 +244,26 @@ export async function loadEnergyContextForRegion(
   const result = await fetchJson(`/api/aethergrid/energy/context?${query.toString()}`, signal);
   if (!result.ok) return unavailable('energy', `Energy endpoint unavailable (HTTP ${result.status}).`);
   const data = object(result.payload.data ?? result.payload);
-  const count = finite(data.recordsCount);
+  const fuelMix = Array.isArray(data.fuelMix) ? data.fuelMix : [];
   const returnedRegion = text(data.region);
+  const periods = fuelMix
+    .map((row) => text(object(row).period))
+    .filter((value): value is string => Boolean(value));
+  const newestPeriod = periods.length ? periods[0] : null;
   const metrics = [
     returnedRegion ? { label: 'REGION', value: returnedRegion } : null,
-    count == null ? null : { label: 'RECORDS', value: String(Math.round(count)) }
+    { label: 'FUEL ROWS', value: String(fuelMix.length) },
+    newestPeriod ? { label: 'LATEST', value: newestPeriod } : null
   ].filter((item): item is { label: string; value: string } => Boolean(item));
   return normalizeCommon(
     'energy',
-    result.payload,
-    text(data.source) ?? 'Provider-backed regional energy context',
+    {
+      ...result.payload,
+      sourceTime: newestPeriod
+    },
+    returnedRegion
+      ? `EIA hourly fuel-type records for ${returnedRegion}`
+      : 'Provider-backed regional energy context',
     metrics
   );
 }
@@ -240,16 +274,25 @@ async function transitSource(cityId: string, signal?: AbortSignal): Promise<Oper
   if (!result.ok) return unavailable('transit', `Transit endpoint unavailable (HTTP ${result.status}).`);
   const data = object(result.payload.data ?? result.payload);
   const vehicles = Array.isArray(data.vehicles) ? data.vehicles : [];
-  const configured = data.configured === true;
-  if (!configured && result.payload.receipt == null && result.payload.providerReceipt == null) {
-    return unavailable('transit', 'No decoded GTFS-Realtime vehicle feed is configured.', 'unconfigured');
-  }
+  const receipt = receiptFrom(result.payload);
+  const status = text(data.status);
+  const configured =
+    receipt.live === true ||
+    data.live === true ||
+    status === 'GTFS-Realtime Live';
+  const feedTimestamp = finite(data.feedHeaderTimestamp);
   return normalizeCommon(
     'transit',
-    result.payload,
+    {
+      ...result.payload,
+      sourceTime:
+        feedTimestamp == null
+          ? null
+          : new Date(feedTimestamp * 1000).toISOString()
+    },
     configured
       ? `${vehicles.length} decoded vehicle position${vehicles.length === 1 ? '' : 's'}`
-      : 'Transit provider is not configured',
+      : text(data.message) ?? 'Transit provider is not configured',
     [{ label: 'VEHICLES', value: String(vehicles.length) }]
   );
 }
@@ -260,6 +303,8 @@ export async function loadOperationalSnapshot(input: {
   cityId: string;
   temporalMode: TemporalMode;
   cursorIso: string;
+  gaugeId?: string | null;
+  energyRegion?: string | null;
   signal?: AbortSignal;
 }): Promise<OperationalSnapshot> {
   const fetchedAt = new Date().toISOString();
@@ -283,10 +328,34 @@ export async function loadOperationalSnapshot(input: {
   const settled = await Promise.allSettled([
     weatherSource(input.latitude, input.longitude, input.signal),
     hazardSource(input.latitude, input.longitude, input.signal),
-    transitSource(input.cityId, input.signal)
+    transitSource(input.cityId, input.signal),
+    input.gaugeId
+      ? loadHydrologyGauge(input.gaugeId, input.signal)
+      : Promise.resolve(
+          unavailable(
+            'hydrology',
+            'Bind an explicit NOAA NWPS gauge ID to this city or coordinate to load live hydrology.',
+            'unconfigured'
+          )
+        ),
+    input.energyRegion
+      ? loadEnergyContextForRegion(input.energyRegion, input.signal)
+      : Promise.resolve(
+          unavailable(
+            'energy',
+            'Bind an explicit EIA balancing-region code to this city or coordinate to load live energy context.',
+            'unconfigured'
+          )
+        )
   ]);
 
-  const ids: readonly OperationalSourceId[] = ['weather', 'hazards', 'transit'];
+  const ids: readonly OperationalSourceId[] = [
+    'weather',
+    'hazards',
+    'transit',
+    'hydrology',
+    'energy'
+  ];
   const resolved = settled.map((result, index) =>
     result.status === 'fulfilled'
       ? result.value
@@ -300,16 +369,9 @@ export async function loadOperationalSnapshot(input: {
   const sources: readonly OperationalSourceSnapshot[] = [
     byId.get('weather') ?? unavailable('weather', 'Weather source unavailable.'),
     byId.get('hazards') ?? unavailable('hazards', 'Hazards source unavailable.'),
-    unavailable(
-      'hydrology',
-      'Location-to-gauge resolution is not connected yet; no default gauge is assumed.',
-      'unconfigured'
-    ),
-    unavailable(
-      'energy',
-      'Location-to-energy-region resolution is not connected yet; no default balancing authority is assumed.',
-      'unconfigured'
-    ),
+    byId.get('hydrology') ??
+      unavailable('hydrology', 'Hydrology source unavailable.'),
+    byId.get('energy') ?? unavailable('energy', 'Energy source unavailable.'),
     byId.get('transit') ?? unavailable('transit', 'Transit source unavailable.')
   ];
 
