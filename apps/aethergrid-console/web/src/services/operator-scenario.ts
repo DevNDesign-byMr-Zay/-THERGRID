@@ -98,6 +98,7 @@ export interface OperatorScenarioExport {
 }
 
 const STORAGE_KEY = 'aethergrid.operator.scenarios.v4';
+export const OPERATOR_SCENARIOS_EVENT = 'aethergrid:operator-scenarios-changed';
 export const MAX_OPERATOR_SCENARIOS = 8;
 export const MAX_OPERATOR_SCENARIO_ASSUMPTIONS = 16;
 
@@ -159,6 +160,14 @@ const STATUSES = new Set<OperatorScenarioStatus>([
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function notifyScenarioChange(scenarios: readonly OperatorScenario[]): void {
+  globalThis.dispatchEvent?.(
+    new CustomEvent(OPERATOR_SCENARIOS_EVENT, {
+      detail: { count: scenarios.length }
+    })
+  );
 }
 
 function boundedText(value: unknown, limit: number): string {
@@ -270,6 +279,7 @@ export function saveOperatorScenarios(
     .map((scenario) => clone(scenario));
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(uniqueScenarios));
+  notifyScenarioChange(uniqueScenarios);
   return uniqueScenarios;
 }
 
