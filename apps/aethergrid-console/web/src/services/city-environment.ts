@@ -25,6 +25,46 @@ interface EnvironmentResponse {
   current?: Partial<AtmosphericCurrentState> | null;
 }
 
+interface ForecastReceipt {
+  provider?: string;
+  dataset?: string;
+  retrievedAt?: string | null;
+  modelRunAt?: string | null;
+  live?: boolean;
+  stale?: boolean;
+  fallback?: boolean;
+  attribution?: string | null;
+}
+
+export interface AtmosphericForecastSeries {
+  coordinate: {
+    latitude: number;
+    longitude: number;
+  };
+  provider: string | null;
+  dataset: string | null;
+  fetchedAt: string | null;
+  modelRunAt: string | null;
+  attribution: string | null;
+  sourceBacked: boolean;
+  stale: boolean;
+  samples: readonly AtmosphericCurrentState[];
+}
+
+function object(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function text(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function boolean(value: unknown): boolean {
+  return value === true;
+}
+
 function finiteOrNull(value: unknown): number | null {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
@@ -39,6 +79,173 @@ function modelTimeToIso(value: string | null | undefined, utcOffsetSeconds: numb
   const asUtc = Date.parse(`${value}Z`);
   if (!Number.isFinite(asUtc)) return null;
   return new Date(asUtc - utcOffsetSeconds * 1000).toISOString();
+}
+
+export async function loadCityEnvironmentForecast(
+  latitude: number,
+  longitude: number,
+  signal?: AbortSignal
+): Promise<AtmosphericForecastSeries> {
+  const query = new URLSearchParams({
+    lat: String(latitude),
+    lon: String(longitude)
+  });
+  const response = await fetch(`/api/aethergrid/weather/forecast?${query.toString()}`, {
+    headers: { accept: 'application/json' },
+    signal
+  });
+  if (!response.ok) {
+    throw new Error(`city forecast request failed with HTTP ${response.status}`);
+  }
+
+  const payload = object(await response.json());
+  const receipt = object(payload.receipt) as ForecastReceipt;
+  const envelope = object(payload.data ?? payload);
+  const providerData = object(envelope.data ?? envelope);
+  const source = object(envelope.source);
+
+  const provider =
+    text(receipt.provider) ??
+    text(source.provider) ??
+    text(envelope.provider);
+  const sourceBacked =
+    boolean(receipt.live) ||
+    (boolean(source.live) && receipt.fallback !== true);
+  const stale = boolean(receipt.stale);
+  const fetchedAt =
+    text(receipt.retrievedAt) ??
+    text(source.retrievedAt) ??
+    text(source.fetchedAt);
+  const modelRunAt =
+    text(receipt.modelRunAt) ??
+    text(source.modelRunAt) ??
+    text(source.modelTime);
+  const attribution =
+    text(receipt.attribution) ??
+    text(source.attribution) ??
+    provider;
+
+  let samples: AtmosphericCurrentState[] = [];
+  const openMeteoHourly = Array.isArray(envelope.hourly)
+    ? envelope.hourly
+    : null;
+
+  if (openMeteoHourly) {
+    samples = openMeteoHourly.map((item) => {
+      const row = object(item);
+      return {
+        time: text(row.eventTime),
+        temperatureC: finiteOrNull(row.temperatureC),
+        apparentTemperatureC: null,
+        relativeHumidityPercent: finiteOrNull(row.relativeHumidityPercent),
+        surfacePressureHpa: null,
+        weatherCode: finiteOrNull(row.weatherCode),
+        cloudCoverPercent: null,
+        isDay: null,
+        precipitationMm: null,
+        windSpeedKph: finiteOrNull(row.windSpeedKph),
+        windDirectionDegrees: null,
+        windGustsKph: null,
+        shortwaveRadiationWm2: null,
+        visibilityM: null
+      };
+    });
+  } else {
+    const timelines = object(providerData.timelines);
+    const tomorrowHourly = Array.isArray(timelines.hourly)
+      ? timelines.hourly
+      : [];
+    samples = tomorrowHourly.map((item) => {
+      const row = object(item);
+      const values = object(row.values);
+      return {
+        time: text(row.time),
+        temperatureC: finiteOrNull(values.temperature),
+        apparentTemperatureC: finiteOrNull(values.temperatureApparent),
+        relativeHumidityPercent: finiteOrNull(values.humidity),
+        surfacePressureHpa: finiteOrNull(values.pressureSurfaceLevel),
+        weatherCode: null,
+        cloudCoverPercent: finiteOrNull(values.cloudCover),
+        isDay: null,
+        precipitationMm: finiteOrNull(values.rainIntensity),
+        windSpeedKph:
+          finiteOrNull(values.windSpeed) == null
+            ? null
+            : Number(values.windSpeed) * 3.6,
+        windDirectionDegrees: finiteOrNull(values.windDirection),
+        windGustsKph:
+          finiteOrNull(values.windGust) == null
+            ? null
+            : Number(values.windGust) * 3.6,
+        shortwaveRadiationWm2: null,
+        visibilityM:
+          finiteOrNull(values.visibility) == null
+            ? null
+            : Number(values.visibility) * 1000
+      };
+    });
+  }
+
+  if (!samples.length) {
+    throw new Error('weather forecast returned no provider samples');
+  }
+
+  return {
+    coordinate: { latitude, longitude },
+    provider,
+    dataset: text(receipt.dataset),
+    fetchedAt,
+    modelRunAt,
+    attribution,
+    sourceBacked,
+    stale,
+    samples
+  };
+}
+
+export function selectCityEnvironmentForecast(
+  series: AtmosphericForecastSeries,
+  cursorIso: string,
+  utcOffsetSeconds = 0,
+  maxDistanceMs = 90 * 60 * 1000
+): AtmosphericOverlaySnapshot | null {
+  const cursorTime = Date.parse(cursorIso);
+  if (!Number.isFinite(cursorTime)) return null;
+
+  let selected: AtmosphericCurrentState | null = null;
+  let selectedIso: string | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (const sample of series.samples) {
+    const sourceIso = modelTimeToIso(sample.time, utcOffsetSeconds);
+    if (!sourceIso) continue;
+    const distance = Math.abs(Date.parse(sourceIso) - cursorTime);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      selected = sample;
+      selectedIso = sourceIso;
+    }
+  }
+
+  if (!selected || !selectedIso || bestDistance > maxDistanceMs) return null;
+
+  return {
+    id: `forecast:${series.coordinate.latitude.toFixed(5)}:${series.coordinate.longitude.toFixed(5)}:${selectedIso}`,
+    coordinate: { ...series.coordinate },
+    eventTime: selectedIso,
+    sourceTime: selectedIso,
+    fetchedAt: series.fetchedAt,
+    live: series.sourceBacked && !series.stale,
+    stale: series.stale,
+    fallback: !series.sourceBacked,
+    attribution: series.attribution ?? series.provider,
+    timezone: null,
+    utcOffsetSeconds,
+    current: {
+      ...selected,
+      time: selectedIso
+    }
+  };
 }
 
 export async function loadCityEnvironment(
@@ -75,6 +282,7 @@ export async function loadCityEnvironment(
     sourceTime,
     fetchedAt,
     live: source.live === true,
+    stale: false,
     fallback: source.live !== true,
     attribution: source.attribution ?? source.provider ?? null,
     timezone: payload.timezone ?? null,
