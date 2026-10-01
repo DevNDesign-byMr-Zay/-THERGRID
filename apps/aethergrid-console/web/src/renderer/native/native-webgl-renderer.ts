@@ -927,7 +927,11 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
           edge.properties?.analysisType === 'workset-geometry';
         const scenarioModelEdge =
           edge.properties?.analysisType === 'scenario-model';
-        if (scenarioModelEdge) {
+        const nwsBoundary =
+          edge.properties?.eventType === 'nws-alert-boundary';
+        if (nwsBoundary) {
+          color = rgba(hazardHex(edge.properties?.severity), 0.88);
+        } else if (scenarioModelEdge) {
           color = rgba('#d991ff', 0.86);
         } else if (worksetGeometryEdge) {
           color = rgba('#63ffc5', 0.78);
@@ -1013,12 +1017,12 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
           ? rgba(hazardHex(node.properties?.severity), 0.96)
           : urbanLight
             ? rgba(
-              '#ffd37d',
-              0.48 +
-                (node.intensity ?? 0.5) * 0.22 +
-                lightPulse * 0.2
-            )
-          : operatorIncident
+                '#ffd37d',
+                0.48 +
+                  (node.intensity ?? 0.5) * 0.22 +
+                  lightPulse * 0.2
+              )
+            : operatorIncident
             ? rgba(incidentColor, 0.96)
             : scenarioModelNode
               ? rgba('#d991ff', 0.96)
