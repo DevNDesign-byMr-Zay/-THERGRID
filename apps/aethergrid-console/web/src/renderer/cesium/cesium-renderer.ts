@@ -12,6 +12,7 @@ import {
   Math as CesiumMath,
   Terrain,
   Viewer,
+  createGooglePhotorealistic3DTileset,
   createOsmBuildingsAsync
 } from 'cesium';
 
@@ -64,6 +65,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #container: HTMLElement | null = null;
   #viewer: Viewer | null = null;
   #buildings: Cesium3DTileset | null = null;
+  #realityTiles: Cesium3DTileset | null = null;
   #grid: GeodeticGridLayer | null = null;
   #cameraJourney: CameraJourneyController | null = null;
   #visualController: VisualModeController | null = null;
@@ -72,6 +74,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #solarLighting: SolarLightingController | null = null;
   #overlays = new Map<string, NetworkOverlayLayer>();
   #visualMode: VisualMode = 'solid';
+  #appliedVisualMode: VisualMode = 'solid';
   #performanceTier: SpatialPerformanceTier = 'balanced';
   #selectedTile: { feature: Cesium3DTileFeature; color: Color } | null = null;
   #layers = new Map<string, LayerState>();
@@ -142,6 +145,25 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       this.#visualController.setBuildings(null);
     }
 
+    if (config.realityEnabled) {
+      try {
+        this.#realityTiles = await createGooglePhotorealistic3DTileset();
+        this.#realityTiles.show = false;
+        this.#viewer.scene.primitives.add(this.#realityTiles);
+        this.#visualController.setRealityTiles(this.#realityTiles);
+      } catch (error) {
+        this.#realityTiles = null;
+        this.#visualController.setRealityTiles(
+          null,
+          error instanceof Error
+            ? `Photorealistic 3D Tiles unavailable: ${error.message}`
+            : 'Photorealistic 3D Tiles unavailable'
+        );
+      }
+    } else {
+      this.#visualController.setRealityTiles(null);
+    }
+
     this.#ready = true;
     this.setVisualMode(this.#visualMode);
     this.#applyLayerVisibility();
@@ -201,10 +223,11 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#visualMode = mode;
     if (!this.#visualController) return;
     const result = this.#visualController.apply(mode);
-    this.#grid?.setVisualMode(mode);
+    this.#appliedVisualMode = result.applied;
+    this.#grid?.setVisualMode(result.applied);
     this.#degraded = result.degraded;
     this.#reason = result.reason;
-    if (this.#buildings) this.#buildings.show = this.#buildingsShouldShow();
+    this.#applyLayerVisibility();
   }
 
   setPerformanceTier(tier: SpatialPerformanceTier): void {
@@ -323,7 +346,10 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       return {
         id: featureId(picked) ?? 'cesium-feature',
         kind: String(picked.getProperty('building') || picked.getProperty('type') || '3d-tile'),
-        source: 'cesium-osm-buildings',
+        source:
+          this.#appliedVisualMode === 'reality'
+            ? 'google-photorealistic-3d-tiles'
+            : 'cesium-osm-buildings',
         latitude: cartographic ? CesiumMath.toDegrees(cartographic.latitude) : undefined,
         longitude: cartographic ? CesiumMath.toDegrees(cartographic.longitude) : undefined,
         heightMeters: cartographic?.height,
@@ -400,6 +426,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     if (this.#viewer && !this.#viewer.isDestroyed()) this.#viewer.destroy();
     this.#viewer = null;
     this.#buildings = null;
+    this.#realityTiles = null;
     this.#time = null;
     this.#ready = false;
   }
@@ -444,11 +471,17 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
         next.buildingSse * detailMultiplier;
       this.#buildings.show = this.#buildingsShouldShow();
     }
+    if (this.#realityTiles) {
+      this.#realityTiles.maximumScreenSpaceError =
+        next.buildingSse * detailMultiplier;
+    }
+    this.#applyLayerVisibility();
     viewer.scene.requestRender();
   }
 
   #buildingsShouldShow(): boolean {
     return (
+      this.#appliedVisualMode !== 'reality' &&
       this.#layerVisible('buildings', true) &&
       (this.#detailLevel === 'city' || this.#detailLevel === 'district')
     );
@@ -465,8 +498,15 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
   #applyLayerVisibility(): void {
     if (!this.#viewer) return;
-    this.#viewer.scene.globe.show = this.#layerVisible('terrain', true);
-    if (this.#buildings) this.#buildings.show = this.#buildingsShouldShow();
+    const realityActive =
+      this.#appliedVisualMode === 'reality' && this.#realityTiles != null;
+    this.#viewer.scene.globe.show = realityActive
+      ? false
+      : this.#layerVisible('terrain', true);
+    if (this.#realityTiles) this.#realityTiles.show = realityActive;
+    if (this.#buildings) {
+      this.#buildings.show = realityActive ? false : this.#buildingsShouldShow();
+    }
     this.#grid?.setVisible(this.#layerVisible('grid', true));
     this.#weather?.setVisible(this.#layerVisible('weather', true));
     this.#airQuality?.setVisible(this.#layerVisible('air', true));
