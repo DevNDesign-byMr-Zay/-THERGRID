@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
   createOperatorSession,
@@ -10,9 +10,14 @@ import {
   type OperatorSessionWorkspace,
   type OperatorWorkspaceSession
 } from '../services/operator-session';
+import {
+  loadSpatialWorkset,
+  SPATIAL_WORKSET_EVENT,
+  type SpatialWorksetItem
+} from '../services/spatial-workset';
 
 interface OperatorSessionPanelProps {
-  current: OperatorSessionWorkspace;
+  current: Omit<OperatorSessionWorkspace, 'workset'>;
   onRestore(session: OperatorWorkspaceSession): void;
 }
 
@@ -28,19 +33,27 @@ export function OperatorSessionPanel({
   const [sessions, setSessions] =
     useState<OperatorWorkspaceSession[]>(loadOperatorSessions);
   const [name, setName] = useState('');
+  const [workset, setWorkset] =
+    useState<SpatialWorksetItem[]>(loadSpatialWorkset);
+
+  useEffect(() => {
+    const sync = () => setWorkset(loadSpatialWorkset());
+    globalThis.addEventListener?.(SPATIAL_WORKSET_EVENT, sync);
+    return () => globalThis.removeEventListener?.(SPATIAL_WORKSET_EVENT, sync);
+  }, []);
 
   const activeSummary = useMemo(
     () => ({
-      workset: current.workset.length,
+      workset: workset.length,
       incidents: current.incidents.length,
       comparisons:
         Number(Boolean(current.observationA)) + Number(Boolean(current.observationB))
     }),
-    [current]
+    [current, workset]
   );
 
   const save = () => {
-    const session = createOperatorSession(name, current);
+    const session = createOperatorSession(name, { ...current, workset });
     const next = saveOperatorSessions([
       session,
       ...sessions.filter((candidate) => candidate.name !== session.name)
