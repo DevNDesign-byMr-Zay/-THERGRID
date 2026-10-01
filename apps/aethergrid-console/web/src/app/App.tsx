@@ -1867,9 +1867,32 @@ export function App() {
           </div>
           <div className="intel-workspace intel-scenario">
             <ScenarioPanel
-            activeTemporalMode={temporal.mode}
-            onScenarioApplied={(scenarioId) => clock.setMode('scenario', scenarioId)}
-              onReturnLive={() => clock.goLive()}
+              activeTemporalMode={temporal.mode}
+              onScenarioApplied={(scenarioId, visual) => {
+                setActiveOperatorScenario(null);
+                setScenarioVisual(visual);
+                clock.setMode('scenario', scenarioId);
+              }}
+              onReturnLive={() => {
+                setActiveOperatorScenario(null);
+                setScenarioVisual(null);
+                clock.goLive();
+              }}
+            />
+            <ScenarioComposerPanel
+              context={{
+                region: scope === 'world' ? 'GLOBAL' : city.name,
+                temporal: temporalInstant,
+                workset: spatialWorkset,
+                incidents: spatialIncidents,
+                observationA,
+                observationB,
+                geometry: worksetGeometry
+              }}
+              activeScenarioId={activeOperatorScenario?.id ?? null}
+              onActivate={activateOperatorScenario}
+              onDeactivate={deactivateOperatorScenario}
+              onAnalyze={analyzeOperatorScenario}
             />
           </div>
           <div className="intel-workspace intel-quantum">
