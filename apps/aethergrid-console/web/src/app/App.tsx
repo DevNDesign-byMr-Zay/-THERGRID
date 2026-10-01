@@ -868,7 +868,8 @@ export function App() {
       energy:
         scope === 'city' && powerOverlay
           ? powerOverlay.nodes.length + powerOverlay.edges.length
-          : 0
+          : 0,
+      annotations: spatialIncidents.length
     } as Record<string, number>;
   }, [
     semanticOverlays,
@@ -879,7 +880,8 @@ export function App() {
     liveContext,
     temporal.mode,
     windOverlay,
-    powerOverlay
+    powerOverlay,
+    spatialIncidents
   ]);
 
   const currentBookmark = useMemo(
