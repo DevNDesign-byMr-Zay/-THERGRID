@@ -88,10 +88,11 @@ export function OperationalDataPanel({
   airQualityCurrent,
   seismicCurrent
 }: OperationalDataPanelProps) {
+  const bindingScopeId = `coord:${latitude.toFixed(5)}:${longitude.toFixed(5)}`;
   const [snapshot, setSnapshot] = useState<OperationalSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [bindings, setBindings] = useState<OperationalSourceBindings>(() =>
-    loadOperationalSourceBindings(cityId)
+    loadOperationalSourceBindings(bindingScopeId)
   );
   const [gaugeDraft, setGaugeDraft] = useState(bindings.gaugeId ?? '');
   const [energyRegionDraft, setEnergyRegionDraft] = useState(
@@ -102,12 +103,12 @@ export function OperationalDataPanel({
   const sampleKey = temporalMode === 'live' ? 'live' : cursorIso;
 
   useEffect(() => {
-    const next = loadOperationalSourceBindings(cityId);
+    const next = loadOperationalSourceBindings(bindingScopeId);
     setBindings(next);
     setGaugeDraft(next.gaugeId ?? '');
     setEnergyRegionDraft(next.energyRegion ?? '');
     setBindingError(null);
-  }, [cityId]);
+  }, [bindingScopeId]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -163,7 +164,7 @@ export function OperationalDataPanel({
 
   const applyBindings = () => {
     try {
-      const next = saveOperationalSourceBindings(cityId, {
+      const next = saveOperationalSourceBindings(bindingScopeId, {
         gaugeId: gaugeDraft,
         energyRegion: energyRegionDraft
       });
@@ -177,7 +178,7 @@ export function OperationalDataPanel({
   };
 
   const clearBindings = () => {
-    const next = clearOperationalSourceBindings(cityId);
+    const next = clearOperationalSourceBindings(bindingScopeId);
     setBindings(next);
     setGaugeDraft('');
     setEnergyRegionDraft('');
