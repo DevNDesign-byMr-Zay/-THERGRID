@@ -9,9 +9,7 @@ async function text(path) {
 }
 
 test('v4 spatial investigations are bounded local operator assessments and never authoritative findings', async () => {
-  const service = await text(
-    'apps/aethergrid-console/web/src/services/spatial-investigation.ts',
-  );
+  const service = await text('apps/aethergrid-console/web/src/services/spatial-investigation.ts');
 
   assert.match(service, /aethergrid\.operator\.spatial-investigations\.v4/u);
   assert.match(service, /MAX_SPATIAL_INVESTIGATIONS = 6/u);
@@ -26,9 +24,7 @@ test('v4 spatial investigations are bounded local operator assessments and never
 });
 
 test('v4 investigations link existing source and operator records by reference instead of copying backend evidence', async () => {
-  const service = await text(
-    'apps/aethergrid-console/web/src/services/spatial-investigation.ts',
-  );
+  const service = await text('apps/aethergrid-console/web/src/services/spatial-investigation.ts');
 
   assert.match(service, /canonicalEntityIds/u);
   assert.match(service, /incidentIds/u);
@@ -41,9 +37,7 @@ test('v4 investigations link existing source and operator records by reference i
 });
 
 test('v4 investigation geometry snapshots remain explicitly non-authoritative analytical context', async () => {
-  const service = await text(
-    'apps/aethergrid-console/web/src/services/spatial-investigation.ts',
-  );
+  const service = await text('apps/aethergrid-console/web/src/services/spatial-investigation.ts');
 
   assert.match(service, /SpatialInvestigationGeometrySnapshot/u);
   assert.match(service, /relationshipBasis/u);
@@ -53,9 +47,7 @@ test('v4 investigation geometry snapshots remain explicitly non-authoritative an
 });
 
 test('v4 investigation export warns that hypothesis assessments are human-entered and evidence must be revalidated', async () => {
-  const service = await text(
-    'apps/aethergrid-console/web/src/services/spatial-investigation.ts',
-  );
+  const service = await text('apps/aethergrid-console/web/src/services/spatial-investigation.ts');
 
   assert.match(service, /operator-spatial-investigation-export\.v1/u);
   assert.match(service, /Hypothesis assessments are human-entered analytical judgments/u);
@@ -92,11 +84,9 @@ test('v4 investigation board labels supported contradicted and inconclusive as o
 });
 
 test('v4 Evidence panel can hand a selected provenance record to the investigation board without mutating evidence', async () => {
-  const evidence = await text(
-    'apps/aethergrid-console/web/src/components/EvidencePanel.tsx',
-  );
+  const evidence = await text('apps/aethergrid-console/web/src/components/EvidencePanel.tsx');
 
-  assert.match(evidence, /onSelectEvidence\?\(record\)/u);
+  assert.match(evidence, /onSelectEvidence\?\.\(record\)/u);
   assert.match(evidence, /loadEvidenceRecord\(lookup\)/u);
   assert.match(evidence, /setSelected\(record\)/u);
   assert.doesNotMatch(evidence, /record\.details\s*=/u);
