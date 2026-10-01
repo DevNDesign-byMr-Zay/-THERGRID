@@ -121,6 +121,9 @@ test('v4 app activates local scenarios in scenario time and synchronizes scenari
   assert.match(app, /clock\.scrub\(scenario\.startIso, 'scenario'\)/u);
   assert.match(app, /setScenarioVisual\(comparison\.visual\)/u);
   assert.match(app, /<ScenarioComposerPanel/u);
+  assert.match(app, /const restoreScenarioFromTemporalEvent/u);
+  assert.match(app, /savedOperatorScenarios\.find/u);
+  assert.match(app, /onScenarioEvent=\{restoreScenarioFromTemporalEvent\}/u);
   assert.match(app, /onScenarioApplied=\{\(scenarioId, visual\)/u);
   assert.match(app, /setScenarioVisual\(visual\)/u);
 });
