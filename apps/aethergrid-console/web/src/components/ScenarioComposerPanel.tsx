@@ -84,22 +84,22 @@ export function ScenarioComposerPanel({
   const [assumption, setAssumption] = useState('');
 
   useEffect(() => {
-    setScenarios((current) => {
-      let changed = false;
-      const next = current.map((scenario) => {
-        const expectedStatus =
-          scenario.id === activeScenarioId
-            ? 'active'
-            : scenario.status === 'active'
-              ? 'draft'
-              : scenario.status;
-        if (expectedStatus === scenario.status) return scenario;
-        changed = true;
-        return setOperatorScenarioStatus(scenario, expectedStatus);
-      });
-      return changed ? saveOperatorScenarios(next) : current;
+    let changed = false;
+    const nextScenarios = scenarios.map((scenario) => {
+      const expectedStatus =
+        scenario.id === activeScenarioId
+          ? 'active'
+          : scenario.status === 'active'
+            ? 'draft'
+            : scenario.status;
+      if (expectedStatus === scenario.status) return scenario;
+      changed = true;
+      return setOperatorScenarioStatus(scenario, expectedStatus);
     });
-  }, [activeScenarioId]);
+    if (changed) {
+      setScenarios(saveOperatorScenarios(nextScenarios));
+    }
+  }, [activeScenarioId, scenarios]);
 
   const selected = useMemo(
     () => scenarios.find((scenario) => scenario.id === selectedId) ?? null,
