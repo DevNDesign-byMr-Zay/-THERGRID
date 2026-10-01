@@ -907,7 +907,15 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
           edge.kind === 'flow' && edge.properties?.vectorType === 'wind';
         const worksetGeometryEdge =
           edge.properties?.analysisType === 'workset-geometry';
-        if (worksetGeometryEdge) {
+        const scenarioModelEdge =
+          edge.properties?.analysisType === 'scenario-model';
+        const worksetGeometryEdge =
+          edge.properties?.analysisType === 'workset-geometry';
+        const scenarioModelEdge =
+          edge.properties?.analysisType === 'scenario-model';
+        if (scenarioModelEdge) {
+          color = rgba('#d991ff', 0.86);
+        } else if (worksetGeometryEdge) {
           color = rgba('#63ffc5', 0.78);
         } else if (windEdge && this.#time.mode === 'live') {
           const timestamp = Date.parse(this.#time.iso);
@@ -959,6 +967,10 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
         const point = this.#project(node.position);
         const urbanLight =
           node.properties?.presentationType === 'urban-illumination';
+        const worksetGeometryNode =
+          node.properties?.analysisType === 'workset-geometry';
+        const scenarioModelNode =
+          node.properties?.analysisType === 'scenario-model';
         const timestamp = Date.parse(this.#time.iso);
         const phase = Number.isFinite(timestamp) ? timestamp / 1000 : 0;
         const lightPulse =
@@ -973,6 +985,8 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
           node.properties?.eventType === 'operator-incident';
         const worksetGeometryNode =
           node.properties?.analysisType === 'workset-geometry';
+        const scenarioModelNode =
+          node.properties?.analysisType === 'scenario-model';
         const incidentSeverity = String(node.properties?.severity ?? 'info');
         const incidentColor =
           incidentSeverity === 'critical'
@@ -993,9 +1007,11 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
             )
           : operatorIncident
             ? rgba(incidentColor, 0.96)
-            : worksetGeometryNode
-              ? rgba('#63ffc5', 0.96)
-              : this.#visualColor(layerColor(snapshot.layerId, node.kind));
+            : scenarioModelNode
+              ? rgba('#d991ff', 0.96)
+              : worksetGeometryNode
+                ? rgba('#63ffc5', 0.96)
+                : this.#visualColor(layerColor(snapshot.layerId, node.kind));
         const selected = this.#isSelectedSource(
           snapshot.layerId,
           node.id,
@@ -1204,9 +1220,13 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
         context.strokeStyle = selected
           ? '#ffffff'
           : css(
-              windEdge && this.#time.mode === 'live'
-                ? rgba('#7de9ff', 0.34 + pulse * 0.48)
-                : base
+              scenarioModelEdge
+                ? rgba('#d991ff', 0.86)
+                : worksetGeometryEdge
+                  ? rgba('#63ffc5', 0.78)
+                  : windEdge && this.#time.mode === 'live'
+                    ? rgba('#7de9ff', 0.34 + pulse * 0.48)
+                    : base
             );
         context.lineWidth = selected
           ? 3
@@ -1265,16 +1285,20 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
         context.fillStyle = selected
           ? '#ffffff'
           : css(
-              urbanLight
-                ? rgba(
-                    '#ffd37d',
-                    0.48 +
-                      (node.intensity ?? 0.5) * 0.22 +
-                      lightPulse * 0.2
-                  )
-                : this.#visualColor(
-                    layerColor(snapshot.layerId, node.kind)
-                  )
+              scenarioModelNode
+                ? rgba('#d991ff', 0.96)
+                : worksetGeometryNode
+                  ? rgba('#63ffc5', 0.96)
+                  : urbanLight
+                    ? rgba(
+                        '#ffd37d',
+                        0.48 +
+                          (node.intensity ?? 0.5) * 0.22 +
+                          lightPulse * 0.2
+                      )
+                    : this.#visualColor(
+                        layerColor(snapshot.layerId, node.kind)
+                      )
             );
         context.beginPath();
         context.arc(x, y, selected ? 6 : 3.5 + clamp(node.intensity ?? 0.5, 0, 1) * 2.5, 0, Math.PI * 2);
