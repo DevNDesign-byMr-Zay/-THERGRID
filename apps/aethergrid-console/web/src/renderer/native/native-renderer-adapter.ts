@@ -8,6 +8,7 @@ import type {
   LayerState,
   SpatialFeatureSelection,
   SpatialPickPoint,
+  SpatialPerformanceTier,
   SpatialRenderer,
   SpatialRendererConfig,
   SpatialRendererStatus,
@@ -24,6 +25,7 @@ export interface LegacyNativeSpatialBridge {
   setLayers?(layers: readonly LayerState[]): void;
   selectFeature?(id: string | null): void;
   setVisualMode?(mode: VisualMode): void;
+  setPerformanceTier?(tier: SpatialPerformanceTier): void;
   applyOverlay?(snapshot: SpatialOverlaySnapshot): void;
   clearOverlay?(layerId: string): void;
   applyAtmosphere?(snapshot: AtmosphericOverlaySnapshot): void;
@@ -44,6 +46,7 @@ export class NativeSpatialRendererAdapter implements SpatialRenderer {
   #ready = false;
   #bridgeAttached: boolean;
   #visualMode: VisualMode = 'holographic';
+  #performanceTier: SpatialPerformanceTier = 'balanced';
 
   constructor(bridge: LegacyNativeSpatialBridge = {}) {
     this.#bridge = bridge;
@@ -79,6 +82,11 @@ export class NativeSpatialRendererAdapter implements SpatialRenderer {
   setVisualMode(mode: VisualMode): void {
     this.#visualMode = mode;
     this.#bridge.setVisualMode?.(mode);
+  }
+
+  setPerformanceTier(tier: SpatialPerformanceTier): void {
+    this.#performanceTier = tier;
+    this.#bridge.setPerformanceTier?.(tier);
   }
 
   applyOverlay(snapshot: SpatialOverlaySnapshot): void {
@@ -122,6 +130,7 @@ export class NativeSpatialRendererAdapter implements SpatialRenderer {
       engine: this.engine,
       ready: this.#ready,
       visualMode: this.#visualMode,
+      performanceTier: this.#performanceTier,
       degraded: !this.#bridgeAttached,
       reason: this.#bridgeAttached ? null : 'Verified v3 native renderer bridge is not attached to the migration shell yet'
     };
