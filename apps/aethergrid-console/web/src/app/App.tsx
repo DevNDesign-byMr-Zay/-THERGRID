@@ -301,6 +301,15 @@ export function App() {
     () => spatialIncidentsToOverlay(spatialIncidents, temporalInstant),
     [spatialIncidents, temporalInstant]
   );
+  const worksetGeometry = useMemo(
+    () => buildSpatialWorksetGeometry(spatialWorkset),
+    [spatialWorkset]
+  );
+
+  const worksetGeometryOverlay = useMemo(
+    () => spatialWorksetGeometryToOverlay(worksetGeometry, temporalInstant),
+    [worksetGeometry, temporalInstant]
+  );
 
   const spatialComparison = useMemo(
     () =>
@@ -359,10 +368,16 @@ export function App() {
   );
 
   useEffect(() => {
+    const syncWorkset = () => setSpatialWorkset(loadSpatialWorkset());
+    globalThis.addEventListener?.(SPATIAL_WORKSET_EVENT, syncWorkset);
+    return () =>
+      globalThis.removeEventListener?.(SPATIAL_WORKSET_EVENT, syncWorkset);
+  }, []);
+
+  useEffect(() => {
     const controller = new AbortController();
 
-    const refresh = () => {
-      void loadGlobalLiveContext(controller.signal)
+    const refresh = () => {      void loadGlobalLiveContext(controller.signal)
         .then(setGlobalLive)
         .catch(() => undefined);
     };
