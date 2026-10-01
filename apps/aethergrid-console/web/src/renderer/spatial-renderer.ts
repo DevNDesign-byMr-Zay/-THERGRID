@@ -15,6 +15,12 @@ export type VisualMode =
 
 export type TemporalMode = 'live' | 'historical' | 'forecast' | 'scenario';
 export type SpatialInteractionMode = 'inspect' | 'measure';
+export type SpatialPerformanceMode =
+  | 'auto'
+  | 'quality'
+  | 'balanced'
+  | 'efficiency';
+export type SpatialPerformanceTier = Exclude<SpatialPerformanceMode, 'auto'>;
 
 export interface SpatialTarget {
   id?: string;
@@ -123,6 +129,7 @@ export interface SpatialRendererStatus {
   busy?: boolean;
   journeyPhase?: SpatialJourneyPhase;
   detailLevel?: SpatialDetailLevel;
+  performanceTier?: SpatialPerformanceTier;
   solar?: SpatialSolarStatus | null;
   reason?: string | null;
 }
@@ -137,6 +144,7 @@ export interface SpatialRenderer {
   setLayers(layers: readonly LayerState[]): void;
   selectFeature(id: string | null): void;
   setVisualMode(mode: VisualMode): void;
+  setPerformanceTier(tier: SpatialPerformanceTier): void;
   applyOverlay(snapshot: SpatialOverlaySnapshot): void;
   clearOverlay(layerId: string): void;
   applyAtmosphere(snapshot: AtmosphericOverlaySnapshot): void;
