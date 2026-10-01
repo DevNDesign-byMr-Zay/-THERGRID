@@ -26,9 +26,7 @@ test('v4 semantic identity prefers explicit GERS but never fabricates a cross-so
 });
 
 test('v4 mapped scene segments bind back to their real source feature IDs', async () => {
-  const overlays = await text(
-    'apps/aethergrid-console/web/src/services/city-power-overlay.ts',
-  );
+  const overlays = await text('apps/aethergrid-console/web/src/services/city-power-overlay.ts');
 
   assert.match(overlays, /sourceFeatureId: featureId/u);
   assert.match(overlays, /sourceFeatureId: area\.id/u);
@@ -65,9 +63,7 @@ test('v4 operator context carries canonical identity into selection AI and frame
 });
 
 test('v4 renderer manager retains the selected scene feature across engine activation', async () => {
-  const manager = await text(
-    'apps/aethergrid-console/web/src/renderer/renderer-manager.ts',
-  );
+  const manager = await text('apps/aethergrid-console/web/src/renderer/renderer-manager.ts');
   const overlayLayer = await text(
     'apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts',
   );
