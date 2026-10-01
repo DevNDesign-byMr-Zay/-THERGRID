@@ -182,12 +182,15 @@ test('v4 live atmosphere is source-backed and drives Cesium clouds and fog', asy
   assert.match(weatherLayer, /windDirectionDegrees/u);
   assert.match(weatherLayer, /ParticleSystem/u);
   assert.match(weatherLayer, /BoxEmitter/u);
-  assert.match(weatherLayer, /time\.mode !== 'live'/u);
+  assert.match(
+    weatherLayer,
+    /time\.mode !== 'live' && time\.mode !== 'forecast'/u,
+  );
   assert.match(app, /ATMOSPHERE/u);
   assert.match(app, /loadCityEnvironment/u);
   assert.match(
     app,
-    /Current weather visuals are hidden until a source supports the selected time/u,
+    /Current weather is hidden outside LIVE; provider forecast is available in FORECAST mode/u,
   );
 });
 
@@ -856,23 +859,21 @@ test('v4 renderer switching is reversible and preserves safe fallback diagnostic
   assert.match(viewport, /await manager\.flyTo\(target\)/u);
 });
 
-test('v4 temporal modes hide current-only environment feeds outside live time', async () => {
+test('v4 temporal modes keep current-only feeds live-only while allowing source-backed forecast weather', async () => {
   const [app, rail] = await Promise.all([
     text('apps/aethergrid-console/web/src/app/App.tsx'),
     text('apps/aethergrid-console/web/src/components/TemporalRail.tsx'),
   ]);
 
-  assert.match(
-    app,
-    /atmosphere=\{\s*scope === 'city' && temporal\.mode === 'live' \? atmosphere : null\s*\}/u,
-  );
-  assert.match(app, /environment:[\s\S]{0,180}temporal\.mode === 'live'/u);
+  assert.match(app, /atmosphere=\{scope === 'city' \? activeAtmosphere : null\}/u);
+  assert.match(app, /forecast: temporal\.mode === 'forecast'/u);
   assert.match(app, /liveContext:[\s\S]{0,180}temporal\.mode === 'live'/u);
   assert.match(app, /temporal\.mode !== 'live'[\s\S]{0,120}\? 0/u);
   assert.match(rail, /LIVE SOURCES/u);
   assert.match(rail, /STATIC MAP CONTEXT/u);
+  assert.match(rail, /FORECAST \+ STATIC/u);
+  assert.match(rail, /Provider weather sample when available/u);
   assert.match(rail, /MODELED \+ STATIC/u);
-  assert.match(rail, /current weather\/AQI\/seismic hidden/u);
 });
 
 test('v4 live 4d clock advances automatically while non-live cursors remain independent', async () => {
@@ -902,9 +903,10 @@ test('v4 thunderstorm presentation is source-bounded and explicitly synthetic in
   assert.match(atmosphere, /windGustsKph/u);
   assert.match(atmosphere, /cadenceSeconds/u);
   assert.match(atmosphere, /flashOpacity/u);
-  assert.match(viewport, /time\.mode === 'live'/u);
+  assert.match(viewport, /time\.mode === 'live' \|\| time\.mode === 'forecast'/u);
   assert.match(viewport, /stormPresentation\(atmosphere, time\.iso\)/u);
-  assert.match(viewport, /SOURCE WEATHER · SYNTHETIC FLASH TIMING/u);
+  assert.match(viewport, /FORECAST WEATHER/u);
+  assert.match(viewport, /SYNTHETIC FLASH TIMING/u);
 });
 
 test('v4 live wind field is source-backed spatial geometry shared by Cesium and native failover', async () => {
@@ -996,7 +998,7 @@ test('v4 documentation and promotion gates describe only implemented spatial cap
   assert.match(readme, /v4 spatial operator web foundation/u);
   assert.match(readme, /does \*\*not\*\* replace the maintained packaged v3 surface/u);
   assert.match(readme, /real source-backed native WebGL fallback/u);
-  assert.match(readme, /current weather, AQI and seismic context are hidden outside LIVE mode/u);
+  assert.match(readme, /weather may render in FORECAST/u);
   assert.match(readme, /PRESENTATION|presentation-only/u);
 
   assert.match(plan, /Batch 18 — v4 spatial operator foundation/u);
