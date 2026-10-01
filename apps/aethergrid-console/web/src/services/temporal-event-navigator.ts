@@ -1,11 +1,14 @@
 import type { TemporalMode } from '../renderer/spatial-renderer';
 import type { SpatialIncident } from './spatial-incidents';
+import type { OperatorScenario } from './operator-scenario';
 import type { SpatialObservation } from './spatial-comparison';
 
 export type TemporalNavigatorEventType =
   | 'operator-incident'
   | 'observation-a'
-  | 'observation-b';
+  | 'observation-b'
+  | 'scenario-start'
+  | 'scenario-end';
 
 export interface TemporalNavigatorEvent {
   id: string;
@@ -17,7 +20,7 @@ export interface TemporalNavigatorEvent {
   originalMode: TemporalMode;
   scenarioId: string | null;
   authoritative: false;
-  provenance: 'operator-local' | 'captured-frame';
+  provenance: 'operator-local' | 'captured-frame' | 'modeled-scenario';
   severity: string | null;
   status: string | null;
   canonicalId: string | null;
@@ -26,6 +29,7 @@ export interface TemporalNavigatorEvent {
 export interface TemporalNavigatorFilters {
   incidents: boolean;
   captures: boolean;
+  scenarios: boolean;
 }
 
 export const TEMPORAL_RAIL_PAST_MINUTES = 6 * 60;
@@ -57,7 +61,8 @@ function eventFromObservation(
 export function buildTemporalNavigatorEvents(
   incidents: readonly SpatialIncident[],
   observationA: SpatialObservation | null,
-  observationB: SpatialObservation | null
+  observationB: SpatialObservation | null,
+  scenarios: readonly OperatorScenario[] = []
 ): TemporalNavigatorEvent[] {
   const events: TemporalNavigatorEvent[] = incidents.map((incident) => ({
     id: `incident:${incident.id}`,
@@ -78,6 +83,41 @@ export function buildTemporalNavigatorEvents(
   if (observationA) events.push(eventFromObservation(observationA, 'A'));
   if (observationB) events.push(eventFromObservation(observationB, 'B'));
 
+  for (const scenario of scenarios) {
+    events.push({
+      id: `scenario-start:${scenario.id}`,
+      type: 'scenario-start',
+      timeIso: scenario.startIso,
+      endIso: scenario.endIso,
+      label: `${scenario.name} · START`,
+      detail: `MODELED · v${scenario.version} · ${scenario.template.toUpperCase()}`,
+      originalMode: 'scenario',
+      scenarioId: scenario.id,
+      authoritative: false,
+      provenance: 'modeled-scenario',
+      severity: null,
+      status: scenario.status,
+      canonicalId: null
+    });
+    if (scenario.endIso) {
+      events.push({
+        id: `scenario-end:${scenario.id}`,
+        type: 'scenario-end',
+        timeIso: scenario.endIso,
+        endIso: scenario.endIso,
+        label: `${scenario.name} · END`,
+        detail: `MODELED · v${scenario.version} · ${scenario.template.toUpperCase()}`,
+        originalMode: 'scenario',
+        scenarioId: scenario.id,
+        authoritative: false,
+        provenance: 'modeled-scenario',
+        severity: null,
+        status: scenario.status,
+        canonicalId: null
+      });
+    }
+  }
+
   return events
     .filter((event) => Number.isFinite(Date.parse(event.timeIso)))
     .sort((a, b) => Date.parse(a.timeIso) - Date.parse(b.timeIso));
@@ -87,9 +127,13 @@ export function filterTemporalNavigatorEvents(
   events: readonly TemporalNavigatorEvent[],
   filters: TemporalNavigatorFilters
 ): TemporalNavigatorEvent[] {
-  return events.filter((event) =>
-    event.type === 'operator-incident' ? filters.incidents : filters.captures
-  );
+  return events.filter((event) => {
+    if (event.type === 'operator-incident') return filters.incidents;
+    if (event.type === 'scenario-start' || event.type === 'scenario-end') {
+      return filters.scenarios;
+    }
+    return filters.captures;
+  });
 }
 
 export function temporalEventOffsetMinutes(
