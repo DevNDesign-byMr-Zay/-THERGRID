@@ -4211,3 +4211,258 @@ button {
   }
 }
 
+/* 4D operator incident layer */
+.spatial-incidents {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid rgba(255, 128, 107, 0.08);
+  border-radius: 10px;
+  background: linear-gradient(145deg, rgba(20, 13, 16, 0.7), rgba(9, 11, 17, 0.74));
+}
+
+.spatial-incidents-head,
+.spatial-incident-list article header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.spatial-incidents-head span small,
+.spatial-incidents-head span strong,
+.spatial-incident-list article header small,
+.spatial-incident-list article header strong {
+  display: block;
+}
+
+.spatial-incidents-head small,
+.spatial-incident-list article header small {
+  color: #80636b;
+  font-size: 6px;
+  letter-spacing: 0.09em;
+}
+
+.spatial-incidents-head strong {
+  margin-top: 2px;
+  color: #efd6dd;
+  font-size: 9px;
+}
+
+.spatial-incidents-head > em,
+.spatial-incident-list article header > em {
+  border: 1px solid rgba(255, 128, 107, 0.12);
+  border-radius: 999px;
+  padding: 3px 6px;
+  color: #c38d98;
+  font-size: 5px;
+  font-style: normal;
+}
+
+.spatial-incidents-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.spatial-incidents-summary span,
+.spatial-incident-list article {
+  padding: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.spatial-incidents-summary small,
+.spatial-incidents-summary strong {
+  display: block;
+}
+
+.spatial-incidents-summary small {
+  color: #6f6068;
+  font-size: 5px;
+}
+
+.spatial-incidents-summary strong {
+  margin-top: 3px;
+  color: #ead5dc;
+  font-size: 8px;
+}
+
+.spatial-incident-compose {
+  display: grid;
+  gap: 5px;
+}
+
+.spatial-incident-compose input,
+.spatial-incident-compose textarea,
+.spatial-incident-compose select,
+.spatial-incident-note-edit textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 6px;
+  color: #d7e4ec;
+  background: rgba(255, 255, 255, 0.018);
+  font: inherit;
+  font-size: 7px;
+}
+
+.spatial-incident-compose input,
+.spatial-incident-compose select {
+  min-height: 30px;
+  padding: 0 7px;
+}
+
+.spatial-incident-compose textarea,
+.spatial-incident-note-edit textarea {
+  min-height: 58px;
+  padding: 7px;
+  resize: vertical;
+}
+
+.spatial-incident-compose > div {
+  display: grid;
+  grid-template-columns: 0.85fr 0.75fr 1.1fr;
+  gap: 5px;
+}
+
+.spatial-incident-compose button,
+.spatial-incident-actions button,
+.spatial-incident-statuses button,
+.spatial-incidents-footer button,
+.spatial-incident-note-edit button {
+  min-height: 27px;
+  border: 1px solid rgba(255, 128, 107, 0.12);
+  border-radius: 6px;
+  color: #bd939d;
+  background: rgba(255, 128, 107, 0.025);
+  font-size: 5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+.spatial-incident-compose button:disabled,
+.spatial-incident-actions button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.spatial-incident-compose > small,
+.spatial-incidents-empty,
+.spatial-incident-list article p,
+.spatial-incident-links span {
+  color: #6f7884;
+  font-size: 6px;
+  line-height: 1.45;
+}
+
+.spatial-incident-list {
+  display: grid;
+  gap: 6px;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.spatial-incident-list article[data-incident-severity='critical'] {
+  border-color: rgba(255, 87, 87, 0.28);
+}
+
+.spatial-incident-list article[data-incident-severity='high'] {
+  border-color: rgba(255, 128, 107, 0.2);
+}
+
+.spatial-incident-list article[data-incident-status='resolved'],
+.spatial-incident-list article[data-incident-status='dismissed'] {
+  opacity: 0.66;
+}
+
+.spatial-incident-list article header strong {
+  margin-top: 2px;
+  color: #f0dde2;
+  font-size: 7px;
+}
+
+.spatial-incident-list article code {
+  display: block;
+  overflow: hidden;
+  margin-top: 6px;
+  color: #76666d;
+  font-size: 5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spatial-incident-links {
+  display: grid;
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.spatial-incident-note {
+  margin-top: 7px !important;
+  padding: 7px;
+  border-left: 2px solid rgba(255, 128, 107, 0.16);
+  background: rgba(255, 128, 107, 0.018);
+  white-space: pre-wrap;
+}
+
+.spatial-incident-statuses,
+.spatial-incident-actions,
+.spatial-incidents-footer,
+.spatial-incident-note-edit {
+  display: grid;
+  gap: 4px;
+  margin-top: 7px;
+}
+
+.spatial-incident-statuses {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.spatial-incident-statuses button.active {
+  border-color: rgba(255, 128, 107, 0.32);
+  color: #ffe0df;
+  background: rgba(255, 128, 107, 0.08);
+}
+
+.spatial-incident-actions {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.spatial-incidents-footer {
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.7fr);
+}
+
+.spatial-incident-note-edit {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.spatial-incident-note-edit textarea {
+  grid-column: 1 / -1;
+}
+
+.spatial-incidents-empty {
+  margin: 0;
+}
+
+.spatial-incidents-boundary {
+  margin-top: 0;
+}
+
+:root[data-theme='light'] .spatial-incidents,
+:root[data-theme='light'] .spatial-incidents-summary span,
+:root[data-theme='light'] .spatial-incident-list article {
+  background: rgba(255, 250, 250, 0.78);
+}
+
+@media (max-width: 760px) {
+  .spatial-incident-compose > div,
+  .spatial-incident-statuses,
+  .spatial-incident-actions,
+  .spatial-incidents-footer {
+    grid-template-columns: 1fr;
+  }
+}
+
