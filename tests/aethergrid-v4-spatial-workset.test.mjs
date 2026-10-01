@@ -29,9 +29,7 @@ test('v4 workset pins frozen entity dossiers without mutating their original cap
 });
 
 test('v4 workset exports remain explicitly non-authoritative and do not claim coordinate restore reselects an entity', async () => {
-  const service = await text(
-    'apps/aethergrid-console/web/src/services/spatial-workset.ts',
-  );
+  const service = await text('apps/aethergrid-console/web/src/services/spatial-workset.ts');
 
   assert.match(service, /aethergrid\.operator-spatial-workset\.v1/u);
   assert.match(service, /authoritative: false/u);
