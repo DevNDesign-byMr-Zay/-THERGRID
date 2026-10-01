@@ -182,6 +182,7 @@ function validScenario(value: unknown): value is OperatorScenario {
     scenario.authoritative === false &&
     scenario.modeled === true &&
     typeof scenario.id === 'string' &&
+    typeof scenario.version === 'number' &&
     Number.isInteger(scenario.version) &&
     scenario.version >= 1 &&
     (scenario.parentScenarioId == null ||
