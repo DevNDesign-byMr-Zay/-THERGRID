@@ -49,6 +49,8 @@ import {
 import type { ScenarioVisualState } from '../services/scenario-client';
 import {
   compareOperatorScenario,
+  loadOperatorScenarios,
+  OPERATOR_SCENARIOS_EVENT,
   operatorScenarioToOverlay,
   type OperatorScenario
 } from '../services/operator-scenario';
@@ -277,6 +279,8 @@ export function App() {
     useState<ScenarioVisualState | null>(null);
   const [activeOperatorScenario, setActiveOperatorScenario] =
     useState<OperatorScenario | null>(null);
+  const [savedOperatorScenarios, setSavedOperatorScenarios] =
+    useState<OperatorScenario[]>(loadOperatorScenarios);
   const [agentHandoff, setAgentHandoff] = useState<AgentHandoffRequest | null>(null);
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceRecord | null>(null);
   const [cityLoad, setCityLoad] = useState<CityLoadState>({
@@ -350,9 +354,10 @@ export function App() {
       buildTemporalNavigatorEvents(
         spatialIncidents,
         observationA,
-        observationB
+        observationB,
+        savedOperatorScenarios
       ),
-    [spatialIncidents, observationA, observationB]
+    [spatialIncidents, observationA, observationB, savedOperatorScenarios]
   );
 
   const entityDossier = useMemo(
@@ -398,6 +403,17 @@ export function App() {
     globalThis.addEventListener?.(SPATIAL_WORKSET_EVENT, syncWorkset);
     return () =>
       globalThis.removeEventListener?.(SPATIAL_WORKSET_EVENT, syncWorkset);
+  }, []);
+
+  useEffect(() => {
+    const syncScenarios = () =>
+      setSavedOperatorScenarios(loadOperatorScenarios());
+    globalThis.addEventListener?.(OPERATOR_SCENARIOS_EVENT, syncScenarios);
+    return () =>
+      globalThis.removeEventListener?.(
+        OPERATOR_SCENARIOS_EVENT,
+        syncScenarios
+      );
   }, []);
 
   useEffect(() => {
