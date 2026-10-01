@@ -1,3 +1,4 @@
+import { validateCoordinates } from "./providers/coordinate-validator.mjs";
 import { createRequestContext } from './providers/request-context.mjs';
 import { createPublicConfig } from './config/public-config.mjs';
 import { createTomorrowWeatherProvider } from './providers/tomorrow-weather-provider.mjs';
@@ -934,27 +935,16 @@ const server = http.createServer(async (request, response) => {
       const latParam = url.searchParams.get('lat');
       const lonParam = url.searchParams.get('lon');
 
-      if (!latParam || !lonParam) {
-        return json(response, 200, {
-          data: {
-            status: 'missing_coordinates',
-            message: 'Explicit lat and lon query parameters are required.',
-            live: false,
-          },
-          receipt: {
-            provider: 'open-meteo-weather',
-            capability: 'weather',
-            dataset: 'open-meteo-weather',
-            requestId: reqContext.requestId,
-            live: false,
-            fallback: true,
-            attribution: 'Open-Meteo Weather API (Missing Coordinates)',
-          },
+      const coordVal = validateCoordinates(latParam, lonParam);
+      if (!coordVal.valid) {
+        return json(response, 400, {
+          error: 'invalid_coordinates',
+          message: coordVal.message,
+          live: false,
         });
       }
 
-      const lat = Number(latParam);
-      const lon = Number(lonParam);
+      const { lat, lon } = coordVal;
 
       if (providerRegistry.config.weather.provider === 'tomorrow-io') {
         const result = await tomorrowWeatherProvider.request(
@@ -977,27 +967,16 @@ const server = http.createServer(async (request, response) => {
       const latParam = url.searchParams.get('lat');
       const lonParam = url.searchParams.get('lon');
 
-      if (!latParam || !lonParam) {
-        return json(response, 200, {
-          data: {
-            status: 'missing_coordinates',
-            message: 'Explicit lat and lon query parameters are required.',
-            live: false,
-          },
-          receipt: {
-            provider: 'open-meteo-weather',
-            capability: 'weather',
-            dataset: 'open-meteo-forecast',
-            requestId: reqContext.requestId,
-            live: false,
-            fallback: true,
-            attribution: 'Open-Meteo Weather API (Missing Coordinates)',
-          },
+      const coordVal = validateCoordinates(latParam, lonParam);
+      if (!coordVal.valid) {
+        return json(response, 400, {
+          error: 'invalid_coordinates',
+          message: coordVal.message,
+          live: false,
         });
       }
 
-      const lat = Number(latParam);
-      const lon = Number(lonParam);
+      const { lat, lon } = coordVal;
 
       if (providerRegistry.config.weather.provider === 'tomorrow-io') {
         const result = await tomorrowWeatherProvider.request(
@@ -1017,12 +996,24 @@ const server = http.createServer(async (request, response) => {
     }
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/hazards/alerts') {
-      const lat = url.searchParams.has('lat') ? Number(url.searchParams.get('lat')) : undefined;
-      const lon = url.searchParams.has('lon') ? Number(url.searchParams.get('lon')) : undefined;
-      const result = await nwsAlertsProvider.request(
-        { lat, lon },
-        execCtx,
-      );
+      const latParam = url.searchParams.get('lat');
+      const lonParam = url.searchParams.get('lon');
+      if (latParam !== null || lonParam !== null) {
+        const coordVal = validateCoordinates(latParam, lonParam);
+        if (!coordVal.valid) {
+          return json(response, 400, {
+            error: 'invalid_coordinates',
+            message: coordVal.message,
+            live: false,
+          });
+        }
+        const result = await nwsAlertsProvider.request(
+          { lat: coordVal.lat, lon: coordVal.lon },
+          execCtx,
+        );
+        return json(response, 200, providerRegistry.redactor.redactValue(result));
+      }
+      const result = await nwsAlertsProvider.request({}, execCtx);
       return json(response, 200, providerRegistry.redactor.redactValue(result));
     }
 
@@ -1072,8 +1063,46 @@ const server = http.createServer(async (request, response) => {
       if (!payload || !payload.confirmSubmission) {
         return json(response, 400, { error: 'confirmation_required', message: 'Explicit operator confirmation (confirmSubmission: true) is required to submit D-Wave hardware jobs.' });
       }
-      const result = await dwaveProvider.request({ action: 'submit', problemPayload: payload.problemPayload }, execCtx);
-      return json(response, 200, providerRegistry.redactor.redactValue(result));
+      if (!payload.solver || typeof payload.solver !== 'string' || payload.solver.trim() === '' ) {
+        return json(response, 400, { error: 'invalid_request', message: 'Explicit solver identifier is required for D-Wave problem submission.' });
+      }
+      if (!payload.problemType || typeof payload.problemType !== 'string' || payload.problemType.trim() === '' ) {
+        return json(response, 400, { error: 'invalid_request', message: 'Explicit supported problemType is required for D-Wave problem submission.' });
+      }
+      if (!payload.problemPayload || (typeof payload.problemPayload === 'object' && Object.keys(payload.problemPayload).length === 0)) {
+        return json(response, 400, { error: 'invalid_request', message: 'Actual encoded problem payload is required for D-Wave problem submission.' });
+      }
+
+      try {
+        const result = await dwaveProvider.request(
+          {
+            action: 'submit',
+            confirmSubmission: true,
+            solver: payload.solver,
+            problemType: payload.problemType,
+            problemPayload: payload.problemPayload,
+            parameters: payload.parameters || {},
+          },
+          execCtx,
+        );
+        return json(response, 200, providerRegistry.redactor.redactValue(result));
+      } catch (err) {
+        return json(response, 400, { error: 'invalid_request', message: err.message });
+      }
+    }
+
+    if (request.method === 'GET' && url.pathname.startsWith('/api/aethergrid/quantum/dwave/jobs/') && url.pathname.endsWith('/result')) {
+      const parts = url.pathname.split('/');
+      const problemId = parts[parts.length - 2];
+      if (!problemId) {
+        return json(response, 400, { error: 'invalid_request', message: 'Explicit problemId path parameter is required for D-Wave job result' });
+      }
+      try {
+        const result = await dwaveProvider.request({ action: 'result', problemId }, execCtx);
+        return json(response, 200, providerRegistry.redactor.redactValue(result));
+      } catch (err) {
+        return json(response, 400, { error: 'invalid_request', message: err.message });
+      }
     }
 
 if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime/providers') {
