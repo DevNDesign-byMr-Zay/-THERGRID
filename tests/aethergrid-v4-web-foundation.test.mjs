@@ -228,10 +228,10 @@ test('v4 coordinate navigation remains available on mobile', async () => {
 });
 
 test('v4 spatial selection visibly highlights real features and can be cleared', async () => {
-  const [renderer, viewport, app] = await Promise.all([
+  const [renderer, viewport, dossierPanel] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
     text('apps/aethergrid-console/web/src/components/SpatialViewport.tsx'),
-    text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/components/EntityDossierPanel.tsx'),
   ]);
 
   assert.match(renderer, /selectionIndicator: true/u);
@@ -242,7 +242,7 @@ test('v4 spatial selection visibly highlights real features and can be cleared',
   assert.match(viewport, /addEventListener\('click', onPointer\)/u);
   assert.match(viewport, /event\.key !== 'Escape'/u);
   assert.match(viewport, /manager\.selectFeature\(null\)/u);
-  assert.match(app, /ESC TO CLEAR/u);
+  assert.match(dossierPanel, /ESC clears the scene selection/u);
 });
 
 test('v4 provenance UI separates source time from retrieval age', async () => {
@@ -715,19 +715,21 @@ test('v4 scenario map effects mirror the backend stress model without mutating s
 });
 
 test('v4 selected spatial entities expose layer provenance and hand off to AI context', async () => {
-  const [layer, app] = await Promise.all([
+  const [layer, app, dossier, dossierPanel] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/services/spatial-entity-dossier.ts'),
+    text('apps/aethergrid-console/web/src/components/EntityDossierPanel.tsx'),
   ]);
 
   assert.match(layer, /provenanceProperties/u);
   assert.match(layer, /sourceTime: snapshot\.sourceTime/u);
   assert.match(layer, /fetchedAt: snapshot\.fetchedAt/u);
   assert.match(layer, /fallback: snapshot\.fallback/u);
-  assert.match(app, /ANALYZE WITH AI/u);
+  assert.match(dossierPanel, /ANALYZE WITH AUREN/u);
   assert.match(app, /setIntelWorkspace\('ai'\)/u);
-  assert.match(app, /selection\.properties\?\.sourceTime/u);
-  assert.match(app, /selection\.properties\?\.fetchedAt/u);
+  assert.match(dossier, /sourceTime: propertyString\(selection\.properties, 'sourceTime'\)/u);
+  assert.match(dossier, /fetchedAt: propertyString\(selection\.properties, 'fetchedAt'\)/u);
 });
 
 test('v4 selected-entity AI handoff prefills AUREN without automatic submission', async () => {
@@ -742,7 +744,8 @@ test('v4 selected-entity AI handoff prefills AUREN without automatic submission'
   assert.match(dock, /textareaRef\.current\?\.focus/u);
   assert.doesNotMatch(dock, /handoff[\s\S]{0,220}void submit\(\)/u);
   assert.match(app, /agent: 'AUREN'/u);
-  assert.match(app, /Separate observed facts, modeled context, assumptions, uncertainty/u);
+  assert.match(app, /Treat the dossier as non-authoritative operator analysis/u);
+  assert.match(app, /Separate entity-specific facts from surrounding context/u);
   assert.match(app, /<AgentDock context=\{agentContext\} handoff=\{agentHandoff\}/u);
 });
 
