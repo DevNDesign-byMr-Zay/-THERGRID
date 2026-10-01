@@ -42,6 +42,21 @@ function colorForIntensity(intensity: number, alpha = 1): Color {
   );
 }
 
+function hazardColor(severity: unknown, alpha = 0.96): Color {
+  const normalized = String(severity ?? '').toLowerCase();
+  const color =
+    normalized === 'extreme'
+      ? '#ff3b52'
+      : normalized === 'severe'
+        ? '#ff704f'
+        : normalized === 'moderate'
+          ? '#f2b65f'
+          : normalized === 'minor'
+            ? '#e2d86c'
+            : '#f08a73';
+  return Color.fromCssColorString(color).withAlpha(alpha);
+}
+
 function nodeColor(node: SpatialOverlayNode): Color {
   const intensity = overlayIntensity(node.intensity);
   if (node.properties?.analysisType === 'measurement') {
@@ -55,6 +70,9 @@ function nodeColor(node: SpatialOverlayNode): Color {
   }
   if (node.properties?.presentationType === 'urban-illumination') {
     return Color.fromCssColorString('#ffd37d').withAlpha(0.58 + intensity * 0.34);
+  }
+  if (node.kind === 'event' && node.properties?.eventType === 'nws-alert') {
+    return hazardColor(node.properties?.severity, 0.8 + intensity * 0.2);
   }
   if (node.kind === 'event' && node.properties?.eventType === 'operator-incident') {
     const severity = String(node.properties?.severity ?? 'info');
@@ -103,6 +121,7 @@ function nodeFarDistance(node: SpatialOverlayNode): number {
 }
 
 function edgeFarDistance(edge: SpatialOverlayEdge): number {
+  if (edge.properties?.eventType === 'nws-alert-boundary') return 2_000_000;
   if (edge.kind === 'coastline') return 180_000;
   if (edge.kind === 'waterway') return 110_000;
   if (edge.kind === 'route') return 80_000;
@@ -164,6 +183,9 @@ function nodeEntity(
 }
 
 function edgeColor(edge: SpatialOverlayEdge, intensity: number): Color {
+  if (edge.properties?.eventType === 'nws-alert-boundary') {
+    return hazardColor(edge.properties?.severity, 0.46 + intensity * 0.42);
+  }
   if (edge.kind === 'analysis-line' && edge.properties?.analysisType === 'measurement') {
     return Color.fromCssColorString('#c9a7ff').withAlpha(0.9);
   }
@@ -186,6 +208,9 @@ function edgeColor(edge: SpatialOverlayEdge, intensity: number): Color {
 }
 
 function edgeWidth(edge: SpatialOverlayEdge, intensity: number): number {
+  if (edge.properties?.eventType === 'nws-alert-boundary') {
+    return 2.1 + intensity * 2.4;
+  }
   if (edge.kind === 'analysis-line' && edge.properties?.analysisType === 'measurement') {
     return 3.1;
   }
@@ -245,7 +270,11 @@ function edgeEntity(
       distanceDisplayCondition: new ConstantProperty(
         new DistanceDisplayCondition(0, edgeFarDistance(edge))
       ),
-      clampToGround: edge.kind === 'route' || edge.kind === 'waterway' || edge.kind === 'coastline'
+      clampToGround:
+        edge.kind === 'route' ||
+        edge.kind === 'waterway' ||
+        edge.kind === 'coastline' ||
+        edge.properties?.eventType === 'nws-alert-boundary'
     }),
     properties: {
       overlayKind: edge.kind,
