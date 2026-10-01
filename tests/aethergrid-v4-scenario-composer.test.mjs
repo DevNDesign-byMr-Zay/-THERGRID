@@ -89,6 +89,8 @@ test('v4 scenario overlay is time-bounded modeled geometry and never provider te
   assert.match(service, /live: false/u);
   assert.match(service, /sourceTime: null/u);
   assert.match(service, /sourceDataset: 'local-operator-scenario'/u);
+  assert.doesNotMatch(service, /charCodeAt/u);
+  assert.doesNotMatch(service, /variability/u);
 });
 
 test('v4 scenario composer exposes assumptions persistence comparison activation and export with truth boundaries', async () => {
