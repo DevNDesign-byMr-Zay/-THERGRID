@@ -1,4 +1,4 @@
-import { describe, it, before, after } from 'node:test';
+import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { parseEnv } from '../apps/aethergrid-console/config/env-schema.mjs';
@@ -25,26 +25,25 @@ import { createNoaaNwpsHydrologyProvider } from '../apps/aethergrid-console/prov
 import { createEiaProvider } from '../apps/aethergrid-console/providers/eia-provider.mjs';
 import { createTransitRegistry } from '../apps/aethergrid-console/providers/transit-registry.mjs';
 import { createDwaveProvider } from '../apps/aethergrid-console/providers/dwave-provider.mjs';
-import { createNwsAlertsProvider } from '../apps/aethergrid-console/providers/nws-alerts-provider.mjs';
-import { createTomorrowWeatherProvider } from '../apps/aethergrid-console/providers/tomorrow-weather-provider.mjs';
 import { server } from '../apps/aethergrid-console/server.mjs';
 
-describe('ÆTHERGRID v4.0 Batch 19B — Production Provider Execution Layer, Security & Truthful Receipts', () => {
-  let activePort = 0;
-
-  before(async () => {
-    if (!server.listening) {
-      await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+async function withServer(run) {
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+  try {
+    await run(baseUrl);
+  } finally {
+    if (typeof server.closeAllConnections === 'function') {
+      server.closeAllConnections();
     }
-    activePort = server.address().port;
-  });
+    await new Promise((resolve, reject) =>
+      server.close((error) => (error ? reject(error) : resolve())),
+    );
+  }
+}
 
-  after(async () => {
-    if (server.listening) {
-      await new Promise((resolve) => server.close(resolve));
-    }
-  });
-
+describe('ÆTHERGRID v4.0 Batch 20/21 — Production Provider Execution Layer & Verification', () => {
   describe('1. Central Validated Environment Configuration & Valid Defaults', () => {
     it('parses valid default environment settings and preserves canonical core URLs', () => {
       const parsed = parseEnv({});
@@ -148,13 +147,13 @@ describe('ÆTHERGRID v4.0 Batch 19B — Production Provider Execution Layer, Sec
       const unconfiguredReceipt = createProviderReceipt({
         provider: 'eia',
         fallback: true,
-        live: true, // Overridden because fallback is true
+        live: true,
       });
       assert.equal(unconfiguredReceipt.live, false);
       assert.equal(unconfiguredReceipt.fallback, true);
 
       const liveReceipt = createProviderReceipt({
-        provider: 'open-meteo',
+        provider: 'open-meteo-weather',
         live: true,
         fallback: false,
       });
@@ -221,45 +220,67 @@ describe('ÆTHERGRID v4.0 Batch 19B — Production Provider Execution Layer, Sec
     });
   });
 
-  describe('6. Public Endpoints Verification', () => {
+  describe('6. Public Endpoints Verification & Confirmation Boundaries', () => {
     it('responds to GET /api/aethergrid/runtime/providers with safe metadata', async () => {
-      const res = await fetch(`http://127.0.0.1:${activePort}/api/aethergrid/runtime/providers`);
-      assert.equal(res.status, 200);
+      await withServer(async (baseUrl) => {
+        const res = await fetch(`${baseUrl}/api/aethergrid/runtime/providers`);
+        assert.equal(res.status, 200);
 
-      const body = await res.json();
-      assert.equal(body.spatial.provider, 'native-webgl');
-      assert.equal(body.weather.provider, 'open-meteo');
+        const body = await res.json();
+        assert.equal(body.spatial.provider, 'native-webgl');
+        assert.equal(body.weather.provider, 'open-meteo');
+      });
     });
 
     it('responds to GET /api/aethergrid/config/public with browser-safe settings', async () => {
-      const res = await fetch(`http://127.0.0.1:${activePort}/api/aethergrid/config/public`);
-      assert.equal(res.status, 200);
+      await withServer(async (baseUrl) => {
+        const res = await fetch(`${baseUrl}/api/aethergrid/config/public`);
+        assert.equal(res.status, 200);
 
-      const body = await res.json();
-      assert.ok(body.spatial);
-      assert.ok('provider' in body.spatial);
-      assert.ok('cesiumIonToken' in body.spatial);
+        const body = await res.json();
+        assert.ok(body.spatial);
+        assert.ok('provider' in body.spatial);
+        assert.ok('cesiumIonToken' in body.spatial);
+      });
     });
 
     it('weather current route returns missing_coordinates when lat/lon omitted without NY defaults', async () => {
-      const res = await fetch(`http://127.0.0.1:${activePort}/api/aethergrid/weather/current`);
-      assert.equal(res.status, 200);
+      await withServer(async (baseUrl) => {
+        const res = await fetch(`${baseUrl}/api/aethergrid/weather/current`);
+        assert.equal(res.status, 200);
 
-      const body = await res.json();
-      assert.equal(body.data.status, 'missing_coordinates');
-      assert.equal(body.receipt.live, false);
+        const body = await res.json();
+        assert.equal(body.data.status, 'missing_coordinates');
+        assert.equal(body.receipt.live, false);
+      });
     });
 
     it('weather forecast route returns hourly forecast time series with distinct event timestamps when coords supplied', async () => {
-      const res = await fetch(
-        `http://127.0.0.1:${activePort}/api/aethergrid/weather/forecast?lat=40.7128&lon=-74.006`,
-      );
-      assert.equal(res.status, 200);
+      await withServer(async (baseUrl) => {
+        const res = await fetch(
+          `${baseUrl}/api/aethergrid/weather/forecast?lat=40.7128&lon=-74.006`,
+        );
+        assert.equal(res.status, 200);
 
-      const body = await res.json();
-      assert.ok(body.data);
-      assert.ok('hourly' in body.data);
-      assert.ok(Array.isArray(body.data.hourly));
+        const body = await res.json();
+        assert.ok(body.data);
+        assert.ok('hourly' in body.data);
+        assert.ok(Array.isArray(body.data.hourly));
+      });
+    });
+
+    it('D-Wave POST job submission fails with 400 when operator confirmation is missing', async () => {
+      await withServer(async (baseUrl) => {
+        const res = await fetch(`${baseUrl}/api/aethergrid/quantum/dwave/jobs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ workload: 'test' }),
+        });
+        assert.equal(res.status, 400);
+
+        const body = await res.json();
+        assert.equal(body.error, 'confirmation_required');
+      });
     });
   });
 });

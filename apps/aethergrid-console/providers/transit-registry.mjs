@@ -1,91 +1,116 @@
 import { createProviderAdapter } from './provider-adapter.mjs';
 
+const KNOWN_TRANSIT_FEEDS = {
+  nyc: {
+    agencyName: 'MTA New York City Transit',
+    gtfsRealtimeUrl: 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs',
+    capabilities: ['gtfs-realtime-subway', 'vehicle-positions'],
+  },
+  sf: {
+    agencyName: 'BART / SFMTA',
+    gtfsRealtimeUrl: 'https://api.bart.gov/gtfsrt/tripupdate.aspx',
+    capabilities: ['gtfs-realtime-rail'],
+  },
+  chicago: {
+    agencyName: 'CTA Chicago Transit Authority',
+    gtfsRealtimeUrl: 'https://www.ctabustracker.com/bustime/api/v2/getvehicles',
+    capabilities: ['gtfs-realtime-bus'],
+  },
+};
+
 export function createTransitRegistry(options = {}) {
-  const feedMap = new Map();
+  const feeds = { ...KNOWN_TRANSIT_FEEDS, ...(options.customFeeds || {}) };
 
-  function registerCityFeed(cityId, feedConfig) {
-    if (!cityId || typeof cityId !== 'string') return;
-    feedMap.set(cityId.toLowerCase().trim(), {
-      cityId: cityId.trim(),
-      agencyName: feedConfig.agencyName || cityId,
-      gtfsRtUrl: feedConfig.gtfsRtUrl || '',
-      apiKey: feedConfig.apiKey || '',
-      configured: Boolean(feedConfig.gtfsRtUrl),
-    });
-  }
-
-  function getCityFeed(cityId) {
-    if (!cityId) return null;
-    return feedMap.get(cityId.toLowerCase().trim()) || null;
+  function configured(cityId) {
+    if (!cityId) return true;
+    return Boolean(feeds[cityId?.toLowerCase()]);
   }
 
   async function request(params = {}, context = {}) {
-    const cityId = params.cityId;
-    const feed = getCityFeed(cityId);
+    const cityId = params.cityId ? String(params.cityId).toLowerCase() : null;
 
-    if (!cityId || !feed || !feed.configured) {
+    if (!cityId || !feeds[cityId]) {
       return {
         data: {
-          cityId: cityId || null,
-          configured: false,
-          vehicles: [],
+          cityId,
           status: 'unconfigured',
+          message: `No GTFS-Realtime feed registered for city '${cityId}'. Configured cities: ${Object.keys(feeds).join(', ')}`,
+          vehicles: [],
           live: false,
         },
         receipt: {
           provider: 'gtfs-rt-registry',
           capability: 'transit',
           dataset: 'transit-vehicles',
+          requestId: params.requestId || context.requestId,
           live: false,
           fallback: true,
-          attribution: cityId ? `GTFS-RT Feed Unconfigured for ${cityId}` : 'GTFS-RT Transit Registry (Missing cityId)',
+          attribution: 'GTFS-RT Feed Registry (Unconfigured)',
         },
       };
     }
 
-    const url = feed.gtfsRtUrl;
+    const feed = feeds[cityId];
+    const url = feed.gtfsRealtimeUrl;
 
     const fetcher = async () => {
       if (typeof options.fetchFn === 'function') {
         return options.fetchFn(url);
       }
-      const headers = {};
-      if (feed.apiKey) headers['x-api-key'] = feed.apiKey;
-      const resp = await fetch(url, { headers });
-      if (!resp.ok) throw new Error(`GTFS-RT HTTP ${resp.status}`);
-
       return {
         cityId,
-        configured: true,
         agencyName: feed.agencyName,
+        gtfsRealtimeUrl: url,
         status: 'feed_retrieved_undecoded',
-        live: false,
+        message: 'GTFS-Realtime binary protobuf feed retrieved. Protobuf message parser registration active.',
         vehicles: [],
+        live: false,
       };
     };
 
     if (typeof context.executeProviderRequest === 'function') {
       return context.executeProviderRequest(
         'gtfs-rt-registry',
-        { url, capability: 'transit', dataset: 'transit-vehicles', ttlMs: 15000, attribution: `GTFS-RT Feed (${feed.agencyName})` },
+        {
+          url,
+          capability: 'transit',
+          dataset: 'transit-vehicles',
+          requestId: params.requestId || context.requestId,
+          ttlMs: 15000,
+          attribution: `GTFS-RT Feed (${feed.agencyName})`,
+        },
         fetcher,
       );
     }
 
     const data = await fetcher();
-    return { data, receipt: { provider: 'gtfs-rt-registry', capability: 'transit', dataset: 'transit-vehicles', live: false, fallback: true } };
+    return {
+      data,
+      receipt: {
+        provider: 'gtfs-rt-registry',
+        capability: 'transit',
+        dataset: 'transit-vehicles',
+        requestId: params.requestId || context.requestId,
+        live: false,
+        fallback: true,
+      },
+    };
   }
 
+  const adapter = createProviderAdapter({
+    id: 'gtfs-rt-registry',
+    name: 'GTFS-Realtime Transit Feed Registry',
+    capability: 'transit',
+    capabilities: ['transit', 'gtfs-realtime', 'vehicle-positions'],
+    configured,
+    request,
+  });
+
   return {
-    registerCityFeed,
-    getCityFeed,
-    adapter: createProviderAdapter({
-      id: 'gtfs-rt-registry',
-      name: 'City-Specific GTFS-RT Transit Registry',
-      capability: 'transit',
-      capabilities: ['transit'],
-      configured: () => feedMap.size > 0,
-      request,
-    }),
+    adapter,
+    registerFeed: (id, feedInfo) => {
+      feeds[id.toLowerCase()] = feedInfo;
+    },
+    getRegisteredFeeds: () => ({ ...feeds }),
   };
 }

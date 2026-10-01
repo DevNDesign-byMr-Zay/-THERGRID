@@ -22,6 +22,7 @@ export function createNoaaNwpsHydrologyProvider(options = {}) {
           provider: 'noaa-nwps',
           capability: 'hydrology',
           dataset: 'hydrology-gauge',
+          requestId: params.requestId || context.requestId,
           live: false,
           fallback: true,
           attribution: 'NOAA NWPS (Missing gaugeId)',
@@ -31,6 +32,7 @@ export function createNoaaNwpsHydrologyProvider(options = {}) {
 
     const cleanGaugeId = gaugeId.trim().toUpperCase();
     const url = `${baseUrl}/gauges/${cleanGaugeId}`;
+    const stageflowUrl = `${baseUrl}/gauges/${cleanGaugeId}/stageflow`;
 
     const fetcher = async () => {
       if (typeof options.fetchFn === 'function') {
@@ -44,7 +46,7 @@ export function createNoaaNwpsHydrologyProvider(options = {}) {
 
       let stageFlowData = null;
       try {
-        const sfResp = await fetch(`${baseUrl}/gauges/${cleanGaugeId}/stageflow`);
+        const sfResp = await fetch(stageflowUrl);
         if (sfResp.ok) {
           stageFlowData = await sfResp.json();
         }
@@ -77,13 +79,29 @@ export function createNoaaNwpsHydrologyProvider(options = {}) {
     if (typeof context.executeProviderRequest === 'function') {
       return context.executeProviderRequest(
         'noaa-nwps',
-        { url, capability: 'hydrology', dataset: 'hydrology-gauge', ttlMs: 180000, attribution: 'NOAA National Water Prediction Service (NWPS)' },
+        {
+          url,
+          capability: 'hydrology',
+          dataset: 'hydrology-gauge',
+          requestId: params.requestId || context.requestId,
+          ttlMs: 180000,
+          attribution: 'NOAA National Water Prediction Service (NWPS)',
+        },
         fetcher,
       );
     }
 
     const data = await fetcher();
-    return { data, receipt: { provider: 'noaa-nwps', capability: 'hydrology', dataset: 'hydrology-gauge', live: true } };
+    return {
+      data,
+      receipt: {
+        provider: 'noaa-nwps',
+        capability: 'hydrology',
+        dataset: 'hydrology-gauge',
+        requestId: params.requestId || context.requestId,
+        live: true,
+      },
+    };
   }
 
   return createProviderAdapter({

@@ -763,6 +763,8 @@ async function main() {
     '/api/aethergrid/quantum/runtime',
     '/api/aethergrid/quantum/backends',
     '/api/aethergrid/quantum/jobs',
+    '/api/aethergrid/quantum/dwave/solvers',
+    '/api/aethergrid/quantum/dwave/jobs',
     '/api/aethergrid/agents/',
     '/api/aethergrid/team',
     '/api/aethergrid/view',

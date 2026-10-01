@@ -70,15 +70,20 @@ export function createProviderExecutor(options = {}) {
           });
           return { data: cached.value, receipt };
         } else {
-          // Stale entry found -> Return stale cached entry immediately with stale: true, live: false
+          // Stale entry found -> Return stale cached entry immediately with stale: true and live: false
           if (typeof fetcher === 'function') {
             Promise.resolve().then(async () => {
               try {
+                if (limiter && !limiter.tryAcquire()) return;
                 if (params.url && urlPolicy) {
                   urlPolicy.validateUrl(params.url);
                 }
-                const fresh = await fetcher();
-                cache.set(cacheKey, fresh, ttlMs);
+                const fresh = breaker
+                  ? (await breaker.execute(fetcher)).result
+                  : await fetcher();
+                if (fresh?.live !== false && fresh?.status !== 'unconfigured') {
+                  cache.set(cacheKey, fresh, ttlMs);
+                }
               } catch {
                 // Background refresh failure handled silently
               }
