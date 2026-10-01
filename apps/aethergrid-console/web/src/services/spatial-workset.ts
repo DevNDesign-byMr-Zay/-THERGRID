@@ -50,12 +50,16 @@ function validItem(value: unknown): value is SpatialWorksetItem {
   );
 }
 
+function cloneFrozenDossier(dossier: SpatialEntityDossier): SpatialEntityDossier {
+  return JSON.parse(JSON.stringify(dossier)) as SpatialEntityDossier;
+}
+
 function cloneItem(item: SpatialWorksetItem): SpatialWorksetItem {
   return {
     id: item.id,
     canonicalId: item.canonicalId,
     pinnedAt: item.pinnedAt,
-    dossier: freezeSpatialEntityDossier(item.dossier)
+    dossier: cloneFrozenDossier(item.dossier)
   };
 }
 
