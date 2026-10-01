@@ -905,7 +905,11 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
         let color = base;
         const windEdge =
           edge.kind === 'flow' && edge.properties?.vectorType === 'wind';
-        if (windEdge && this.#time.mode === 'live') {
+        const worksetGeometryEdge =
+          edge.properties?.analysisType === 'workset-geometry';
+        if (worksetGeometryEdge) {
+          color = rgba('#63ffc5', 0.78);
+        } else if (windEdge && this.#time.mode === 'live') {
           const timestamp = Date.parse(this.#time.iso);
           const phase = Number.isFinite(timestamp) ? timestamp / 1000 : 0;
           const pulse = 0.5 + 0.5 * Math.sin(phase * 0.72 + (edge.intensity ?? 0.5) * 4.7);
@@ -967,6 +971,8 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
             );
         const operatorIncident =
           node.properties?.eventType === 'operator-incident';
+        const worksetGeometryNode =
+          node.properties?.analysisType === 'workset-geometry';
         const incidentSeverity = String(node.properties?.severity ?? 'info');
         const incidentColor =
           incidentSeverity === 'critical'
@@ -987,7 +993,9 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
             )
           : operatorIncident
             ? rgba(incidentColor, 0.96)
-            : this.#visualColor(layerColor(snapshot.layerId, node.kind));
+            : worksetGeometryNode
+              ? rgba('#63ffc5', 0.96)
+              : this.#visualColor(layerColor(snapshot.layerId, node.kind));
         const selected = this.#isSelectedSource(
           snapshot.layerId,
           node.id,
