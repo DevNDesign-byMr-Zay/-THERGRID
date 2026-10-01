@@ -50,6 +50,20 @@ function nodeColor(node: SpatialOverlayNode): Color {
   if (node.properties?.presentationType === 'urban-illumination') {
     return Color.fromCssColorString('#ffd37d').withAlpha(0.58 + intensity * 0.34);
   }
+  if (node.kind === 'event' && node.properties?.eventType === 'operator-incident') {
+    const severity = String(node.properties?.severity ?? 'info');
+    const incidentColor =
+      severity === 'critical'
+        ? '#ff4f63'
+        : severity === 'high'
+          ? '#ff806b'
+          : severity === 'medium'
+            ? '#f0b45f'
+            : severity === 'low'
+              ? '#e0d778'
+              : '#8dc9ff';
+    return Color.fromCssColorString(incidentColor).withAlpha(0.78 + intensity * 0.22);
+  }
   if (node.kind === 'event' && node.properties?.eventType === 'earthquake') {
     return Color.fromCssColorString('#ff7b63').withAlpha(0.78 + intensity * 0.22);
   }
