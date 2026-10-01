@@ -107,5 +107,8 @@ test('v4 app links investigation board to local spatial context and TEAM with st
   assert.match(app, /human-entered analytical judgment/u);
   assert.match(app, /not a verified finding/u);
   assert.match(app, /must be inspected independently/u);
-  assert.match(app, /Separate confirmed observations from assumptions, contradictions, uncertainty and missing evidence/u);
+  assert.match(
+    app,
+    /Separate confirmed observations from assumptions, contradictions, uncertainty and missing evidence/u,
+  );
 });
