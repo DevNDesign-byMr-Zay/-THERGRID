@@ -956,6 +956,48 @@ export function App() {
     setIntelWorkspace('ai');
     setIntelOpen(true);
   };
+  const activateOperatorScenario = (scenario: OperatorScenario) => {
+    const comparison = compareOperatorScenario(scenario);
+    const sameScenario = activeOperatorScenario?.id === scenario.id;
+    setActiveOperatorScenario({ ...scenario, status: 'active' });
+    setScenarioVisual(comparison.visual);
+    if (!sameScenario) {
+      clock.pause();
+      clock.setMode('scenario', scenario.id);
+      clock.scrub(scenario.startIso, 'scenario');
+    }
+    setIntelWorkspace('scenario');
+    setIntelOpen(true);
+  };
+
+  const deactivateOperatorScenario = () => {
+    setActiveOperatorScenario(null);
+    setScenarioVisual(null);
+    clock.goLive();
+  };
+
+  const analyzeOperatorScenario = (scenario: OperatorScenario) => {
+    const comparison = compareOperatorScenario(scenario);
+    const assumptions = scenario.assumptions
+      .slice(0, 12)
+      .map((item) => item.text)
+      .join('; ');
+    const references =
+      `${scenario.references.canonicalEntityIds.length} canonical entities, ${scenario.references.incidentIds.length} local incidents, ${scenario.references.observationIds.length} captured observations across ${scenario.references.regions.length} region(s)`;
+
+    setAgentHandoff((current) => ({
+      id: (current?.id ?? 0) + 1,
+      agent: 'VÆLON',
+      prompt:
+        `Analyze operator-authored scenario "${scenario.name}" (${scenario.template}) beginning ${scenario.startIso}${scenario.endIso ? ` and ending ${scenario.endIso}` : ''}. ` +
+        `Parameters: load ${scenario.parameters.loadMultiplierPercent}%, renewable availability ${scenario.parameters.renewableAvailabilityPercent}%, storage reserve ${scenario.parameters.storageReservePercent}%, weather risk ${scenario.parameters.weatherRiskPercent}%. ` +
+        `Modeled visual state: stress ${comparison.visual.stressFactor.toFixed(2)}x, renewable bias ${comparison.visual.renewableBias.toFixed(2)}, storage stress ${comparison.visual.storageStress.toFixed(2)}, weather risk ${comparison.visual.weatherRisk.toFixed(2)}. ` +
+        `Captured references: ${references}. Assumptions: ${assumptions || 'none explicitly recorded'}. ` +
+        'Treat every parameter, assumption, visual factor and scenario geometry as hypothetical operator input. Do not call it live data, a provider forecast, a probability, a causal finding or a verified real-world outcome. Separate what is merely assumed from what the referenced source evidence could support, identify sensitivity to assumptions, and specify what real data or simulation would be needed before an operational recommendation.'
+    }));
+    setIntelWorkspace('ai');
+    setIntelOpen(true);
+  };
   const centerWorksetGeometry = () => {
     if (!worksetGeometry.centroid) return;
     const { latitude, longitude } = worksetGeometry.centroid;
