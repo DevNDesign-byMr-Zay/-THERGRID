@@ -5,6 +5,7 @@ import {
   type AgentHandoffRequest
 } from '../components/AgentDock';
 import { DataSourceBadge } from '../components/DataSourceBadge';
+import { EntityDossierPanel } from '../components/EntityDossierPanel';
 import { EvidencePanel } from '../components/EvidencePanel';
 import { OperationalDataPanel } from '../components/OperationalDataPanel';
 import { QuantumPanel } from '../components/QuantumPanel';
@@ -59,6 +60,11 @@ import {
   measurementToOverlay,
   type SpatialMeasurement
 } from '../services/spatial-analysis';
+import {
+  buildSpatialEntityDossier,
+  freezeSpatialEntityDossier,
+  type SpatialEntityDossier
+} from '../services/spatial-entity-dossier';
 import { bindSpatialSelectionIdentity } from '../services/spatial-entity-identity';
 import {
   captureSpatialObservation,
@@ -202,6 +208,8 @@ export function App() {
     useState<SpatialObservation | null>(null);
   const [observationB, setObservationB] =
     useState<SpatialObservation | null>(null);
+  const [frozenDossier, setFrozenDossier] =
+    useState<SpatialEntityDossier | null>(null);
   const [powerOverlay, setPowerOverlay] = useState<SpatialOverlaySnapshot | null>(null);
   const [illuminationOverlay, setIlluminationOverlay] =
     useState<SpatialOverlaySnapshot | null>(null);
@@ -261,6 +269,44 @@ export function App() {
         ? compareSpatialObservations(observationA, observationB)
         : null,
     [observationA, observationB]
+  );
+
+  const entityDossier = useMemo(
+    () =>
+      selection
+        ? buildSpatialEntityDossier({
+            region: scope === 'world' ? 'GLOBAL' : city.name,
+            temporal: temporalInstant,
+            visualMode,
+            useCase: activeUseCase,
+            selection,
+            measurement,
+            observationA,
+            observationB,
+            cityIdentity: scope === 'city' ? cityIdentity : null,
+            atmosphere:
+              scope === 'city' && temporal.mode === 'live' ? atmosphere : null,
+            liveContext:
+              scope === 'city' && temporal.mode === 'live'
+                ? liveContext
+                : null
+          })
+        : null,
+    [
+      selection,
+      scope,
+      city.name,
+      temporalInstant,
+      temporal.mode,
+      visualMode,
+      activeUseCase,
+      measurement,
+      observationA,
+      observationB,
+      cityIdentity,
+      atmosphere,
+      liveContext
+    ]
   );
 
   useEffect(() => {
