@@ -36,9 +36,7 @@ test('v4 temporal event navigation demotes old LIVE captures to historical conte
 });
 
 test('v4 temporal rail exposes event markers inside the same bounded -6h to +7d control window', async () => {
-  const rail = await text(
-    'apps/aethergrid-console/web/src/components/TemporalRail.tsx',
-  );
+  const rail = await text('apps/aethergrid-console/web/src/components/TemporalRail.tsx');
 
   assert.match(rail, /TEMPORAL_RAIL_PAST_MINUTES/u);
   assert.match(rail, /TEMPORAL_RAIL_FUTURE_MINUTES/u);
@@ -50,9 +48,7 @@ test('v4 temporal rail exposes event markers inside the same bounded -6h to +7d 
 });
 
 test('v4 temporal event navigator supports source filters and bounded previous next traversal', async () => {
-  const panel = await text(
-    'apps/aethergrid-console/web/src/components/TemporalEventNavigator.tsx',
-  );
+  const panel = await text('apps/aethergrid-console/web/src/components/TemporalEventNavigator.tsx');
 
   assert.match(panel, /4D EVENT NAVIGATOR/u);
   assert.match(panel, /INCIDENTS/u);
@@ -92,9 +88,7 @@ test('v4 app shares one temporal event model with both navigator controls and ra
 });
 
 test('v4 temporal navigator truth copy explicitly separates operator incidents from captured analysis snapshots', async () => {
-  const panel = await text(
-    'apps/aethergrid-console/web/src/components/TemporalEventNavigator.tsx',
-  );
+  const panel = await text('apps/aethergrid-console/web/src/components/TemporalEventNavigator.tsx');
 
   assert.match(panel, /TIME NAVIGATION · NON-AUTHORITATIVE/u);
   assert.match(panel, /old LIVE capture converts the view to historical context/u);
