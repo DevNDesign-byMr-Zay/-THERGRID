@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import type { ScenarioId, ScenarioParameters } from '../services/scenario-client';
 import {
   addOperatorScenarioAssumption,
+  branchOperatorScenario,
   compareOperatorScenario,
   createOperatorScenario,
   downloadOperatorScenario,
@@ -150,6 +151,12 @@ export function ScenarioComposerPanel({
     setScenarios(next);
     if (activeScenarioId === id) onDeactivate();
     setSelectedId(next[0]?.id ?? null);
+  };
+
+  const branchSelected = () => {
+    if (!selected) return;
+    const branched = branchOperatorScenario(selected);
+    persist(branched);
   };
 
   const changeSelectedParameter = (
@@ -333,7 +340,7 @@ export function ScenarioComposerPanel({
             >
               <span>
                 <small>
-                  {scenario.status.toUpperCase()} ·{' '}
+                  {scenario.status.toUpperCase()} · v{scenario.version} ·{' '}
                   {scenario.template.toUpperCase()}
                 </small>
                 <strong>{scenario.name}</strong>
@@ -350,7 +357,7 @@ export function ScenarioComposerPanel({
         <article className="scenario-composer-detail">
           <header>
             <span>
-              <small>SELECTED HYPOTHESIS</small>
+              <small>SELECTED HYPOTHESIS · VERSION {selected.version}</small>
               <strong>{selected.name}</strong>
             </span>
             <em>{selected.status.toUpperCase()}</em>
@@ -530,6 +537,9 @@ export function ScenarioComposerPanel({
             )}
             <button type="button" onClick={() => onAnalyze(selected)}>
               ANALYZE WITH VÆLON
+            </button>
+            <button type="button" onClick={branchSelected}>
+              BRANCH VERSION
             </button>
             <button
               type="button"
