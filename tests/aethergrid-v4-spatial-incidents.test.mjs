@@ -77,8 +77,14 @@ test('v4 app renders incidents in world and city scenes while incident navigatio
 
   assert.match(app, /\{ id: 'annotations', visible: true \}/u);
   assert.match(app, /spatialIncidentsToOverlay/u);
-  assert.match(app, /\[worldOverlay, incidentOverlay, worksetGeometryOverlay, measurementOverlay\]/u);
-  assert.match(app, /seismicOverlay,[\s\S]*incidentOverlay,[\s\S]*worksetGeometryOverlay,[\s\S]*measurementOverlay/u);
+  assert.match(
+    app,
+    /\[worldOverlay, incidentOverlay, worksetGeometryOverlay, measurementOverlay\]/u,
+  );
+  assert.match(
+    app,
+    /seismicOverlay,[\s\S]*incidentOverlay,[\s\S]*worksetGeometryOverlay,[\s\S]*measurementOverlay/u,
+  );
   assert.match(app, /const locateSpatialIncident/u);
   assert.match(app, /setSelection\(null\)/u);
   assert.match(app, /name: 'INCIDENT ANCHOR'/u);
