@@ -1333,6 +1333,53 @@ button {
 }
 
 
+.hazard-scene-badge {
+  position: absolute;
+  top: 72px;
+  left: 16px;
+  z-index: 6;
+  max-width: min(300px, calc(100% - 32px));
+  display: grid;
+  gap: 2px;
+  padding: 7px 9px;
+  border: 1px solid rgba(255, 112, 79, 0.22);
+  border-radius: 7px;
+  background: rgba(22, 8, 7, 0.8);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+.hazard-scene-badge span {
+  color: #a46c60;
+  font-size: 6px;
+  letter-spacing: 0.1em;
+}
+
+.hazard-scene-badge strong {
+  color: #ffd2c8;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+}
+
+.hazard-scene-badge small {
+  overflow: hidden;
+  color: #a9877f;
+  font-size: 5px;
+  letter-spacing: 0.05em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hazard-scene-badge[data-source-state='stale'] {
+  border-color: rgba(255, 211, 125, 0.26);
+  background: rgba(20, 15, 7, 0.82);
+}
+
+.hazard-scene-badge[data-source-state='unavailable'],
+.hazard-scene-badge[data-source-state='fallback'] {
+  border-color: rgba(255, 112, 112, 0.28);
+}
+
 .use-case-scene-badge {
   position: absolute;
   top: 72px;
