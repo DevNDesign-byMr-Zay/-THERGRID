@@ -3,6 +3,7 @@ import type {
   SpatialSurfacePoint,
   TemporalInstant
 } from '../renderer/spatial-renderer';
+import type { OperatorScenario } from './operator-scenario';
 import type { SpatialEntityDossier } from './spatial-entity-dossier';
 import type { SpatialIncident } from './spatial-incidents';
 import type { SpatialObservation } from './spatial-comparison';
@@ -22,6 +23,7 @@ export interface OperatorSessionWorkspace {
   observationA: SpatialObservation | null;
   observationB: SpatialObservation | null;
   frozenDossier: SpatialEntityDossier | null;
+  operatorScenario: OperatorScenario | null;
   workset: readonly SpatialWorksetItem[];
   incidents: readonly SpatialIncident[];
 }
@@ -99,7 +101,15 @@ export function loadOperatorSessions(): OperatorWorkspaceSession[] {
     return parsed
       .filter(validSession)
       .slice(0, MAX_OPERATOR_SESSIONS)
-      .map((session) => clone(session));
+      .map((session) => ({
+        ...clone(session),
+        workspace: {
+          ...clone(session.workspace),
+          operatorScenario: session.workspace.operatorScenario
+            ? clone(session.workspace.operatorScenario)
+            : null
+        }
+      }));
   } catch {
     return [];
   }
