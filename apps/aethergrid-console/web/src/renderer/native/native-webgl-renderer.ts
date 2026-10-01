@@ -590,7 +590,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     }
 
     if (
-      this.#time.mode === 'live' &&
+      (this.#time.mode === 'live' || this.#time.mode === 'forecast') &&
       this.#layerVisible('weather', true) &&
       (this.#atmosphere?.current?.cloudCoverPercent ?? 0) > 75
     ) {
@@ -707,7 +707,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
 
   #weatherGeometry(): NativeWeatherGeometry {
     if (
-      this.#time.mode !== 'live' ||
+      (this.#time.mode !== 'live' && this.#time.mode !== 'forecast') ||
       !this.#layerVisible('weather', true) ||
       !this.#atmosphere?.current
     ) {
