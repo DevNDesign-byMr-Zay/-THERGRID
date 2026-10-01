@@ -248,6 +248,7 @@ Implemented v4 behavior includes:
 - source-backed roads, water, green space, power topology, recent seismic context and selectable entity provenance;
 - scenario-mode network visualization aligned with the backend scenario stress factors, including a dim source-baseline comparison beneath the modeled scenario presentation;
 - operational view presets using only implemented layers: City Ops, Grid Resilience, Environment, Seismic and Skyline;
+- explicit per-city/coordinate source bindings for NOAA NWPS gauge IDs and EIA balancing-region codes, persisted locally as non-secret operator settings and never inferred from map location;
 - browser-persistent saved spatial views that restore scope, target, layers, visual mode, operation mode and the 4D cursor without silently re-submitting backend scenarios;
 - selected-entity provenance handoff into AUREN, prefilled for operator review but never auto-submitted;
 - independent city-load readiness for geometry, atmosphere and live context;
