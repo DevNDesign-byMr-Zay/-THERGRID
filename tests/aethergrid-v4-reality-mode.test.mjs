@@ -25,12 +25,6 @@ test('v4 reality mode uses real Cesium photorealistic tiles and falls back truth
   assert.match(controller, /applied: 'solid'/u);
   assert.match(controller, /applied: 'reality'/u);
 
-  assert.match(
-    publicConfig,
-    /realityEnabled: Boolean\(developmentCesiumToken\)/u,
-  );
-  assert.doesNotMatch(
-    renderer,
-    /Photorealistic[\s\S]{0,160}background-image|backgroundImage/u,
-  );
+  assert.match(publicConfig, /realityEnabled: Boolean\(developmentCesiumToken\)/u);
+  assert.doesNotMatch(renderer, /Photorealistic[\s\S]{0,160}background-image|backgroundImage/u);
 });
