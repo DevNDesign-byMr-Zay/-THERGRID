@@ -25,6 +25,7 @@ export interface AtmosphericOverlaySnapshot {
   sourceTime: string | null;
   fetchedAt: string | null;
   live: boolean;
+  stale?: boolean;
   fallback: boolean;
   attribution: string | null;
   timezone: string | null;
