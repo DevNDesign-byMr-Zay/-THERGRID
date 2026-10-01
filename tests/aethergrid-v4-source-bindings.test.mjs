@@ -35,9 +35,7 @@ test('v4 source bindings validate provider identifiers instead of guessing them 
 });
 
 test('v4 bound hydrology and energy reads use existing backend routes only in live snapshots', async () => {
-  const client = await text(
-    'apps/aethergrid-console/web/src/services/operational-data-client.ts',
-  );
+  const client = await text('apps/aethergrid-console/web/src/services/operational-data-client.ts');
 
   assert.match(client, /gaugeId\?: string \| null/u);
   assert.match(client, /energyRegion\?: string \| null/u);
