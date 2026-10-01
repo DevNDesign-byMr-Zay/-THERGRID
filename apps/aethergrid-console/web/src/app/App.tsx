@@ -11,6 +11,7 @@ import { OperationalDataPanel } from '../components/OperationalDataPanel';
 import { OperatorSessionPanel } from '../components/OperatorSessionPanel';
 import { QuantumPanel } from '../components/QuantumPanel';
 import { ProfileMenu } from '../components/ProfileMenu';
+import { ScenarioComposerPanel } from '../components/ScenarioComposerPanel';
 import { ScenarioPanel } from '../components/ScenarioPanel';
 import { SpatialAnalysisPanel } from '../components/SpatialAnalysisPanel';
 import { SpatialComparisonPanel } from '../components/SpatialComparisonPanel';
@@ -46,6 +47,11 @@ import {
   loadCityEnvironment
 } from '../services/city-environment';
 import type { ScenarioVisualState } from '../services/scenario-client';
+import {
+  compareOperatorScenario,
+  operatorScenarioToOverlay,
+  type OperatorScenario
+} from '../services/operator-scenario';
 import {
   loadGlobalLiveContext,
   type GlobalLiveContext
@@ -210,7 +216,8 @@ const INITIAL_LAYERS: readonly LayerState[] = [
   { id: 'seismic', visible: true },
   { id: 'energy', visible: true },
   { id: 'annotations', visible: true },
-  { id: 'workset-analysis', visible: true }
+  { id: 'workset-analysis', visible: true },
+  { id: 'scenario-model', visible: true }
 ];
 
 const VISUAL_MODES: readonly VisualMode[] = [
@@ -266,7 +273,10 @@ export function App() {
   const [liveContext, setLiveContext] = useState<CityLiveSnapshot | null>(null);
   const [globalLive, setGlobalLive] = useState<GlobalLiveContext | null>(null);
   const [liveContextError, setLiveContextError] = useState<string | null>(null);
-  const [scenarioVisual, setScenarioVisual] = useState<ScenarioVisualState | null>(null);
+  const [scenarioVisual, setScenarioVisual] =
+    useState<ScenarioVisualState | null>(null);
+  const [activeOperatorScenario, setActiveOperatorScenario] =
+    useState<OperatorScenario | null>(null);
   const [agentHandoff, setAgentHandoff] = useState<AgentHandoffRequest | null>(null);
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceRecord | null>(null);
   const [cityLoad, setCityLoad] = useState<CityLoadState>({
@@ -313,6 +323,18 @@ export function App() {
   const worksetGeometryOverlay = useMemo(
     () => spatialWorksetGeometryToOverlay(worksetGeometry, temporalInstant),
     [worksetGeometry, temporalInstant]
+  );
+
+  const operatorScenarioOverlay = useMemo(
+    () =>
+      activeOperatorScenario
+        ? operatorScenarioToOverlay(
+            activeOperatorScenario,
+            worksetGeometry,
+            temporalInstant
+          )
+        : null,
+    [activeOperatorScenario, worksetGeometry, temporalInstant]
   );
 
   const spatialComparison = useMemo(
