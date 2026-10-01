@@ -4466,3 +4466,218 @@ button {
   }
 }
 
+/* Operator workspace sessions — explicit local restore snapshots */
+.operator-session-panel {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(121, 255, 221, 0.07);
+  border-radius: 9px;
+  background: linear-gradient(
+    145deg,
+    rgba(8, 18, 22, 0.65),
+    rgba(8, 12, 18, 0.72)
+  );
+}
+
+.operator-session-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.operator-session-head span small,
+.operator-session-head span strong {
+  display: block;
+}
+
+.operator-session-head span small {
+  color: #5d766f;
+  font-size: 6px;
+  letter-spacing: 0.1em;
+}
+
+.operator-session-head span strong {
+  margin-top: 2px;
+  color: #d1eee7;
+  font-size: 8px;
+}
+
+.operator-session-head > em {
+  border: 1px solid rgba(121, 255, 221, 0.12);
+  border-radius: 999px;
+  padding: 3px 6px;
+  color: #7fb4a7;
+  font-size: 5px;
+  font-style: normal;
+}
+
+.operator-session-current {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.operator-session-current span {
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.operator-session-current small,
+.operator-session-current strong {
+  display: block;
+}
+
+.operator-session-current small {
+  color: #526c66;
+  font-size: 5px;
+  letter-spacing: 0.06em;
+}
+
+.operator-session-current strong {
+  margin-top: 3px;
+  color: #beded5;
+  font-size: 8px;
+}
+
+.operator-session-compose {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px;
+}
+
+.operator-session-compose input {
+  min-width: 0;
+  min-height: 29px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 6px;
+  padding: 0 7px;
+  color: #d8e9e5;
+  background: rgba(255, 255, 255, 0.018);
+  font: inherit;
+  font-size: 6px;
+}
+
+.operator-session-compose button,
+.operator-session-actions button {
+  min-height: 29px;
+  border: 1px solid rgba(121, 255, 221, 0.13);
+  border-radius: 6px;
+  color: #8dbeb2;
+  background: rgba(121, 255, 221, 0.026);
+  font-size: 5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.operator-session-list {
+  display: grid;
+  gap: 5px;
+  max-height: 300px;
+  overflow: auto;
+}
+
+.operator-session-list article {
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.operator-session-list article header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 7px;
+}
+
+.operator-session-list article header span {
+  min-width: 0;
+}
+
+.operator-session-list article header small,
+.operator-session-list article header strong {
+  display: block;
+}
+
+.operator-session-list article header small {
+  color: #597169;
+  font-size: 5px;
+  letter-spacing: 0.07em;
+}
+
+.operator-session-list article header strong {
+  overflow: hidden;
+  margin-top: 2px;
+  color: #d2e9e3;
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operator-session-list article header em {
+  flex: 0 0 auto;
+  color: #667d76;
+  font-size: 5px;
+  font-style: normal;
+}
+
+.operator-session-list article p,
+.operator-session-empty {
+  margin: 5px 0 0;
+  color: #647b74;
+  font-size: 6px;
+  line-height: 1.4;
+}
+
+.operator-session-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.operator-session-tags span {
+  padding: 3px 5px;
+  border: 1px solid rgba(121, 255, 221, 0.08);
+  border-radius: 999px;
+  color: #698a81;
+  font-size: 5px;
+}
+
+.operator-session-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.operator-session-actions button:first-child {
+  border-color: rgba(121, 255, 221, 0.2);
+  color: #b8e7dc;
+}
+
+.operator-session-boundary {
+  margin-top: 0;
+}
+
+:root[data-theme='light'] .operator-session-panel,
+:root[data-theme='light'] .operator-session-list article,
+:root[data-theme='light'] .operator-session-current span {
+  background: rgba(248, 255, 253, 0.82);
+}
+
+@media (max-width: 760px) {
+  .operator-session-compose,
+  .operator-session-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
