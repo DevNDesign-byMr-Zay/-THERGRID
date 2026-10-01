@@ -13,6 +13,7 @@ import { ProfileMenu } from '../components/ProfileMenu';
 import { ScenarioPanel } from '../components/ScenarioPanel';
 import { SpatialAnalysisPanel } from '../components/SpatialAnalysisPanel';
 import { SpatialComparisonPanel } from '../components/SpatialComparisonPanel';
+import { SpatialIncidentPanel } from '../components/SpatialIncidentPanel';
 import { SpatialWorksetPanel } from '../components/SpatialWorksetPanel';
 import { RuntimeDiagnosticsPanel } from '../components/RuntimeDiagnosticsPanel';
 import { SpatialViewport } from '../components/SpatialViewport';
@@ -67,6 +68,11 @@ import {
   type SpatialEntityDossier
 } from '../services/spatial-entity-dossier';
 import { bindSpatialSelectionIdentity } from '../services/spatial-entity-identity';
+import {
+  loadSpatialIncidents,
+  spatialIncidentsToOverlay,
+  type SpatialIncident
+} from '../services/spatial-incidents';
 import {
   captureSpatialObservation,
   compareSpatialObservations,
@@ -179,7 +185,8 @@ const INITIAL_LAYERS: readonly LayerState[] = [
   { id: 'weather', visible: true },
   { id: 'air', visible: true },
   { id: 'seismic', visible: true },
-  { id: 'energy', visible: true }
+  { id: 'energy', visible: true },
+  { id: 'annotations', visible: true }
 ];
 
 const VISUAL_MODES: readonly VisualMode[] = [
@@ -211,6 +218,8 @@ export function App() {
     useState<SpatialObservation | null>(null);
   const [frozenDossier, setFrozenDossier] =
     useState<SpatialEntityDossier | null>(null);
+  const [spatialIncidents, setSpatialIncidents] =
+    useState<SpatialIncident[]>(loadSpatialIncidents);
   const [powerOverlay, setPowerOverlay] = useState<SpatialOverlaySnapshot | null>(null);
   const [illuminationOverlay, setIlluminationOverlay] =
     useState<SpatialOverlaySnapshot | null>(null);
@@ -262,6 +271,10 @@ export function App() {
         ? measurementToOverlay(measurement, measurementFrame)
         : null,
     [measurement, measurementFrame]
+  );
+  const incidentOverlay = useMemo(
+    () => spatialIncidentsToOverlay(spatialIncidents, temporalInstant),
+    [spatialIncidents, temporalInstant]
   );
 
   const spatialComparison = useMemo(
@@ -610,13 +623,14 @@ export function App() {
   const activeOverlays = useMemo(
     () =>
       (scope === 'world'
-        ? [worldOverlay, measurementOverlay]
+        ? [worldOverlay, incidentOverlay, measurementOverlay]
         : [
             ...semanticOverlays,
             activeIllumination,
             powerOverlay,
             windOverlay,
             seismicOverlay,
+            incidentOverlay,
             measurementOverlay
           ]
       ).filter(
@@ -630,6 +644,7 @@ export function App() {
       powerOverlay,
       windOverlay,
       seismicOverlay,
+      incidentOverlay,
       measurementOverlay
     ]
   );
@@ -753,6 +768,36 @@ export function App() {
         `Source chain: ${sourceChain || 'none'}. Core coverage: ${dossier.coverage.percent}%. ` +
         `Matching captured frames: ${dossier.matchingObservations.map((item) => item.slot).join(', ') || 'none'}. ` +
         'Treat the dossier as non-authoritative operator analysis. Separate entity-specific facts from surrounding context, preserve missing fields, do not infer a GERS join or causation where none is proven, and identify the next evidence needed before an operator decision.'
+    }));
+    setIntelWorkspace('ai');
+    setIntelOpen(true);
+  };
+  const locateSpatialIncident = (incident: SpatialIncident) => {
+    setSelection(null);
+    setCity({
+      id: `incident-${incident.anchor.latitude.toFixed(5)}-${incident.anchor.longitude.toFixed(5)}`,
+      name: 'INCIDENT ANCHOR',
+      district: `${incident.title} · ${incident.anchor.latitude.toFixed(5)}°, ${incident.anchor.longitude.toFixed(5)}°`,
+      latitude: incident.anchor.latitude,
+      longitude: incident.anchor.longitude,
+      rangeMeters: 3_000,
+      pitchDegrees: -35,
+      custom: true
+    });
+    setScope('city');
+    setIntelOpen(true);
+  };
+
+  const analyzeSpatialIncident = (incident: SpatialIncident) => {
+    setAgentHandoff((current) => ({
+      id: (current?.id ?? 0) + 1,
+      agent: 'AUREN',
+      prompt:
+        `Review the local operator-created ${incident.category} record "${incident.title}" at ${incident.anchor.region}. ` +
+        `Severity: ${incident.severity}; record status: ${incident.status}; observed frame: ${incident.temporalMode} at ${incident.observedAt}. ` +
+        `Entity link: ${incident.anchor.canonicalId ?? 'none'}; workset link: ${incident.linkedWorksetCanonicalId ?? 'none'}; GERS: ${incident.anchor.gersId ?? 'none'}. ` +
+        `Operator note: ${incident.note || 'none'}. ` +
+        'Treat this strictly as a non-authoritative operator annotation. Do not treat its severity/status as provider-confirmed fact, do not infer causation, and identify what source-backed evidence would be required to verify or dismiss the concern.'
     }));
     setIntelWorkspace('ai');
     setIntelOpen(true);
@@ -1593,6 +1638,20 @@ export function App() {
             current={entityDossier}
             onLocate={locateEntityDossier}
             onAnalyze={analyzeEntityDossier}
+          />
+          <SpatialIncidentPanel
+            incidents={spatialIncidents}
+            current={entityDossier}
+            temporal={temporalInstant}
+            region={scope === 'world' ? 'GLOBAL' : city.name}
+            coordinate={{
+              latitude: scope === 'world' ? 20 : city.latitude,
+              longitude: scope === 'world' ? 0 : city.longitude,
+              heightMeters: null
+            }}
+            onChange={setSpatialIncidents}
+            onLocate={locateSpatialIncident}
+            onAnalyze={analyzeSpatialIncident}
           />
         </aside>
       </section>
