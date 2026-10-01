@@ -39,8 +39,8 @@ test('v4 operational client uses provider receipts and withholds fallback metric
   assert.match(client, /A source-backed gauge identifier is required/u);
   assert.match(client, /loadEnergyContextForRegion/u);
   assert.match(client, /A source-backed energy region is required/u);
-  assert.match(client, /Location-to-gauge resolution is not connected yet/u);
-  assert.match(client, /Location-to-energy-region resolution is not connected yet/u);
+  assert.match(client, /Bind an explicit NOAA NWPS gauge ID/u);
+  assert.match(client, /Bind an explicit EIA balancing-region code/u);
   assert.match(client, /\/api\/aethergrid\/weather\/current/u);
   assert.match(client, /\/api\/aethergrid\/hazards\/alerts/u);
   assert.match(client, /\/api\/aethergrid\/hydrology\/gauges/u);
@@ -70,6 +70,11 @@ test('v4 OPS workspace exposes source readiness without synthetic telemetry', as
   assert.match(app, /seismicCurrent=/u);
   assert.match(app, /temporalMode=\{temporal\.mode\}/u);
   assert.match(app, /cursorIso=\{temporal\.cursorIso\}/u);
+  assert.match(panel, /SOURCE BINDINGS/u);
+  assert.match(panel, /APPLY BINDINGS/u);
+  assert.match(panel, /never inferred from the map/u);
+  assert.match(panel, /gaugeId: bindings\.gaugeId/u);
+  assert.match(panel, /energyRegion: bindings\.energyRegion/u);
   assert.match(css, /data-workspace='operations'/u);
   assert.match(css, /data-provider-state='live'/u);
   assert.match(css, /data-provider-state='forecast'/u);
