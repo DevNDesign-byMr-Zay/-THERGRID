@@ -746,8 +746,16 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
       });
     }
 
+    const forecastPresentation =
+      this.#time.mode === 'forecast' &&
+      (phenomenon === 'rain' ||
+        phenomenon === 'snow' ||
+        phenomenon === 'thunderstorm' ||
+        phenomenon === 'mixed');
+    const presentationPrecipitation =
+      precipitation > 0.02 ? precipitation : forecastPresentation ? 0.1 : 0;
     const precipitationActive =
-      precipitation > 0.02 &&
+      presentationPrecipitation > 0.02 &&
       (phenomenon === 'rain' ||
         phenomenon === 'snow' ||
         phenomenon === 'thunderstorm' ||
@@ -756,7 +764,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
       const count = Math.max(
         8,
         Math.round(
-          (18 + clamp(precipitation / 8, 0, 1) * 90) *
+          (18 + clamp(presentationPrecipitation / 8, 0, 1) * 90) *
             this.#decorativeDensity()
         )
       );
@@ -778,11 +786,11 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
         if (snow) {
           points.push({
             position: [x, y],
-            color: rgba('#e8f4ff', 0.42 + clamp(precipitation / 8, 0, 1) * 0.3),
+            color: rgba('#e8f4ff', 0.42 + clamp(presentationPrecipitation / 8, 0, 1) * 0.3),
             size: 2.2 + deterministicUnit(index, 4.13) * 3
           });
         } else {
-          const length = 0.045 + clamp(precipitation / 8, 0, 1) * 0.07;
+          const length = 0.045 + clamp(presentationPrecipitation / 8, 0, 1) * 0.07;
           lines.push({
             from: [x, y],
             to: [
@@ -791,7 +799,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
             ],
             color: rgba(
               '#9ddcff',
-              0.22 + clamp(precipitation / 8, 0, 1) * 0.42
+              0.22 + clamp(presentationPrecipitation / 8, 0, 1) * 0.42
             )
           });
         }
