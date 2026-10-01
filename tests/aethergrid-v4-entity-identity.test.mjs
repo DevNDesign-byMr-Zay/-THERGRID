@@ -38,17 +38,18 @@ test('v4 mapped scene segments bind back to their real source feature IDs', asyn
 });
 
 test('v4 operator context carries canonical identity into selection AI and frame comparison', async () => {
-  const [app, comparison, panel] = await Promise.all([
+  const [app, comparison, panel, dossierPanel] = await Promise.all([
     text('apps/aethergrid-console/web/src/app/App.tsx'),
     text('apps/aethergrid-console/web/src/services/spatial-comparison.ts'),
     text('apps/aethergrid-console/web/src/components/SpatialComparisonPanel.tsx'),
+    text('apps/aethergrid-console/web/src/components/EntityDossierPanel.tsx'),
   ]);
 
   assert.match(app, /bindSpatialSelectionIdentity/u);
   assert.match(app, /canonicalId: selection\.identity\?\.canonicalId/u);
   assert.match(app, /crossSourceJoinReady/u);
-  assert.match(app, /GERS LINKED/u);
-  assert.match(app, /NOT LINKED/u);
+  assert.match(dossierPanel, /GERS LINKED/u);
+  assert.match(dossierPanel, /NO GERS JOIN/u);
   assert.match(app, /Identity basis:/u);
   assert.match(app, /Entity relationship:/u);
 
