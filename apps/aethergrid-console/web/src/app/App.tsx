@@ -15,6 +15,7 @@ import { ScenarioPanel } from '../components/ScenarioPanel';
 import { SpatialAnalysisPanel } from '../components/SpatialAnalysisPanel';
 import { SpatialComparisonPanel } from '../components/SpatialComparisonPanel';
 import { SpatialIncidentPanel } from '../components/SpatialIncidentPanel';
+import { SpatialWorksetGeometryPanel } from '../components/SpatialWorksetGeometryPanel';
 import { SpatialWorksetPanel } from '../components/SpatialWorksetPanel';
 import { RuntimeDiagnosticsPanel } from '../components/RuntimeDiagnosticsPanel';
 import { SpatialViewport } from '../components/SpatialViewport';
@@ -85,7 +86,17 @@ import {
   compareSpatialObservations,
   type SpatialObservation
 } from '../services/spatial-comparison';
-import { saveSpatialWorkset } from '../services/spatial-workset';
+import {
+  loadSpatialWorkset,
+  saveSpatialWorkset,
+  SPATIAL_WORKSET_EVENT,
+  type SpatialWorksetItem
+} from '../services/spatial-workset';
+import {
+  buildSpatialWorksetGeometry,
+  spatialWorksetGeometryToOverlay,
+  type SpatialWorksetGeometrySummary
+} from '../services/spatial-workset-geometry';
 import { buildTemporalNavigatorEvents } from '../services/temporal-event-navigator';
 import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
 import type { SpatialViewBookmark } from '../services/view-bookmarks';
@@ -195,7 +206,8 @@ const INITIAL_LAYERS: readonly LayerState[] = [
   { id: 'air', visible: true },
   { id: 'seismic', visible: true },
   { id: 'energy', visible: true },
-  { id: 'annotations', visible: true }
+  { id: 'annotations', visible: true },
+  { id: 'workset-analysis', visible: true }
 ];
 
 const VISUAL_MODES: readonly VisualMode[] = [
@@ -229,6 +241,8 @@ export function App() {
     useState<SpatialEntityDossier | null>(null);
   const [spatialIncidents, setSpatialIncidents] =
     useState<SpatialIncident[]>(loadSpatialIncidents);
+  const [spatialWorkset, setSpatialWorkset] =
+    useState<SpatialWorksetItem[]>(loadSpatialWorkset);
   const [pendingSessionRestore, setPendingSessionRestore] =
     useState<OperatorWorkspaceSession | null>(null);
   const [powerOverlay, setPowerOverlay] = useState<SpatialOverlaySnapshot | null>(null);
