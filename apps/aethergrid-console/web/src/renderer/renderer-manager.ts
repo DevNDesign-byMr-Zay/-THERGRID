@@ -12,6 +12,7 @@ import type {
   SpatialRendererConfig,
   SpatialRendererStatus,
   SpatialSurfacePoint,
+  SpatialPerformanceTier,
   SpatialTarget,
   TemporalInstant,
   VisualMode
@@ -26,6 +27,7 @@ export class RendererManager {
   #layers: readonly LayerState[] = [];
   #time: TemporalInstant | null = null;
   #mode: VisualMode = 'solid';
+  #performanceTier: SpatialPerformanceTier = 'balanced';
   #overlays = new Map<string, SpatialOverlaySnapshot>();
   #atmosphere: AtmosphericOverlaySnapshot | null = null;
   #airQuality: AirQualityOverlaySnapshot | null = null;
@@ -115,6 +117,11 @@ export class RendererManager {
     this.#current.setVisualMode(mode);
   }
 
+  setPerformanceTier(tier: SpatialPerformanceTier): void {
+    this.#performanceTier = tier;
+    this.#current.setPerformanceTier(tier);
+  }
+
   applyOverlay(snapshot: SpatialOverlaySnapshot): void {
     this.#overlays.set(snapshot.layerId, snapshot);
     this.#current.applyOverlay(snapshot);
@@ -183,6 +190,7 @@ export class RendererManager {
     await renderer.initialize(this.#config);
     renderer.setLayers(this.#layers);
     renderer.setVisualMode(this.#mode);
+    renderer.setPerformanceTier(this.#performanceTier);
     for (const snapshot of this.#overlays.values()) renderer.applyOverlay(snapshot);
     if (this.#atmosphere) renderer.applyAtmosphere(this.#atmosphere);
     if (this.#airQuality) renderer.applyAirQuality(this.#airQuality);
