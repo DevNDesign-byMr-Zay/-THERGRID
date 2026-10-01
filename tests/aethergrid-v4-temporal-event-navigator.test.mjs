@@ -89,7 +89,10 @@ test('v4 app shares one temporal event model with both navigator controls and ra
   );
   assert.match(app, /<TemporalEventNavigator/u);
   assert.match(app, /events=\{temporalEvents\}/u);
-  assert.match(app, /<TemporalRail clock=\{clock\} state=\{temporal\} events=\{temporalEvents\}/u);
+  assert.match(
+    app,
+    /<TemporalRail[\s\S]{0,160}clock=\{clock\}[\s\S]{0,160}state=\{temporal\}[\s\S]{0,160}events=\{temporalEvents\}/u,
+  );
 });
 
 test('v4 temporal navigator truth copy explicitly separates operator incidents from captured analysis snapshots', async () => {
