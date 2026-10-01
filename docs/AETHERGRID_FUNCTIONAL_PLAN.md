@@ -128,6 +128,7 @@ Deliver:
 - explicit temporal-data eligibility so AQI/seismic remain current-only while provider-backed weather may appear in FORECAST only at an aligned returned source sample;
 - source-driven cloud, precipitation, fog, AQI, thunderstorm and geographic wind-vector presentation;
 - source-backed city-load readiness, selectable provenance and operator-controlled AUREN handoff;
+- live NWS active-hazard visualization from the existing provider route, including severity-coded point-context markers and returned Polygon/MultiPolygon boundary geometry without fabricated affected-area fills;
 - explicit operator bindings for NOAA NWPS gauge IDs and EIA balancing-region codes, with no coordinate-derived identity guessing and no browser-stored provider secrets;
 - backend-aligned scenario stress visualization with source-baseline comparison and no source-data mutation;
 - real operational presets using only implemented layers;
@@ -137,7 +138,8 @@ Fidelity / authority boundaries:
 - thunderstorm flash cadence is synthetic presentation derived from provider-coded storm conditions, not detected lightning;
 - mapped-building illumination is presentation-only and is not occupancy, window-state or utility-load telemetry;
 - native failover preserves a functional operator scene but is not photorealistic equivalence to streamed Cesium content;
-- OpenStreetMap, terrain, weather, AQI and seismic data keep source/fallback/provenance state;
+- OpenStreetMap, terrain, weather, AQI, seismic and NWS hazard data keep source/fallback/provenance state;
+- NWS hazard boundaries are rendered only from provider-returned geometry; missing geometry never becomes an inferred polygon or radius;
 - scenario visuals remain modeled overlays and never become authoritative source truth;
 - physical infrastructure actuation remains disabled.
 
