@@ -105,12 +105,22 @@ function mix(a: Rgba, b: Rgba, amount: number): Rgba {
   };
 }
 
+function hazardHex(severity: unknown): string {
+  const normalized = String(severity ?? '').toLowerCase();
+  if (normalized === 'extreme') return '#ff3b52';
+  if (normalized === 'severe') return '#ff704f';
+  if (normalized === 'moderate') return '#f2b65f';
+  if (normalized === 'minor') return '#e2d86c';
+  return '#f08a73';
+}
+
 function layerColor(layerId: string, kind = ''): Rgba {
   if (layerId === 'analysis') return rgba('#c9a7ff', 0.94);
   if (layerId === 'energy') return rgba('#70e7ff', 0.9);
   if (layerId === 'roads') return rgba('#9aa9b7', 0.58);
   if (layerId === 'water') return rgba('#38bde8', 0.72);
   if (layerId === 'green') return rgba('#64d99b', 0.64);
+  if (layerId === 'hazards') return rgba('#ff704f', 0.92);
   if (layerId === 'seismic' || kind === 'event') return rgba('#ff806b', 0.95);
   if (layerId === 'world' && kind === 'city') return rgba('#7ee8ff', 0.96);
   return rgba('#8db7cf', 0.72);
@@ -998,8 +1008,11 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
                 : incidentSeverity === 'low'
                   ? '#e0d778'
                   : '#8dc9ff';
-        let color = urbanLight
-          ? rgba(
+        const nwsAlert = node.properties?.eventType === 'nws-alert';
+        let color = nwsAlert
+          ? rgba(hazardHex(node.properties?.severity), 0.96)
+          : urbanLight
+            ? rgba(
               '#ffd37d',
               0.48 +
                 (node.intensity ?? 0.5) * 0.22 +
