@@ -175,7 +175,12 @@ function pathToEdges(
       to: localMetersToCoordinate(mesh.city, path[index], 6),
       label,
       intensity: kind === 'coastline' ? 0.82 : kind === 'waterway' ? 0.68 : 0.44,
-      properties
+      properties: {
+        sourceFeatureId: featureId,
+        sourceDataset: 'osm-overpass',
+        cityId: mesh.city.id,
+        ...properties
+      }
     });
   }
   return edges;
@@ -229,7 +234,12 @@ export function cityMeshToSemanticOverlays(
       ),
       label: area.name || area.waterType || area.id,
       intensity: 0.62,
-      properties: { waterType: area.waterType ?? '' }
+      properties: {
+        sourceFeatureId: area.id,
+        sourceDataset: 'osm-overpass',
+        cityId: mesh.city.id,
+        waterType: area.waterType ?? ''
+      }
     }));
 
   const greenAreas: SpatialOverlayArea[] = (mesh.greenAreas ?? [])
@@ -242,7 +252,12 @@ export function cityMeshToSemanticOverlays(
       ),
       label: area.name || area.greenType || area.id,
       intensity: 0.52,
-      properties: { greenType: area.greenType ?? '' }
+      properties: {
+        sourceFeatureId: area.id,
+        sourceDataset: 'osm-overpass',
+        cityId: mesh.city.id,
+        greenType: area.greenType ?? ''
+      }
     }));
 
   return [
@@ -494,6 +509,9 @@ export function cityMeshToPowerOverlay(mesh: CityMeshResponse): SpatialOverlaySn
       unit: asset.voltage ? 'V' : null,
       intensity: voltageIntensity(asset.voltage),
       properties: {
+        sourceFeatureId: asset.id,
+        sourceDataset: 'osm-overpass',
+        cityId: mesh.city.id,
         operator: asset.operator ?? '',
         powerType: asset.powerType ?? ''
       }
@@ -513,7 +531,10 @@ export function cityMeshToPowerOverlay(mesh: CityMeshResponse): SpatialOverlaySn
         unit: line.voltage ? 'V' : null,
         intensity: voltageIntensity(line.voltage),
         properties: {
+          sourceFeatureId: line.id,
           sourceLineId: line.id,
+          sourceDataset: 'osm-overpass',
+          cityId: mesh.city.id,
           operator: line.operator ?? '',
           powerType: line.powerType ?? ''
         }
