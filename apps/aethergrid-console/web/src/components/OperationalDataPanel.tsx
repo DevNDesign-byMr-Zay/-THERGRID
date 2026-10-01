@@ -15,6 +15,7 @@ import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
 
 interface ExistingCurrentSource {
   live: boolean;
+  state?: OperationalSourceSnapshot['state'];
   provider: string | null;
   sourceTime: string | null;
   fetchedAt: string | null;
@@ -40,7 +41,7 @@ function existingSourceSnapshot(
   if (!current) return null;
   return {
     id,
-    state: current.live ? 'live' : 'fallback',
+    state: current.state ?? (current.live ? 'live' : 'fallback'),
     provider: current.provider,
     dataset: null,
     sourceTime: current.sourceTime,
@@ -58,8 +59,16 @@ function sourceById(
   existing: OperationalSourceSnapshot | null
 ): OperationalSourceSnapshot | null {
   const candidate = snapshot?.sources.find((source) => source.id === id) ?? null;
-  if (candidate?.state === 'live' || candidate?.state === 'stale') return candidate;
-  if (existing?.state === 'live') return existing;
+  if (
+    candidate?.state === 'live' ||
+    candidate?.state === 'forecast' ||
+    candidate?.state === 'stale'
+  ) return candidate;
+  if (
+    existing?.state === 'live' ||
+    existing?.state === 'forecast' ||
+    existing?.state === 'stale'
+  ) return existing;
   return candidate ?? existing;
 }
 
@@ -112,6 +121,13 @@ export function OperationalDataPanel({
     () => snapshot?.sources.filter((source) => source.state === 'live').length ?? 0,
     [snapshot]
   );
+  const forecastCount = useMemo(
+    () =>
+      temporalMode === 'forecast' && weatherCurrent?.state === 'forecast'
+        ? 1
+        : 0,
+    [temporalMode, weatherCurrent]
+  );
 
   return (
     <section className="intel-card operational-data-panel">
@@ -126,7 +142,9 @@ export function OperationalDataPanel({
       <p>
         {temporalMode === 'live'
           ? `${liveCount} source${liveCount === 1 ? '' : 's'} currently verified LIVE. Missing providers stay missing.`
-          : 'Only provider-backed samples valid for the selected 4D cursor may appear here; current-only telemetry is not replayed.'}
+          : temporalMode === 'forecast'
+            ? `${forecastCount} provider-backed weather forecast sample${forecastCount === 1 ? '' : 's'} aligned to the selected 4D cursor. Current-only telemetry remains hidden.`
+            : 'Only provider-backed samples valid for the selected 4D cursor may appear here; current-only telemetry is not replayed.'}
       </p>
 
       <div className="provider-list">
@@ -144,7 +162,9 @@ export function OperationalDataPanel({
           const state =
             temporalMode === 'live'
               ? source?.state ?? (loading ? 'loading' : support)
-              : support;
+              : temporalMode === 'forecast' && source
+                ? source.state
+                : support;
 
           return (
             <article key={capability.id} className="provider-card" data-provider-state={state}>
