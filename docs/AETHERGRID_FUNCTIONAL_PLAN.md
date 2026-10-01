@@ -125,9 +125,10 @@ Deliver:
 - progressively refined terrain/building detail as the camera approaches city/district scale;
 - computed solar state tied to the 4D clock, solar-aware building presentation and mapped-building nighttime illumination;
 - continuously advancing LIVE time plus independent historical, forecast and scenario cursors;
-- explicit temporal-data eligibility so current-only weather/AQI/seismic context is not presented as historical or forecast data;
+- explicit temporal-data eligibility so AQI/seismic remain current-only while provider-backed weather may appear in FORECAST only at an aligned returned source sample;
 - source-driven cloud, precipitation, fog, AQI, thunderstorm and geographic wind-vector presentation;
 - source-backed city-load readiness, selectable provenance and operator-controlled AUREN handoff;
+- explicit operator bindings for NOAA NWPS gauge IDs and EIA balancing-region codes, with no coordinate-derived identity guessing and no browser-stored provider secrets;
 - backend-aligned scenario stress visualization with source-baseline comparison and no source-data mutation;
 - real operational presets using only implemented layers;
 - persistent local spatial bookmarks that restore scope, target, layers, visual mode, operation mode and 4D cursor without backend mutation.
