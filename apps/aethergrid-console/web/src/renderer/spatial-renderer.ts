@@ -48,6 +48,27 @@ export interface LayerState {
   opacity?: number;
 }
 
+export type SpatialIdentityBasis =
+  | 'gers'
+  | 'source-native'
+  | 'overlay-stable'
+  | 'scene-derived';
+
+export interface SpatialEntityIdentity {
+  canonicalId: string;
+  sceneId: string;
+  sourceId: string;
+  sourceFeatureId: string | null;
+  displayName: string;
+  kind: string;
+  source: string | null;
+  layerId: string | null;
+  basis: SpatialIdentityBasis;
+  gersId: string | null;
+  osmId: string | null;
+  crossSourceJoinReady: boolean;
+}
+
 export interface SpatialFeatureSelection {
   id: string;
   kind: string;
@@ -56,6 +77,7 @@ export interface SpatialFeatureSelection {
   longitude?: number;
   heightMeters?: number;
   properties?: Readonly<Record<string, unknown>>;
+  identity?: SpatialEntityIdentity;
 }
 
 export interface SpatialPickPoint {
