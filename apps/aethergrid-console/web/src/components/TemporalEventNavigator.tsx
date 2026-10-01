@@ -12,6 +12,7 @@ interface TemporalEventNavigatorProps {
   clock: AethergridTemporalClock;
   state: Readonly<TemporalState>;
   events: readonly TemporalNavigatorEvent[];
+  onScenarioEvent?(event: TemporalNavigatorEvent): void;
 }
 
 function timeLabel(value: string): string {
@@ -22,7 +23,8 @@ function timeLabel(value: string): string {
 export function TemporalEventNavigator({
   clock,
   state,
-  events
+  events,
+  onScenarioEvent
 }: TemporalEventNavigatorProps) {
   const [filters, setFilters] = useState({
     incidents: true,
@@ -58,6 +60,10 @@ export function TemporalEventNavigator({
       return;
     }
     if (mode === 'scenario') {
+      if (event.scenarioId && onScenarioEvent) {
+        onScenarioEvent(event);
+        return;
+      }
       clock.setMode('scenario', event.scenarioId);
       clock.scrub(event.timeIso, 'scenario');
       return;
@@ -79,7 +85,7 @@ export function TemporalEventNavigator({
           <small>4D EVENT NAVIGATOR</small>
           <strong>{filtered.length} VISIBLE RECORDS</strong>
         </span>
-        <em>LOCAL / CAPTURED</em>
+        <em>LOCAL / CAPTURED / MODELED</em>
       </div>
 
       <div className="temporal-event-controls">
@@ -163,7 +169,7 @@ export function TemporalEventNavigator({
         </div>
       ) : (
         <p className="temporal-event-empty">
-          No filtered operator incidents or captured A/B frames are available.
+          No filtered incidents, captured A/B frames or modeled scenario bounds are available.
         </p>
       )}
 
