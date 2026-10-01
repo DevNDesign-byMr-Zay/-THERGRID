@@ -17,9 +17,9 @@ import type {
   SpatialRendererStatus,
   SpatialSurfacePoint,
   SpatialTarget,
+  SpatialPerformanceMode,
   TemporalInstant,
-  VisualMode,
-  type SpatialPerformanceMode
+  VisualMode
 } from '../renderer/spatial-renderer';
 import { loadPublicRuntimeConfig } from '../services/public-runtime-config';
 import { useSpatialPerformance } from '../hooks/use-spatial-performance';
