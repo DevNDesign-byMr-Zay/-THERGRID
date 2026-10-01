@@ -909,10 +909,6 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
           edge.properties?.analysisType === 'workset-geometry';
         const scenarioModelEdge =
           edge.properties?.analysisType === 'scenario-model';
-        const worksetGeometryEdge =
-          edge.properties?.analysisType === 'workset-geometry';
-        const scenarioModelEdge =
-          edge.properties?.analysisType === 'scenario-model';
         if (scenarioModelEdge) {
           color = rgba('#d991ff', 0.86);
         } else if (worksetGeometryEdge) {
@@ -983,10 +979,6 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
             );
         const operatorIncident =
           node.properties?.eventType === 'operator-incident';
-        const worksetGeometryNode =
-          node.properties?.analysisType === 'workset-geometry';
-        const scenarioModelNode =
-          node.properties?.analysisType === 'scenario-model';
         const incidentSeverity = String(node.properties?.severity ?? 'info');
         const incidentColor =
           incidentSeverity === 'critical'
@@ -1209,6 +1201,10 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
         const b = toScreen(edge.to);
         const windEdge =
           edge.kind === 'flow' && edge.properties?.vectorType === 'wind';
+        const worksetGeometryEdge =
+          edge.properties?.analysisType === 'workset-geometry';
+        const scenarioModelEdge =
+          edge.properties?.analysisType === 'scenario-model';
         const timestamp = Date.parse(this.#time.iso);
         const phase = Number.isFinite(timestamp) ? timestamp / 1000 : 0;
         const pulse = 0.5 + 0.5 * Math.sin(phase * 0.72 + (edge.intensity ?? 0.5) * 4.7);
@@ -1272,6 +1268,10 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
         );
         const urbanLight =
           node.properties?.presentationType === 'urban-illumination';
+        const worksetGeometryNode =
+          node.properties?.analysisType === 'workset-geometry';
+        const scenarioModelNode =
+          node.properties?.analysisType === 'scenario-model';
         const timestamp = Date.parse(this.#time.iso);
         const phase = Number.isFinite(timestamp) ? timestamp / 1000 : 0;
         const lightPulse =
