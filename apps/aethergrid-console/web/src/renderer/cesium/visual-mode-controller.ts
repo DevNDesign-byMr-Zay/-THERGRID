@@ -56,7 +56,7 @@ export class VisualModeController {
           requested: mode,
           applied: 'solid',
           degraded: true,
-          reason: 'Reality mode requires a configured Cesium ion photorealistic capability'
+          reason: 'Reality mode requires a configured photorealistic 3D Tiles provider'
         };
       }
 
