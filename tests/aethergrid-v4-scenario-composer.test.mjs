@@ -18,6 +18,9 @@ test('v4 operator scenarios are bounded persistent modeled records with explicit
   assert.match(service, /authoritative: false/u);
   assert.match(service, /modeled: true/u);
   assert.match(service, /operator-scenario\.v1/u);
+  assert.match(service, /version: 1/u);
+  assert.match(service, /parentScenarioId: null/u);
+  assert.match(service, /branchOperatorScenario/u);
   assert.doesNotMatch(service, /fetch\(/u);
   assert.doesNotMatch(service, /\/api\/aethergrid\//u);
 });
@@ -98,6 +101,7 @@ test('v4 scenario composer exposes assumptions persistence comparison activation
   assert.match(panel, /ADD ASSUMPTION/u);
   assert.match(panel, /ACTIVATE MODEL/u);
   assert.match(panel, /ANALYZE WITH VÆLON/u);
+  assert.match(panel, /BRANCH VERSION/u);
   assert.match(panel, /EXPORT JSON/u);
   assert.match(panel, /HYPOTHETICAL MODEL · NOT LIVE \/ NOT FORECAST/u);
   assert.match(panel, /not provider[\s\S]*telemetry/u);
