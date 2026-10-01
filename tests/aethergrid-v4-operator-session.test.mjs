@@ -23,9 +23,7 @@ test('v4 operator sessions are bounded local non-authoritative workspace snapsho
 });
 
 test('v4 operator session payload preserves workspace analysis without persisting a stale active scene selection', async () => {
-  const service = await text(
-    'apps/aethergrid-console/web/src/services/operator-session.ts',
-  );
+  const service = await text('apps/aethergrid-console/web/src/services/operator-session.ts');
 
   assert.match(service, /interactionMode/u);
   assert.match(service, /measurementPoints/u);
@@ -40,9 +38,7 @@ test('v4 operator session payload preserves workspace analysis without persistin
 });
 
 test('v4 session export states that restore does not reselect or prove source freshness', async () => {
-  const service = await text(
-    'apps/aethergrid-console/web/src/services/operator-session.ts',
-  );
+  const service = await text('apps/aethergrid-console/web/src/services/operator-session.ts');
 
   assert.match(service, /operator-workspace-session-export\.v1/u);
   assert.match(service, /does not reselect or revalidate any source entity/u);
@@ -90,10 +86,7 @@ test('v4 session restore applies analysis state after city reset and preserves f
   assert.match(app, /setObservationA/u);
   assert.match(app, /setObservationB/u);
   assert.match(app, /JSON\.parse\([\s\S]*JSON\.stringify\(workspace\.frozenDossier\)/u);
-  assert.doesNotMatch(
-    app,
-    /freezeSpatialEntityDossier\(workspace\.frozenDossier\)/u,
-  );
+  assert.doesNotMatch(app, /freezeSpatialEntityDossier\(workspace\.frozenDossier\)/u);
 });
 
 test('v4 operator sessions preserve LIVE truth boundary while restoring historical forecast and scenario cursors through bookmark semantics', async () => {
