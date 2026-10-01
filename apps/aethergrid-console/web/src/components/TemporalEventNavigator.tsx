@@ -26,7 +26,8 @@ export function TemporalEventNavigator({
 }: TemporalEventNavigatorProps) {
   const [filters, setFilters] = useState({
     incidents: true,
-    captures: true
+    captures: true,
+    scenarios: true
   });
 
   const filtered = useMemo(
@@ -106,6 +107,18 @@ export function TemporalEventNavigator({
         >
           A/B CAPTURES
         </button>
+        <button
+          type="button"
+          className={filters.scenarios ? 'active' : ''}
+          onClick={() =>
+            setFilters((current) => ({
+              ...current,
+              scenarios: !current.scenarios
+            }))
+          }
+        >
+          SCENARIOS
+        </button>
         <button type="button" disabled={!filtered.length} onClick={() => move(-1)}>
           PREV
         </button>
@@ -135,7 +148,11 @@ export function TemporalEventNavigator({
                     ? 'OPERATOR INCIDENT'
                     : event.type === 'observation-a'
                       ? 'FRAME A'
-                      : 'FRAME B'}
+                      : event.type === 'observation-b'
+                        ? 'FRAME B'
+                        : event.type === 'scenario-start'
+                          ? 'SCENARIO START'
+                          : 'SCENARIO END'}
                 </small>
                 <strong>{event.label}</strong>
               </span>
@@ -155,7 +172,8 @@ export function TemporalEventNavigator({
         <span>
           Jumping to an old LIVE capture converts the view to historical context.
           Operator incidents remain local annotations; captured frames remain
-          operator analysis snapshots.
+          operator analysis snapshots; scenario markers remain modeled
+          hypothetical bounds rather than observations or forecasts.
         </span>
       </div>
     </section>
