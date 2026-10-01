@@ -323,6 +323,16 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       const properties = entity.properties?.getValue(viewer.clock.currentTime) as
         | Record<string, unknown>
         | undefined;
+      const layerId =
+        typeof properties?.layerId === 'string' ? properties.layerId : null;
+      const rawSourceFeatureId = properties?.sourceFeatureId;
+      const sourceFeatureId =
+        typeof rawSourceFeatureId === 'string' && rawSourceFeatureId.trim()
+          ? rawSourceFeatureId.trim()
+          : entity.id;
+      if (layerId) {
+        this.#overlays.get(layerId)?.selectSourceFeature(sourceFeatureId);
+      }
       return {
         id: entity.id,
         kind: String(properties?.overlayKind ?? 'overlay-entity'),
@@ -382,6 +392,9 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     if (this.#selectedTile) {
       this.#selectedTile.feature.color = Color.clone(this.#selectedTile.color, new Color());
       this.#selectedTile = null;
+    }
+    for (const overlay of this.#overlays.values()) {
+      overlay.clearSelection();
     }
     if (this.#viewer) this.#viewer.selectedEntity = undefined;
   }
