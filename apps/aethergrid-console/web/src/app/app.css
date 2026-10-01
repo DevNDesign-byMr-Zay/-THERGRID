@@ -5364,3 +5364,353 @@ button {
   }
 }
 
+/* 4D scenario composer — explicitly modeled operator context */
+.scenario-composer-panel {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  margin-top: 8px;
+  border: 1px solid rgba(217, 145, 255, 0.09);
+  border-radius: 9px;
+  background: linear-gradient(
+    145deg,
+    rgba(20, 11, 28, 0.72),
+    rgba(9, 11, 18, 0.76)
+  );
+}
+
+.scenario-composer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.scenario-composer-head span small,
+.scenario-composer-head span strong {
+  display: block;
+}
+
+.scenario-composer-head small {
+  color: #786287;
+  font-size: 6px;
+  letter-spacing: 0.09em;
+}
+
+.scenario-composer-head strong {
+  margin-top: 2px;
+  color: #ead7f4;
+  font-size: 8px;
+}
+
+.scenario-composer-head > em,
+.scenario-composer-list > button > em,
+.scenario-composer-detail > header > em {
+  border: 1px solid rgba(217, 145, 255, 0.13);
+  border-radius: 999px;
+  padding: 3px 6px;
+  color: #ad8dbb;
+  font-size: 5px;
+  font-style: normal;
+}
+
+.scenario-composer-create,
+.scenario-composer-detail {
+  display: grid;
+  gap: 7px;
+}
+
+.scenario-composer-create > input,
+.scenario-composer-create > textarea,
+.scenario-time-grid input,
+.scenario-assumption-compose input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 6px;
+  color: #eadff0;
+  background: rgba(255, 255, 255, 0.018);
+  font: inherit;
+  font-size: 6px;
+}
+
+.scenario-composer-create > input,
+.scenario-time-grid input,
+.scenario-assumption-compose input {
+  min-height: 29px;
+  padding: 0 7px;
+}
+
+.scenario-composer-create > textarea {
+  min-height: 58px;
+  padding: 7px;
+  resize: vertical;
+}
+
+.scenario-template-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.scenario-template-row button,
+.scenario-create,
+.scenario-composer-actions button,
+.scenario-assumption-compose button,
+.scenario-assumption-list button {
+  min-height: 28px;
+  border: 1px solid rgba(217, 145, 255, 0.11);
+  border-radius: 6px;
+  color: #a58ab4;
+  background: rgba(217, 145, 255, 0.025);
+  font-size: 5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+.scenario-template-row button.active,
+.scenario-create,
+.scenario-composer-actions button:first-child {
+  border-color: rgba(217, 145, 255, 0.28);
+  color: #e6c4f5;
+  background: rgba(217, 145, 255, 0.07);
+}
+
+.scenario-time-grid,
+.scenario-baseline-grid,
+.scenario-comparison-grid,
+.scenario-visual-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.scenario-time-grid label {
+  display: grid;
+  gap: 3px;
+}
+
+.scenario-time-grid small,
+.scenario-baseline-grid small,
+.scenario-comparison-grid small,
+.scenario-visual-grid small {
+  color: #756581;
+  font-size: 5px;
+  letter-spacing: 0.06em;
+}
+
+.scenario-composer-parameters,
+.scenario-selected-parameters {
+  display: grid;
+  gap: 5px;
+}
+
+.scenario-composer-parameters label,
+.scenario-selected-parameters label {
+  display: grid;
+  gap: 3px;
+}
+
+.scenario-composer-parameters label > span,
+.scenario-selected-parameters label > span {
+  display: flex;
+  justify-content: space-between;
+  color: #8d7c98;
+  font-size: 6px;
+}
+
+.scenario-composer-parameters input,
+.scenario-selected-parameters input {
+  width: 100%;
+  accent-color: #d991ff;
+}
+
+.scenario-context-capture {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.scenario-context-capture span {
+  padding: 3px 5px;
+  border: 1px solid rgba(217, 145, 255, 0.08);
+  border-radius: 999px;
+  color: #867291;
+  font-size: 5px;
+}
+
+.scenario-composer-list {
+  display: grid;
+  gap: 4px;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.scenario-composer-list > button {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 7px;
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 7px;
+  color: inherit;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.012);
+  cursor: pointer;
+}
+
+.scenario-composer-list > button.active {
+  border-color: rgba(217, 145, 255, 0.24);
+  background: rgba(217, 145, 255, 0.045);
+}
+
+.scenario-composer-list > button span {
+  min-width: 0;
+}
+
+.scenario-composer-list small,
+.scenario-composer-list strong {
+  display: block;
+}
+
+.scenario-composer-list small {
+  color: #766782;
+  font-size: 5px;
+  letter-spacing: 0.06em;
+}
+
+.scenario-composer-list strong {
+  overflow: hidden;
+  margin-top: 2px;
+  color: #e4d7ea;
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scenario-composer-detail {
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.scenario-composer-detail > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 7px;
+}
+
+.scenario-composer-detail > header small,
+.scenario-composer-detail > header strong {
+  display: block;
+}
+
+.scenario-composer-detail > header small {
+  color: #756682;
+  font-size: 5px;
+}
+
+.scenario-composer-detail > header strong {
+  margin-top: 2px;
+  color: #eadcf0;
+  font-size: 8px;
+}
+
+.scenario-composer-detail > p {
+  margin: 0;
+  color: #81728b;
+  font-size: 6px;
+  line-height: 1.45;
+}
+
+.scenario-baseline-grid span,
+.scenario-comparison-grid span,
+.scenario-visual-grid span {
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.scenario-baseline-grid strong,
+.scenario-comparison-grid strong,
+.scenario-visual-grid strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 3px;
+  color: #d8cae0;
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scenario-assumption-compose {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px;
+}
+
+.scenario-assumption-list {
+  display: grid;
+  gap: 4px;
+}
+
+.scenario-assumption-list > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+  padding: 6px;
+  border-left: 2px solid rgba(217, 145, 255, 0.22);
+  color: #ad9ab8;
+  background: rgba(217, 145, 255, 0.018);
+  font-size: 6px;
+  line-height: 1.4;
+}
+
+.scenario-assumption-list button {
+  min-height: 24px;
+}
+
+.scenario-composer-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.scenario-composer-boundary {
+  margin-top: 0;
+}
+
+:root[data-theme='light'] .scenario-composer-panel,
+:root[data-theme='light'] .scenario-composer-detail,
+:root[data-theme='light'] .scenario-composer-list > button,
+:root[data-theme='light'] .scenario-baseline-grid span,
+:root[data-theme='light'] .scenario-comparison-grid span,
+:root[data-theme='light'] .scenario-visual-grid span {
+  background: rgba(253, 248, 255, 0.84);
+}
+
+@media (max-width: 760px) {
+  .scenario-template-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .scenario-time-grid,
+  .scenario-baseline-grid,
+  .scenario-comparison-grid,
+  .scenario-visual-grid,
+  .scenario-composer-actions,
+  .scenario-assumption-compose,
+  .scenario-assumption-list > div {
+    grid-template-columns: 1fr;
+  }
+}
+
