@@ -241,7 +241,7 @@ Implemented v4 behavior includes:
 - streamed terrain and 3D-building detail that increases progressively as the camera approaches city/district scale;
 - computed solar elevation/azimuth tied to the 4D clock, with solar-aware atmosphere and restrained building presentation;
 - a continuously advancing LIVE clock plus independent historical, forecast and scenario cursors;
-- explicit temporal source gating: current weather, AQI and seismic context are hidden outside LIVE mode until time-capable provider series are connected;
+- explicit temporal source gating: AQI and seismic remain current-only outside LIVE, while weather may render in FORECAST only when the active 4D cursor aligns to a returned provider forecast sample; historical/scenario weather is never invented;
 - source-driven cloud, rain, snow, fog, AQI and thunderstorm presentation, with thunderstorm flash timing explicitly labeled synthetic rather than observed lightning;
 - live wind vectors generated from provider wind speed/direction/gusts as normalized geographic overlay geometry shared by Cesium and native failover;
 - mapped-building nighttime illumination points derived from real building footprints/heights and capped for performance; these are presentation-only and do not represent measured occupancy, window state or utility load;
