@@ -3,6 +3,7 @@ import type { OperationalSourceId } from '../time/operational-temporal-capabilit
 
 export type OperationalSourceState =
   | 'live'
+  | 'forecast'
   | 'stale'
   | 'fallback'
   | 'unconfigured'
