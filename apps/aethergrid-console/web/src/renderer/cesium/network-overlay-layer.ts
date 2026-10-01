@@ -299,6 +299,8 @@ export class NetworkOverlayLayer {
   #edgeEntities = new Map<string, Entity>();
   #scenarioGhostEntities = new Map<string, Entity>();
   #areaEntities = new Map<string, Entity>();
+  #selectedSourceFeatureId: string | null = null;
+  #time: TemporalInstant | null = null;
   #visible = true;
 
   constructor(viewer: Viewer) {
@@ -350,7 +352,21 @@ export class NetworkOverlayLayer {
     this.#viewer.scene.requestRender();
   }
 
+  selectSourceFeature(sourceFeatureId: string | null): void {
+    this.#selectedSourceFeatureId = sourceFeatureId;
+    if (this.#time) this.setTime(this.#time);
+    else this.#applySelectionHighlight();
+  }
+
+  clearSelection(): void {
+    if (!this.#selectedSourceFeatureId) return;
+    this.#selectedSourceFeatureId = null;
+    if (this.#time) this.setTime(this.#time);
+    else this.#viewer.scene.requestRender();
+  }
+
   setTime(time: TemporalInstant): void {
+    this.#time = { ...time };
     const snapshot = this.#snapshot;
     if (!snapshot) return;
 
@@ -461,7 +477,58 @@ export class NetworkOverlayLayer {
       if (entity) entity.show = isActiveAt(area, time.iso);
     }
 
+    this.#applySelectionHighlight();
     if (this.#visible) this.#viewer.scene.requestRender();
+  }
+
+  #sourceFeatureId(
+    id: string,
+    properties: Readonly<Record<string, unknown>> | undefined
+  ): string {
+    const value = properties?.sourceFeatureId;
+    return typeof value === 'string' && value.trim() ? value.trim() : id;
+  }
+
+  #applySelectionHighlight(): void {
+    const snapshot = this.#snapshot;
+    const selected = this.#selectedSourceFeatureId;
+    if (!snapshot || !selected) return;
+
+    for (const node of snapshot.nodes) {
+      if (this.#sourceFeatureId(node.id, node.properties) !== selected) continue;
+      const entity = this.#nodeEntities.get(node.id);
+      if (!entity?.point) continue;
+      const intensity = overlayIntensity(node.intensity);
+      entity.point.pixelSize = new ConstantProperty(
+        Math.max(12, (5 + intensity * 7) * 1.35)
+      );
+      entity.point.outlineColor = new ConstantProperty(
+        Color.fromCssColorString('#ffffff').withAlpha(0.98)
+      );
+      entity.point.outlineWidth = new ConstantProperty(2.4);
+    }
+
+    for (const edge of snapshot.edges) {
+      if (this.#sourceFeatureId(edge.id, edge.properties) !== selected) continue;
+      const entity = this.#edgeEntities.get(edge.id);
+      if (!entity?.polyline) continue;
+      const intensity = overlayIntensity(edge.intensity);
+      entity.polyline.width = new ConstantProperty(
+        Math.max(3.4, edgeWidth(edge, intensity) * 1.75)
+      );
+      entity.polyline.material = new ColorMaterialProperty(
+        Color.fromCssColorString('#ffffff').withAlpha(0.94)
+      );
+    }
+
+    for (const area of snapshot.areas ?? []) {
+      if (this.#sourceFeatureId(area.id, area.properties) !== selected) continue;
+      const entity = this.#areaEntities.get(area.id);
+      if (!entity?.polygon) continue;
+      entity.polygon.outlineColor = new ConstantProperty(
+        Color.fromCssColorString('#ffffff').withAlpha(0.92)
+      );
+    }
   }
 
   provenance(): Pick<
@@ -487,6 +554,8 @@ export class NetworkOverlayLayer {
     this.#source.entities.removeAll();
     this.#viewer.dataSources.remove(this.#source, true);
     this.#snapshot = null;
+    this.#selectedSourceFeatureId = null;
+    this.#time = null;
     this.#nodeEntities.clear();
     this.#edgeEntities.clear();
     this.#scenarioGhostEntities.clear();
