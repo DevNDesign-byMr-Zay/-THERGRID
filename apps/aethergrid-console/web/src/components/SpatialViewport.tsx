@@ -18,9 +18,11 @@ import type {
   SpatialSurfacePoint,
   SpatialTarget,
   TemporalInstant,
-  VisualMode
+  VisualMode,
+  type SpatialPerformanceMode
 } from '../renderer/spatial-renderer';
 import { loadPublicRuntimeConfig } from '../services/public-runtime-config';
+import { useSpatialPerformance } from '../hooks/use-spatial-performance';
 
 interface SpatialViewportProps {
   target: SpatialTarget;
@@ -65,6 +67,7 @@ export function SpatialViewport({
   const onSurfacePointRef = useRef(onSurfacePoint);
   const [status, setStatus] = useState<SpatialRendererStatus>(STARTING_STATUS);
   const [switchingEngine, setSwitchingEngine] = useState(false);
+  const performance = useSpatialPerformance();
 
   useEffect(() => {
     const host = hostRef.current;
@@ -86,6 +89,7 @@ export function SpatialViewport({
       });
       if (cancelled) return;
       setStatus(next);
+      manager.setPerformanceTier(performance.resolved);
       manager.setLayers(layers);
       manager.setVisualMode(visualMode);
       manager.setTime(time);
@@ -192,6 +196,13 @@ export function SpatialViewport({
     manager.setVisualMode(visualMode);
     setStatus(manager.status());
   }, [visualMode, status.ready]);
+
+  useEffect(() => {
+    const manager = managerRef.current;
+    if (!manager || !status.ready) return;
+    manager.setPerformanceTier(performance.resolved);
+    setStatus(manager.status());
+  }, [performance.resolved, status.ready]);
 
   useEffect(() => {
     const manager = managerRef.current;
@@ -317,6 +328,7 @@ export function SpatialViewport({
       className="spatial-shell"
       data-solar-phase={status.solar?.phase ?? 'unknown'}
       data-interaction-mode={interactionMode}
+      data-performance-tier={performance.resolved}
     >
       <div className="spatial-canvas" ref={hostRef} aria-label="ÆTHERGRID 4D spatial viewport" />
       <div className="spatial-grid-overlay" aria-hidden="true" />
@@ -364,6 +376,32 @@ export function SpatialViewport({
               {label}
             </button>
           ))}
+        </div>
+        <div
+          className="renderer-quality-switch"
+          role="group"
+          aria-label="Spatial graphics performance"
+          title={`AUTO resolved to ${performance.resolved.toUpperCase()}. This changes render cost only, not source data or analysis values.`}
+        >
+          {[
+            ['auto', 'AUTO'],
+            ['quality', 'HQ'],
+            ['balanced', 'BAL'],
+            ['efficiency', 'ECO']
+          ].map(([mode, label]) => (
+            <button
+              type="button"
+              key={mode}
+              className={performance.mode === mode ? 'active' : ''}
+              aria-pressed={performance.mode === mode}
+              onClick={() =>
+                performance.setMode(mode as SpatialPerformanceMode)
+              }
+            >
+              {label}
+            </button>
+          ))}
+          <em>{performance.resolved.toUpperCase()}</em>
         </div>
       </div>
 
