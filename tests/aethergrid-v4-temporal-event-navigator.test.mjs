@@ -71,6 +71,7 @@ test('v4 temporal event jumps preserve scenario identity and never relabel old e
 
   for (const source of [rail, panel]) {
     assert.match(source, /temporalEventNavigationMode/u);
+    assert.match(source, /onScenarioEvent/u);
     assert.match(source, /clock\.pause\(\)/u);
     assert.match(source, /clock\.setMode\('scenario', event\.scenarioId\)/u);
     assert.match(source, /clock\.scrub\(event\.timeIso, 'scenario'\)/u);
