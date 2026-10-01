@@ -965,6 +965,19 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
                 node.id.length * 0.71 +
                 (node.intensity ?? 0.5) * 4.2
             );
+        const operatorIncident =
+          node.properties?.eventType === 'operator-incident';
+        const incidentSeverity = String(node.properties?.severity ?? 'info');
+        const incidentColor =
+          incidentSeverity === 'critical'
+            ? '#ff4f63'
+            : incidentSeverity === 'high'
+              ? '#ff806b'
+              : incidentSeverity === 'medium'
+                ? '#f0b45f'
+                : incidentSeverity === 'low'
+                  ? '#e0d778'
+                  : '#8dc9ff';
         let color = urbanLight
           ? rgba(
               '#ffd37d',
@@ -972,7 +985,9 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
                 (node.intensity ?? 0.5) * 0.22 +
                 lightPulse * 0.2
             )
-          : this.#visualColor(layerColor(snapshot.layerId, node.kind));
+          : operatorIncident
+            ? rgba(incidentColor, 0.96)
+            : this.#visualColor(layerColor(snapshot.layerId, node.kind));
         const selected = this.#isSelectedSource(
           snapshot.layerId,
           node.id,
