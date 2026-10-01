@@ -414,7 +414,10 @@ test('v4 scenario controls synchronize bounded server scenarios with 4d time', a
   assert.match(panel, /EVIDENCE RECEIPT/u);
   assert.match(panel, /RETURN LIVE/u);
   assert.match(app, /clock\.setMode\('scenario', scenarioId\)/u);
-  assert.match(app, /onReturnLive=\{\(\) => clock\.goLive\(\)\}/u);
+  assert.match(
+    app,
+    /onReturnLive=\{\(\) => \{[\s\S]{0,320}setActiveOperatorScenario\(null\);[\s\S]{0,320}setScenarioVisual\(null\);[\s\S]{0,320}clock\.goLive\(\);[\s\S]{0,120}\}\}/u,
+  );
 });
 
 test('v4 runtime diagnostics report provider readiness without exposing credentials', async () => {
