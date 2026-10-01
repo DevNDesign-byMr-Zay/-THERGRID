@@ -902,6 +902,55 @@ export function App() {
     setScope('city');
     setIntelOpen(true);
   };
+  const centerWorksetGeometry = () => {
+    if (!worksetGeometry.centroid) return;
+    const { latitude, longitude } = worksetGeometry.centroid;
+    setSelection(null);
+    setActiveUseCase(null);
+    setCity({
+      id: `workset-centroid-${latitude.toFixed(5)}-${longitude.toFixed(5)}`,
+      name: 'WORKSET GEOMETRY',
+      district: `${worksetGeometry.positionedEntityCount} pinned entities · analytical centroid`,
+      latitude,
+      longitude,
+      rangeMeters: Math.max(
+        4_500,
+        Math.min(
+          8_000_000,
+          worksetGeometry.maximumPairDistanceMeters * 1.35
+        )
+      ),
+      pitchDegrees: -38,
+      custom: true
+    });
+    setScope('city');
+    setIntelOpen(true);
+  };
+
+  const analyzeWorksetGeometry = (
+    geometry: SpatialWorksetGeometrySummary
+  ) => {
+    const regions = geometry.regions.join(', ') || 'none';
+    const edgeSummary = geometry.edges
+      .slice(0, 12)
+      .map(
+        (edge) =>
+          `${edge.fromCanonicalId} ↔ ${edge.toCanonicalId}: ${(edge.distanceMeters / 1000).toFixed(2)} km`
+      )
+      .join('; ');
+
+    setAgentHandoff((current) => ({
+      id: (current?.id ?? 0) + 1,
+      agent: 'AUREN',
+      prompt:
+        `Review the local operator workset geometry containing ${geometry.positionedEntityCount} positioned canonical entities across ${geometry.regions.length} region(s): ${regions}. ` +
+        `Minimum-spanning analytical distance: ${(geometry.totalTreeDistanceMeters / 1000).toFixed(2)} km; maximum pair separation: ${(geometry.maximumPairDistanceMeters / 1000).toFixed(2)} km. ` +
+        `Analytical edges: ${edgeSummary || 'none'}. ` +
+        'Treat these links strictly as minimum-spanning spatial geometry derived from operator-pinned coordinates. Do not infer physical, electrical, transit, ownership, dependency, operational, or causal relationships from the lines. Identify only defensible spatial patterns and the source-backed evidence required before asserting any real-world relationship.'
+    }));
+    setIntelWorkspace('ai');
+    setIntelOpen(true);
+  };
   const changeInteractionMode = (mode: SpatialInteractionMode) => {
     setInteractionMode(mode);
     if (mode === 'measure') {
@@ -1780,6 +1829,11 @@ export function App() {
             current={entityDossier}
             onLocate={locateEntityDossier}
             onAnalyze={analyzeEntityDossier}
+          />
+          <SpatialWorksetGeometryPanel
+            geometry={worksetGeometry}
+            onCenter={centerWorksetGeometry}
+            onAnalyze={analyzeWorksetGeometry}
           />
           <SpatialIncidentPanel
             incidents={spatialIncidents}
