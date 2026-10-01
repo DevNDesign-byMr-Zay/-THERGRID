@@ -69,6 +69,9 @@ test('v4 source binding UI states that identifiers are operator selected and liv
 
   assert.match(panel, /OPERATOR SELECTED/u);
   assert.match(panel, /LIVE ONLY/u);
+  assert.match(panel, /bindingScopeId/u);
+  assert.match(panel, /latitude\.toFixed\(5\)/u);
+  assert.match(panel, /longitude\.toFixed\(5\)/u);
   assert.match(panel, /NOAA NWPS GAUGE ID/u);
   assert.match(panel, /EIA REGION CODE/u);
   assert.match(panel, /Bind only identifiers you have verified/u);
