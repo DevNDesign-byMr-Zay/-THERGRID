@@ -182,10 +182,7 @@ test('v4 live atmosphere is source-backed and drives Cesium clouds and fog', asy
   assert.match(weatherLayer, /windDirectionDegrees/u);
   assert.match(weatherLayer, /ParticleSystem/u);
   assert.match(weatherLayer, /BoxEmitter/u);
-  assert.match(
-    weatherLayer,
-    /time\.mode !== 'live' && time\.mode !== 'forecast'/u,
-  );
+  assert.match(weatherLayer, /time\.mode !== 'live' && time\.mode !== 'forecast'/u);
   assert.match(app, /ATMOSPHERE/u);
   assert.match(app, /loadCityEnvironment/u);
   assert.match(
@@ -263,7 +260,7 @@ test('v4 provenance UI separates source time from retrieval age', async () => {
   assert.match(app, /sourceTime=\{/u);
   assert.match(app, /globalLive\?\.overlay\.sourceTime/u);
   assert.match(app, /powerOverlay\?\.sourceTime/u);
-  assert.match(app, /FETCHED \{formatDataAge\(atmosphere\?\.fetchedAt\)\}/u);
+  assert.match(app, /FETCHED \\{formatDataAge\\(activeAtmosphere\\?\\.fetchedAt\\)\\}/u);
 });
 
 test('v4 city-live context renders source-backed AQI and seismic events only in LIVE mode', async () => {
@@ -480,10 +477,7 @@ test('v4 world scope isolates global live context from selected-city overlays', 
     app,
     /scope === 'world'\s*\? \[worldOverlay, incidentOverlay, worksetGeometryOverlay, operatorScenarioOverlay, measurementOverlay\]/u,
   );
-  assert.match(
-    app,
-    /atmosphere=\{\s*scope === 'city' && temporal\.mode === 'live' \? atmosphere : null\s*\}/u,
-  );
+  assert.match(app, /atmosphere=\{scope === 'city' \? activeAtmosphere : null\}/u);
   assert.match(app, /scope === 'world'\s*\? \{\s*latitude: 20,\s*longitude: 0/u);
   assert.match(app, /scope === 'city' && cityIdentity/u);
   assert.match(app, /scope === 'city' && atmosphere/u);
