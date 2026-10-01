@@ -161,7 +161,7 @@ function boundaryEdges(
           to: points[pointIndex],
           label: alert.event,
           intensity: severityIntensity(alert.severity),
-          validFrom: alert.onset ?? alert.effective,
+          validFrom: alert.effective ?? alert.onset,
           validTo: alert.expires,
           properties: {
             ...alertProperties(raw, alert, true),
@@ -185,7 +185,7 @@ function boundaryEdges(
           to: first,
           label: alert.event,
           intensity: severityIntensity(alert.severity),
-          validFrom: alert.onset ?? alert.effective,
+          validFrom: alert.effective ?? alert.onset,
           validTo: alert.expires,
           properties: {
             ...alertProperties(raw, alert, true),
@@ -287,14 +287,18 @@ export async function loadNwsHazards(
     position: { latitude, longitude, heightMeters: 80 + index * 8 },
     label: alert.event,
     intensity: severityIntensity(alert.severity),
-    validFrom: alert.onset ?? alert.effective,
+    validFrom: alert.effective ?? alert.onset,
     validTo: alert.expires,
     properties: alertProperties(raw, alert, alert.geometryAvailable)
   }));
 
-  const edges = parsed.flatMap(({ alert, raw }, index) =>
-    boundaryEdges(index, alert, raw)
-  );
+  const edges: SpatialOverlayEdge[] = [];
+  for (let index = 0; index < parsed.length; index += 1) {
+    if (edges.length >= MAX_BOUNDARY_EDGES) break;
+    const item = parsed[index];
+    const remaining = MAX_BOUNDARY_EDGES - edges.length;
+    edges.push(...boundaryEdges(index, item.alert, item.raw).slice(0, remaining));
+  }
 
   const overlay: SpatialOverlaySnapshot = {
     id: `nws-hazards:${latitude.toFixed(5)}:${longitude.toFixed(5)}:${fetchedAt}`,
