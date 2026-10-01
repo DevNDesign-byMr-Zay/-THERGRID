@@ -47,9 +47,7 @@ test('v4 bound hydrology and energy reads use existing backend routes only in li
 });
 
 test('v4 NOAA EIA and GTFS adapters expose provider-backed metrics without synthetic values', async () => {
-  const client = await text(
-    'apps/aethergrid-console/web/src/services/operational-data-client.ts',
-  );
+  const client = await text('apps/aethergrid-console/web/src/services/operational-data-client.ts');
 
   assert.match(client, /observedStageFeet/u);
   assert.match(client, /observedFlowCfs/u);
