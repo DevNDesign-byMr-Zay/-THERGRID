@@ -104,6 +104,8 @@ test('v4 scenario composer exposes assumptions persistence comparison activation
   assert.match(panel, /operatorScenarioTemplateParameters/u);
   assert.match(panel, /ADD ASSUMPTION/u);
   assert.match(panel, /ACTIVATE MODEL/u);
+  assert.match(panel, /activeScenarioId/u);
+  assert.match(panel, /setOperatorScenarioStatus/u);
   assert.match(panel, /ANALYZE WITH VÆLON/u);
   assert.match(panel, /BRANCH VERSION/u);
   assert.match(panel, /EXPORT JSON/u);
