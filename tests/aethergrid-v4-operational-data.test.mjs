@@ -23,6 +23,7 @@ test('v4 operational temporal capability registry refuses to replay current-only
   assert.match(capabilities, /'seismic'/u);
   assert.match(capabilities, /historical: 'current-only'/u);
   assert.match(capabilities, /forecast: 'current-only'/u);
+  assert.match(capabilities, /forecast: 'available'/u);
   assert.match(capabilities, /pending-provider/u);
 });
 
@@ -71,5 +72,6 @@ test('v4 OPS workspace exposes source readiness without synthetic telemetry', as
   assert.match(app, /cursorIso=\{temporal\.cursorIso\}/u);
   assert.match(css, /data-workspace='operations'/u);
   assert.match(css, /data-provider-state='live'/u);
+  assert.match(css, /data-provider-state='forecast'/u);
   assert.match(css, /data-provider-state='pending-provider'/u);
 });
