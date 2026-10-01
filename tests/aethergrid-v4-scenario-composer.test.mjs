@@ -9,9 +9,7 @@ async function text(path) {
 }
 
 test('v4 operator scenarios are bounded persistent modeled records with explicit non-authoritative semantics', async () => {
-  const service = await text(
-    'apps/aethergrid-console/web/src/services/operator-scenario.ts',
-  );
+  const service = await text('apps/aethergrid-console/web/src/services/operator-scenario.ts');
 
   assert.match(service, /aethergrid\.operator\.scenarios\.v4/u);
   assert.match(service, /MAX_OPERATOR_SCENARIOS = 8/u);
@@ -26,9 +24,7 @@ test('v4 operator scenarios are bounded persistent modeled records with explicit
 });
 
 test('v4 scenario normalization preserves legitimate zero-valued parameters', async () => {
-  const service = await text(
-    'apps/aethergrid-console/web/src/services/operator-scenario.ts',
-  );
+  const service = await text('apps/aethergrid-console/web/src/services/operator-scenario.ts');
 
   assert.match(service, /function finiteOr/u);
   assert.match(service, /Number\.isFinite\(number\) \? number : fallback/u);
@@ -37,20 +33,13 @@ test('v4 scenario normalization preserves legitimate zero-valued parameters', as
 });
 
 test('v4 persisted active scenario status does not silently reactivate after reload', async () => {
-  const service = await text(
-    'apps/aethergrid-console/web/src/services/operator-scenario.ts',
-  );
+  const service = await text('apps/aethergrid-console/web/src/services/operator-scenario.ts');
 
-  assert.match(
-    service,
-    /status: scenario\.status === 'active' \? 'draft' : scenario\.status/u,
-  );
+  assert.match(service, /status: scenario\.status === 'active' \? 'draft' : scenario\.status/u);
 });
 
 test('v4 scenario creation freezes references and baseline context instead of claiming live source output', async () => {
-  const service = await text(
-    'apps/aethergrid-console/web/src/services/operator-scenario.ts',
-  );
+  const service = await text('apps/aethergrid-console/web/src/services/operator-scenario.ts');
 
   assert.match(service, /canonicalEntityIds/u);
   assert.match(service, /incidentIds/u);
@@ -63,9 +52,7 @@ test('v4 scenario creation freezes references and baseline context instead of cl
 });
 
 test('v4 scenario comparison is a parameter/model comparison against an explicit neutral baseline', async () => {
-  const service = await text(
-    'apps/aethergrid-console/web/src/services/operator-scenario.ts',
-  );
+  const service = await text('apps/aethergrid-console/web/src/services/operator-scenario.ts');
 
   assert.match(service, /NEUTRAL_SCENARIO_PARAMETERS/u);
   assert.match(service, /compareOperatorScenario/u);
@@ -78,9 +65,7 @@ test('v4 scenario comparison is a parameter/model comparison against an explicit
 });
 
 test('v4 scenario overlay is time-bounded modeled geometry and never provider telemetry', async () => {
-  const service = await text(
-    'apps/aethergrid-console/web/src/services/operator-scenario.ts',
-  );
+  const service = await text('apps/aethergrid-console/web/src/services/operator-scenario.ts');
 
   assert.match(service, /layerId: 'scenario-model'/u);
   assert.match(service, /analysisType: 'scenario-model'/u);
@@ -95,9 +80,7 @@ test('v4 scenario overlay is time-bounded modeled geometry and never provider te
 });
 
 test('v4 scenario composer exposes assumptions persistence comparison activation and export with truth boundaries', async () => {
-  const panel = await text(
-    'apps/aethergrid-console/web/src/components/ScenarioComposerPanel.tsx',
-  );
+  const panel = await text('apps/aethergrid-console/web/src/components/ScenarioComposerPanel.tsx');
 
   assert.match(panel, /4D SCENARIO COMPOSER/u);
   assert.match(panel, /SAVE HYPOTHETICAL SCENARIO/u);
@@ -171,9 +154,7 @@ test('v4 Cesium and native renderers visually distinguish scenario-model geometr
 });
 
 test('v4 scenario export is explicitly modeled and warns that it is not observation forecast or verified outcome', async () => {
-  const service = await text(
-    'apps/aethergrid-console/web/src/services/operator-scenario.ts',
-  );
+  const service = await text('apps/aethergrid-console/web/src/services/operator-scenario.ts');
 
   assert.match(service, /operator-scenario-export\.v1/u);
   assert.match(service, /operator-authored hypothetical scenario/i);
