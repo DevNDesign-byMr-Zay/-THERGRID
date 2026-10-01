@@ -110,7 +110,7 @@ export function createProviderRegistry(options = {}) {
   });
 
   health.registerProvider('energy', {
-    name: 'Local Microgrid Simulator',
+    name: 'Local Microgrid Simulator & EIA Context',
     capabilities: ['energy'],
     status: PROVIDER_STATUS.READY,
   });
@@ -153,44 +153,44 @@ export function createProviderRegistry(options = {}) {
     return Object.freeze({
       spatial: {
         provider: 'native-webgl',
-        status: healthStatuses.spatial?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses.spatial?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
       geo: {
         provider: config.geo.provider,
-        status: healthStatuses.geo?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses.geo?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
       terrain: {
         provider: config.terrain.provider,
-        status: healthStatuses.terrain?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses.terrain?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
       weather: {
         provider: config.weather.provider,
-        status: healthStatuses.weather?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses.weather?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
       airQuality: {
         provider: config.airQuality.provider,
-        status: healthStatuses['air-quality']?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses['air-quality']?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
       seismic: {
         provider: config.seismic.provider,
-        status: healthStatuses.seismic?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses.seismic?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
       quantum: {
         provider: config.quantum.provider,
-        status: healthStatuses.quantum?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses.quantum?.status || PROVIDER_STATUS.UNCONFIGURED,
         hardwareEnabled: ibmConfigured,
       },
       ai: {
         provider: config.ai.provider,
-        status: healthStatuses.ai?.status || PROVIDER_STATUS.FALLBACK,
+        status: healthStatuses.ai?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
       energy: {
         provider: 'local-microgrid-simulator',
-        status: healthStatuses.energy?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses.energy?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
       hazards: {
         provider: 'nws-alerts',
-        status: healthStatuses.hazards?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses.hazards?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
       transit: {
         status: healthStatuses.transit?.status || PROVIDER_STATUS.UNCONFIGURED,

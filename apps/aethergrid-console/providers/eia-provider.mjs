@@ -20,7 +20,8 @@ export function createEiaProvider(options = {}) {
           live: false,
         },
         receipt: {
-          provider: 'eia-energy',
+          provider: 'eia',
+          capability: 'energy',
           dataset: 'electricity-mix',
           live: false,
           fallback: true,
@@ -59,18 +60,18 @@ export function createEiaProvider(options = {}) {
 
     if (typeof context.executeProviderRequest === 'function') {
       return context.executeProviderRequest(
-        'energy',
-        { url, dataset: 'electricity-mix', ttlMs: 300000, attribution: 'U.S. Energy Information Administration (eia.gov)' },
+        'eia',
+        { url, capability: 'energy', dataset: 'electricity-mix', ttlMs: 300000, attribution: 'U.S. Energy Information Administration (eia.gov)' },
         fetcher,
       );
     }
 
     const data = await fetcher();
-    return { data, receipt: { provider: 'eia-energy', dataset: 'electricity-mix', live: true } };
+    return { data, receipt: { provider: 'eia', capability: 'energy', dataset: 'electricity-mix', live: true } };
   }
 
   return createProviderAdapter({
-    id: 'eia-energy',
+    id: 'eia',
     name: 'U.S. EIA Energy Context Provider',
     capability: 'energy',
     capabilities: ['energy'],

@@ -24,6 +24,7 @@ export function createDwaveProvider(options = {}) {
         },
         receipt: {
           provider: 'dwave',
+          capability: 'quantum',
           dataset: 'quantum-annealing',
           live: false,
           fallback: true,
@@ -49,24 +50,24 @@ export function createDwaveProvider(options = {}) {
       return {
         provider: 'dwave',
         workload,
-        status: 'submitted',
-        hardwareSubmitted: true,
-        hardwareExecuted: false, // Submitted is not completed hardware execution!
-        live: true,
+        status: 'solvers_discovered',
+        hardwareSubmitted: false, // Discovering problems/solvers is NOT workload submission!
+        hardwareExecuted: false,
+        live: false,
         sapiResponse: json,
       };
     };
 
     if (typeof context.executeProviderRequest === 'function') {
       return context.executeProviderRequest(
-        'quantum',
-        { url, dataset: 'quantum-annealing', ttlMs: 30000, attribution: 'D-Wave Ocean SAPI Quantum Cloud' },
+        'dwave',
+        { url, capability: 'quantum', dataset: 'quantum-annealing', ttlMs: 30000, attribution: 'D-Wave Ocean SAPI Quantum Cloud' },
         fetcher,
       );
     }
 
     const data = await fetcher();
-    return { data, receipt: { provider: 'dwave', dataset: 'quantum-annealing', live: true } };
+    return { data, receipt: { provider: 'dwave', capability: 'quantum', dataset: 'quantum-annealing', live: false, fallback: true } };
   }
 
   return createProviderAdapter({

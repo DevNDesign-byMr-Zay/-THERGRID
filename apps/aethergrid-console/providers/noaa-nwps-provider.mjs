@@ -20,6 +20,7 @@ export function createNoaaNwpsHydrologyProvider(options = {}) {
         },
         receipt: {
           provider: 'noaa-nwps',
+          capability: 'hydrology',
           dataset: 'hydrology-gauge',
           live: false,
           fallback: true,
@@ -62,14 +63,14 @@ export function createNoaaNwpsHydrologyProvider(options = {}) {
 
     if (typeof context.executeProviderRequest === 'function') {
       return context.executeProviderRequest(
-        'hydrology',
-        { url, dataset: 'hydrology-gauge', ttlMs: 180000, attribution: 'NOAA National Water Prediction Service (NWPS)' },
+        'noaa-nwps',
+        { url, capability: 'hydrology', dataset: 'hydrology-gauge', ttlMs: 180000, attribution: 'NOAA National Water Prediction Service (NWPS)' },
         fetcher,
       );
     }
 
     const data = await fetcher();
-    return { data, receipt: { provider: 'noaa-nwps', dataset: 'hydrology-gauge', live: true } };
+    return { data, receipt: { provider: 'noaa-nwps', capability: 'hydrology', dataset: 'hydrology-gauge', live: true } };
   }
 
   return createProviderAdapter({

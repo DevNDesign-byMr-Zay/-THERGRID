@@ -24,9 +24,12 @@ import { createProviderExecutor } from '../apps/aethergrid-console/providers/pro
 import { createNoaaNwpsHydrologyProvider } from '../apps/aethergrid-console/providers/noaa-nwps-provider.mjs';
 import { createEiaProvider } from '../apps/aethergrid-console/providers/eia-provider.mjs';
 import { createTransitRegistry } from '../apps/aethergrid-console/providers/transit-registry.mjs';
+import { createDwaveProvider } from '../apps/aethergrid-console/providers/dwave-provider.mjs';
+import { createNwsAlertsProvider } from '../apps/aethergrid-console/providers/nws-alerts-provider.mjs';
+import { createTomorrowWeatherProvider } from '../apps/aethergrid-console/providers/tomorrow-weather-provider.mjs';
 import { server } from '../apps/aethergrid-console/server.mjs';
 
-describe('ÆTHERGRID v4.0 Batch 19B — Provider Execution Layer, Security & Truthful Receipts', () => {
+describe('ÆTHERGRID v4.0 Batch 19B — Production Provider Execution Layer, Security & Truthful Receipts', () => {
   let activePort = 0;
 
   before(async () => {
@@ -54,11 +57,24 @@ describe('ÆTHERGRID v4.0 Batch 19B — Provider Execution Layer, Security & Tru
       );
     });
 
+    it('strictly rejects invalid non-numeric port strings with a clear validation error', () => {
+      assert.throws(
+        () => parseEnv({ AETHERGRID_PORT: 'invalid-port' }),
+        /Value must be a valid number/,
+      );
+    });
+
     it('rejects invalid URL environment variables', () => {
       assert.throws(
         () => parseEnv({ AETHERGRID_OPEN_METEO_URL: 'not-a-valid-url' }),
         /Invalid URL format/,
       );
+    });
+
+    it('tolerates missing optional future provider configuration without throwing', () => {
+      const config = createProviderConfig({});
+      assert.equal(config.futureProviders.cesium.token, '');
+      assert.equal(config.futureProviders.tomorrowIo.apiKey, '');
     });
 
     it('generates safe public configuration with boolean flags', () => {
@@ -132,7 +148,7 @@ describe('ÆTHERGRID v4.0 Batch 19B — Provider Execution Layer, Security & Tru
       const unconfiguredReceipt = createProviderReceipt({
         provider: 'eia',
         fallback: true,
-        live: true, // Should be overridden because fallback is true!
+        live: true, // Overridden because fallback is true
       });
       assert.equal(unconfiguredReceipt.live, false);
       assert.equal(unconfiguredReceipt.fallback, true);
@@ -195,6 +211,14 @@ describe('ÆTHERGRID v4.0 Batch 19B — Provider Execution Layer, Security & Tru
       assert.equal(res.data.vehicles.length, 0);
       assert.equal(res.receipt.live, false);
     });
+
+    it('D-Wave adapter returns hardwareSubmitted: false and hardwareExecuted: false when discovering solvers', async () => {
+      const provider = createDwaveProvider();
+      const res = await provider.request({});
+      assert.equal(res.data.hardwareSubmitted, false);
+      assert.equal(res.data.hardwareExecuted, false);
+      assert.equal(res.receipt.live, false);
+    });
   });
 
   describe('6. Public Endpoints Verification', () => {
@@ -217,7 +241,16 @@ describe('ÆTHERGRID v4.0 Batch 19B — Provider Execution Layer, Security & Tru
       assert.ok('cesiumIonToken' in body.spatial);
     });
 
-    it('weather forecast route returns hourly forecast time series with distinct event timestamps', async () => {
+    it('weather current route returns missing_coordinates when lat/lon omitted without NY defaults', async () => {
+      const res = await fetch(`http://127.0.0.1:${activePort}/api/aethergrid/weather/current`);
+      assert.equal(res.status, 200);
+
+      const body = await res.json();
+      assert.equal(body.data.status, 'missing_coordinates');
+      assert.equal(body.receipt.live, false);
+    });
+
+    it('weather forecast route returns hourly forecast time series with distinct event timestamps when coords supplied', async () => {
       const res = await fetch(
         `http://127.0.0.1:${activePort}/api/aethergrid/weather/forecast?lat=40.7128&lon=-74.006`,
       );

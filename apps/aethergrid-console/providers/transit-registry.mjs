@@ -34,6 +34,7 @@ export function createTransitRegistry(options = {}) {
         },
         receipt: {
           provider: 'gtfs-rt-registry',
+          capability: 'transit',
           dataset: 'transit-vehicles',
           live: false,
           fallback: true,
@@ -57,22 +58,22 @@ export function createTransitRegistry(options = {}) {
         cityId,
         configured: true,
         agencyName: feed.agencyName,
-        status: 'live',
-        live: true,
-        vehicles: [], // Would contain decoded GTFS-RT entities
+        status: 'feed_retrieved_undecoded',
+        live: false,
+        vehicles: [],
       };
     };
 
     if (typeof context.executeProviderRequest === 'function') {
       return context.executeProviderRequest(
-        'transit',
-        { url, dataset: 'transit-vehicles', ttlMs: 15000, attribution: `GTFS-RT Feed (${feed.agencyName})` },
+        'gtfs-rt-registry',
+        { url, capability: 'transit', dataset: 'transit-vehicles', ttlMs: 15000, attribution: `GTFS-RT Feed (${feed.agencyName})` },
         fetcher,
       );
     }
 
     const data = await fetcher();
-    return { data, receipt: { provider: 'gtfs-rt-registry', dataset: 'transit-vehicles', live: true } };
+    return { data, receipt: { provider: 'gtfs-rt-registry', capability: 'transit', dataset: 'transit-vehicles', live: false, fallback: true } };
   }
 
   return {

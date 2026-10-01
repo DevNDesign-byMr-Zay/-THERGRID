@@ -61,12 +61,12 @@ export function createUrlPolicy(allowedUrlsOrOrigins = []) {
     const targetOrigin = parsed.origin.toLowerCase();
     const targetHostname = parsed.hostname.toLowerCase();
 
-    // Allow loopback endpoints for local development (Ollama, local microgrid, etc.)
+    // Allow loopback endpoints for local development
     if (targetHostname === '127.0.0.1' || targetHostname === 'localhost') {
       return true;
     }
 
-    // Exact origin match
+    // Exact origin match required!
     if (allowedOrigins.has(targetOrigin)) {
       return true;
     }

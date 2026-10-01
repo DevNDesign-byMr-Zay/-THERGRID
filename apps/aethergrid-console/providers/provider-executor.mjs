@@ -1,5 +1,23 @@
 import { createProviderReceipt } from './provider-receipt.mjs';
 
+function buildCanonicalCacheKey(providerId, capability, dataset, params = {}) {
+  const safeParams = {};
+  for (const [k, v] of Object.entries(params)) {
+    const lowerKey = k.toLowerCase();
+    if (
+      lowerKey.includes('key') ||
+      lowerKey.includes('token') ||
+      lowerKey.includes('secret') ||
+      lowerKey.includes('auth') ||
+      lowerKey === 'url'
+    ) {
+      continue;
+    }
+    safeParams[k] = v;
+  }
+  return `${providerId}:${capability}:${dataset}:${JSON.stringify(safeParams)}`;
+}
+
 export function createProviderExecutor(options = {}) {
   const urlPolicy = options.urlPolicy;
   const health = options.health;
@@ -14,7 +32,7 @@ export function createProviderExecutor(options = {}) {
 
     const capability = params.capability || 'general';
     const dataset = params.dataset || providerId;
-    const cacheKey = params.cacheKey || `${providerId}:${capability}:${JSON.stringify(params)}`;
+    const cacheKey = params.cacheKey || buildCanonicalCacheKey(providerId, capability, dataset, params);
     const ttlMs = params.ttlMs || 60000;
     const attribution = params.attribution || '';
 
@@ -44,7 +62,7 @@ export function createProviderExecutor(options = {}) {
       throw new Error(`Rate limit exceeded for provider '${providerId}'`);
     }
 
-    // 2. Cache Lookup & Stale-While-Revalidate (SWR) Check
+    // 2. Cache Lookup & SWR Check
     if (cache) {
       const cached = cache.get(cacheKey);
       if (cached.found) {
@@ -71,7 +89,7 @@ export function createProviderExecutor(options = {}) {
           });
           return { data: cached.value, receipt };
         } else {
-          // Stale entry found -> SWR: Return stale cached data with stale: true, live: false
+          // Stale entry found -> Return stale cached entry immediately with stale: true and live: false
           if (typeof fetcher === 'function') {
             Promise.resolve().then(async () => {
               try {

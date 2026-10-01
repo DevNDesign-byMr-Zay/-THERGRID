@@ -13,7 +13,7 @@ export function createProviderHealth() {
     healthMap.set(id, {
       id,
       name: metadata.name || id,
-      capabilities: Array.isArray(metadata.capabilities) ? [...metadata.capabilities] : [],
+      capabilities: Array.isArray(metadata.capabilities) ? [...metadata.capabilities] : [metadata.capability || 'general'],
       status: metadata.status || PROVIDER_STATUS.UNCONFIGURED,
       hardwareEnabled: metadata.hardwareEnabled ?? false,
       details: metadata.details || '',

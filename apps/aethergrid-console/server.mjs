@@ -1,10 +1,10 @@
+import { createPublicConfig } from './config/public-config.mjs';
 import { createTomorrowWeatherProvider } from './providers/tomorrow-weather-provider.mjs';
 import { createNwsAlertsProvider } from './providers/nws-alerts-provider.mjs';
 import { createNoaaNwpsHydrologyProvider } from './providers/noaa-nwps-provider.mjs';
 import { createEiaProvider } from './providers/eia-provider.mjs';
 import { createTransitRegistry } from './providers/transit-registry.mjs';
 import { createDwaveProvider } from './providers/dwave-provider.mjs';
-import { createPublicConfig } from './config/public-config.mjs';
 import { createProviderRegistry } from './providers/provider-registry.mjs';
 import http from 'node:http';
 import { createHash } from 'node:crypto';
@@ -912,72 +912,7 @@ const server = http.createServer(async (request, response) => {
       return json(response, 200, { evidence: record, advisoryOnly: true });
     }
 
-                if (request.method === 'GET' && url.pathname === '/api/aethergrid/weather/current') {
-      const lat = Number(url.searchParams.get('lat') || 40.7128);
-      const lon = Number(url.searchParams.get('lon') || -74.006);
-      const fetcher = () => cityEnvironmentRuntime.current({ lat, lon });
-      const result = await providerRegistry.executeProviderRequest(
-        'weather',
-        { lat, lon, dataset: 'open-meteo-weather', ttlMs: 120000, attribution: 'Open-Meteo Weather API' },
-        fetcher,
-      );
-      return json(response, 200, providerRegistry.redactor.redactValue(result));
-    }
-
-    if (request.method === 'GET' && url.pathname === '/api/aethergrid/weather/forecast') {
-      const lat = Number(url.searchParams.get('lat') || 40.7128);
-      const lon = Number(url.searchParams.get('lon') || -74.006);
-      const fetcher = () => cityEnvironmentRuntime.forecast({ lat, lon });
-      const result = await providerRegistry.executeProviderRequest(
-        'weather',
-        { lat, lon, dataset: 'open-meteo-forecast', ttlMs: 300000, attribution: 'Open-Meteo Weather API' },
-        fetcher,
-      );
-      return json(response, 200, providerRegistry.redactor.redactValue(result));
-    }
-
-    if (request.method === 'GET' && url.pathname === '/api/aethergrid/hazards/alerts') {
-      const lat = Number(url.searchParams.get('lat') || 40.7128);
-      const lon = Number(url.searchParams.get('lon') || -74.006);
-      const result = await providerRegistry.executeProviderRequest(
-        'hazards',
-        { lat, lon, dataset: 'nws-alerts', ttlMs: 60000, attribution: 'US National Weather Service' },
-        async () => ({ live: false, alerts: [] }),
-      );
-      return json(response, 200, providerRegistry.redactor.redactValue(result));
-    }
-
-    if (request.method === 'GET' && url.pathname === '/api/aethergrid/hydrology/gauges') {
-      const gaugeId = url.searchParams.get('gaugeId') || 'NYCN6';
-      const result = await providerRegistry.executeProviderRequest(
-        'hydrology',
-        { gaugeId, dataset: 'hydrology-gauge', ttlMs: 180000, attribution: 'NOAA NWPS' },
-        async () => ({ gaugeId, name: 'Hudson River Reference Gauge', observedStageFeet: 3.2, live: false }),
-      );
-      return json(response, 200, providerRegistry.redactor.redactValue(result));
-    }
-
-    if (request.method === 'GET' && url.pathname === '/api/aethergrid/energy/context') {
-      const region = url.searchParams.get('region') || 'NYIS';
-      const result = await providerRegistry.executeProviderRequest(
-        'energy',
-        { region, dataset: 'electricity-mix', ttlMs: 300000, attribution: 'U.S. EIA Reference' },
-        async () => ({ region, balancingAuthority: 'NYISO', live: false }),
-      );
-      return json(response, 200, providerRegistry.redactor.redactValue(result));
-    }
-
-    if (request.method === 'GET' && url.pathname === '/api/aethergrid/transit/vehicles') {
-      const cityId = url.searchParams.get('cityId') || 'nyc';
-      const result = await providerRegistry.executeProviderRequest(
-        'transit',
-        { cityId, dataset: 'transit-vehicles', ttlMs: 15000, attribution: 'GTFS-RT Registry' },
-        async () => ({ cityId, vehicles: [], configured: false, status: 'unconfigured' }),
-      );
-      return json(response, 200, providerRegistry.redactor.redactValue(result));
-    }
-
-        if (request.method === 'GET' && url.pathname === '/api/aethergrid/config/public') {
+                if (request.method === 'GET' && url.pathname === '/api/aethergrid/config/public') {
       return json(
         response,
         200,
@@ -985,9 +920,31 @@ const server = http.createServer(async (request, response) => {
       );
     }
 
-    if (request.method === 'GET' && url.pathname === '/api/aethergrid/weather/current') {
-      const lat = url.searchParams.has('lat') ? Number(url.searchParams.get('lat')) : undefined;
-      const lon = url.searchParams.has('lon') ? Number(url.searchParams.get('lon')) : undefined;
+        if (request.method === 'GET' && url.pathname === '/api/aethergrid/weather/current') {
+      const latParam = url.searchParams.get('lat');
+      const lonParam = url.searchParams.get('lon');
+
+      if (!latParam || !lonParam) {
+        return json(response, 200, {
+          data: {
+            status: 'missing_coordinates',
+            message: 'Explicit lat and lon query parameters are required.',
+            live: false,
+          },
+          receipt: {
+            provider: 'open-meteo',
+            capability: 'weather',
+            dataset: 'open-meteo-weather',
+            live: false,
+            fallback: true,
+            attribution: 'Open-Meteo Weather API (Missing Coordinates)',
+          },
+        });
+      }
+
+      const lat = Number(latParam);
+      const lon = Number(lonParam);
+
       if (providerRegistry.config.weather.provider === 'tomorrow-io') {
         const result = await tomorrowWeatherProvider.request(
           { lat, lon },
@@ -995,28 +952,50 @@ const server = http.createServer(async (request, response) => {
         );
         return json(response, 200, providerRegistry.redactor.redactValue(result));
       }
-      const fetcher = () => cityEnvironmentRuntime.current({ lat: lat ?? 40.7128, lon: lon ?? -74.006 });
+
+      const fetcher = () => cityEnvironmentRuntime.current({ lat, lon });
       const result = await providerRegistry.executeProviderRequest(
-        'weather',
-        { lat, lon, dataset: 'open-meteo-weather', ttlMs: 120000, attribution: 'Open-Meteo Weather API' },
+        'open-meteo',
+        { lat, lon, capability: 'weather', dataset: 'open-meteo-weather', ttlMs: 120000, attribution: 'Open-Meteo Weather API' },
         fetcher,
       );
       return json(response, 200, providerRegistry.redactor.redactValue(result));
     }
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/weather/forecast') {
-      const lat = Number(url.searchParams.get('lat') || 40.7128);
-      const lon = Number(url.searchParams.get('lon') || -74.006);
+      const latParam = url.searchParams.get('lat');
+      const lonParam = url.searchParams.get('lon');
+
+      if (!latParam || !lonParam) {
+        return json(response, 200, {
+          data: {
+            status: 'missing_coordinates',
+            message: 'Explicit lat and lon query parameters are required.',
+            live: false,
+          },
+          receipt: {
+            provider: 'open-meteo',
+            capability: 'weather',
+            dataset: 'open-meteo-forecast',
+            live: false,
+            fallback: true,
+            attribution: 'Open-Meteo Weather API (Missing Coordinates)',
+          },
+        });
+      }
+
+      const lat = Number(latParam);
+      const lon = Number(lonParam);
+
       const fetcher = () => cityEnvironmentRuntime.forecast({ lat, lon });
       const result = await providerRegistry.executeProviderRequest(
-        'weather',
-        { lat, lon, dataset: 'open-meteo-forecast', ttlMs: 300000, attribution: 'Open-Meteo Weather API' },
+        'open-meteo',
+        { lat, lon, capability: 'weather', dataset: 'open-meteo-forecast', ttlMs: 300000, attribution: 'Open-Meteo Weather API' },
         fetcher,
       );
       return json(response, 200, providerRegistry.redactor.redactValue(result));
     }
-
-    if (request.method === 'GET' && url.pathname === '/api/aethergrid/hazards/alerts') {
+if (request.method === 'GET' && url.pathname === '/api/aethergrid/hazards/alerts') {
       const lat = url.searchParams.has('lat') ? Number(url.searchParams.get('lat')) : undefined;
       const lon = url.searchParams.has('lon') ? Number(url.searchParams.get('lon')) : undefined;
       const result = await nwsAlertsProvider.request(

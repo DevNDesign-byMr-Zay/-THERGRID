@@ -23,6 +23,7 @@ export function createTomorrowWeatherProvider(options = {}) {
         data: fallbackData,
         receipt: {
           provider: 'tomorrow-io',
+          capability: 'weather',
           dataset: 'weather-realtime',
           live: false,
           fallback: true,
@@ -31,13 +32,18 @@ export function createTomorrowWeatherProvider(options = {}) {
       };
     }
 
-    const url = `${baseUrl}/weather/realtime?location=${lat},${lon}&apikey=${encodeURIComponent(apiKey)}`;
+    const url = `${baseUrl}/weather/realtime?location=${lat},${lon}`;
 
     const fetcher = async () => {
       if (typeof options.fetchFn === 'function') {
         return options.fetchFn(url);
       }
-      const resp = await fetch(url);
+      const resp = await fetch(url, {
+        headers: {
+          'apikey': apiKey,
+          'Accept': 'application/json',
+        },
+      });
       if (!resp.ok) {
         throw new Error(`Tomorrow.io HTTP ${resp.status}: ${resp.statusText}`);
       }
@@ -56,13 +62,16 @@ export function createTomorrowWeatherProvider(options = {}) {
     if (typeof context.executeProviderRequest === 'function') {
       return context.executeProviderRequest(
         'tomorrow-io',
-        { url, dataset: 'weather-realtime', ttlMs: 180000, attribution: 'Tomorrow.io Weather API' },
+        { url, capability: 'weather', dataset: 'weather-realtime', ttlMs: 180000, attribution: 'Tomorrow.io Weather API' },
         fetcher,
       );
     }
 
     const data = await fetcher();
-    return { data, receipt: { provider: 'tomorrow-io', dataset: 'weather-realtime', live: true } };
+    return {
+      data,
+      receipt: { provider: 'tomorrow-io', capability: 'weather', dataset: 'weather-realtime', live: true },
+    };
   }
 
   return createProviderAdapter({

@@ -16,7 +16,8 @@ export function createNwsAlertsProvider(options = {}) {
       return {
         data: { live: false, alerts: [], status: 'missing_coordinates' },
         receipt: {
-          provider: 'nws-alerts',
+          provider: 'nws',
+          capability: 'hazards',
           dataset: 'active-alerts',
           live: false,
           fallback: true,
@@ -66,18 +67,18 @@ export function createNwsAlertsProvider(options = {}) {
 
     if (typeof context.executeProviderRequest === 'function') {
       return context.executeProviderRequest(
-        'hazards',
-        { url, dataset: 'active-alerts', ttlMs: 60000, attribution: 'US National Weather Service (api.weather.gov)' },
+        'nws',
+        { url, capability: 'hazards', dataset: 'active-alerts', ttlMs: 60000, attribution: 'US National Weather Service (api.weather.gov)' },
         fetcher,
       );
     }
 
     const data = await fetcher();
-    return { data, receipt: { provider: 'nws-alerts', dataset: 'active-alerts', live: true } };
+    return { data, receipt: { provider: 'nws', capability: 'hazards', dataset: 'active-alerts', live: true } };
   }
 
   return createProviderAdapter({
-    id: 'nws-alerts',
+    id: 'nws',
     name: 'National Weather Service Hazards Provider',
     capability: 'hazards',
     capabilities: ['hazards'],

@@ -25,26 +25,33 @@ const optionalUrl = z
   .default('')
   .refine(validateUrlString, { message: 'Invalid URL format; must be a valid HTTP or HTTPS URL' });
 
-const numberFromEnv = (defaultValue) =>
+const boundedNumberFromEnv = (defaultValue, min = 1, max = 65535) =>
   z
     .union([z.string(), z.number()])
     .optional()
-    .transform((val) => {
+    .transform((val, ctx) => {
       if (val === undefined || val === '') return defaultValue;
       const num = Number(val);
-      return Number.isNaN(num) ? defaultValue : num;
+      if (Number.isNaN(num) || num < min || num > max) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Value must be a valid number between ${min} and ${max}`,
+        });
+        return z.NEVER;
+      }
+      return num;
     });
 
 export const envSchema = z.object({
   // App / System
-  AETHERGRID_PORT: numberFromEnv(8090),
-  PORT: numberFromEnv(8090),
+  AETHERGRID_PORT: boundedNumberFromEnv(8090, 1, 65535),
+  PORT: boundedNumberFromEnv(8090, 1, 65535),
   AETHERGRID_DATA_DIR: z.string().optional().default('.aethergrid-data'),
 
   // AI
   AETHERGRID_AI_PROVIDER: z.string().optional().default('local'),
   AETHERGRID_AI_MODEL: optionalString,
-  AETHERGRID_AI_TIMEOUT_MS: numberFromEnv(45000),
+  AETHERGRID_AI_TIMEOUT_MS: boundedNumberFromEnv(45000, 100, 300000),
   AETHERGRID_OPENAI_BASE_URL: defaultUrl('https://api.openai.com/v1'),
   AETHERGRID_OPENAI_API_KEY: optionalString,
   AETHERGRID_OLLAMA_BASE_URL: defaultUrl('http://127.0.0.1:11434'),
@@ -66,7 +73,7 @@ export const envSchema = z.object({
     .string()
     .optional()
     .default('AETHERGRID/2.6 (operator-console; configure deployment contact)'),
-  AETHERGRID_GEO_CACHE_TTL_MS: numberFromEnv(900000),
+  AETHERGRID_GEO_CACHE_TTL_MS: boundedNumberFromEnv(900000, 1000, 86400000),
 
   // City Environment / Weather
   AETHERGRID_ENVIRONMENT_PROVIDER: z.string().optional().default('open-meteo'),
@@ -81,7 +88,7 @@ export const envSchema = z.object({
   AETHERGRID_USGS_EARTHQUAKE_URL: defaultUrl(
     'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson',
   ),
-  AETHERGRID_SEISMIC_CACHE_TTL_MS: numberFromEnv(60000),
+  AETHERGRID_SEISMIC_CACHE_TTL_MS: boundedNumberFromEnv(60000, 1000, 86400000),
 
   // Terrain
   AETHERGRID_TERRAIN_PROVIDER: z.string().optional().default('open-meteo'),
