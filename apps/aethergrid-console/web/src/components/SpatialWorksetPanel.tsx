@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { SpatialEntityDossier } from '../services/spatial-entity-dossier';
 import {
@@ -6,6 +6,7 @@ import {
   downloadSpatialWorkset,
   loadSpatialWorkset,
   MAX_SPATIAL_WORKSET_ITEMS,
+  SPATIAL_WORKSET_EVENT,
   pinSpatialEntityDossier,
   removeSpatialWorksetItem,
   type SpatialWorksetItem
@@ -35,6 +36,12 @@ export function SpatialWorksetPanel({
   onAnalyze
 }: SpatialWorksetPanelProps) {
   const [items, setItems] = useState<SpatialWorksetItem[]>(loadSpatialWorkset);
+
+  useEffect(() => {
+    const sync = () => setItems(loadSpatialWorkset());
+    globalThis.addEventListener?.(SPATIAL_WORKSET_EVENT, sync);
+    return () => globalThis.removeEventListener?.(SPATIAL_WORKSET_EVENT, sync);
+  }, []);
 
   const currentPinned = useMemo(
     () =>
