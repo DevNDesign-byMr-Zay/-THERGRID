@@ -47,7 +47,7 @@ export const OPERATIONAL_TEMPORAL_CAPABILITIES: readonly OperationalTemporalCapa
     historical: 'pending-provider',
     forecast: 'pending-provider',
     scenario: 'pending-provider',
-    note: 'Gauge and modeled-water time series require provider timestamps; no hydrology value is inferred locally.'
+    note: 'Live NOAA NWPS gauge context is available after an operator binds an explicit gauge ID. Gauge identity is never inferred from map location.'
   },
   {
     id: 'energy',
@@ -56,7 +56,7 @@ export const OPERATIONAL_TEMPORAL_CAPABILITIES: readonly OperationalTemporalCapa
     historical: 'pending-provider',
     forecast: 'pending-provider',
     scenario: 'pending-provider',
-    note: 'Regional energy telemetry must be source-backed. Scenario values remain modeled and are never relabeled as live telemetry.'
+    note: 'Live EIA regional fuel-type context is available after an operator binds an explicit balancing-region code. Region identity is never inferred from map location.'
   },
   {
     id: 'transit',
