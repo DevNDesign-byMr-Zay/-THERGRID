@@ -74,3 +74,26 @@ test('v4 renderer manager retains the selected scene feature across engine activ
   assert.match(overlayLayer, /sourceName: node\.label \?\? node\.id/u);
   assert.match(overlayLayer, /sourceName: edge\.label \?\? edge\.id/u);
 });
+
+test('v4 source-feature selection highlights complete mapped features in both renderers', async () => {
+  const [cesiumLayer, cesiumRenderer, nativeRenderer] = await Promise.all([
+    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+  ]);
+
+  assert.match(cesiumLayer, /selectSourceFeature\(sourceFeatureId: string \| null\)/u);
+  assert.match(cesiumLayer, /#applySelectionHighlight/u);
+  assert.match(cesiumLayer, /properties\?\.sourceFeatureId/u);
+  assert.match(cesiumLayer, /edgeWidth\(edge, intensity\) \* 1\.75/u);
+  assert.match(cesiumRenderer, /selectSourceFeature\(sourceFeatureId\)/u);
+  assert.match(cesiumRenderer, /overlay\.clearSelection\(\)/u);
+
+  assert.match(nativeRenderer, /#selectedSourceFeatureId: string \| null/u);
+  assert.match(nativeRenderer, /#selectedLayerId: string \| null/u);
+  assert.match(nativeRenderer, /#isSelectedSource/u);
+  assert.match(nativeRenderer, /snapshot\.edges\.find/u);
+  assert.match(nativeRenderer, /snapshot\.areas/u);
+  assert.match(nativeRenderer, /selected \? '#ffffff'/u);
+});
+
