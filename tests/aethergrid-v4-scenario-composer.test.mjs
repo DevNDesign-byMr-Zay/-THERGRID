@@ -73,7 +73,8 @@ test('v4 scenario comparison is a parameter/model comparison against an explicit
   assert.match(service, /renewableAvailabilityPercent:/u);
   assert.match(service, /storageReservePercent:/u);
   assert.match(service, /weatherRiskPercent:/u);
-  assert.match(service, /scenarioVisualState/u);
+  assert.match(service, /scenarioVisualState\('custom', parameters\)/u);
+  assert.match(service, /operatorScenarioTemplateParameters/u);
 });
 
 test('v4 scenario overlay is time-bounded modeled geometry and never provider telemetry', async () => {
@@ -100,6 +101,7 @@ test('v4 scenario composer exposes assumptions persistence comparison activation
 
   assert.match(panel, /4D SCENARIO COMPOSER/u);
   assert.match(panel, /SAVE HYPOTHETICAL SCENARIO/u);
+  assert.match(panel, /operatorScenarioTemplateParameters/u);
   assert.match(panel, /ADD ASSUMPTION/u);
   assert.match(panel, /ACTIVATE MODEL/u);
   assert.match(panel, /ANALYZE WITH VÆLON/u);
