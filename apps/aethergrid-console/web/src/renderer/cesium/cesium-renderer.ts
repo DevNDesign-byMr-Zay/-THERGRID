@@ -25,6 +25,7 @@ import type {
   SpatialRendererConfig,
   SpatialDetailLevel,
   SpatialJourneyPhase,
+  SpatialPerformanceTier,
   SpatialRendererStatus,
   SpatialSolarStatus,
   SpatialSurfacePoint,
@@ -71,6 +72,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #solarLighting: SolarLightingController | null = null;
   #overlays = new Map<string, NetworkOverlayLayer>();
   #visualMode: VisualMode = 'solid';
+  #performanceTier: SpatialPerformanceTier = 'balanced';
   #selectedTile: { feature: Cesium3DTileFeature; color: Color } | null = null;
   #layers = new Map<string, LayerState>();
   #time: TemporalInstant | null = null;
@@ -203,6 +205,19 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#degraded = result.degraded;
     this.#reason = result.reason;
     if (this.#buildings) this.#buildings.show = this.#buildingsShouldShow();
+  }
+
+  setPerformanceTier(tier: SpatialPerformanceTier): void {
+    this.#performanceTier = tier;
+    const viewer = this.#viewer;
+    if (!viewer) return;
+
+    viewer.resolutionScale =
+      tier === 'quality' ? 1 : tier === 'balanced' ? 0.84 : 0.66;
+    const phase =
+      this.#journeyPhase === 'idle' ? 'district' : this.#journeyPhase;
+    this.#applyDetailForPhase(phase);
+    viewer.scene.requestRender();
   }
 
   applyOverlay(snapshot: SpatialOverlaySnapshot): void {
@@ -362,6 +377,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       busy: this.#busy,
       journeyPhase: this.#journeyPhase,
       detailLevel: this.#detailLevel,
+      performanceTier: this.#performanceTier,
       solar: this.#solar,
       reason: this.#reason
     };
@@ -414,10 +430,18 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     };
 
     const next = detail[phase];
+    const detailMultiplier =
+      this.#performanceTier === 'quality'
+        ? 0.82
+        : this.#performanceTier === 'balanced'
+          ? 1.12
+          : 1.62;
     this.#detailLevel = next.level;
-    viewer.scene.globe.maximumScreenSpaceError = next.terrainSse;
+    viewer.scene.globe.maximumScreenSpaceError =
+      next.terrainSse * detailMultiplier;
     if (this.#buildings) {
-      this.#buildings.maximumScreenSpaceError = next.buildingSse;
+      this.#buildings.maximumScreenSpaceError =
+        next.buildingSse * detailMultiplier;
       this.#buildings.show = this.#buildingsShouldShow();
     }
     viewer.scene.requestRender();
