@@ -1174,6 +1174,9 @@ export function App() {
       observationA,
       observationB,
       frozenDossier,
+      operatorScenario: activeOperatorScenario
+        ? JSON.parse(JSON.stringify(activeOperatorScenario))
+        : null,
       incidents: spatialIncidents.map((incident) => ({
         ...incident,
         anchor: { ...incident.anchor }
@@ -1187,6 +1190,7 @@ export function App() {
       observationA,
       observationB,
       frozenDossier,
+      activeOperatorScenario,
       spatialIncidents
     ]
   );
@@ -1227,6 +1231,13 @@ export function App() {
     const view = session.workspace.view;
     setSelection(null);
     clock.pause();
+    setActiveOperatorScenario(
+      session.workspace.operatorScenario
+        ? (JSON.parse(
+            JSON.stringify(session.workspace.operatorScenario)
+          ) as OperatorScenario)
+        : null
+    );
     restoreBookmark({
       ...view,
       id: `session-view:${session.id}`,
