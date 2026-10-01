@@ -8,6 +8,7 @@ import { DataSourceBadge } from '../components/DataSourceBadge';
 import { EntityDossierPanel } from '../components/EntityDossierPanel';
 import { EvidencePanel } from '../components/EvidencePanel';
 import { OperationalDataPanel } from '../components/OperationalDataPanel';
+import { OperatorSessionPanel } from '../components/OperatorSessionPanel';
 import { QuantumPanel } from '../components/QuantumPanel';
 import { ProfileMenu } from '../components/ProfileMenu';
 import { ScenarioPanel } from '../components/ScenarioPanel';
@@ -70,14 +71,20 @@ import {
 import { bindSpatialSelectionIdentity } from '../services/spatial-entity-identity';
 import {
   loadSpatialIncidents,
+  saveSpatialIncidents,
   spatialIncidentsToOverlay,
   type SpatialIncident
 } from '../services/spatial-incidents';
+import {
+  type OperatorSessionWorkspace,
+  type OperatorWorkspaceSession
+} from '../services/operator-session';
 import {
   captureSpatialObservation,
   compareSpatialObservations,
   type SpatialObservation
 } from '../services/spatial-comparison';
+import { saveSpatialWorkset } from '../services/spatial-workset';
 import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
 import type { SpatialViewBookmark } from '../services/view-bookmarks';
 import {
@@ -220,6 +227,8 @@ export function App() {
     useState<SpatialEntityDossier | null>(null);
   const [spatialIncidents, setSpatialIncidents] =
     useState<SpatialIncident[]>(loadSpatialIncidents);
+  const [pendingSessionRestore, setPendingSessionRestore] =
+    useState<OperatorWorkspaceSession | null>(null);
   const [powerOverlay, setPowerOverlay] = useState<SpatialOverlaySnapshot | null>(null);
   const [illuminationOverlay, setIlluminationOverlay] =
     useState<SpatialOverlaySnapshot | null>(null);
@@ -412,6 +421,33 @@ export function App() {
 
     return () => controller.abort();
   }, [city.id, city.latitude, city.longitude]);
+
+  useEffect(() => {
+    if (!pendingSessionRestore) return;
+    const workspace = pendingSessionRestore.workspace;
+    setInteractionMode(workspace.interactionMode);
+    setMeasurementPoints(
+      workspace.measurementPoints.map((point) => ({ ...point }))
+    );
+    setMeasurementFrame(
+      workspace.measurementFrame
+        ? {
+            ...workspace.measurementFrame,
+            scenarioVisual: workspace.measurementFrame.scenarioVisual
+              ? { ...workspace.measurementFrame.scenarioVisual }
+              : null
+          }
+        : null
+    );
+    setObservationA(workspace.observationA ? { ...workspace.observationA } : null);
+    setObservationB(workspace.observationB ? { ...workspace.observationB } : null);
+    setFrozenDossier(
+      workspace.frozenDossier
+        ? freezeSpatialEntityDossier(workspace.frozenDossier)
+        : null
+    );
+    setPendingSessionRestore(null);
+  }, [pendingSessionRestore, city.id]);
 
   useOperatorShortcuts({
     focusSearch: () => searchInputRef.current?.focus(),
@@ -922,6 +958,41 @@ export function App() {
     ]
   );
 
+  const currentSessionWorkspace = useMemo<
+    Omit<OperatorSessionWorkspace, 'workset'>
+  >(
+    () => ({
+      view: currentBookmark,
+      interactionMode,
+      measurementPoints: measurementPoints.map((point) => ({ ...point })),
+      measurementFrame: measurementFrame
+        ? {
+            ...measurementFrame,
+            scenarioVisual: measurementFrame.scenarioVisual
+              ? { ...measurementFrame.scenarioVisual }
+              : null
+          }
+        : null,
+      observationA,
+      observationB,
+      frozenDossier,
+      incidents: spatialIncidents.map((incident) => ({
+        ...incident,
+        anchor: { ...incident.anchor }
+      }))
+    }),
+    [
+      currentBookmark,
+      interactionMode,
+      measurementPoints,
+      measurementFrame,
+      observationA,
+      observationB,
+      frozenDossier,
+      spatialIncidents
+    ]
+  );
+
   const restoreBookmark = (bookmark: SpatialViewBookmark) => {
     setScope(bookmark.scope);
     setVisualMode(bookmark.visualMode);
@@ -952,6 +1023,22 @@ export function App() {
     } else {
       clock.scrub(bookmark.cursorIso, bookmark.temporalMode);
     }
+  };
+
+  const restoreOperatorSession = (session: OperatorWorkspaceSession) => {
+    const view = session.workspace.view;
+    setSelection(null);
+    clock.pause();
+    restoreBookmark({
+      ...view,
+      id: `session-view:${session.id}`,
+      name: session.name,
+      createdAt: session.createdAt
+    });
+    saveSpatialWorkset(session.workspace.workset);
+    setSpatialIncidents(saveSpatialIncidents(session.workspace.incidents));
+    setPendingSessionRestore(session);
+    setIntelOpen(true);
   };
 
   const applyUseCase = (preset: UseCasePreset) => {
@@ -1086,6 +1173,11 @@ export function App() {
           <ViewBookmarksPanel
             current={currentBookmark}
             onRestore={restoreBookmark}
+          />
+
+          <OperatorSessionPanel
+            current={currentSessionWorkspace}
+            onRestore={restoreOperatorSession}
           />
 
           <div className="rail-section layer-list">
