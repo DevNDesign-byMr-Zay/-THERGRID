@@ -246,6 +246,7 @@ Implemented v4 behavior includes:
 - live wind vectors generated from provider wind speed/direction/gusts as normalized geographic overlay geometry shared by Cesium and native failover;
 - mapped-building nighttime illumination points derived from real building footprints/heights and capped for performance; these are presentation-only and do not represent measured occupancy, window state or utility load;
 - source-backed roads, water, green space, power topology, recent seismic context and selectable entity provenance;
+- live NWS active-hazard context with severity-coded alert markers and provider-returned Polygon/MultiPolygon boundary geometry; when NWS omits geometry, only a point-context marker is shown and no affected-area shape is invented;
 - scenario-mode network visualization aligned with the backend scenario stress factors, including a dim source-baseline comparison beneath the modeled scenario presentation;
 - operational view presets using only implemented layers: City Ops, Grid Resilience, Environment, Seismic and Skyline;
 - explicit per-city/coordinate source bindings for NOAA NWPS gauge IDs and EIA balancing-region codes, persisted locally as non-secret operator settings and never inferred from map location;
