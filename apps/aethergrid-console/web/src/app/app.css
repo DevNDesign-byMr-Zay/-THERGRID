@@ -1626,6 +1626,41 @@ button {
   letter-spacing: 0.07em;
 }
 
+.forecast-scene-badge {
+  position: absolute;
+  top: 118px;
+  left: 50%;
+  z-index: 6;
+  transform: translateX(-50%);
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 8px 11px;
+  border: 1px solid rgba(112, 231, 255, 0.24);
+  border-radius: 8px;
+  background: rgba(7, 18, 27, 0.84);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+.forecast-scene-badge span {
+  color: #6d9eb0;
+  font-size: 6px;
+  letter-spacing: 0.11em;
+}
+
+.forecast-scene-badge strong {
+  color: #c9f5ff;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+}
+
+.forecast-scene-badge small {
+  color: #64818e;
+  font-size: 5px;
+  letter-spacing: 0.07em;
+}
+
 .scenario-visual-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2517,6 +2552,12 @@ button {
   border-color: rgba(99, 255, 197, 0.2);
 }
 
+.weather-card[data-source-state='forecast'] {
+  border-color: rgba(112, 231, 255, 0.28);
+  box-shadow: inset 0 0 22px rgba(112, 231, 255, 0.035);
+}
+
+.weather-card[data-source-state='stale'],
 .weather-card[data-source-state='fallback'] {
   border-color: rgba(245, 195, 112, 0.24);
 }
@@ -3580,6 +3621,10 @@ button {
 
 .operational-data-panel .provider-card[data-provider-state='live'] header strong {
   color: #8fffc8;
+}
+
+.operational-data-panel .provider-card[data-provider-state='forecast'] header strong {
+  color: #9feeff;
 }
 
 .operational-data-panel .provider-card[data-provider-state='fallback'] header strong,
