@@ -21,6 +21,7 @@ export interface SpatialWorksetExport {
 }
 
 const STORAGE_KEY = 'aethergrid.operator.spatial-workset.v4';
+export const SPATIAL_WORKSET_EVENT = 'aethergrid:spatial-workset-changed';
 export const MAX_SPATIAL_WORKSET_ITEMS = 12;
 
 function validDossier(value: unknown): value is SpatialEntityDossier {
@@ -47,6 +48,14 @@ function validItem(value: unknown): value is SpatialWorksetItem {
     typeof item.canonicalId === 'string' &&
     typeof item.pinnedAt === 'string' &&
     validDossier(item.dossier)
+  );
+}
+
+function notifyWorksetChanged(items: readonly SpatialWorksetItem[]): void {
+  globalThis.dispatchEvent?.(
+    new CustomEvent(SPATIAL_WORKSET_EVENT, {
+      detail: { count: items.length }
+    })
   );
 }
 
@@ -96,6 +105,7 @@ export function saveSpatialWorkset(
     .map(cloneItem);
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(unique));
+  notifyWorksetChanged(unique);
   return unique;
 }
 
@@ -131,6 +141,7 @@ export function removeSpatialWorksetItem(
 
 export function clearSpatialWorkset(): SpatialWorksetItem[] {
   localStorage.removeItem(STORAGE_KEY);
+  notifyWorksetChanged([]);
   return [];
 }
 
