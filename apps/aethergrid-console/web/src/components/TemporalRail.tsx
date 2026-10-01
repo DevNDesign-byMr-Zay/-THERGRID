@@ -45,6 +45,12 @@ function dataModeCopy(mode: TemporalMode): {
       detail: 'Current weather · AQI · seismic · mapped spatial context'
     };
   }
+  if (mode === 'forecast') {
+    return {
+      label: 'FORECAST + STATIC',
+      detail: 'Provider weather sample when available · AQI/seismic hidden · mapped spatial context'
+    };
+  }
   if (mode === 'scenario') {
     return {
       label: 'MODELED + STATIC',
