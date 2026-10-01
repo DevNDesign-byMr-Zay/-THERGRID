@@ -9,6 +9,7 @@
 - Added scheduled dependency-freshness evidence without automatic dependency mutation.
 
 ### Added
+- Added per-city/coordinate operator bindings for NOAA NWPS gauge IDs and EIA balancing-region codes, enabling source-backed live hydrology and energy reads without location-based identifier guessing or browser-stored provider credentials.
 - Added provider-backed 4D weather forecast sampling for the typed operator surface, including nearest-sample cursor alignment, out-of-range refusal, stale/fallback provenance, forecast scene labeling, and Cesium forecast atmosphere rendering without relabeling it as a live observation.
 - Added renderer-neutral spatial measurement with Cesium terrain/depth picking, explicitly labeled native projection fallback, geodesic distance/bearing and optional elevation/slope analysis.
 - Added Frame A / Frame B operator comparison across captured 4D contexts, mutually available metric deltas, non-authoritative JSON export and operator-controlled AUREN review.
