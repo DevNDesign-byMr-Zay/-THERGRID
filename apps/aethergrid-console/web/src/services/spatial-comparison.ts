@@ -21,6 +21,11 @@ export interface SpatialObservation {
   visualMode: VisualMode;
   selectedEntity: {
     id: string;
+    canonicalId: string;
+    identityBasis: string;
+    sourceFeatureId: string | null;
+    gersId: string | null;
+    crossSourceJoinReady: boolean;
     kind: string;
     source: string | null;
     layerId: string | null;
@@ -83,6 +88,7 @@ export interface SpatialComparison {
   b: SpatialObservation;
   capturedSeparationSeconds: number;
   frameSeparationSeconds: number;
+  sameCanonicalEntity: boolean | null;
   metricDeltas: readonly SpatialMetricDelta[];
 }
 
@@ -115,12 +121,22 @@ export function captureSpatialObservation(
     selectedEntity: input.selection
       ? {
           id: input.selection.id,
+          canonicalId:
+            input.selection.identity?.canonicalId ?? input.selection.id,
+          identityBasis:
+            input.selection.identity?.basis ?? 'scene-derived',
+          sourceFeatureId:
+            input.selection.identity?.sourceFeatureId ?? null,
+          gersId: input.selection.identity?.gersId ?? null,
+          crossSourceJoinReady:
+            input.selection.identity?.crossSourceJoinReady ?? false,
           kind: input.selection.kind,
           source: input.selection.source ?? null,
           layerId:
-            typeof input.selection.properties?.layerId === 'string'
+            input.selection.identity?.layerId ??
+            (typeof input.selection.properties?.layerId === 'string'
               ? input.selection.properties.layerId
-              : null
+              : null)
         }
       : null,
     measurement: input.measurement
@@ -206,6 +222,11 @@ export function compareSpatialObservations(
   const frameSeparationSeconds =
     Math.abs(Date.parse(b.temporal.iso) - Date.parse(a.temporal.iso)) / 1000;
 
+  const sameCanonicalEntity =
+    a.selectedEntity?.canonicalId && b.selectedEntity?.canonicalId
+      ? a.selectedEntity.canonicalId === b.selectedEntity.canonicalId
+      : null;
+
   return {
     a,
     b,
@@ -213,13 +234,14 @@ export function compareSpatialObservations(
       Number.isFinite(capturedSeparationSeconds) ? capturedSeparationSeconds : 0,
     frameSeparationSeconds:
       Number.isFinite(frameSeparationSeconds) ? frameSeparationSeconds : 0,
+    sameCanonicalEntity,
     metricDeltas
   };
 }
 
 export function downloadSpatialComparison(comparison: SpatialComparison): void {
   const payload = {
-    schemaVersion: 'aethergrid.operator-spatial-comparison.v1',
+    schemaVersion: 'aethergrid.operator-spatial-comparison.v2',
     kind: 'operator-spatial-comparison',
     authoritative: false,
     generatedAt: new Date().toISOString(),
