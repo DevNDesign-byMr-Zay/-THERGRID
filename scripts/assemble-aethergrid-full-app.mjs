@@ -33,6 +33,7 @@ const REQUIRED_FILES = Object.freeze([
   'providers/rate-limiter.mjs',
   'providers/provider-health.mjs',
   'providers/provider-registry.mjs',
+  'providers/coordinate-validator.mjs',
   'providers/provider-adapter.mjs',
   'providers/provider-executor.mjs',
   'providers/provider-receipt.mjs',

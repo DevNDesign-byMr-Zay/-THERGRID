@@ -31,75 +31,112 @@ export function createNoaaNwpsHydrologyProvider(options = {}) {
     }
 
     const cleanGaugeId = gaugeId.trim().toUpperCase();
-    const url = `${baseUrl}/gauges/${cleanGaugeId}`;
+    const metadataUrl = `${baseUrl}/gauges/${cleanGaugeId}`;
     const stageflowUrl = `${baseUrl}/gauges/${cleanGaugeId}/stageflow`;
 
-    const fetcher = async () => {
+    // 1. Governed Metadata Request
+    const fetchMetadata = async () => {
       if (typeof options.fetchFn === 'function') {
-        return options.fetchFn(url);
+        return options.fetchFn(metadataUrl);
       }
-      const resp = await fetch(url);
+      const resp = await fetch(metadataUrl);
       if (!resp.ok) {
-        throw new Error(`NOAA NWPS HTTP ${resp.status}`);
+        throw new Error(`NOAA NWPS Metadata HTTP ${resp.status}`);
       }
-      const json = await resp.json();
-
-      let stageFlowData = null;
-      try {
-        const sfResp = await fetch(stageflowUrl);
-        if (sfResp.ok) {
-          stageFlowData = await sfResp.json();
-        }
-      } catch {
-        // Stageflow query optional
-      }
-
-      const observedStage = stageFlowData?.observed?.primary ?? json.status?.observed?.primary;
-      const observedFlow = stageFlowData?.observed?.secondary ?? json.status?.observed?.secondary;
-
-      return {
-        gaugeId: cleanGaugeId,
-        name: json.name || null,
-        observedStageFeet: Number.isFinite(Number(observedStage)) ? Number(observedStage) : null,
-        observedFlowCfs: Number.isFinite(Number(observedFlow)) ? Number(observedFlow) : null,
-        observedAt: stageFlowData?.observed?.validTime || json.status?.observed?.validTime || null,
-        actionStageFeet: Number.isFinite(Number(json.flood?.action)) ? Number(json.flood.action) : null,
-        minorFloodStageFeet: Number.isFinite(Number(json.flood?.minor)) ? Number(json.flood.minor) : null,
-        moderateFloodStageFeet: Number.isFinite(Number(json.flood?.moderate)) ? Number(json.flood.moderate) : null,
-        majorFloodStageFeet: Number.isFinite(Number(json.flood?.major)) ? Number(json.flood.major) : null,
-        forecastStageFeet: Number.isFinite(Number(stageFlowData?.forecast?.primary || json.status?.forecast?.primary))
-          ? Number(stageFlowData?.forecast?.primary || json.status?.forecast?.primary)
-          : null,
-        forecastAt: stageFlowData?.forecast?.validTime || json.status?.forecast?.validTime || null,
-        status: 'NOAA NWPS Live',
-        live: true,
-      };
+      return resp.json();
     };
 
+    let metadataResult;
     if (typeof context.executeProviderRequest === 'function') {
-      return context.executeProviderRequest(
+      metadataResult = await context.executeProviderRequest(
         'noaa-nwps',
         {
-          url,
+          url: metadataUrl,
           capability: 'hydrology',
-          dataset: 'hydrology-gauge',
+          dataset: 'hydrology-gauge-metadata',
           requestId: params.requestId || context.requestId,
           ttlMs: 180000,
           attribution: 'NOAA National Water Prediction Service (NWPS)',
         },
-        fetcher,
+        fetchMetadata,
       );
+    } else {
+      const data = await fetchMetadata();
+      metadataResult = { data, receipt: { provider: 'noaa-nwps', capability: 'hydrology', dataset: 'hydrology-gauge-metadata', live: true } };
     }
 
-    const data = await fetcher();
+    const meta = metadataResult.data || {};
+
+    // 2. Governed Stageflow Request
+    const fetchStageflow = async () => {
+      if (typeof options.fetchFn === 'function') {
+        return options.fetchFn(stageflowUrl);
+      }
+      const resp = await fetch(stageflowUrl);
+      if (!resp.ok) {
+        throw new Error(`NOAA NWPS Stageflow HTTP ${resp.status}`);
+      }
+      return resp.json();
+    };
+
+    let stageflowData = null;
+    let stageflowLive = false;
+    try {
+      if (typeof context.executeProviderRequest === 'function') {
+        const sfExec = await context.executeProviderRequest(
+          'noaa-nwps',
+          {
+            url: stageflowUrl,
+            capability: 'hydrology',
+            dataset: 'hydrology-gauge-stageflow',
+            requestId: params.requestId || context.requestId,
+            ttlMs: 180000,
+            attribution: 'NOAA National Water Prediction Service (NWPS)',
+          },
+          fetchStageflow,
+        );
+        stageflowData = sfExec.data;
+        stageflowLive = sfExec.receipt?.live ?? true;
+      } else {
+        stageflowData = await fetchStageflow();
+        stageflowLive = true;
+      }
+    } catch {
+      stageflowData = null;
+      stageflowLive = false;
+    }
+
+    const observedStage = stageflowData?.observed?.primary ?? meta.status?.observed?.primary;
+    const observedFlow = stageflowData?.observed?.secondary ?? meta.status?.observed?.secondary;
+
+    const normalizedData = {
+      gaugeId: cleanGaugeId,
+      name: meta.name || null,
+      latitude: meta.latitude !== undefined ? Number(meta.latitude) : null,
+      longitude: meta.longitude !== undefined ? Number(meta.longitude) : null,
+      observedStageFeet: Number.isFinite(Number(observedStage)) ? Number(observedStage) : null,
+      observedFlowCfs: Number.isFinite(Number(observedFlow)) ? Number(observedFlow) : null,
+      observedAt: stageflowData?.observed?.validTime || meta.status?.observed?.validTime || null,
+      actionStageFeet: Number.isFinite(Number(meta.flood?.action)) ? Number(meta.flood.action) : null,
+      minorFloodStageFeet: Number.isFinite(Number(meta.flood?.minor)) ? Number(meta.flood.minor) : null,
+      moderateFloodStageFeet: Number.isFinite(Number(meta.flood?.moderate)) ? Number(meta.flood.moderate) : null,
+      majorFloodStageFeet: Number.isFinite(Number(meta.flood?.major)) ? Number(meta.flood.major) : null,
+      forecastStageFeet: Number.isFinite(Number(stageflowData?.forecast?.primary || meta.status?.forecast?.primary))
+        ? Number(stageflowData?.forecast?.primary || meta.status?.forecast?.primary)
+        : null,
+      forecastAt: stageflowData?.forecast?.validTime || meta.status?.forecast?.validTime || null,
+      status: stageflowLive ? 'NOAA NWPS Live' : 'NOAA NWPS Partial (Metadata Only)',
+      live: Boolean(metadataResult.receipt?.live),
+    };
+
     return {
-      data,
+      data: normalizedData,
       receipt: {
         provider: 'noaa-nwps',
         capability: 'hydrology',
         dataset: 'hydrology-gauge',
         requestId: params.requestId || context.requestId,
-        live: true,
+        live: Boolean(metadataResult.receipt?.live),
       },
     };
   }

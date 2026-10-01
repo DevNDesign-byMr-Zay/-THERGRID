@@ -1,5 +1,7 @@
 import { createProviderAdapter } from './provider-adapter.mjs';
 
+const VALID_REGION_REGEX = /^[A-Z0-9_-]{2,20}$/;
+
 export function createEiaProvider(options = {}) {
   const apiKey = options.apiKey || process.env.AETHERGRID_EIA_API_KEY || '';
   const baseUrl = options.baseUrl || process.env.AETHERGRID_EIA_URL || 'https://api.eia.gov/v2';
@@ -32,35 +34,65 @@ export function createEiaProvider(options = {}) {
     }
 
     const cleanRegion = region.trim().toUpperCase();
+
+    if (!VALID_REGION_REGEX.test(cleanRegion)) {
+      return {
+        data: {
+          region: cleanRegion,
+          status: 'invalid_region',
+          message: `Region code '${cleanRegion}' contains invalid characters or length.`,
+          fuelMix: [],
+          live: false,
+        },
+        receipt: {
+          provider: 'eia',
+          capability: 'energy',
+          dataset: 'electricity-mix',
+          requestId: params.requestId || context.requestId,
+          live: false,
+          fallback: true,
+          attribution: 'U.S. Energy Information Administration',
+        },
+      };
+    }
+
     const url = `${baseUrl}/electricity/rto/fuel-type-data/data/?api_key=${apiKey}&facets[respondent][]=${cleanRegion}&frequency=hourly&data[]=value&sort[0][column]=period&sort[0][direction]=desc&length=24`;
 
     const fetcher = async () => {
+      let rawJson;
       if (typeof options.fetchFn === 'function') {
-        return options.fetchFn(url);
+        rawJson = await options.fetchFn(url);
+      } else {
+        if (!configured()) {
+          return {
+            region: cleanRegion,
+            status: 'unconfigured',
+            message: 'EIA API key is not configured on this server.',
+            fuelMix: [],
+            live: false,
+          };
+        }
+        const resp = await fetch(url);
+        if (!resp.ok) {
+          throw new Error(`EIA API HTTP ${resp.status}`);
+        }
+        rawJson = await resp.json();
       }
-      if (!configured()) {
-        return {
-          region: cleanRegion,
-          status: 'unconfigured',
-          message: 'EIA API key is not configured on this server.',
-          fuelMix: [],
-          live: false,
-        };
-      }
-      const resp = await fetch(url);
-      if (!resp.ok) {
-        throw new Error(`EIA API HTTP ${resp.status}`);
-      }
-      const json = await resp.json();
-      const rows = Array.isArray(json.response?.data) ? json.response.data : [];
 
-      const fuelMix = rows.map((r) => ({
-        period: r.period,
-        respondent: r.respondent,
-        fueltype: r.fueltype,
-        fueltypeDescription: r['type-name'] || r.fueltype,
-        generationMegawatthours: Number.isFinite(Number(r.value)) ? Number(r.value) : 0,
-      }));
+      const rows = Array.isArray(rawJson.response?.data) ? rawJson.response.data : (Array.isArray(rawJson) ? rawJson : []);
+
+      const fuelMix = rows.map((r) => {
+        const val = r.value;
+        const validVal = val !== null && val !== undefined && val !== '' && Number.isFinite(Number(val));
+        return {
+          period: r.period || null,
+          respondent: r.respondent || cleanRegion,
+          fueltype: r.fueltype || null,
+          fueltypeDescription: r['type-name'] || r.fueltypeDescription || r.fueltype || null,
+          value: validVal ? Number(val) : null,
+          sourceUnits: r.units || r.sourceUnits || 'megawatthours',
+        };
+      });
 
       return {
         region: cleanRegion,
@@ -71,7 +103,7 @@ export function createEiaProvider(options = {}) {
     };
 
     if (typeof context.executeProviderRequest === 'function') {
-      return context.executeProviderRequest(
+      const exec = await context.executeProviderRequest(
         'eia',
         {
           url,
@@ -83,6 +115,7 @@ export function createEiaProvider(options = {}) {
         },
         fetcher,
       );
+      return { data: exec.data, receipt: exec.receipt };
     }
 
     const data = await fetcher();

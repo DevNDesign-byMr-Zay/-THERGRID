@@ -1,3 +1,4 @@
+import { validateCoordinates } from "./coordinate-validator.mjs";
 import { createProviderAdapter } from './provider-adapter.mjs';
 
 export function createNwsAlertsProvider(options = {}) {
@@ -11,67 +12,85 @@ export function createNwsAlertsProvider(options = {}) {
     const lat = params.lat;
     const lon = params.lon;
 
-    if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lon))) {
-      return {
-        data: {
-          status: 'missing_coordinates',
-          message: 'Valid lat/lon parameters are required for NWS active alerts.',
-          alerts: [],
-          live: false,
-        },
-        receipt: {
-          provider: 'nws',
-          capability: 'hazards',
-          dataset: 'active-alerts',
-          requestId: params.requestId || context.requestId,
-          live: false,
-          fallback: true,
-          attribution: 'US National Weather Service (api.weather.gov)',
-        },
-      };
+    if (lat !== undefined && lon !== undefined) {
+      const coordVal = validateCoordinates(lat, lon);
+      if (!coordVal.valid) {
+        return {
+          data: {
+            status: 'missing_coordinates',
+            message: 'Valid lat/lon parameters are required for NWS active alerts.',
+            alerts: [],
+            count: 0,
+            live: false,
+          },
+          receipt: {
+            provider: 'nws',
+            capability: 'hazards',
+            dataset: 'active-alerts',
+            requestId: params.requestId || context.requestId,
+            live: false,
+            fallback: true,
+            attribution: 'US National Weather Service (api.weather.gov)',
+          },
+        };
+      }
     }
 
-    const url = `${baseUrl}/alerts/active?point=${lat},${lon}`;
+    const url = (lat !== undefined && lon !== undefined)
+      ? `${baseUrl}/alerts/active?point=${lat},${lon}`
+      : `${baseUrl}/alerts/active`;
 
     const fetcher = async () => {
+      let rawJson;
       if (typeof options.fetchFn === 'function') {
-        return options.fetchFn(url);
+        rawJson = await options.fetchFn(url);
+      } else {
+        const resp = await fetch(url, {
+          headers: {
+            accept: 'application/json',
+            'user-agent': 'AETHERGRID/4.0 (contact@aethergrid.org)',
+          },
+        });
+        if (!resp.ok) {
+          throw new Error(`NWS Active Alerts HTTP ${resp.status}`);
+        }
+        rawJson = await resp.json();
       }
-      const resp = await fetch(url, {
-        headers: {
-          accept: 'application/json',
-          'user-agent': 'AETHERGRID/4.0 (contact@aethergrid.org)',
-        },
-      });
-      if (!resp.ok) {
-        throw new Error(`NWS Active Alerts HTTP ${resp.status}`);
-      }
-      const json = await resp.json();
-      const features = Array.isArray(json.features) ? json.features : [];
 
-      const alerts = features.map((f) => ({
-        id: f.id || f.properties?.id,
-        event: f.properties?.event || 'Unknown Alert',
-        headline: f.properties?.headline || null,
-        severity: f.properties?.severity || 'Unknown',
-        urgency: f.properties?.urgency || 'Unknown',
-        certainty: f.properties?.certainty || 'Unknown',
-        effective: f.properties?.effective || null,
-        expires: f.properties?.expires || null,
-        areaDesc: f.properties?.areaDesc || null,
-      }));
+      const features = Array.isArray(rawJson.features) ? rawJson.features : [];
+
+      const alerts = features.map((f) => {
+        const props = f.properties || {};
+        return {
+          id: f.id || props.id || null,
+          event: props.event || null,
+          severity: props.severity || null,
+          urgency: props.urgency || null,
+          certainty: props.certainty || null,
+          headline: props.headline || null,
+          description: props.description || null,
+          instruction: props.instruction || null,
+          effective: props.effective || null,
+          onset: props.onset || null,
+          expires: props.expires || null,
+          areaDesc: props.areaDesc || null,
+          affectedArea: props.areaDesc || null,
+          affectedZones: Array.isArray(props.affectedZones) ? props.affectedZones : [],
+          geometry: f.geometry || null,
+        };
+      });
 
       return {
         count: alerts.length,
         alerts,
-        location: { lat, lon },
+        location: (lat !== undefined && lon !== undefined) ? { lat, lon } : null,
         status: 'NWS Live Alerts',
         live: true,
       };
     };
 
     if (typeof context.executeProviderRequest === 'function') {
-      return context.executeProviderRequest(
+      const exec = await context.executeProviderRequest(
         'nws',
         {
           url,
@@ -83,6 +102,7 @@ export function createNwsAlertsProvider(options = {}) {
         },
         fetcher,
       );
+      return { data: exec.data, receipt: exec.receipt };
     }
 
     const data = await fetcher();

@@ -1,3 +1,4 @@
+import { validateCoordinates } from "./coordinate-validator.mjs";
 import { createProviderAdapter } from './provider-adapter.mjs';
 
 export function createTomorrowWeatherProvider(options = {}) {
@@ -32,7 +33,8 @@ export function createTomorrowWeatherProvider(options = {}) {
     const lat = params.lat;
     const lon = params.lon;
 
-    if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lon))) {
+    const coordVal = validateCoordinates(lat, lon);
+    if (!coordVal.valid) {
       return {
         data: {
           status: 'missing_coordinates',
@@ -55,30 +57,71 @@ export function createTomorrowWeatherProvider(options = {}) {
     const url = `${endpoint}?location=${lat},${lon}`;
 
     const fetcher = async () => {
+      let rawJson;
       if (typeof options.fetchFn === 'function') {
-        return options.fetchFn(url);
+        rawJson = await options.fetchFn(url);
+      } else {
+        const resp = await fetch(url, {
+          headers: {
+            accept: 'application/json',
+            'apikey': apiKey,
+          },
+        });
+        if (!resp.ok) {
+          throw new Error(`Tomorrow.io HTTP ${resp.status}`);
+        }
+        rawJson = await resp.json();
       }
-      const resp = await fetch(url, {
-        headers: {
-          accept: 'application/json',
-          'apikey': apiKey,
-        },
+
+      if (mode === 'realtime') {
+        const dataObj = rawJson.data || rawJson;
+        const vals = dataObj.values || {};
+        return {
+          observedAt: dataObj.time || null,
+          temperatureCelsius: vals.temperature !== undefined ? Number(vals.temperature) : null,
+          temperatureApparentCelsius: vals.temperatureApparent !== undefined ? Number(vals.temperatureApparent) : null,
+          humidityPercent: vals.humidity !== undefined ? Number(vals.humidity) : null,
+          precipitationProbability: vals.precipitationProbability !== undefined ? Number(vals.precipitationProbability) : null,
+          windSpeedMps: vals.windSpeed !== undefined ? Number(vals.windSpeed) : null,
+          windDirectionDegrees: vals.windDirection !== undefined ? Number(vals.windDirection) : null,
+          pressureSurfaceLevelHpa: vals.pressureSurfaceLevel !== undefined ? Number(vals.pressureSurfaceLevel) : null,
+          visibilityKm: vals.visibility !== undefined ? Number(vals.visibility) : null,
+          weatherCode: vals.weatherCode !== undefined ? Number(vals.weatherCode) : null,
+          units: 'metric',
+          location: { lat, lon },
+          status: 'Tomorrow.io Live',
+          live: true,
+        };
+      }
+
+      // Forecast mode
+      const modelRunAt = rawJson.time || null;
+      const timelines = rawJson.data?.timelines || rawJson.timelines || {};
+      const hourly = timelines.hourly || [];
+
+      const timesteps = hourly.map((entry) => {
+        const vals = entry.values || {};
+        return {
+          time: entry.time || null,
+          temperatureCelsius: vals.temperature !== undefined ? Number(vals.temperature) : null,
+          humidityPercent: vals.humidity !== undefined ? Number(vals.humidity) : null,
+          weatherCode: vals.weatherCode !== undefined ? Number(vals.weatherCode) : null,
+          values: vals,
+        };
       });
-      if (!resp.ok) {
-        throw new Error(`Tomorrow.io HTTP ${resp.status}`);
-      }
-      const json = await resp.json();
+
       return {
-        data: json.data || {},
+        modelRunAt,
+        timesteps,
+        units: 'metric',
         location: { lat, lon },
-        mode,
-        status: 'Tomorrow.io Live',
+        status: 'Tomorrow.io Live Forecast',
         live: true,
       };
     };
 
     if (typeof context.executeProviderRequest === 'function') {
-      return context.executeProviderRequest(
+      const exec = await context.executeProviderRequest(
         'tomorrow-io',
         {
           url,
@@ -90,6 +133,7 @@ export function createTomorrowWeatherProvider(options = {}) {
         },
         fetcher,
       );
+      return { data: exec.data, receipt: exec.receipt };
     }
 
     const data = await fetcher();

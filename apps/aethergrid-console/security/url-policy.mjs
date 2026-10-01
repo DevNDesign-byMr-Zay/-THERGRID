@@ -29,6 +29,7 @@ export function createUrlPolicy(allowedUrlsOrOrigins = []) {
     'https://api.eia.gov',
     'https://api.water.noaa.gov',
     'https://cloud.dwavesys.com',
+    'https://sapi.qpu.dwavesys.com',
   ];
 
   for (const d of defaults) {
