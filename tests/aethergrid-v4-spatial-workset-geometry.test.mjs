@@ -78,10 +78,7 @@ test('v4 app synchronizes workset persistence into the graph and renders it in w
   assert.match(app, /buildSpatialWorksetGeometry/u);
   assert.match(app, /spatialWorksetGeometryToOverlay/u);
   assert.match(app, /\{ id: 'workset-analysis', visible: true \}/u);
-  assert.match(
-    app,
-    /worldOverlay, incidentOverlay, worksetGeometryOverlay, measurementOverlay/u,
-  );
+  assert.match(app, /worldOverlay, incidentOverlay, worksetGeometryOverlay, measurementOverlay/u);
   assert.match(
     app,
     /seismicOverlay,[\s\S]*incidentOverlay,[\s\S]*worksetGeometryOverlay,[\s\S]*measurementOverlay/u,
@@ -105,8 +102,14 @@ test('v4 AUREN workset geometry review carries an explicit anti-causality relati
 
   assert.match(app, /const analyzeWorksetGeometry/u);
   assert.match(app, /minimum-spanning spatial geometry/u);
-  assert.match(app, /Do not infer physical, electrical, transit, ownership, dependency, operational, or causal relationships/u);
-  assert.match(app, /source-backed evidence required before asserting any real-world relationship/u);
+  assert.match(
+    app,
+    /Do not infer physical, electrical, transit, ownership, dependency, operational, or causal relationships/u,
+  );
+  assert.match(
+    app,
+    /source-backed evidence required before asserting any real-world relationship/u,
+  );
 });
 
 test('v4 Cesium and native renderers visually distinguish workset geometry without changing its source semantics', async () => {
