@@ -291,6 +291,7 @@ export function App() {
     setEnvironmentError(null);
     setLiveContext(null);
     setLiveContextError(null);
+    setSelection(null);
     setMeasurementPoints([]);
     setMeasurementFrame(null);
     setCityLoad({
@@ -654,12 +655,19 @@ export function App() {
       )
       .join('; ');
 
+    const entityRelation =
+      spatialComparison.sameCanonicalEntity == null
+        ? 'entity identity not comparable'
+        : spatialComparison.sameCanonicalEntity
+          ? `same canonical entity ${spatialComparison.a.selectedEntity?.canonicalId ?? ''}`
+          : 'different canonical entities';
+
     setAgentHandoff((current) => ({
       id: (current?.id ?? 0) + 1,
       agent: 'AUREN',
       prompt:
         `Compare operator-captured Frame A (${spatialComparison.a.region}, ${spatialComparison.a.temporal.mode}, ${spatialComparison.a.temporal.iso}) with Frame B (${spatialComparison.b.region}, ${spatialComparison.b.temporal.mode}, ${spatialComparison.b.temporal.iso}). ` +
-        `Mutually available numeric changes: ${deltas || 'none'}. ` +
+        `Entity relationship: ${entityRelation}. Mutually available numeric changes: ${deltas || 'none'}. ` +
         'Use the active spatial context and provenance. Distinguish observation from modeled context, do not infer causation from correlation, identify missing/non-comparable fields, and suggest evidence needed before an operator decision.'
     }));
     setIntelWorkspace('ai');
