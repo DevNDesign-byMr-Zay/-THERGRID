@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { ScenarioId, ScenarioParameters } from '../services/scenario-client';
 import {
@@ -82,6 +82,24 @@ export function ScenarioComposerPanel({
   );
   const [endValue, setEndValue] = useState('');
   const [assumption, setAssumption] = useState('');
+
+  useEffect(() => {
+    setScenarios((current) => {
+      let changed = false;
+      const next = current.map((scenario) => {
+        const expectedStatus =
+          scenario.id === activeScenarioId
+            ? 'active'
+            : scenario.status === 'active'
+              ? 'draft'
+              : scenario.status;
+        if (expectedStatus === scenario.status) return scenario;
+        changed = true;
+        return setOperatorScenarioStatus(scenario, expectedStatus);
+      });
+      return changed ? saveOperatorScenarios(next) : current;
+    });
+  }, [activeScenarioId]);
 
   const selected = useMemo(
     () => scenarios.find((scenario) => scenario.id === selectedId) ?? null,
