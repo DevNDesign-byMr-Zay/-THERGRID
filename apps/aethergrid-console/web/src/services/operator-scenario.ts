@@ -31,7 +31,7 @@ export interface OperatorScenarioBaseline {
   temporal: {
     iso: string;
     mode: TemporalInstant['mode'];
-    sourceTime: string | null;
+    liveReferenceIso: string | null;
   };
   region: string;
   positionedEntityCount: number;
@@ -293,7 +293,7 @@ export function createOperatorScenario(
       temporal: {
         iso: context.temporal.iso,
         mode: context.temporal.mode,
-        sourceTime: context.temporal.sourceTime ?? null
+        liveReferenceIso: context.temporal.sourceTime ?? null
       },
       region: context.region,
       positionedEntityCount: context.geometry.positionedEntityCount,
