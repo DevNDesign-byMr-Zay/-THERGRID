@@ -4909,3 +4909,149 @@ button {
   }
 }
 
+/* Spatial workset geometry — analytical only */
+.workset-geometry-panel {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(99, 255, 197, 0.08);
+  border-radius: 9px;
+  background: linear-gradient(
+    145deg,
+    rgba(7, 20, 18, 0.68),
+    rgba(8, 12, 18, 0.74)
+  );
+}
+
+.workset-geometry-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.workset-geometry-head span small,
+.workset-geometry-head span strong {
+  display: block;
+}
+
+.workset-geometry-head small {
+  color: #5e766f;
+  font-size: 6px;
+  letter-spacing: 0.09em;
+}
+
+.workset-geometry-head strong {
+  margin-top: 2px;
+  color: #d5eee7;
+  font-size: 8px;
+}
+
+.workset-geometry-head > em {
+  border: 1px solid rgba(99, 255, 197, 0.12);
+  border-radius: 999px;
+  padding: 3px 6px;
+  color: #80af9f;
+  font-size: 5px;
+  font-style: normal;
+}
+
+.workset-geometry-summary,
+.workset-geometry-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.workset-geometry-summary span,
+.workset-geometry-metrics div {
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.workset-geometry-summary small,
+.workset-geometry-summary strong,
+.workset-geometry-metrics small,
+.workset-geometry-metrics strong {
+  display: block;
+}
+
+.workset-geometry-summary small,
+.workset-geometry-metrics small {
+  color: #577067;
+  font-size: 5px;
+  letter-spacing: 0.06em;
+}
+
+.workset-geometry-summary strong,
+.workset-geometry-metrics strong {
+  margin-top: 3px;
+  color: #c6e5da;
+  font-size: 7px;
+}
+
+.workset-geometry-centroid,
+.workset-geometry-warning {
+  margin: 0;
+  font-size: 6px;
+  line-height: 1.45;
+}
+
+.workset-geometry-centroid {
+  color: #68857a;
+}
+
+.workset-geometry-warning {
+  color: #d5ad72;
+}
+
+.workset-geometry-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.workset-geometry-actions button {
+  min-height: 29px;
+  border: 1px solid rgba(99, 255, 197, 0.12);
+  border-radius: 6px;
+  color: #8fc0b0;
+  background: rgba(99, 255, 197, 0.026);
+  font-size: 5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+.workset-geometry-actions button:disabled {
+  opacity: 0.34;
+  cursor: default;
+}
+
+.workset-geometry-actions button:last-child {
+  border-color: rgba(155, 124, 255, 0.14);
+  color: #bab0ef;
+  background: rgba(155, 124, 255, 0.026);
+}
+
+.workset-geometry-boundary {
+  margin-top: 0;
+}
+
+:root[data-theme='light'] .workset-geometry-panel,
+:root[data-theme='light'] .workset-geometry-summary span,
+:root[data-theme='light'] .workset-geometry-metrics div {
+  background: rgba(247, 255, 252, 0.82);
+}
+
+@media (max-width: 760px) {
+  .workset-geometry-summary,
+  .workset-geometry-metrics,
+  .workset-geometry-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
