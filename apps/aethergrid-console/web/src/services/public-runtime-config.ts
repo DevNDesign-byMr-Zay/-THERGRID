@@ -13,7 +13,7 @@ const FALLBACK_CONFIG: PublicRuntimeConfig = {
   spatial: {
     provider: developmentCesiumToken ? 'cesium' : 'native-webgl',
     cesiumIonToken: developmentCesiumToken,
-    realityEnabled: false
+    realityEnabled: Boolean(developmentCesiumToken)
   }
 };
 
