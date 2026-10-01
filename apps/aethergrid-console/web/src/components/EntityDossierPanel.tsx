@@ -28,14 +28,15 @@ export function EntityDossierPanel({
   onClearFrozen,
   onAnalyze
 }: EntityDossierPanelProps) {
-  const active = frozen ?? current;
+  const active = current ?? frozen;
+  const showingFrozenOnly = !current && Boolean(frozen);
 
   return (
     <section className="selection-card entity-dossier intel-context-panel">
       <div className="entity-dossier-head">
         <span>
           <small>ENTITY DOSSIER</small>
-          <strong>{frozen ? 'FROZEN 4D SNAPSHOT' : 'ACTIVE SELECTION'}</strong>
+          <strong>{showingFrozenOnly ? 'FROZEN 4D SNAPSHOT' : 'ACTIVE SELECTION'}</strong>
         </span>
         {active ? (
           <em data-source-state={active.entitySource.state}>
@@ -49,12 +50,12 @@ export function EntityDossierPanel({
           <div className="entity-dossier-title">
             <h3>{active.entity.displayName}</h3>
             <p>{active.entity.kind}</p>
-            {frozen ? (
+            {showingFrozenOnly ? (
               <small>
                 Snapshot retained independently of the active scene until cleared.
               </small>
             ) : (
-              <small>ESC clears the scene selection.</small>
+              <small>ESC clears the scene selection. Frozen snapshots remain retained.</small>
             )}
           </div>
 
@@ -169,6 +170,30 @@ export function EntityDossierPanel({
             )}
           </div>
 
+          {frozen && current ? (
+            <div className="entity-dossier-frozen-summary">
+              <span>
+                <small>FROZEN SNAPSHOT</small>
+                <strong>{frozen.entity.displayName}</strong>
+              </span>
+              <em>{timeLabel(frozen.temporal.iso)}</em>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => downloadSpatialEntityDossier(frozen)}
+                >
+                  EXPORT
+                </button>
+                <button type="button" onClick={() => onAnalyze(frozen)}>
+                  AUREN
+                </button>
+                <button type="button" onClick={onClearFrozen}>
+                  CLEAR
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           <div className="entity-dossier-actions">
             {current ? (
               <button type="button" onClick={onFreeze}>
@@ -184,7 +209,7 @@ export function EntityDossierPanel({
             <button type="button" onClick={() => onAnalyze(active)}>
               ANALYZE WITH AUREN
             </button>
-            {frozen ? (
+            {showingFrozenOnly ? (
               <button type="button" onClick={onClearFrozen}>
                 CLEAR FROZEN
               </button>
