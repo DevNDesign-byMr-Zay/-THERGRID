@@ -13,6 +13,7 @@ import { ProfileMenu } from '../components/ProfileMenu';
 import { ScenarioPanel } from '../components/ScenarioPanel';
 import { SpatialAnalysisPanel } from '../components/SpatialAnalysisPanel';
 import { SpatialComparisonPanel } from '../components/SpatialComparisonPanel';
+import { SpatialWorksetPanel } from '../components/SpatialWorksetPanel';
 import { RuntimeDiagnosticsPanel } from '../components/RuntimeDiagnosticsPanel';
 import { SpatialViewport } from '../components/SpatialViewport';
 import { TemporalRail } from '../components/TemporalRail';
@@ -754,6 +755,25 @@ export function App() {
         'Treat the dossier as non-authoritative operator analysis. Separate entity-specific facts from surrounding context, preserve missing fields, do not infer a GERS join or causation where none is proven, and identify the next evidence needed before an operator decision.'
     }));
     setIntelWorkspace('ai');
+    setIntelOpen(true);
+  };
+  const locateEntityDossier = (dossier: SpatialEntityDossier) => {
+    const { latitude, longitude } = dossier.entity.position;
+    if (latitude == null || longitude == null) return;
+
+    setActiveUseCase(null);
+    setSelection(null);
+    setCity({
+      id: `workset-${latitude.toFixed(5)}-${longitude.toFixed(5)}`,
+      name: 'WORKSET ANCHOR',
+      district: `${dossier.entity.displayName} · ${latitude.toFixed(5)}°, ${longitude.toFixed(5)}°`,
+      latitude,
+      longitude,
+      rangeMeters: 3_200,
+      pitchDegrees: -35,
+      custom: true
+    });
+    setScope('city');
     setIntelOpen(true);
   };
   const changeInteractionMode = (mode: SpatialInteractionMode) => {
@@ -1567,6 +1587,11 @@ export function App() {
               }
             }}
             onClearFrozen={() => setFrozenDossier(null)}
+            onAnalyze={analyzeEntityDossier}
+          />
+          <SpatialWorksetPanel
+            current={entityDossier}
+            onLocate={locateEntityDossier}
             onAnalyze={analyzeEntityDossier}
           />
         </aside>
