@@ -72,8 +72,14 @@ export function SpatialComparisonPanel({
               <strong>{comparison.capturedSeparationSeconds.toFixed(0)}s</strong>
             </span>
             <span>
-              <small>COMPARABLE</small>
-              <strong>{comparison.metricDeltas.length}</strong>
+              <small>ENTITY</small>
+              <strong>
+                {comparison.sameCanonicalEntity == null
+                  ? '—'
+                  : comparison.sameCanonicalEntity
+                    ? 'SAME'
+                    : 'DIFFERENT'}
+              </strong>
             </span>
           </div>
 
@@ -121,7 +127,7 @@ export function SpatialComparisonPanel({
       <div className="analysis-boundary">
         <strong>OPERATOR ANALYSIS · NON-AUTHORITATIVE</strong>
         <span>
-          Missing metrics stay missing. Exported comparison packages are separate from the server evidence ledger.
+          Missing metrics stay missing. Entity sameness uses canonical identity only; scene proximity is never treated as identity. Exported comparison packages are separate from the server evidence ledger.
         </span>
       </div>
     </section>
