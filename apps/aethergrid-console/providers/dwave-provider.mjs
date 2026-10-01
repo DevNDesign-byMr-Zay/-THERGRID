@@ -9,6 +9,7 @@ export function createDwaveProvider(options = {}) {
   }
 
   async function request(params = {}, context = {}) {
+    const actionType = params.action || 'discover'; // 'discover' | 'submit' | 'status' | 'result'
     const workload = params.workload || 'renewable-siting';
 
     if (!configured()) {
@@ -33,27 +34,74 @@ export function createDwaveProvider(options = {}) {
       };
     }
 
-    const url = `${solverUrl}/problems`;
+    let url = `${solverUrl}/solvers/remote/`;
+    if (actionType === 'submit') {
+      url = `${solverUrl}/problems`;
+    } else if ((actionType === 'status' || actionType === 'result') && params.problemId) {
+      url = `${solverUrl}/problems/${encodeURIComponent(params.problemId)}`;
+    }
 
     const fetcher = async () => {
       if (typeof options.fetchFn === 'function') {
         return options.fetchFn(url);
       }
+
+      if (actionType === 'submit') {
+        const payload = params.problemPayload || { type: 'bqm', params: {} };
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-Auth-Token': token,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+        if (!resp.ok) throw new Error(`D-Wave Submit HTTP ${resp.status}`);
+        const json = await resp.json();
+        const problemId = json?.id || json?.problem_id || null;
+        return {
+          provider: 'dwave',
+          workload,
+          problemId,
+          status: 'submitted',
+          hardwareSubmitted: Boolean(problemId),
+          hardwareExecuted: false,
+          live: true,
+          sapiResponse: json,
+        };
+      }
+
       const resp = await fetch(url, {
         headers: {
           'X-Auth-Token': token,
-          'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
       });
       if (!resp.ok) throw new Error(`D-Wave SAPI HTTP ${resp.status}`);
       const json = await resp.json();
+
+      if (actionType === 'discover') {
+        return {
+          provider: 'dwave',
+          workload,
+          status: 'solvers_discovered',
+          hardwareSubmitted: false,
+          hardwareExecuted: false,
+          live: true,
+          solvers: Array.isArray(json) ? json : [json],
+        };
+      }
+
+      const isCompleted = json?.status === 'COMPLETED' || json?.status === 'DONE';
       return {
         provider: 'dwave',
         workload,
-        status: 'solvers_discovered',
-        hardwareSubmitted: false, // Discovering problems/solvers is NOT workload submission!
-        hardwareExecuted: false,
-        live: false,
+        problemId: params.problemId,
+        status: json?.status || 'unknown',
+        hardwareSubmitted: true,
+        hardwareExecuted: isCompleted,
+        live: true,
         sapiResponse: json,
       };
     };
@@ -67,7 +115,7 @@ export function createDwaveProvider(options = {}) {
     }
 
     const data = await fetcher();
-    return { data, receipt: { provider: 'dwave', capability: 'quantum', dataset: 'quantum-annealing', live: false, fallback: true } };
+    return { data, receipt: { provider: 'dwave', capability: 'quantum', dataset: 'quantum-annealing', live: true } };
   }
 
   return createProviderAdapter({

@@ -12,7 +12,7 @@ export function createNwsAlertsProvider(options = {}) {
     const lat = params.lat;
     const lon = params.lon;
 
-    if (lat === undefined || lon === undefined) {
+    if (lat === undefined || lon === undefined || !Number.isFinite(Number(lat)) || !Number.isFinite(Number(lon))) {
       return {
         data: { live: false, alerts: [], status: 'missing_coordinates' },
         receipt: {

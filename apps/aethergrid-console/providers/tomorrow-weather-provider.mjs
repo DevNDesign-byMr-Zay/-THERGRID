@@ -11,6 +11,7 @@ export function createTomorrowWeatherProvider(options = {}) {
   async function request(params = {}, context = {}) {
     const lat = params.lat;
     const lon = params.lon;
+    const mode = params.mode || 'realtime'; // 'realtime' | 'forecast'
 
     if (!configured() || lat === undefined || lon === undefined) {
       const fallbackData = {
@@ -18,13 +19,14 @@ export function createTomorrowWeatherProvider(options = {}) {
         live: false,
         fallback: true,
         condition: 'Tomorrow.io Unconfigured / Missing Location',
+        hourly: [],
       };
       return {
         data: fallbackData,
         receipt: {
           provider: 'tomorrow-io',
           capability: 'weather',
-          dataset: 'weather-realtime',
+          dataset: `weather-${mode}`,
           live: false,
           fallback: true,
           attribution: 'Tomorrow.io Weather API (Unconfigured)',
@@ -32,7 +34,8 @@ export function createTomorrowWeatherProvider(options = {}) {
       };
     }
 
-    const url = `${baseUrl}/weather/realtime?location=${lat},${lon}`;
+    const path = mode === 'forecast' ? '/weather/forecast' : '/weather/realtime';
+    const url = `${baseUrl}${path}?location=${lat},${lon}`;
 
     const fetcher = async () => {
       if (typeof options.fetchFn === 'function') {
@@ -48,6 +51,24 @@ export function createTomorrowWeatherProvider(options = {}) {
         throw new Error(`Tomorrow.io HTTP ${resp.status}: ${resp.statusText}`);
       }
       const json = await resp.json();
+
+      if (mode === 'forecast') {
+        const hourly = json?.timelines?.hourly || [];
+        const timeSeries = hourly.slice(0, 48).map((item) => ({
+          eventTime: item.time || null,
+          temperatureC: item.values?.temperature ?? null,
+          relativeHumidityPercent: item.values?.humidity ?? null,
+          windSpeedKph: Number.isFinite(Number(item.values?.windSpeed)) ? Number(item.values.windSpeed) * 3.6 : null,
+        }));
+
+        return {
+          provider: 'Tomorrow.io Hourly Forecast',
+          live: true,
+          hourly: timeSeries,
+          raw: json,
+        };
+      }
+
       const values = json?.data?.values || {};
       return {
         temperatureC: values.temperature ?? null,
@@ -62,7 +83,7 @@ export function createTomorrowWeatherProvider(options = {}) {
     if (typeof context.executeProviderRequest === 'function') {
       return context.executeProviderRequest(
         'tomorrow-io',
-        { url, capability: 'weather', dataset: 'weather-realtime', ttlMs: 180000, attribution: 'Tomorrow.io Weather API' },
+        { url, capability: 'weather', dataset: `weather-${mode}`, ttlMs: 180000, attribution: 'Tomorrow.io Weather API' },
         fetcher,
       );
     }
@@ -70,7 +91,7 @@ export function createTomorrowWeatherProvider(options = {}) {
     const data = await fetcher();
     return {
       data,
-      receipt: { provider: 'tomorrow-io', capability: 'weather', dataset: 'weather-realtime', live: true },
+      receipt: { provider: 'tomorrow-io', capability: 'weather', dataset: `weather-${mode}`, live: true },
     };
   }
 

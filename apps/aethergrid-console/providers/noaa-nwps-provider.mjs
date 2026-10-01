@@ -42,20 +42,33 @@ export function createNoaaNwpsHydrologyProvider(options = {}) {
       }
       const json = await resp.json();
 
-      const observedStage = json.status?.observed?.primary;
-      const observedFlow = json.status?.observed?.secondary;
+      let stageFlowData = null;
+      try {
+        const sfResp = await fetch(`${baseUrl}/gauges/${cleanGaugeId}/stageflow`);
+        if (sfResp.ok) {
+          stageFlowData = await sfResp.json();
+        }
+      } catch {
+        // Stageflow query optional
+      }
+
+      const observedStage = stageFlowData?.observed?.primary ?? json.status?.observed?.primary;
+      const observedFlow = stageFlowData?.observed?.secondary ?? json.status?.observed?.secondary;
 
       return {
         gaugeId: cleanGaugeId,
         name: json.name || null,
         observedStageFeet: Number.isFinite(Number(observedStage)) ? Number(observedStage) : null,
         observedFlowCfs: Number.isFinite(Number(observedFlow)) ? Number(observedFlow) : null,
-        observedAt: json.status?.observed?.validTime || null,
+        observedAt: stageFlowData?.observed?.validTime || json.status?.observed?.validTime || null,
         actionStageFeet: Number.isFinite(Number(json.flood?.action)) ? Number(json.flood.action) : null,
         minorFloodStageFeet: Number.isFinite(Number(json.flood?.minor)) ? Number(json.flood.minor) : null,
         moderateFloodStageFeet: Number.isFinite(Number(json.flood?.moderate)) ? Number(json.flood.moderate) : null,
         majorFloodStageFeet: Number.isFinite(Number(json.flood?.major)) ? Number(json.flood.major) : null,
-        forecastStageFeet: Number.isFinite(Number(json.status?.forecast?.primary)) ? Number(json.status.forecast.primary) : null,
+        forecastStageFeet: Number.isFinite(Number(stageFlowData?.forecast?.primary || json.status?.forecast?.primary))
+          ? Number(stageFlowData?.forecast?.primary || json.status?.forecast?.primary)
+          : null,
+        forecastAt: stageFlowData?.forecast?.validTime || json.status?.forecast?.validTime || null,
         status: 'NOAA NWPS Live',
         live: true,
       };

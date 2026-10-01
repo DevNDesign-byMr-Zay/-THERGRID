@@ -32,34 +32,14 @@ export function createProviderExecutor(options = {}) {
 
     const capability = params.capability || 'general';
     const dataset = params.dataset || providerId;
+    const requestId = params.requestId || `req-${Date.now()}`;
     const cacheKey = params.cacheKey || buildCanonicalCacheKey(providerId, capability, dataset, params);
     const ttlMs = params.ttlMs || 60000;
     const attribution = params.attribution || '';
 
-    // 1. Rate Limiting Check
-    if (limiter && !limiter.tryAcquire()) {
-      if (health) {
-        health.recordExecution(providerId, {
-          error: true,
-          degraded: true,
-          circuitState: breaker ? breaker.getState() : 'CLOSED',
-        });
-      }
-
-      if (typeof fallbackFetcher === 'function') {
-        const fallbackData = await fallbackFetcher({ reason: 'rate_limited' });
-        const receipt = createProviderReceipt({
-          provider: providerId,
-          capability,
-          dataset,
-          cacheState: 'miss',
-          live: false,
-          fallback: true,
-          attribution: attribution || `${providerId} (Rate Limited Fallback)`,
-        });
-        return { data: fallbackData, receipt };
-      }
-      throw new Error(`Rate limit exceeded for provider '${providerId}'`);
+    // 1. Outbound URL Policy Validation FIRST (Security check before cache or fetch)
+    if (params.url && urlPolicy) {
+      urlPolicy.validateUrl(params.url);
     }
 
     // 2. Cache Lookup & SWR Check
@@ -81,6 +61,7 @@ export function createProviderExecutor(options = {}) {
             provider: providerId,
             capability,
             dataset,
+            requestId,
             cacheState: 'hit',
             live: isLiveData,
             stale: false,
@@ -89,10 +70,13 @@ export function createProviderExecutor(options = {}) {
           });
           return { data: cached.value, receipt };
         } else {
-          // Stale entry found -> Return stale cached entry immediately with stale: true and live: false
+          // Stale entry found -> Return stale cached entry immediately with stale: true, live: false
           if (typeof fetcher === 'function') {
             Promise.resolve().then(async () => {
               try {
+                if (params.url && urlPolicy) {
+                  urlPolicy.validateUrl(params.url);
+                }
                 const fresh = await fetcher();
                 cache.set(cacheKey, fresh, ttlMs);
               } catch {
@@ -116,6 +100,7 @@ export function createProviderExecutor(options = {}) {
             provider: providerId,
             capability,
             dataset,
+            requestId,
             cacheState: 'stale',
             live: false,
             stale: true,
@@ -128,9 +113,31 @@ export function createProviderExecutor(options = {}) {
       }
     }
 
-    // 3. Outbound URL Policy Validation
-    if (params.url && urlPolicy) {
-      urlPolicy.validateUrl(params.url);
+    // 3. Rate Limiting Check
+    if (limiter && !limiter.tryAcquire()) {
+      if (health) {
+        health.recordExecution(providerId, {
+          error: true,
+          degraded: true,
+          circuitState: breaker ? breaker.getState() : 'CLOSED',
+        });
+      }
+
+      if (typeof fallbackFetcher === 'function') {
+        const fallbackData = await fallbackFetcher({ reason: 'rate_limited' });
+        const receipt = createProviderReceipt({
+          provider: providerId,
+          capability,
+          dataset,
+          requestId,
+          cacheState: 'miss',
+          live: false,
+          fallback: true,
+          attribution: attribution || `${providerId} (Rate Limited Fallback)`,
+        });
+        return { data: fallbackData, receipt };
+      }
+      throw new Error(`Rate limit exceeded for provider '${providerId}'`);
     }
 
     // 4. Circuit Breaker Execution
@@ -189,6 +196,7 @@ export function createProviderExecutor(options = {}) {
           provider: providerId,
           capability,
           dataset,
+          requestId,
           cacheState: 'miss',
           live: false,
           stale: false,
@@ -215,6 +223,7 @@ export function createProviderExecutor(options = {}) {
         provider: providerId,
         capability,
         dataset,
+        requestId,
         cacheState: 'miss',
         live: isLiveData,
         stale: false,
