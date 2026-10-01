@@ -106,7 +106,10 @@ import {
   spatialWorksetGeometryToOverlay,
   type SpatialWorksetGeometrySummary
 } from '../services/spatial-workset-geometry';
-import { buildTemporalNavigatorEvents } from '../services/temporal-event-navigator';
+import {
+  buildTemporalNavigatorEvents,
+  type TemporalNavigatorEvent
+} from '../services/temporal-event-navigator';
 import type { EvidenceRecord } from '../services/evidence-client';
 import type { SpatialInvestigation } from '../services/spatial-investigation';
 import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
@@ -990,6 +993,23 @@ export function App() {
     setActiveOperatorScenario(null);
     setScenarioVisual(null);
     clock.goLive();
+  };
+
+  const restoreScenarioFromTemporalEvent = (
+    event: TemporalNavigatorEvent
+  ) => {
+    if (!event.scenarioId) return;
+    const scenario = savedOperatorScenarios.find(
+      (candidate) => candidate.id === event.scenarioId
+    );
+    if (scenario) {
+      activateOperatorScenario(scenario);
+      clock.scrub(event.timeIso, 'scenario');
+      return;
+    }
+    clock.pause();
+    clock.setMode('scenario', event.scenarioId);
+    clock.scrub(event.timeIso, 'scenario');
   };
 
   const analyzeOperatorScenario = (scenario: OperatorScenario) => {
@@ -2013,11 +2033,17 @@ export function App() {
             clock={clock}
             state={temporal}
             events={temporalEvents}
+            onScenarioEvent={restoreScenarioFromTemporalEvent}
           />
         </aside>
       </section>
 
-      <TemporalRail clock={clock} state={temporal} events={temporalEvents} />
+      <TemporalRail
+        clock={clock}
+        state={temporal}
+        events={temporalEvents}
+        onScenarioEvent={restoreScenarioFromTemporalEvent}
+      />
     </main>
   );
 }
