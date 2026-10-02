@@ -64,9 +64,16 @@ async function jsonRequest<T>(
       ...(options.headers || {})
     }
   });
-  const payload = (await response.json().catch(() => ({}))) as T & { error?: string };
+  const payload = (await response.json().catch(() => ({}))) as T & {
+    error?: string;
+    message?: string;
+  };
   if (!response.ok) {
-    throw new Error(payload.error || `quantum request failed with HTTP ${response.status}`);
+    throw new Error(
+      payload.message ||
+        payload.error ||
+        `quantum request failed with HTTP ${response.status}`
+    );
   }
   return payload;
 }
