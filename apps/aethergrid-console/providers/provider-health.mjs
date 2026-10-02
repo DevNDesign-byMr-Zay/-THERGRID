@@ -28,6 +28,14 @@ export function createProviderHealth() {
       lastFallbackAt: null,
       lastCacheHitAt: null,
       lastLatencyMs: null,
+      requestCount: 0,
+      successCount: 0,
+      failureCount: 0,
+      timeoutCount: 0,
+      rateLimitedCount: 0,
+      freshCacheHitCount: 0,
+      staleCacheHitCount: 0,
+      fallbackCount: 0,
       cacheHit: false,
       cacheState: 'none',
       circuitState: 'CLOSED',
@@ -111,6 +119,20 @@ export function createProviderHealth() {
         break;
     }
 
+    const requestCount = existing.requestCount + 1;
+    const successCount = existing.successCount + (outcome === 'upstreamSuccess' ? 1 : 0);
+    const failureCount =
+      existing.failureCount +
+      (['upstreamFailure', 'timeout', 'circuitOpen'].includes(outcome) ? 1 : 0);
+    const timeoutCount = existing.timeoutCount + (outcome === 'timeout' ? 1 : 0);
+    const rateLimitedCount =
+      existing.rateLimitedCount + (outcome === 'rateLimited' ? 1 : 0);
+    const freshCacheHitCount =
+      existing.freshCacheHitCount + (outcome === 'freshCacheHit' ? 1 : 0);
+    const staleCacheHitCount =
+      existing.staleCacheHitCount + (outcome === 'staleCacheHit' ? 1 : 0);
+    const fallbackCount = existing.fallbackCount + (outcome === 'fallback' ? 1 : 0);
+
     healthMap.set(id, {
       ...existing,
       status: newStatus,
@@ -121,6 +143,14 @@ export function createProviderHealth() {
       lastFallbackAt: newFallbackAt,
       lastCacheHitAt: newCacheHitAt,
       lastLatencyMs: metrics.latencyMs ?? existing.lastLatencyMs,
+      requestCount,
+      successCount,
+      failureCount,
+      timeoutCount,
+      rateLimitedCount,
+      freshCacheHitCount,
+      staleCacheHitCount,
+      fallbackCount,
       cacheHit: outcome === 'freshCacheHit' || outcome === 'staleCacheHit',
       cacheState: outcome === 'freshCacheHit' ? 'hit' : outcome === 'staleCacheHit' ? 'stale' : 'miss',
       circuitState: metrics.circuitState || existing.circuitState,
@@ -150,6 +180,14 @@ export function createProviderHealth() {
         ...(info.lastLatencyMs !== null && info.lastLatencyMs !== undefined
           ? { lastLatencyMs: info.lastLatencyMs }
           : {}),
+        requestCount: info.requestCount,
+        successCount: info.successCount,
+        failureCount: info.failureCount,
+        timeoutCount: info.timeoutCount,
+        rateLimitedCount: info.rateLimitedCount,
+        freshCacheHitCount: info.freshCacheHitCount,
+        staleCacheHitCount: info.staleCacheHitCount,
+        fallbackCount: info.fallbackCount,
         ...(info.cacheHit !== undefined ? { cacheHit: info.cacheHit } : {}),
         ...(info.cacheState ? { cacheState: info.cacheState } : {}),
         ...(info.circuitState ? { circuitState: info.circuitState } : {}),
