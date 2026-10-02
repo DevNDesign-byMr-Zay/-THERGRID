@@ -57,3 +57,50 @@ export async function loadRuntimeDiagnostics(
   }
   return payload;
 }
+
+
+export type PublicProviderStatus =
+  | 'ready'
+  | 'configured'
+  | 'degraded'
+  | 'fallback'
+  | 'unavailable'
+  | 'unconfigured'
+  | string;
+
+export interface PublicProviderCapability {
+  provider?: string;
+  status?: PublicProviderStatus;
+  hardwareEnabled?: boolean;
+}
+
+export interface PublicProviderRuntime {
+  spatial?: PublicProviderCapability;
+  geo?: PublicProviderCapability;
+  terrain?: PublicProviderCapability;
+  weather?: PublicProviderCapability;
+  airQuality?: PublicProviderCapability;
+  seismic?: PublicProviderCapability;
+  quantum?: PublicProviderCapability;
+  ai?: PublicProviderCapability;
+  energy?: PublicProviderCapability;
+  hazards?: PublicProviderCapability;
+  transit?: PublicProviderCapability;
+  hydrology?: PublicProviderCapability;
+}
+
+export async function loadPublicProviderRuntime(
+  signal?: AbortSignal
+): Promise<PublicProviderRuntime> {
+  const response = await fetch('/api/aethergrid/runtime/providers', {
+    headers: { accept: 'application/json' },
+    signal
+  });
+  const payload = (await response.json().catch(() => ({}))) as PublicProviderRuntime & {
+    error?: string;
+  };
+  if (!response.ok) {
+    throw new Error(payload.error || `provider runtime failed with HTTP ${response.status}`);
+  }
+  return payload;
+}
