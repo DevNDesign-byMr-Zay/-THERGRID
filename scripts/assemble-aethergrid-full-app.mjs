@@ -42,6 +42,7 @@ const REQUIRED_FILES = Object.freeze([
   'providers/nws-alerts-provider.mjs',
   'providers/noaa-nwps-provider.mjs',
   'providers/eia-provider.mjs',
+  'providers/transit-feed-config.mjs',
   'providers/transit-registry.mjs',
   'providers/dwave-provider.mjs',
   'app.json',
