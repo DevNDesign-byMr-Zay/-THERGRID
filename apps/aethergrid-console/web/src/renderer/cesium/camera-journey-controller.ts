@@ -1,0 +1,101 @@
+import {
+  BoundingSphere,
+  Camera,
+  Cartesian3,
+  HeadingPitchRange,
+  Math as CesiumMath
+} from 'cesium';
+
+import type { SpatialTarget } from '../spatial-renderer';
+
+export type CameraJourneyPhase = 'global' | 'regional' | 'city' | 'district';
+
+export interface CameraJourneyStage {
+  phase: CameraJourneyPhase;
+  destinationHeightMeters: number;
+  durationSeconds: number;
+  pitchDegrees: number;
+}
+
+const DEFAULT_STAGES: readonly CameraJourneyStage[] = [
+  { phase: 'global', destinationHeightMeters: 11_000_000, durationSeconds: 1.05, pitchDegrees: -88 },
+  { phase: 'regional', destinationHeightMeters: 1_200_000, durationSeconds: 0.9, pitchDegrees: -72 },
+  { phase: 'city', destinationHeightMeters: 120_000, durationSeconds: 0.85, pitchDegrees: -50 },
+  { phase: 'district', destinationHeightMeters: 6_000, durationSeconds: 1.0, pitchDegrees: -34 }
+];
+
+export class CameraJourneyController {
+  #camera: Camera;
+  #activeJourney = 0;
+
+  constructor(camera: Camera) {
+    this.#camera = camera;
+  }
+
+  cancel(): void {
+    this.#activeJourney += 1;
+    this.#camera.cancelFlight();
+  }
+
+  async flyTo(
+    target: SpatialTarget,
+    onPhase?: (phase: CameraJourneyPhase) => void
+  ): Promise<void> {
+    const journey = ++this.#activeJourney;
+    const finalHeight = Math.max(
+      target.heightMeters ?? 0,
+      target.rangeMeters ?? DEFAULT_STAGES.at(-1)?.destinationHeightMeters ?? 5_000
+    );
+    const baseStages =
+      target.journey === 'global'
+        ? [DEFAULT_STAGES[0]]
+        : target.journey === 'direct'
+          ? [DEFAULT_STAGES.at(-1) ?? DEFAULT_STAGES[0]]
+          : DEFAULT_STAGES;
+
+    const stages = baseStages.map((stage, index) => ({
+      ...stage,
+      destinationHeightMeters:
+        index === baseStages.length - 1 ? finalHeight : stage.destinationHeightMeters,
+      pitchDegrees:
+        index === baseStages.length - 1
+          ? target.pitchDegrees ?? stage.pitchDegrees
+          : stage.pitchDegrees
+    }));
+
+    for (const stage of stages) {
+      if (journey !== this.#activeJourney) return;
+      onPhase?.(stage.phase);
+      await this.#flyStage(target, stage, journey);
+    }
+  }
+
+  async #flyStage(
+    target: SpatialTarget,
+    stage: CameraJourneyStage,
+    journey: number
+  ): Promise<void> {
+    const focus = Cartesian3.fromDegrees(
+      target.longitude,
+      target.latitude,
+      target.heightMeters ?? 0
+    );
+    const sphere = new BoundingSphere(focus, 1);
+    const offset = new HeadingPitchRange(
+      CesiumMath.toRadians(target.headingDegrees ?? 0),
+      CesiumMath.toRadians(stage.pitchDegrees),
+      stage.destinationHeightMeters
+    );
+
+    await new Promise<void>((resolve) => {
+      this.#camera.flyToBoundingSphere(sphere, {
+        offset,
+        duration: stage.durationSeconds,
+        complete: resolve,
+        cancel: resolve
+      });
+    });
+
+    if (journey !== this.#activeJourney) this.#camera.cancelFlight();
+  }
+}

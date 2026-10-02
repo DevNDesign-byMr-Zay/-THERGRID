@@ -113,6 +113,65 @@ Deliver:
 - no-screenshot regression gate;
 - SHA-256 inventory.
 
+## Batch 18 — v4 spatial operator foundation
+
+Status: IMPLEMENTED ON DRAFT BRANCH
+
+Deliver:
+- typed React/Cesium operator shell under `apps/aethergrid-console/web/` while preserving the maintained Node backend;
+- continuous WGS84 globe → region → city → district camera travel with city-specific skyline framing derived from mapped geometry;
+- renderer-neutral `SpatialRenderer` contract with Cesium primary rendering and a real source-backed native WebGL failover;
+- reversible CESIUM / NATIVE switching with failure diagnostics and preserved overlays, time, layers, selection and scenario state;
+- progressively refined terrain/building detail as the camera approaches city/district scale;
+- computed solar state tied to the 4D clock, solar-aware building presentation and mapped-building nighttime illumination;
+- continuously advancing LIVE time plus independent historical, forecast and scenario cursors;
+- explicit temporal-data eligibility so AQI/seismic remain current-only while provider-backed weather may appear in FORECAST only at an aligned returned source sample;
+- source-driven cloud, precipitation, fog, AQI, thunderstorm and geographic wind-vector presentation;
+- source-backed city-load readiness, selectable provenance and operator-controlled AUREN handoff;
+- live NWS active-hazard visualization from the existing provider route, including severity-coded point-context markers and returned Polygon/MultiPolygon boundary geometry without fabricated affected-area fills;
+- explicit operator bindings for NOAA NWPS gauge IDs and EIA balancing-region codes, with no coordinate-derived identity guessing and no browser-stored provider secrets;
+- backend-aligned scenario stress visualization with source-baseline comparison and no source-data mutation;
+- real operational presets using only implemented layers;
+- persistent local spatial bookmarks that restore scope, target, layers, visual mode, operation mode and 4D cursor without backend mutation.
+
+Fidelity / authority boundaries:
+- thunderstorm flash cadence is synthetic presentation derived from provider-coded storm conditions, not detected lightning;
+- mapped-building illumination is presentation-only and is not occupancy, window-state or utility-load telemetry;
+- native failover preserves a functional operator scene but is not photorealistic equivalence to streamed Cesium content;
+- OpenStreetMap, terrain, weather, AQI, seismic and NWS hazard data keep source/fallback/provenance state;
+- NWS hazard boundaries are rendered only from provider-returned geometry; missing geometry never becomes an inferred polygon or radius;
+- scenario visuals remain modeled overlays and never become authoritative source truth;
+- physical infrastructure actuation remains disabled.
+
+Promotion requirements:
+- dedicated v4 TypeScript/build gate passes;
+- root conventional tests, coverage, lint/format, strict renderer typecheck, fresh-clone smoke and container smoke pass;
+- CodeQL passes;
+- v4 docs and release-readiness tests stay synchronized with implemented behavior;
+- v4 remains draft until the maintained package path is explicitly promoted.
+
+## v4 spatial analysis and comparison batch
+
+Status: IMPLEMENTED ON DRAFT BRANCH
+
+Deliver:
+- renderer-neutral geographic surface picking across Cesium and native fallback;
+- explicit surface provenance: depth surface, terrain, ellipsoid or native projection;
+- operator geodesic measurement with distance, bearing, midpoint and optional elevation/slope when both picked surfaces provide heights;
+- measurement geometry rendered through the same normalized overlay system at city and world scope;
+- measurement results captured against a fixed 4D frame rather than silently advancing with LIVE time;
+- Frame A / Frame B observation capture across different locations, times, scenarios, selections and operation modes;
+- comparison of mutually available numeric metrics only, with missing values preserved as missing;
+- local operator-analysis JSON export labeled non-authoritative and separate from the server evidence ledger;
+- operator-controlled AUREN comparison review with explicit instruction not to infer causation from correlation.
+
+Accuracy boundaries:
+- native surface picks are projection estimates and do not claim terrain elevation;
+- elevation delta and slope are omitted unless both picked points provide finite heights;
+- non-LIVE captures do not inherit current-only weather, AQI or seismic values;
+- local analysis exports are not server evidence receipts and do not replace the provenance ledger;
+- comparison deltas describe captured values only and do not establish causal relationships.
+
 ## Replaceable model contract
 
 Each agent resolves through configuration with this shape:
@@ -565,3 +624,84 @@ Copernicus DEM GLO-90 / Open-Meteo elevation is used as visualization context, n
 - release-readiness must require the v3 terrain capabilities and non-survey-grade boundary;
 - all existing city identity, semantic weather, mapped geography, agent, quantum and safety gates remain mandatory;
 - test, lint, typecheck, coverage, fresh-clone smoke, container smoke, quality/release-readiness, package verification and CodeQL must pass on the exact merge head.
+
+
+## v4 spatial operator migration lane — frontend / renderer scope
+
+Status: IMPLEMENTED / VERIFYING ON DRAFT PR
+
+This lane is intentionally separate from provider/backend integration work. It migrates the operator experience to a typed renderer-neutral web surface without changing provider secrets, provider-adapter ownership, backend actuation boundaries, or the authority of source data.
+
+### Spatial renderer foundation
+- React/TypeScript operator web surface under `apps/aethergrid-console/web/`;
+- Cesium primary WGS84 globe/city renderer;
+- functional native WebGL failover using the same normalized spatial overlays;
+- Canvas2D only as the final local graphics fallback when WebGL is unavailable;
+- reversible CESIUM / NATIVE switching and visible failover reason;
+- one geographic target/camera contract across globe, region, city and district;
+- adaptive detail so expensive building rendering activates only at useful city/district scale.
+
+### Real 4D operator behavior
+- LIVE time advances automatically;
+- historical, forecast and scenario cursors remain independent;
+- solar elevation/azimuth is computed from the active 4D instant and geographic target;
+- current AQI and seismic feeds remain LIVE-only; weather now has a provider-backed FORECAST lane that selects the nearest returned sample for the active 4D cursor, refuses out-of-range cursors, and preserves source/stale/fallback provenance;
+- the temporal rail states whether the operator is seeing LIVE SOURCES, STATIC MAP CONTEXT or MODELED + STATIC context.
+
+### Source-backed city motion and identity
+- source weather drives cloud cover, rain/snow, fog, wind drift and AQI particles;
+- modeled thunderstorm codes may trigger bounded presentation flashes, but flash timing is synthetic and never labeled as detected lightning;
+- current wind speed/direction/gusts generate a real geographic wind-vector overlay shared by both renderers;
+- mapped building footprints/heights generate capped nighttime illumination points tied to solar twilight/night state;
+- building illumination is presentation-only and is not measured occupancy, window state or utility demand;
+- mapped skyline geometry derives city-specific arrival framing;
+- roads, water, green space, power topology and recent seismic context remain separately attributed/selectable.
+
+### Operator workflow
+- explicit city-load readiness for geometry, atmosphere and live context;
+- operation-mode presets use only implemented layers;
+- selected entities expose layer/source timestamps and fallback/live provenance;
+- selected-entity analysis can prefill AUREN while leaving submission under operator control;
+- saved views persist scope, target, layers, visual mode, operation mode and 4D cursor locally;
+- restoring a local view never silently re-submits a backend scenario;
+- scenario mode preserves a dim source baseline beneath the brighter modeled network effect and labels source vs modeled state.
+
+### Verification boundary
+The v4 migration is not considered the maintained release merely because the draft UI builds. Promotion requires the dedicated v4 web typecheck/build plus the repository test, lint/format, coverage, fresh-clone, container, quality/release-readiness and CodeQL gates on the exact merge head. Provider/backend work that is not implemented in this lane must not be advertised as complete here.
+
+
+## Batch 19 — provider-backed operator integrations
+
+Status: IMPLEMENTED / VERIFYING ON DRAFT PR
+
+### Connection and forecast runtime
+- consume safe provider readiness from `GET /api/aethergrid/runtime/providers` in the operator Connection Center;
+- expose configured/ready/degraded/fallback/unavailable/unconfigured states without browser credentials;
+- consume the merged Tomorrow.io normalized `timesteps` forecast contract while retaining the legacy timeline adapter only for compatibility;
+- keep Tomorrow provider-specific weather codes out of the Open-Meteo weather-code namespace.
+
+### Live spatial operations
+- render NWS active-alert boundaries only from provider-returned GeoJSON;
+- render decoded GTFS-Realtime vehicle coordinates as a LIVE/stale transit layer with source/feed timestamps;
+- do not synthesize transit route geometry, interpolate missing vehicle locations, or promote fallback/undecoded feeds to live;
+- bind NOAA NWPS gauge IDs explicitly per coordinate scope;
+- render a hydrology marker only when the bound NOAA gauge supplies valid coordinates;
+- derive gauge flood presentation only from the provider observed stage and provider action/minor/moderate/major thresholds;
+- preserve NOAA metadata-only partial state when stageflow is unavailable.
+
+### Energy context
+- retain EIA respondent, period, fuel type, fuel description, nullable value and source units;
+- show latest-period source-backed fuel rows in the operator panel;
+- do not invent balancing-region polygons or attach EIA values to arbitrary map geometry.
+
+### Quantum annealing operator path
+- discover real D-Wave solvers through the server route;
+- require the operator to select a solver and supported problem type;
+- require an actual encoded D-Wave problem object and explicit provider parameters;
+- require both a confirmation checkbox and an immediate confirmation dialog before POST;
+- poll only the genuine problem ID returned by the provider;
+- retrieve a result only after completion;
+- distinguish hardware submitted from hardware executed and never synthesize a QPU result.
+
+### Promotion gate
+Batch 19 remains draft until the exact promotion head passes v4 web build/typecheck, repository tests, coverage, lint/format, fresh-clone smoke, container smoke, release readiness and CodeQL. Source-backed, modeled, fallback and hardware-executed states must remain visibly distinct.
