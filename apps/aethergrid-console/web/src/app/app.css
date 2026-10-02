@@ -6021,3 +6021,60 @@ button {
   line-height: 1.45;
   letter-spacing: 0.035em;
 }
+
+
+.transit-scene-badge {
+  position: absolute;
+  left: 16px;
+  bottom: 112px;
+  z-index: 6;
+  display: grid;
+  gap: 2px;
+  max-width: min(300px, calc(100% - 32px));
+  padding: 7px 9px;
+  border: 1px solid rgba(112, 231, 255, 0.2);
+  border-radius: 7px;
+  background: rgba(5, 17, 24, 0.78);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+.transit-scene-badge span {
+  color: #6d9eb0;
+  font-size: 6px;
+  letter-spacing: 0.1em;
+}
+
+.transit-scene-badge strong {
+  color: #c9f5ff;
+  font-size: 8px;
+  letter-spacing: 0.07em;
+}
+
+.transit-scene-badge small {
+  overflow: hidden;
+  color: #64818e;
+  font-size: 5px;
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transit-scene-badge[data-source-state='stale'] {
+  border-color: rgba(240, 196, 119, 0.28);
+}
+
+.transit-scene-badge[data-source-state='stale'] strong {
+  color: #f0c477;
+}
+
+.transit-scene-badge[data-source-state='unconfigured'],
+.transit-scene-badge[data-source-state='fallback'],
+.transit-scene-badge[data-source-state='unavailable'] {
+  border-color: rgba(122, 139, 153, 0.2);
+  background: rgba(11, 15, 20, 0.72);
+}
+
+.transit-scene-badge[data-source-state='unavailable'] strong {
+  color: #ff8e83;
+}
