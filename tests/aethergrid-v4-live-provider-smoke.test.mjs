@@ -2,7 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const workflow = new URL('../.github/workflows/aethergrid-live-provider-smoke.yml', import.meta.url);
+const workflow = new URL(
+  '../.github/workflows/aethergrid-live-provider-smoke.yml',
+  import.meta.url,
+);
 const script = new URL('../scripts/aethergrid-live-provider-smoke.mjs', import.meta.url);
 
 test('live-provider smoke workflow is manual and read-only for quantum hardware', async () => {
