@@ -120,6 +120,7 @@ export const envSchema = z.object({
   AETHERGRID_TRANSIT_PROVIDER: optionalString,
   AETHERGRID_TRANSIT_API_KEY: optionalString,
   AETHERGRID_TRANSIT_BASE_URL: optionalUrl,
+  AETHERGRID_GTFS_FEEDS_FILE: optionalString,
   AETHERGRID_HYDROLOGY_PROVIDER: optionalString,
   AETHERGRID_HYDROLOGY_API_KEY: optionalString,
   AETHERGRID_HYDROLOGY_BASE_URL: optionalUrl,
