@@ -668,3 +668,40 @@ This lane is intentionally separate from provider/backend integration work. It m
 
 ### Verification boundary
 The v4 migration is not considered the maintained release merely because the draft UI builds. Promotion requires the dedicated v4 web typecheck/build plus the repository test, lint/format, coverage, fresh-clone, container, quality/release-readiness and CodeQL gates on the exact merge head. Provider/backend work that is not implemented in this lane must not be advertised as complete here.
+
+
+## Batch 19 — provider-backed operator integrations
+
+Status: IMPLEMENTED / VERIFYING ON DRAFT PR
+
+### Connection and forecast runtime
+- consume safe provider readiness from `GET /api/aethergrid/runtime/providers` in the operator Connection Center;
+- expose configured/ready/degraded/fallback/unavailable/unconfigured states without browser credentials;
+- consume the merged Tomorrow.io normalized `timesteps` forecast contract while retaining the legacy timeline adapter only for compatibility;
+- keep Tomorrow provider-specific weather codes out of the Open-Meteo weather-code namespace.
+
+### Live spatial operations
+- render NWS active-alert boundaries only from provider-returned GeoJSON;
+- render decoded GTFS-Realtime vehicle coordinates as a LIVE/stale transit layer with source/feed timestamps;
+- do not synthesize transit route geometry, interpolate missing vehicle locations, or promote fallback/undecoded feeds to live;
+- bind NOAA NWPS gauge IDs explicitly per coordinate scope;
+- render a hydrology marker only when the bound NOAA gauge supplies valid coordinates;
+- derive gauge flood presentation only from the provider observed stage and provider action/minor/moderate/major thresholds;
+- preserve NOAA metadata-only partial state when stageflow is unavailable.
+
+### Energy context
+- retain EIA respondent, period, fuel type, fuel description, nullable value and source units;
+- show latest-period source-backed fuel rows in the operator panel;
+- do not invent balancing-region polygons or attach EIA values to arbitrary map geometry.
+
+### Quantum annealing operator path
+- discover real D-Wave solvers through the server route;
+- require the operator to select a solver and supported problem type;
+- require an actual encoded D-Wave problem object and explicit provider parameters;
+- require both a confirmation checkbox and an immediate confirmation dialog before POST;
+- poll only the genuine problem ID returned by the provider;
+- retrieve a result only after completion;
+- distinguish hardware submitted from hardware executed and never synthesize a QPU result.
+
+### Promotion gate
+Batch 19 remains draft until the exact promotion head passes v4 web build/typecheck, repository tests, coverage, lint/format, fresh-clone smoke, container smoke, release readiness and CodeQL. Source-backed, modeled, fallback and hardware-executed states must remain visibly distinct.
