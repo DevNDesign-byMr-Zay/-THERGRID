@@ -17,6 +17,11 @@ It intentionally does **not** replace `apps/aethergrid-console/index.html` or th
 - provider-backed FORECAST weather cursor sampling
 - live NWS active-hazard visualization using returned source geometry when present, with point-context markers only when the provider omits polygon geometry
 - explicit per-city NOAA NWPS gauge and EIA region bindings stored as non-secret operator settings
+- provider Connection Center driven by the safe `/api/aethergrid/runtime/providers` contract
+- source-backed GTFS-Realtime vehicle-position overlays with no inferred route geometry
+- source-backed NOAA NWPS gauge markers only when the provider supplies valid coordinates
+- latest-period EIA fuel-mix visualization using provider values/units without invented regional polygons
+- explicit D-Wave annealing workspace with solver discovery, encoded problem input, double operator confirmation, genuine problem-ID polling and provider-returned results
 - responsive operator shell and timeline
 
 ## Boundary with the provider-foundation work
@@ -59,3 +64,17 @@ npm run build
 Cesium's required Workers, Assets, Widgets and ThirdParty directories are copied into the build output. The spatial adapter uses Cesium World Terrain and Cesium OSM Buildings when a configured token is available.
 
 The existing native renderer remains the fallback target. Wiring the full v3 renderer bridge into this shell happens only after the new web workspace can be merged without regressing the verified v3 application/package.
+
+
+## Provider-backed operator integration boundary
+
+The v4 operator surface now consumes the merged production provider runtime rather than implementing provider credentials in the browser.
+
+- Tomorrow.io forecast data is consumed from the backend's normalized `timesteps` contract. Legacy `timelines.hourly` remains a compatibility fallback, while provider-specific Tomorrow weather codes are not promoted into Open-Meteo code semantics.
+- NWS alerts render provider-returned Polygon/MultiPolygon boundaries when present. Missing geometry produces a point-context marker only.
+- GTFS-Realtime vehicle positions render only decoded source coordinates. ÆTHERGRID does not infer route lines, interpolate missing vehicle positions, or label undecoded/fallback feeds as live.
+- NOAA NWPS gauge geometry appears only when a manually bound gauge returns valid latitude/longitude. Flood bands are derived from provider observed stage and provider action/minor/moderate/major thresholds.
+- EIA fuel-mix rows remain operational data, not spatial geometry. Region polygons are not invented from a balancing-region code.
+- D-Wave submissions require an explicit solver, supported problem type, actual encoded provider payload, an operator checkbox, and a second confirmation. “Hardware executed” appears only after the provider returns a completed answer.
+
+The Connection Center reports safe server-side readiness metadata. It never renders API keys, bearer tokens, SAPI tokens, IBM credentials, EIA keys, or private provider URLs containing credentials.
