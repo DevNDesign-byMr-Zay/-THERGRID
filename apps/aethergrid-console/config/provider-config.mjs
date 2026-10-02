@@ -106,6 +106,7 @@ export function createProviderConfig(rawEnv = process.env) {
         provider: env.AETHERGRID_TRANSIT_PROVIDER,
         apiKey: env.AETHERGRID_TRANSIT_API_KEY,
         baseUrl: env.AETHERGRID_TRANSIT_BASE_URL,
+        feedsFile: env.AETHERGRID_GTFS_FEEDS_FILE,
       }),
       hydrology: Object.freeze({
         provider: env.AETHERGRID_HYDROLOGY_PROVIDER,
