@@ -5,8 +5,12 @@ import { z } from 'zod';
 const feedId = z.string().min(1).max(96).regex(/^[a-z0-9][a-z0-9._-]*$/i);
 const httpUrl = z.string().url().refine((value) => {
   const parsed = new URL(value);
-  return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-}, 'GTFS-Realtime feed URL must use HTTP or HTTPS');
+  return (
+    (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+    !parsed.username &&
+    !parsed.password
+  );
+}, 'GTFS-Realtime feed URL must use HTTP or HTTPS and must not embed credentials');
 
 const feedSchema = z.object({
   id: feedId,
