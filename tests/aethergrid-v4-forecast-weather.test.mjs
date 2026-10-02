@@ -27,7 +27,10 @@ test('v4 forecast weather keeps Tomorrow and Open-Meteo shapes separate without 
   const service = await text('apps/aethergrid-console/web/src/services/city-environment.ts');
 
   assert.match(service, /openMeteoHourly/u);
+  assert.match(service, /providerData\.timesteps/u);
+  assert.match(service, /normalizedTimesteps/u);
   assert.match(service, /providerData\.timelines/u);
+  assert.match(service, /legacyTomorrowHourly/u);
   assert.match(service, /tomorrowHourly/u);
   assert.match(service, /weatherCode: null/u);
   assert.match(service, /temperatureApparent/u);
