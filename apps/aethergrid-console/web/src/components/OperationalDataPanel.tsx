@@ -10,7 +10,6 @@ import {
 import {
   clearOperationalSourceBindings,
   loadOperationalSourceBindings,
-  operationalBindingScopeId,
   saveOperationalSourceBindings,
   type OperationalSourceBindings
 } from '../services/operational-source-bindings';
@@ -146,7 +145,7 @@ export function OperationalDataPanel({
   airQualityCurrent,
   seismicCurrent
 }: OperationalDataPanelProps) {
-  const bindingScopeId = operationalBindingScopeId(latitude, longitude);
+  const bindingScopeId = `coord:${latitude.toFixed(5)}:${longitude.toFixed(5)}`;
   const [snapshot, setSnapshot] = useState<OperationalSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [bindings, setBindings] = useState<OperationalSourceBindings>(() =>
