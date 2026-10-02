@@ -107,3 +107,107 @@ export async function submitBellSampler(
   });
   return payload.job;
 }
+
+
+export interface DwaveReceipt {
+  provider?: string;
+  capability?: string;
+  dataset?: string;
+  requestId?: string;
+  retrievedAt?: string | null;
+  live?: boolean;
+  stale?: boolean;
+  fallback?: boolean;
+  attribution?: string | null;
+}
+
+export interface DwaveSolver {
+  id: string | null;
+  name: string | null;
+  type: string | null;
+  description: string;
+  properties: Readonly<Record<string, unknown>>;
+  parameters: Readonly<Record<string, unknown>>;
+}
+
+export interface DwaveJobState {
+  problemId: string;
+  status: string;
+  rawStatus?: string | null;
+  solver?: string | null;
+  type?: string | null;
+  hardwareSubmitted: boolean;
+  hardwareExecuted: boolean;
+  submitted_on?: string | null;
+  solved_on?: string | null;
+  live?: boolean;
+  result?: unknown;
+  message?: string | null;
+}
+
+export interface DwaveEnvelope<T> {
+  data: T;
+  receipt?: DwaveReceipt;
+}
+
+export interface DwaveDiscovery {
+  status: string;
+  solvers: readonly DwaveSolver[];
+  hardwareSubmitted: boolean;
+  hardwareExecuted: boolean;
+  live: boolean;
+  message?: string | null;
+}
+
+export type DwaveProblemType = 'qubo' | 'ising' | 'cqm' | 'bqm';
+
+export interface DwaveSubmissionInput {
+  solver: string;
+  problemType: DwaveProblemType;
+  problemPayload: unknown;
+  parameters?: Readonly<Record<string, unknown>>;
+  confirmSubmission: true;
+}
+
+export function loadDwaveSolvers(
+  signal?: AbortSignal
+): Promise<DwaveEnvelope<DwaveDiscovery>> {
+  return jsonRequest('/api/aethergrid/quantum/dwave/solvers', { signal });
+}
+
+export function loadDwaveJob(
+  id: string,
+  signal?: AbortSignal
+): Promise<DwaveEnvelope<DwaveJobState>> {
+  const query = new URLSearchParams({ id });
+  return jsonRequest(`/api/aethergrid/quantum/dwave/jobs?${query.toString()}`, {
+    signal
+  });
+}
+
+export function loadDwaveResult(
+  id: string,
+  signal?: AbortSignal
+): Promise<DwaveEnvelope<DwaveJobState>> {
+  return jsonRequest(
+    `/api/aethergrid/quantum/dwave/jobs/${encodeURIComponent(id)}/result`,
+    { signal }
+  );
+}
+
+export function submitDwaveJob(
+  input: DwaveSubmissionInput,
+  signal?: AbortSignal
+): Promise<DwaveEnvelope<DwaveJobState>> {
+  return jsonRequest('/api/aethergrid/quantum/dwave/jobs', {
+    method: 'POST',
+    signal,
+    body: JSON.stringify({
+      confirmSubmission: true,
+      solver: input.solver,
+      problemType: input.problemType,
+      problemPayload: input.problemPayload,
+      parameters: input.parameters ?? {}
+    })
+  });
+}
