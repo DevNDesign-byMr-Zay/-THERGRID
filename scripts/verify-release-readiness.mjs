@@ -978,6 +978,7 @@ async function main() {
   const secretRedactor = await text('apps/aethergrid-console/security/secret-redactor.mjs');
   const urlPolicy = await text('apps/aethergrid-console/security/url-policy.mjs');
   const providerRegistry = await text('apps/aethergrid-console/providers/provider-registry.mjs');
+
   assert(
     /export const envSchema/u.test(envSchema) &&
       /parseEnv/u.test(envSchema) &&
@@ -985,20 +986,33 @@ async function main() {
       /AETHERGRID_CESIUM_ION_TOKEN/u.test(envSchema),
     'ÆTHERGRID env schema must define validated Zod schema with forward-compatible keys',
   );
+
+  assert(
     /createProviderConfig/u.test(providerConfig) && /futureProviders/u.test(providerConfig),
     'ÆTHERGRID provider config must assemble frozen server configuration',
+  );
+
+  assert(
     /createSecretRedactor/u.test(secretRedactor) &&
       /redactString/u.test(secretRedactor) &&
       /redactValue/u.test(secretRedactor),
     'ÆTHERGRID secret redactor must provide string and object credential redaction',
+  );
+
+  assert(
     /createUrlPolicy/u.test(urlPolicy) &&
       /isAllowedUrl/u.test(urlPolicy) &&
       /validateUrl/u.test(urlPolicy),
     'ÆTHERGRID URL policy must validate outbound provider endpoints',
+  );
+
+  assert(
     /createProviderRegistry/u.test(providerRegistry) &&
       /getSafePublicRuntimeMetadata/u.test(providerRegistry) &&
       /getProvidersByCapability/u.test(providerRegistry),
     'ÆTHERGRID provider registry must expose queryable capabilities and safe metadata',
+  );
+
   const aethergridStartScript = await text('apps/aethergrid-console/START-AETHERGRID.ps1');
   const aethergridAppEnv = await text('apps/aethergrid-console/.env.example');
   assert(
