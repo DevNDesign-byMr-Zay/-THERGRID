@@ -78,8 +78,5 @@ test('v4 D-Wave discovery failure does not block IBM or local gate-model startup
   );
   assert.match(panel, /void loadDwaveSolvers\(\)/u);
   assert.match(panel, /setDwaveError/u);
-  assert.doesNotMatch(
-    panel,
-    /Promise\.all\(\[[\s\S]{0,220}loadDwaveSolvers\(\)[\s\S]{0,120}\]\)/u,
-  );
+  assert.doesNotMatch(panel, /Promise\.all\(\[[\s\S]{0,220}loadDwaveSolvers\(\)[\s\S]{0,120}\]\)/u);
 });
