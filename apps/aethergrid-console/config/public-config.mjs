@@ -58,7 +58,9 @@ export function createPublicConfig(rawConfigOrEnv = process.env) {
       dwaveConfigured: Boolean(config.futureProviders.dwave.token),
       nwsConfigured: Boolean(config.futureProviders.nws.apiUrl),
       transitConfigured: Boolean(
-        config.futureProviders.transit.apiKey || config.futureProviders.transit.provider,
+        config.futureProviders.transit.apiKey ||
+          config.futureProviders.transit.provider ||
+          config.futureProviders.transit.feedsFile,
       ),
       hydrologyConfigured: Boolean(
         config.futureProviders.hydrology.apiKey || config.futureProviders.hydrology.provider,
