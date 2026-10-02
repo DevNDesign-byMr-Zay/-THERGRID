@@ -48,6 +48,7 @@ test('.env.example covers the maintained health and observability configuration'
       'AETHERGRID_GEO_USER_AGENT',
       'AETHERGRID_GOOGLE_3D_TILES_API_KEY',
       'AETHERGRID_GOOGLE_3D_TILES_URL',
+      'AETHERGRID_GTFS_FEEDS_FILE',
       'AETHERGRID_HYDROLOGY_API_KEY',
       'AETHERGRID_HYDROLOGY_BASE_URL',
       'AETHERGRID_HYDROLOGY_PROVIDER',
