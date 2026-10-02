@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { TemporalMode } from '../renderer/spatial-renderer';
 import {
   loadOperationalSnapshot,
+  type OperationalFuelMixRow,
   type OperationalSnapshot,
   type OperationalSourceSnapshot
 } from '../services/operational-data-client';
@@ -77,6 +78,62 @@ function sourceById(
     existing?.state === 'stale'
   ) return existing;
   return candidate ?? existing;
+}
+
+function latestFuelMixRows(
+  source: OperationalSourceSnapshot | null
+): readonly OperationalFuelMixRow[] {
+  const rows = source?.fuelMix ?? [];
+  const latestPeriod = rows.find((row) => row.period)?.period ?? null;
+  if (!latestPeriod) return [];
+  return rows
+    .filter((row) => row.period === latestPeriod && row.value != null)
+    .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
+    .slice(0, 7);
+}
+
+function EnergyFuelMix({
+  source
+}: {
+  source: OperationalSourceSnapshot | null;
+}) {
+  if (source?.state !== 'live' && source?.state !== 'stale') return null;
+  const rows = latestFuelMixRows(source);
+  if (!rows.length) return null;
+  const maxValue = Math.max(...rows.map((row) => row.value ?? 0), 1);
+
+  return (
+    <div className="eia-fuel-mix">
+      <div className="eia-fuel-mix-head">
+        <span>LATEST EIA FUEL MIX</span>
+        <strong>{rows[0]?.period ?? '—'}</strong>
+      </div>
+      {rows.map((row, index) => (
+        <div
+          className="eia-fuel-row"
+          key={`${row.period ?? 'period'}:${row.fuelType ?? index}`}
+        >
+          <span>
+            {row.fuelTypeDescription ?? row.fuelType ?? 'UNSPECIFIED'}
+          </span>
+          <i>
+            <b
+              style={{
+                width: `${Math.max(
+                  2,
+                  Math.min(100, ((row.value ?? 0) / maxValue) * 100)
+                )}%`
+              }}
+            />
+          </i>
+          <strong>
+            {row.value?.toLocaleString() ?? '—'} {row.sourceUnits ?? ''}
+          </strong>
+        </div>
+      ))}
+      <small>SOURCE VALUES · NOT A GEOGRAPHIC REGION POLYGON</small>
+    </div>
+  );
 }
 
 export function OperationalDataPanel({
@@ -295,6 +352,10 @@ export function OperationalDataPanel({
                     </div>
                   ))}
                 </dl>
+              ) : null}
+
+              {capability.id === 'energy' ? (
+                <EnergyFuelMix source={source} />
               ) : null}
 
               <p>{source?.summary ?? capability.note}</p>
