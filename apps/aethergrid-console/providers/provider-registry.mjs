@@ -176,7 +176,28 @@ export function createProviderRegistry(options = {}) {
 
   function getSafePublicRuntimeMetadata() {
     const healthStatuses = health.getAllStatuses();
+  function getSafePublicRuntimeMetadata() {
+    const healthStatuses = health.getAllStatuses();
+    const formattedHealth = {};
+    for (const [id, info] of Object.entries(healthStatuses)) {
+      formattedHealth[id] = {
+        name: info.name,
+        status: info.status,
+        capability: info.capability,
+        capabilities: info.capabilities || [info.capability],
+        lastAttemptAt: info.lastAttemptAt || null,
+        lastLiveSuccessAt: info.lastLiveSuccessAt || null,
+        lastFailureAt: info.lastFailureAt || null,
+        lastLatencyMs: info.lastLatencyMs || null,
+        requestCount: info.requestCount || 0,
+        successCount: info.successCount || 0,
+        failureCount: info.failureCount || 0,
+        circuitState: info.circuitState || 'CLOSED',
+      };
+    }
+
     return Object.freeze({
+      health: formattedHealth,
       spatial: {
         provider: 'native-webgl',
         status: healthStatuses['native-webgl']?.status || PROVIDER_STATUS.UNCONFIGURED,
@@ -201,52 +222,11 @@ export function createProviderRegistry(options = {}) {
         provider: config.seismic.provider,
         status: healthStatuses.usgs?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
-      quantum: (() => {
-        const ibm = healthStatuses['ibm-quantum'] || {};
-        const dwave = healthStatuses.dwave || {};
-        const selectedProvider = config.quantum.provider || 'local-simulator';
-
-        let aggStatus = PROVIDER_STATUS.UNCONFIGURED;
-        if (selectedProvider === 'local-simulator' || selectedProvider === 'local') {
-          aggStatus = PROVIDER_STATUS.FALLBACK;
-        } else if (selectedProvider === 'ibm-quantum' || selectedProvider === 'ibm') {
-          aggStatus = ibm.status || PROVIDER_STATUS.UNCONFIGURED;
-        } else if (selectedProvider === 'dwave') {
-          aggStatus = dwave.status || PROVIDER_STATUS.UNCONFIGURED;
-        } else {
-          // Aggregate rule: if either remote provider is ready/configured, return that status
-          const activeStatuses = [ibm.status, dwave.status].filter(Boolean);
-          if (activeStatuses.includes(PROVIDER_STATUS.READY)) {
-            aggStatus = PROVIDER_STATUS.READY;
-          } else if (activeStatuses.includes(PROVIDER_STATUS.CONFIGURED)) {
-            aggStatus = PROVIDER_STATUS.CONFIGURED;
-          } else if (activeStatuses.includes(PROVIDER_STATUS.DEGRADED)) {
-            aggStatus = PROVIDER_STATUS.DEGRADED;
-          }
-        }
-
-        return {
-          provider: selectedProvider,
-          status: aggStatus,
-          hardwareEnabled: Boolean(ibm.hardwareEnabled || dwave.hardwareEnabled || ibmConfigured || config.futureProviders.dwave.token),
-          providers: {
-            ibm: {
-              status: ibm.status || PROVIDER_STATUS.UNCONFIGURED,
-              configured: Boolean(ibmConfigured),
-              hardwareEnabled: Boolean(ibmConfigured),
-              lastLiveSuccessAt: ibm.lastLiveSuccessAt || null,
-              lastFailureAt: ibm.lastFailureAt || null,
-            },
-            dwave: {
-              status: dwave.status || PROVIDER_STATUS.UNCONFIGURED,
-              configured: Boolean(config.futureProviders.dwave.token),
-              hardwareEnabled: Boolean(config.futureProviders.dwave.token),
-              lastLiveSuccessAt: dwave.lastLiveSuccessAt || null,
-              lastFailureAt: dwave.lastFailureAt || null,
-            },
-          },
-        };
-      })(),
+      quantum: {
+        provider: config.quantum.provider,
+        status: healthStatuses['ibm-quantum']?.status || healthStatuses.dwave?.status || PROVIDER_STATUS.UNCONFIGURED,
+        hardwareEnabled: ibmConfigured,
+      },
       ai: {
         provider: config.ai.provider,
         status: healthStatuses['local-ai']?.status || PROVIDER_STATUS.UNCONFIGURED,

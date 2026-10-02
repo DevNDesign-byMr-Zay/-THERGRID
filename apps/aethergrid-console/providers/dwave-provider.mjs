@@ -5,7 +5,7 @@ const SUPPORTED_PROBLEM_TYPES = new Set(['qubo', 'ising', 'cqm', 'bqm']);
 
 export function createDwaveProvider(options = {}) {
   const token = options.token || process.env.AETHERGRID_DWAVE_API_TOKEN || '';
-  const baseUrl = options.baseUrl || options.solverUrl || process.env.AETHERGRID_DWAVE_BASE_URL || process.env.AETHERGRID_DWAVE_URL || process.env.AETHERGRID_DWAVE_SOLVER_URL || 'https://sapi.qpu.dwavesys.com/v2';
+  const baseUrl = options.baseUrl || process.env.AETHERGRID_DWAVE_URL || 'https://sapi.qpu.dwavesys.com/v2';
 
   function configured() {
     return Boolean(token && token.trim().length > 0);

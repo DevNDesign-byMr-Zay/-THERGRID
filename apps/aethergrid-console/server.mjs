@@ -1,3 +1,4 @@
+import { createQuantumWorkerClient } from './quantum/quantum-worker-client.mjs';
 import { validateCoordinates } from "./providers/coordinate-validator.mjs";
 import { createRequestContext } from './providers/request-context.mjs';
 import { createPublicConfig } from './config/public-config.mjs';
@@ -45,45 +46,10 @@ const noaaNwpsProvider = createNoaaNwpsHydrologyProvider({
 
 const dwaveProvider = createDwaveProvider({
   token: providerRegistry.config.futureProviders.dwave.token,
-  baseUrl: providerRegistry.config.futureProviders.dwave.baseUrl || providerRegistry.config.futureProviders.dwave.solverUrl,
-  solverUrl: providerRegistry.config.futureProviders.dwave.baseUrl || providerRegistry.config.futureProviders.dwave.solverUrl,
+  solverUrl: providerRegistry.config.futureProviders.dwave.solverUrl,
 });
 
-function parseTransitFeedsConfig(rawJson, env = {}) {
-  const feeds = {};
-  if (rawJson && typeof rawJson === 'string' && rawJson.trim().length > 0) {
-    try {
-      const parsed = JSON.parse(rawJson);
-      if (parsed && typeof parsed === 'object') {
-        for (const [key, val] of Object.entries(parsed)) {
-          if (val && typeof val === 'object' && val.feedUrl) {
-            const feedId = String(key).toLowerCase().trim();
-            const headers = { ...(val.headers || {}) };
-            if (val.authHeaderRef && env[val.authHeaderRef]) {
-              headers['Authorization'] = env[val.authHeaderRef];
-            } else if (val.authHeader) {
-              headers['Authorization'] = val.authHeader;
-            }
-            feeds[feedId] = {
-              agencyName: val.agencyName || val.agency || feedId,
-              agency: val.agency || val.agencyName || feedId,
-              feedUrl: val.feedUrl,
-              gtfsRealtimeUrl: val.feedUrl,
-              headers,
-            };
-          }
-        }
-      }
-    } catch {
-      // Ignore invalid JSON
-    }
-  }
-  return feeds;
-}
-
-const transitRegistry = createTransitRegistry({
-  feeds: parseTransitFeedsConfig(providerRegistry.config.futureProviders.transit.feedsJson, process.env),
-});
+const transitRegistry = createTransitRegistry();
 
 const root = fileURLToPath(new URL('./', import.meta.url));
 const port = Number(providerRegistry.config.app.port);
@@ -1077,6 +1043,26 @@ const server = http.createServer(async (request, response) => {
         execCtx,
       );
       return json(response, 200, providerRegistry.redactor.redactValue(result));
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/aethergrid/quantum/prepare') {
+      try {
+        const payload = await body(request);
+        const prepResult = await quantumWorkerClient.prepare(payload, execCtx);
+        return json(response, 200, providerRegistry.redactor.redactValue(prepResult));
+      } catch (err) {
+        return json(response, 400, { error: 'invalid_preparation_request', message: err.message });
+      }
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/aethergrid/quantum/dry-run') {
+      try {
+        const payload = await body(request);
+        const dryRunResult = await quantumWorkerClient.dryRun(payload, execCtx);
+        return json(response, 200, providerRegistry.redactor.redactValue(dryRunResult));
+      } catch (err) {
+        return json(response, 400, { error: 'invalid_dry_run_request', message: err.message });
+      }
     }
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/quantum/dwave/solvers') {

@@ -229,6 +229,35 @@ Terrain fitting behavior:
 The GLOBAL stats, CITY IDENTITY panel and provenance surface label this as **DEM DRAPED** when live elevation is available and **FLAT FALLBACK** otherwise.
 
 This is visualization-grade terrain fitting. The default live source is Open-Meteo Elevation backed by Copernicus DEM GLO-90; it is not survey, engineering, cadastral or LiDAR-grade vertical positioning. The app does not infer foundation engineering, road grade compliance, water level, drainage or clearance authority from the DEM.
+## v4 spatial operator web foundation
+
+The draft v4 migration surface lives under `apps/aethergrid-console/web/`. It is a typed React/Cesium operator application that preserves the existing Node backend and source/provenance contracts while introducing a renderer-neutral spatial layer. It does **not** replace the maintained packaged v3 surface until the v4 branch passes the release gates and is explicitly promoted.
+Implemented v4 behavior includes:
+- Cesium as the primary geographic renderer with continuous WGS84 globe → region → city → district camera travel;
+- a real source-backed native WebGL fallback that consumes the same normalized overlays, 4D time, layer state, selection state and scenario context when Cesium cannot initialize;
+- safe manual CESIUM / NATIVE switching with reversible failover and visible failure diagnostics;
+- streamed terrain and 3D-building detail that increases progressively as the camera approaches city/district scale;
+- computed solar elevation/azimuth tied to the 4D clock, with solar-aware atmosphere and restrained building presentation;
+- a continuously advancing LIVE clock plus independent historical, forecast and scenario cursors;
+- explicit temporal source gating: AQI and seismic remain current-only outside LIVE, while weather may render in FORECAST only when the active 4D cursor aligns to a returned provider forecast sample; historical/scenario weather is never invented;
+- source-driven cloud, rain, snow, fog, AQI and thunderstorm presentation, with thunderstorm flash timing explicitly labeled synthetic rather than observed lightning;
+- live wind vectors generated from provider wind speed/direction/gusts as normalized geographic overlay geometry shared by Cesium and native failover;
+- mapped-building nighttime illumination points derived from real building footprints/heights and capped for performance; these are presentation-only and do not represent measured occupancy, window state or utility load;
+- source-backed roads, water, green space, power topology, recent seismic context and selectable entity provenance;
+- live NWS active-hazard context with severity-coded alert markers and provider-returned Polygon/MultiPolygon boundary geometry; when NWS omits geometry, only a point-context marker is shown and no affected-area shape is invented;
+- scenario-mode network visualization aligned with the backend scenario stress factors, including a dim source-baseline comparison beneath the modeled scenario presentation;
+- operational view presets using only implemented layers: City Ops, Grid Resilience, Environment, Seismic and Skyline;
+- explicit per-city/coordinate source bindings for NOAA NWPS gauge IDs and EIA balancing-region codes, persisted locally as non-secret operator settings and never inferred from map location;
+- browser-persistent saved spatial views that restore scope, target, layers, visual mode, operation mode and the 4D cursor without silently re-submitting backend scenarios;
+- selected-entity provenance handoff into AUREN, prefilled for operator review but never auto-submitted;
+- independent city-load readiness for geometry, atmosphere and live context;
+- renderer-neutral INSPECT / MEASURE interaction with geographic surface picking in Cesium and explicitly labeled projection estimates in native fallback;
+- operator geodesic measurement for distance, bearing and optional elevation delta/slope, with the measurement tied to its captured 4D frame rather than drifting with LIVE time;
+- Frame A / Frame B spatial comparison across cities or times using only metrics available in both captures;
+- non-authoritative local comparison export plus operator-controlled AUREN review that is explicitly separate from the server evidence ledger.
+Fidelity boundaries remain explicit. OpenStreetMap / terrain / Open-Meteo / air-quality / USGS data retain their source status and timestamps. Synthetic presentation effects never become authoritative observations. Scenario styling never mutates source data. Native failover preserves the operator-review surface but is not claimed to provide the same photorealistic detail as the Cesium path. Physical infrastructure actuation remains disabled.
+
+The draft v4 operator lane also consumes the merged provider foundation for a safe provider Connection Center, normalized Tomorrow forecast samples, source-backed NWS alert geometry, decoded GTFS-Realtime vehicle positions, explicitly bound NOAA NWPS gauge geometry, EIA fuel-mix records, and a manually confirmed D-Wave annealing workflow. GTFS route lines are not inferred, NOAA gauge locations are not guessed, EIA regions are not converted into invented polygons, and D-Wave hardware execution is not claimed until the provider returns a completed answer.
 ## Windows ZIP workflow
 
 After extracting the package:
@@ -328,9 +357,7 @@ When the live elevation provider is unavailable, the renderer uses a clearly lab
 
 
 ## ÆTHERGRID v4.0 Production Provider Foundation (Batch 18)
-
 Batch 18 establishes the production backend provider, configuration, secret-safety, and runtime foundation for ÆTHERGRID v4.0.
-
 ### Features
 - **Centralized Environment Schema ()**: Schema-validated environment config powered by Zod.
 - **Secret Redaction ()**: Strips configured API keys, bearer tokens, and CRN strings from logs, runtime outputs, errors, and exports.

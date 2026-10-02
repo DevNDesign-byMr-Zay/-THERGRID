@@ -64,3 +64,12 @@ Future provider adapters (e.g., Cesium, Tomorrow.io, Overture, EIA, D-Wave) regi
 1. Schema additions in `env-schema.mjs`.
 2. A wrapped adapter invoking `getBreaker(id)`, `getRateLimiter(id)`, and `urlPolicy.validateUrl(...)`.
 3. Capability registration via `providerHealth.registerProvider(id, { name, capabilities, status })`.
+
+
+### 8. IBM Qiskit Quantum Worker (`services/quantum-worker/`)
+- **Architecture**: External Python FastAPI worker service (`qiskit~=2.5.2`, `qiskit-ibm-runtime~=0.47.0`).
+- **Capability**: `quantum`, `qiskit-transpilation`, `isa-circuit-preparation`
+- **Endpoints**:
+  - `POST /v1/prepare`: Transpiles OpenQASM 3 abstract circuits into backend-specific ISA circuits using preset pass managers, maps Estimator observables to physical layouts, and generates circuit metrics & evidence receipts.
+  - `POST /v1/dry-run`: Executes preflight validation (`dry_run=True`) against IBM Quantum APIs without QPU hardware execution.
+- **Safety Boundary**: Quantum worker operates strictly in `PREPARED` and `DRY_RUN_VALIDATED` states. QPU hardware submission requires explicit operator approval (`APPROVAL_REQUIRED`).

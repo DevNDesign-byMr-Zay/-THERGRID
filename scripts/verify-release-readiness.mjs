@@ -36,6 +36,8 @@ const REQUIRED_FILES = Object.freeze([
   'apps/aethergrid-console/geo-runtime.mjs',
   'apps/aethergrid-console/terrain-runtime.mjs',
   'apps/aethergrid-console/quantum-runtime.mjs',
+  'apps/aethergrid-console/quantum/quantum-worker-client.mjs',
+  'apps/aethergrid-console/quantum/quantum-worker-schema.mjs',
   'apps/aethergrid-console/providers/coordinate-validator.mjs',
   'apps/aethergrid-console/app.json',
   'apps/aethergrid-console/ui.json',
@@ -59,6 +61,7 @@ const REQUIRED_FILES = Object.freeze([
   'docs/ROADMAP.md',
   'docs/RELEASE_READINESS.md',
   '.github/workflows/ci.yml',
+  '.github/workflows/aethergrid-v4-web.yml',
   '.github/workflows/codeql.yml',
   '.github/workflows/release.yml',
   '.github/workflows/dependency-freshness.yml',
@@ -89,6 +92,7 @@ async function main() {
     changelog,
     readme,
     ci,
+    v4Web,
     codeql,
     release,
     dependencyFreshness,
@@ -104,6 +108,7 @@ async function main() {
     text('CHANGELOG.md'),
     text('README.md'),
     text('.github/workflows/ci.yml'),
+    text('.github/workflows/aethergrid-v4-web.yml'),
     text('.github/workflows/codeql.yml'),
     text('.github/workflows/release.yml'),
     text('.github/workflows/dependency-freshness.yml'),
@@ -283,6 +288,20 @@ async function main() {
   assert(
     /npm run typecheck:strict-renderer/u.test(ci),
     'CI must strictly type-check the renderer evidence safety boundary',
+  );
+  assert(
+    /Type-check v4 spatial application/u.test(v4Web) && /npm run typecheck/u.test(v4Web),
+    'v4 web CI must type-check the spatial application',
+  );
+  assert(
+    /Build v4 spatial application/u.test(v4Web) && /npm run build/u.test(v4Web),
+    'v4 web CI must build the spatial application',
+  );
+  assert(
+    /actions\/upload-artifact@v7/u.test(v4Web) &&
+      /path:\s*apps\/aethergrid-console\/web\/dist\//u.test(v4Web) &&
+      /if-no-files-found:\s*error/u.test(v4Web),
+    'v4 web CI must retain a non-empty compiled spatial application artifact',
   );
   assert(/npm test/u.test(ci), 'CI must expose the conventional npm test suite');
   assert(/npm run coverage/u.test(ci), 'CI must enforce coverage');

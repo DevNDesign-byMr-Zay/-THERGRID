@@ -23,6 +23,8 @@ const REQUIRED_FILES = Object.freeze([
   'city-live-runtime.mjs',
   'terrain-runtime.mjs',
   'quantum-runtime.mjs',
+  'quantum/quantum-worker-client.mjs',
+  'quantum/quantum-worker-schema.mjs',
   'config/env-schema.mjs',
   'config/provider-config.mjs',
   'config/public-config.mjs',

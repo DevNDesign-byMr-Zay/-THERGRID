@@ -9,6 +9,27 @@
 - Added scheduled dependency-freshness evidence without automatic dependency mutation.
 
 ### Added
+- Added LIVE-only NWS active-hazard visualization with severity-coded point-context markers and provider-returned Polygon/MultiPolygon boundary geometry; alerts without geometry remain point-context only and never receive fabricated affected-area fills.
+- Added per-city/coordinate operator bindings for NOAA NWPS gauge IDs and EIA balancing-region codes, enabling source-backed live hydrology and energy reads without location-based identifier guessing or browser-stored provider credentials.
+- Added provider-backed 4D weather forecast sampling for the typed operator surface, including nearest-sample cursor alignment, out-of-range refusal, stale/fallback provenance, forecast scene labeling, and Cesium forecast atmosphere rendering without relabeling it as a live observation.
+- Added renderer-neutral spatial measurement with Cesium terrain/depth picking, explicitly labeled native projection fallback, geodesic distance/bearing and optional elevation/slope analysis.
+- Added Frame A / Frame B operator comparison across captured 4D contexts, mutually available metric deltas, non-authoritative JSON export and operator-controlled AUREN review.
+- Added the draft v4 typed React/Cesium spatial operator surface with a renderer-neutral WGS84 scene contract and continuous globe-to-district travel.
+- Added a real source-backed native WebGL renderer as the Cesium failover path, including reversible engine switching, failure diagnostics, shared overlays, 4D time, selection and scenario state.
+- Added continuously advancing LIVE 4D time, truthful non-live source gating, source-driven wind vectors, bounded thunderstorm illumination, mapped-building nighttime illumination and explicit presentation-vs-observation boundaries.
+- Added backend-aligned 4D scenario network effects with source-baseline comparison, operational layer presets, persistent saved spatial views, source provenance inspection and operator-controlled AUREN handoff.
+- Added adaptive city detail/load telemetry, solar-aware scene presentation and city-specific skyline arrival framing derived from mapped building geometry.
+- Added the typed ÆTHERGRID v4 React/Cesium spatial operator surface under `apps/aethergrid-console/web/` while preserving the maintained Node backend and renderer-neutral contracts.
+- Added a functional native WebGL spatial failover that consumes the same normalized overlays, 4D time, layers, selections, weather context and scenario state as Cesium, with Canvas2D only as a final local rendering fallback.
+- Added reversible CESIUM / NATIVE renderer switching, preserved failover diagnostics, and safe retry behavior that returns to native instead of blanking the scene when Cesium cannot initialize.
+- Added a continuously advancing LIVE 4D clock, independent non-live cursors, and explicit temporal eligibility rules that hide current-only weather/AQI/seismic context outside LIVE mode.
+- Added computed solar-state lighting, centered globe-to-city orbit descent, adaptive terrain/building detail, city-load readiness telemetry and skyline-derived city arrival headings.
+- Added source-backed geographic wind-vector overlays shared by Cesium and native failover, using current wind speed/direction/gust provenance rather than decorative motion.
+- Added renderer-neutral thunderstorm presentation driven only by provider thunderstorm codes and current precipitation/gust context, with synthetic flash timing explicitly disclosed.
+- Added mapped-building nighttime illumination derived from actual footprint centroids/heights, capped for performance and explicitly separated from measured occupancy/window-light telemetry.
+- Added backend-aligned scenario network stress visualization with source-baseline ghost routes, modeled-vs-source disclosure and source data left unchanged.
+- Added implemented-layer operational presets, persistent local spatial/4D view bookmarks, selected-entity provenance and operator-controlled AUREN handoff.
+
 - Added bilinear terrain interpolation for city placement using the bounded local-meter elevation grid.
 - Added terrain-anchored building foundations plus per-vertex DEM draping for roads, mapped waterways, green space, power lines and grid-asset markers.
 - Added level mapped-water presentation planes and bounded-datum coastline placement so water does not visibly warp over terrain.
@@ -98,26 +119,9 @@
 
 ### Changed
 
+- Integrated the draft v4 React/Cesium operator lane with the merged production provider foundation: safe provider Connection Center, normalized Tomorrow forecast compatibility, source-backed NWS alert boundaries, decoded GTFS-Realtime vehicle positions, coordinate-bound NOAA NWPS gauge visualization, source-unit-preserving EIA fuel-mix presentation, and an explicitly confirmed D-Wave annealing workflow with genuine job/result polling.
+- Preserved truth boundaries throughout the integration: no inferred GTFS route geometry, no guessed hydrology locations, no invented EIA region polygons, no cross-provider weather-code equivalence, and no hardware-executed quantum claim before a provider-completed result.
 - Current package candidate: `0.1.3`. The `v0.1.2` release is the latest hosted milestone; this candidate is not published until the gated manual release workflow publishes it.
-
-## 0.1.4 — Unreleased — v4 provider runtime closure and production governance
-
-### Added
-
-- Added `apps/aethergrid-console/providers/coordinate-validator.mjs` enforcing valid latitude [-90, 90] and longitude [-180, 180] with HTTP 400 Bad Request client error responses for malformed input.
-- Added a server-side, configuration-driven GTFS transit feeds registry (`AETHERGRID_TRANSIT_FEEDS`) supporting agency feeds, headers, and secret references without hardcoded city claims.
-- Added a manually triggered `provider-acceptance.yml` GitHub Actions workflow (`workflow_dispatch`) for credential-backed live provider acceptance checks without executing hardware submissions or leaking log secrets.
-
-### Fixed
-
-- Harmonized D-Wave configuration contract across environment schema, provider config, server.mjs, and `dwave-provider.mjs` (`baseUrl` with `solverUrl` fallback).
-- Separated D-Wave status (`/problems/{id}/`) and answer (`/problems/{id}/answer/`) requests into independent governed executor calls and added `GET /api/aethergrid/quantum/dwave/jobs/:id/result`.
-- Governed NOAA NWPS hydrology metadata and stageflow requests independently, preserving truthful partial state if stageflow is unavailable.
-- Normalized Tomorrow.io weather realtime/forecast response structures with distinct `observedAt` and `retrievedAt` timestamps.
-- Normalized U.S. EIA fuel-mix missing/invalid generation values to `null` (never zero) and enforced strict region code validation.
-- Preserved complete NWS active hazard alert fields (`instruction`, `onset`, `affectedZones`, GeoJSON `geometry`) and preserved zero-alert responses as `count: 0, live: true`.
-- Refined `/api/aethergrid/runtime/providers` quantum status aggregation so an unconfigured IBM provider entry cannot mask an active D-Wave provider.
-- Aligned Tomorrow.io declared capabilities with implemented runtime methods (`['weather', 'forecast']`).
 
 ## 0.1.1 — 2026-09-24 — post-release hardening
 

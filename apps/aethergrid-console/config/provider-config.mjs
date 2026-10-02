@@ -97,8 +97,7 @@ export function createProviderConfig(rawEnv = process.env) {
       }),
       dwave: Object.freeze({
         token: env.AETHERGRID_DWAVE_API_TOKEN,
-        baseUrl: env.AETHERGRID_DWAVE_BASE_URL || env.AETHERGRID_DWAVE_SOLVER_URL,
-        solverUrl: env.AETHERGRID_DWAVE_BASE_URL || env.AETHERGRID_DWAVE_SOLVER_URL,
+        solverUrl: env.AETHERGRID_DWAVE_SOLVER_URL,
       }),
       nws: Object.freeze({
         apiUrl: env.AETHERGRID_NWS_API_URL,
@@ -107,7 +106,6 @@ export function createProviderConfig(rawEnv = process.env) {
         provider: env.AETHERGRID_TRANSIT_PROVIDER,
         apiKey: env.AETHERGRID_TRANSIT_API_KEY,
         baseUrl: env.AETHERGRID_TRANSIT_BASE_URL,
-        feedsJson: env.AETHERGRID_TRANSIT_FEEDS,
       }),
       hydrology: Object.freeze({
         provider: env.AETHERGRID_HYDROLOGY_PROVIDER,

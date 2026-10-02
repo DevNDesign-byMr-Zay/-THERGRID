@@ -1,0 +1,42 @@
+name: ÆTHERGRID Live Provider Smoke Verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_provider:
+        description: 'Target provider to smoke test (tomorrow, nws, nwps, eia, gtfs, ibm, dwave, all-safe)'
+        required: true
+        default: 'all-safe'
+
+jobs:
+  smoke-verification:
+    name: Live Provider Connectivity & Discovery Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Execute Live Provider Smoke Verification
+        run: node scripts/live-provider-smoke.mjs --target=${{ github.event.inputs.target_provider }}
+        env:
+          AETHERGRID_TOMORROW_IO_API_KEY: ${{ secrets.AETHERGRID_TOMORROW_IO_API_KEY }}
+          AETHERGRID_EIA_API_KEY: ${{ secrets.AETHERGRID_EIA_API_KEY }}
+          AETHERGRID_IBM_QUANTUM_API_KEY: ${{ secrets.AETHERGRID_IBM_QUANTUM_API_KEY }}
+          AETHERGRID_IBM_QUANTUM_SERVICE_CRN: ${{ secrets.AETHERGRID_IBM_QUANTUM_SERVICE_CRN }}
+          AETHERGRID_DWAVE_API_TOKEN: ${{ secrets.AETHERGRID_DWAVE_API_TOKEN }}
+          AETHERGRID_GTFS_FEEDS_FILE: ${{ secrets.AETHERGRID_GTFS_FEEDS_FILE }}
+
+      - name: Upload Sanitized Smoke Verification Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-provider-smoke-report
+          path: dist/live-provider-smoke-report.json
