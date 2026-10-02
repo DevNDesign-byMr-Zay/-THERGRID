@@ -123,6 +123,16 @@ import {
   loadGtfsTransit,
   type GtfsTransitContext
 } from '../services/gtfs-transit';
+import {
+  loadNoaaHydrologyContext,
+  type NoaaHydrologyContext
+} from '../services/noaa-hydrology';
+import {
+  loadOperationalSourceBindings,
+  operationalBindingScopeId,
+  OPERATIONAL_SOURCE_BINDINGS_EVENT,
+  type OperationalSourceBindings
+} from '../services/operational-source-bindings';
 import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
 import type { SpatialViewBookmark } from '../services/view-bookmarks';
 import {
@@ -232,6 +242,7 @@ const INITIAL_LAYERS: readonly LayerState[] = [
   { id: 'seismic', visible: true },
   { id: 'hazards', visible: true },
   { id: 'transit', visible: true },
+  { id: 'hydrology', visible: true },
   { id: 'energy', visible: true },
   { id: 'annotations', visible: true },
   { id: 'workset-analysis', visible: true },
@@ -296,6 +307,15 @@ export function App() {
   const [hazardError, setHazardError] = useState<string | null>(null);
   const [transitContext, setTransitContext] = useState<GtfsTransitContext | null>(null);
   const [transitError, setTransitError] = useState<string | null>(null);
+  const [operationalBindings, setOperationalBindings] =
+    useState<OperationalSourceBindings>({
+      gaugeId: null,
+      energyRegion: null,
+      updatedAt: null
+    });
+  const [hydrologyContext, setHydrologyContext] =
+    useState<NoaaHydrologyContext | null>(null);
+  const [hydrologyError, setHydrologyError] = useState<string | null>(null);
   const [globalLive, setGlobalLive] = useState<GlobalLiveContext | null>(null);
   const [liveContextError, setLiveContextError] = useState<string | null>(null);
   const [scenarioVisual, setScenarioVisual] =
@@ -311,6 +331,11 @@ export function App() {
     environment: true,
     liveContext: true
   });
+
+  const operationalBindingScope = useMemo(
+    () => operationalBindingScopeId(city.latitude, city.longitude),
+    [city.latitude, city.longitude]
+  );
 
   const temporalInstant = useMemo(
     () => ({
@@ -561,6 +586,69 @@ export function App() {
 
     return () => controller.abort();
   }, [city.id, city.latitude, city.longitude]);
+
+  useEffect(() => {
+    const syncBindings = () => {
+      setOperationalBindings(
+        loadOperationalSourceBindings(operationalBindingScope)
+      );
+    };
+    const onBindingChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ scopeId?: string }>).detail;
+      if (detail?.scopeId === operationalBindingScope) syncBindings();
+    };
+
+    syncBindings();
+    globalThis.addEventListener(
+      OPERATIONAL_SOURCE_BINDINGS_EVENT,
+      onBindingChange
+    );
+    return () =>
+      globalThis.removeEventListener(
+        OPERATIONAL_SOURCE_BINDINGS_EVENT,
+        onBindingChange
+      );
+  }, [operationalBindingScope]);
+
+  useEffect(() => {
+    if (
+      scope !== 'city' ||
+      temporal.mode !== 'live' ||
+      !operationalBindings.gaugeId
+    ) {
+      setHydrologyContext(null);
+      setHydrologyError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const refresh = () => {
+      void loadNoaaHydrologyContext(
+        operationalBindings.gaugeId as string,
+        controller.signal
+      )
+        .then((next) => {
+          if (!controller.signal.aborted) {
+            setHydrologyContext(next);
+            setHydrologyError(null);
+          }
+        })
+        .catch((error) => {
+          if (controller.signal.aborted) return;
+          setHydrologyContext(null);
+          setHydrologyError(
+            error instanceof Error ? error.message : String(error)
+          );
+        });
+    };
+
+    refresh();
+    const timer = globalThis.setInterval(refresh, 60_000);
+    return () => {
+      controller.abort();
+      globalThis.clearInterval(timer);
+    };
+  }, [scope, temporal.mode, operationalBindings.gaugeId]);
 
   useEffect(() => {
     if (temporal.mode !== 'live') {
@@ -866,6 +954,22 @@ export function App() {
                 timestamp: vehicle.timestamp
               }))
             }
+          : null,
+      hydrology:
+        scope === 'city' && hydrologyContext && temporal.mode === 'live'
+          ? {
+              gaugeId: hydrologyContext.gauge.gaugeId,
+              name: hydrologyContext.gauge.name,
+              sourceTime: hydrologyContext.sourceTime,
+              live: hydrologyContext.live,
+              stale: hydrologyContext.stale,
+              partial: hydrologyContext.partial,
+              observedStageFeet: hydrologyContext.gauge.observedStageFeet,
+              observedFlowCfs: hydrologyContext.gauge.observedFlowCfs,
+              forecastStageFeet: hydrologyContext.gauge.forecastStageFeet,
+              minorFloodStageFeet:
+                hydrologyContext.gauge.minorFloodStageFeet
+            }
           : null
     }),
     [
@@ -882,7 +986,8 @@ export function App() {
       activeAtmosphere,
       liveContext,
       hazardContext,
-      transitContext
+      transitContext,
+      hydrologyContext
     ]
   );
 
@@ -942,6 +1047,17 @@ export function App() {
     [scope, transitContext, temporal.mode]
   );
 
+  const hydrologyOverlay = useMemo(
+    () =>
+      scope === 'city' &&
+      hydrologyContext &&
+      temporal.mode === 'live' &&
+      !hydrologyContext.fallback
+        ? hydrologyContext.overlay
+        : null,
+    [scope, hydrologyContext, temporal.mode]
+  );
+
   const airQualityOverlay = useMemo(
     () =>
       scope === 'city' && liveContext && temporal.mode === 'live'
@@ -965,6 +1081,7 @@ export function App() {
             seismicOverlay,
             hazardOverlay,
             transitOverlay,
+            hydrologyOverlay,
             incidentOverlay,
             worksetGeometryOverlay,
             operatorScenarioOverlay,
@@ -983,6 +1100,7 @@ export function App() {
       seismicOverlay,
       hazardOverlay,
       transitOverlay,
+      hydrologyOverlay,
       incidentOverlay,
       worksetGeometryOverlay,
       operatorScenarioOverlay,
@@ -1348,6 +1466,10 @@ export function App() {
         scope === 'city' && temporal.mode === 'live' && transitOverlay
           ? transitOverlay.nodes.length + transitOverlay.edges.length
           : 0,
+      hydrology:
+        scope === 'city' && temporal.mode === 'live' && hydrologyOverlay
+          ? hydrologyOverlay.nodes.length + hydrologyOverlay.edges.length
+          : 0,
       energy:
         scope === 'city' && powerOverlay
           ? powerOverlay.nodes.length + powerOverlay.edges.length
@@ -1371,6 +1493,7 @@ export function App() {
     windOverlay,
     hazardOverlay,
     transitOverlay,
+    hydrologyOverlay,
     powerOverlay,
     spatialIncidents,
     worksetGeometry,
@@ -1815,6 +1938,46 @@ export function App() {
               <span>GTFS-RT TRANSIT</span>
               <strong>UNAVAILABLE</strong>
               <small>{transitError}</small>
+            </div>
+          ) : null}
+
+          {scope === 'city' &&
+          temporal.mode === 'live' &&
+          hydrologyContext ? (
+            <div
+              className="hydrology-scene-badge"
+              data-source-state={
+                hydrologyContext.partial
+                  ? 'partial'
+                  : hydrologyContext.stale
+                    ? 'stale'
+                    : hydrologyContext.live
+                      ? 'live'
+                      : 'fallback'
+              }
+            >
+              <span>NOAA NWPS · {hydrologyContext.gauge.gaugeId}</span>
+              <strong>
+                {hydrologyContext.gauge.observedStageFeet == null
+                  ? 'STAGE UNAVAILABLE'
+                  : `${hydrologyContext.gauge.observedStageFeet.toFixed(2)} FT STAGE`}
+              </strong>
+              <small>
+                {hydrologyContext.partial
+                  ? 'PARTIAL · METADATA SOURCE LIVE'
+                  : hydrologyContext.gauge.name ?? 'SOURCE-BACKED GAUGE'}
+              </small>
+            </div>
+          ) : hydrologyError &&
+            scope === 'city' &&
+            temporal.mode === 'live' ? (
+            <div
+              className="hydrology-scene-badge"
+              data-source-state="unavailable"
+            >
+              <span>NOAA NWPS</span>
+              <strong>UNAVAILABLE</strong>
+              <small>{hydrologyError}</small>
             </div>
           ) : null}
 
