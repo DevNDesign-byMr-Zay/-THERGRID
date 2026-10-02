@@ -151,35 +151,69 @@ export async function loadCityEnvironmentForecast(
       };
     });
   } else {
+    const normalizedTimesteps = Array.isArray(providerData.timesteps)
+      ? providerData.timesteps
+      : [];
     const timelines = object(providerData.timelines);
-    const tomorrowHourly = Array.isArray(timelines.hourly)
+    const legacyTomorrowHourly = Array.isArray(timelines.hourly)
       ? timelines.hourly
       : [];
+    const tomorrowHourly = normalizedTimesteps.length
+      ? normalizedTimesteps
+      : legacyTomorrowHourly;
     samples = tomorrowHourly.map((item) => {
       const row = object(item);
       const values = object(row.values);
+      const normalized = normalizedTimesteps.length > 0;
       return {
-        time: text(row.time),
-        temperatureC: finiteOrNull(values.temperature),
-        apparentTemperatureC: finiteOrNull(values.temperatureApparent),
-        relativeHumidityPercent: finiteOrNull(values.humidity),
-        surfacePressureHpa: finiteOrNull(values.pressureSurfaceLevel),
-        weatherCode: null,
-        cloudCoverPercent: finiteOrNull(values.cloudCover),
-        isDay: null,
-        precipitationMm: finiteOrNull(values.rainIntensity),
-        windSpeedKph:
-          finiteOrNull(values.windSpeed) == null
+        time: text(row.time ?? row.eventTime),
+        temperatureC: finiteOrNull(
+          normalized ? row.temperatureC ?? values.temperature : values.temperature
+        ),
+        apparentTemperatureC: finiteOrNull(
+          normalized
+            ? row.apparentTemperatureC ?? values.temperatureApparent
+            : values.temperatureApparent
+        ),
+        relativeHumidityPercent: finiteOrNull(
+          normalized
+            ? row.relativeHumidityPercent ?? values.humidity
+            : values.humidity
+        ),
+        surfacePressureHpa: finiteOrNull(
+          normalized
+            ? row.surfacePressureHpa ?? values.pressureSurfaceLevel
+            : values.pressureSurfaceLevel
+        ),
+        weatherCode: finiteOrNull(normalized ? row.weatherCode : null),
+        cloudCoverPercent: finiteOrNull(
+          normalized ? row.cloudCoverPercent ?? values.cloudCover : values.cloudCover
+        ),
+        isDay: typeof row.isDay === 'boolean' ? row.isDay : null,
+        precipitationMm: finiteOrNull(
+          normalized
+            ? row.precipitationMm ?? values.rainIntensity
+            : values.rainIntensity
+        ),
+        windSpeedKph: normalized
+          ? finiteOrNull(row.windSpeedKph)
+          : finiteOrNull(values.windSpeed) == null
             ? null
             : Number(values.windSpeed) * 3.6,
-        windDirectionDegrees: finiteOrNull(values.windDirection),
-        windGustsKph:
-          finiteOrNull(values.windGust) == null
+        windDirectionDegrees: finiteOrNull(
+          normalized ? row.windDirectionDegrees ?? values.windDirection : values.windDirection
+        ),
+        windGustsKph: normalized
+          ? finiteOrNull(row.windGustsKph)
+          : finiteOrNull(values.windGust) == null
             ? null
             : Number(values.windGust) * 3.6,
-        shortwaveRadiationWm2: null,
-        visibilityM:
-          finiteOrNull(values.visibility) == null
+        shortwaveRadiationWm2: finiteOrNull(
+          normalized ? row.shortwaveRadiationWm2 : null
+        ),
+        visibilityM: normalized
+          ? finiteOrNull(row.visibilityM)
+          : finiteOrNull(values.visibility) == null
             ? null
             : Number(values.visibility) * 1000
       };
