@@ -142,13 +142,13 @@ export function QuantumPanel() {
 
   useEffect(() => {
     let cancelled = false;
+
     void Promise.all([
       loadQuantumRuntime(),
       loadQuantumBackends(),
-      loadQuantumJobs(),
-      loadDwaveSolvers()
+      loadQuantumJobs()
     ])
-      .then(([runtimeResult, backendResult, jobsResult, dwaveResult]) => {
+      .then(([runtimeResult, backendResult, jobsResult]) => {
         if (cancelled) return;
         setRuntime(runtimeResult);
         setBackends(backendResult.backends || []);
@@ -159,6 +159,18 @@ export function QuantumPanel() {
             backendResult.backends?.[0]?.name ||
             ''
         );
+      })
+      .catch((loadError) => {
+        if (!cancelled) {
+          setError(
+            loadError instanceof Error ? loadError.message : String(loadError)
+          );
+        }
+      });
+
+    void loadDwaveSolvers()
+      .then((dwaveResult) => {
+        if (cancelled) return;
         setDwaveDiscovery(dwaveResult.data);
         setDwaveReceipt(dwaveResult.receipt ?? null);
         const firstDwaveSolver =
@@ -166,10 +178,11 @@ export function QuantumPanel() {
         setDwaveSolver(
           firstDwaveSolver?.id || firstDwaveSolver?.name || ''
         );
+        setDwaveError(null);
       })
       .catch((loadError) => {
         if (!cancelled) {
-          setError(
+          setDwaveError(
             loadError instanceof Error ? loadError.message : String(loadError)
           );
         }
