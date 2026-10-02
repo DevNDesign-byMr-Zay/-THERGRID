@@ -24,7 +24,9 @@ test('v4 provider connection center consumes only safe runtime metadata', async 
 });
 
 test('v4 provider connection center exposes the merged provider capability set', async () => {
-  const panel = await text('apps/aethergrid-console/web/src/components/RuntimeDiagnosticsPanel.tsx');
+  const panel = await text(
+    'apps/aethergrid-console/web/src/components/RuntimeDiagnosticsPanel.tsx',
+  );
 
   for (const capability of [
     'spatial',
