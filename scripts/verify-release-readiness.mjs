@@ -291,12 +291,16 @@ async function main() {
     /Type-check v4 spatial application/u.test(v4Web) && /npm run typecheck/u.test(v4Web),
     'v4 web CI must type-check the spatial application',
   );
+  assert(
     /Build v4 spatial application/u.test(v4Web) && /npm run build/u.test(v4Web),
     'v4 web CI must build the spatial application',
+  );
+  assert(
     /actions\/upload-artifact@v7/u.test(v4Web) &&
       /path:\s*apps\/aethergrid-console\/web\/dist\//u.test(v4Web) &&
       /if-no-files-found:\s*error/u.test(v4Web),
     'v4 web CI must retain a non-empty compiled spatial application artifact',
+  );
   assert(/npm test/u.test(ci), 'CI must expose the conventional npm test suite');
   assert(/npm run coverage/u.test(ci), 'CI must enforce coverage');
   assert(
