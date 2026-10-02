@@ -6078,3 +6078,119 @@ button {
 .transit-scene-badge[data-source-state='unavailable'] strong {
   color: #ff8e83;
 }
+
+
+.quantum-workspace-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.quantum-workspace-tabs button {
+  min-height: 29px;
+  border: 1px solid rgba(255, 255, 255, 0.045);
+  border-radius: 6px;
+  color: #64798c;
+  background: rgba(255, 255, 255, 0.014);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  cursor: pointer;
+}
+
+.quantum-workspace-tabs button.active {
+  border-color: rgba(155, 124, 255, 0.3);
+  color: #d9d3ff;
+  background: rgba(155, 124, 255, 0.08);
+}
+
+.dwave-workspace {
+  display: grid;
+  gap: 8px;
+}
+
+.dwave-json-field {
+  display: grid;
+  gap: 4px;
+  color: #667b8e;
+  font-size: 7px;
+  letter-spacing: 0.08em;
+}
+
+.dwave-json-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 7px;
+  outline: none;
+  color: #c7d7e2;
+  background: rgba(3, 7, 12, 0.62);
+  font: 7px/1.45 ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+
+.dwave-json-field textarea:focus {
+  border-color: rgba(155, 124, 255, 0.34);
+}
+
+.dwave-json-field small {
+  font-size: 6px;
+  line-height: 1.4;
+  letter-spacing: 0.03em;
+}
+
+.dwave-json-field small.valid {
+  color: #63cda6;
+}
+
+.dwave-json-field small.invalid {
+  color: #ff9d91;
+}
+
+.dwave-confirmation {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 7px;
+  align-items: start;
+  padding: 8px;
+  border: 1px solid rgba(155, 124, 255, 0.16);
+  border-radius: 7px;
+  color: #8093a4;
+  background: rgba(155, 124, 255, 0.035);
+  font-size: 6px;
+  line-height: 1.45;
+}
+
+.dwave-confirmation input {
+  margin: 1px 0 0;
+  accent-color: #9b7cff;
+}
+
+.dwave-boundary {
+  margin: 0;
+  padding-top: 2px;
+  color: #5d7183;
+  font-size: 6px;
+  line-height: 1.5;
+}
+
+.dwave-result summary {
+  color: #8c82c4;
+  font-size: 7px;
+  cursor: pointer;
+}
+
+.dwave-result pre {
+  max-height: 190px;
+  margin: 6px 0 0;
+  padding: 8px;
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  color: #9db0bf;
+  background: rgba(3, 7, 12, 0.62);
+  font: 6px/1.45 ui-monospace, "SFMono-Regular", Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
