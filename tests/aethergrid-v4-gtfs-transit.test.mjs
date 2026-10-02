@@ -33,7 +33,6 @@ test('v4 GTFS transit adapter withholds scene nodes for fallback or undecoded re
   assert.match(service, /stale/u);
 });
 
-
 test('v4 GTFS vehicles are live-only scene overlays in both renderers', async () => {
   const [app, cesium, nativeRenderer, presets, styles] = await Promise.all([
     text('apps/aethergrid-console/web/src/app/App.tsx'),
