@@ -57,6 +57,21 @@ function hazardColor(severity: unknown, alpha = 0.96): Color {
   return Color.fromCssColorString(color).withAlpha(alpha);
 }
 
+function hydrologyColor(band: unknown, alpha = 0.96): Color {
+  const normalized = String(band ?? '').toLowerCase();
+  const color =
+    normalized === 'major'
+      ? '#ff4f63'
+      : normalized === 'moderate'
+        ? '#ff8a5b'
+        : normalized === 'minor'
+          ? '#f0c477'
+          : normalized === 'action'
+            ? '#8dd7ff'
+            : '#62c7e9';
+  return Color.fromCssColorString(color).withAlpha(alpha);
+}
+
 function nodeColor(node: SpatialOverlayNode): Color {
   const intensity = overlayIntensity(node.intensity);
   if (node.properties?.analysisType === 'measurement') {
@@ -93,6 +108,9 @@ function nodeColor(node: SpatialOverlayNode): Color {
   }
   if (node.kind === 'transit' && node.properties?.eventType === 'gtfs-vehicle') {
     return Color.fromCssColorString('#70e7ff').withAlpha(0.78 + intensity * 0.22);
+  }
+  if (node.kind === 'sensor' && node.properties?.eventType === 'noaa-nwps-gauge') {
+    return hydrologyColor(node.properties?.floodBand, 0.8 + intensity * 0.2);
   }
   if (node.kind === 'city') {
     const category = String(node.properties?.category || 'unknown');
