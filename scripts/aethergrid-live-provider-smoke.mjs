@@ -162,8 +162,7 @@ await runCheck(
 await runCheck(
   'ibm',
   Boolean(
-    process.env.AETHERGRID_IBM_QUANTUM_API_KEY &&
-      process.env.AETHERGRID_IBM_QUANTUM_SERVICE_CRN,
+    process.env.AETHERGRID_IBM_QUANTUM_API_KEY && process.env.AETHERGRID_IBM_QUANTUM_SERVICE_CRN,
   ),
   async () => {
     const runtime = createQuantumRuntime({
