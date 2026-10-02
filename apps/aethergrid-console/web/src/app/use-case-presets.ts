@@ -31,6 +31,7 @@ export const USE_CASE_PRESETS: readonly UseCasePreset[] = [
       'air',
       'seismic',
       'hazards',
+      'transit',
       'energy'
     ]
   },
