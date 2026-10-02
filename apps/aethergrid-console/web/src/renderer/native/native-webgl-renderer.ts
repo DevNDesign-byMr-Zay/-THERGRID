@@ -121,6 +121,7 @@ function layerColor(layerId: string, kind = ''): Rgba {
   if (layerId === 'water') return rgba('#38bde8', 0.72);
   if (layerId === 'green') return rgba('#64d99b', 0.64);
   if (layerId === 'hazards') return rgba('#ff704f', 0.92);
+  if (layerId === 'transit' || kind === 'transit') return rgba('#70e7ff', 0.94);
   if (layerId === 'seismic' || kind === 'event') return rgba('#ff806b', 0.95);
   if (layerId === 'world' && kind === 'city') return rgba('#7ee8ff', 0.96);
   return rgba('#8db7cf', 0.72);
@@ -1013,8 +1014,12 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
                   ? '#e0d778'
                   : '#8dc9ff';
         const nwsAlert = node.properties?.eventType === 'nws-alert';
+        const gtfsVehicle =
+          node.kind === 'transit' && node.properties?.eventType === 'gtfs-vehicle';
         let color = nwsAlert
           ? rgba(hazardHex(node.properties?.severity), 0.96)
+          : gtfsVehicle
+            ? rgba('#70e7ff', 0.96)
           : urbanLight
             ? rgba(
                 '#ffd37d',
