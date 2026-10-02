@@ -594,7 +594,7 @@ export function App() {
   }, [city.id, city.latitude, city.longitude, temporal.mode]);
 
   useEffect(() => {
-    if (temporal.mode !== 'live') {
+    if (scope !== 'city' || temporal.mode !== 'live') {
       setTransitContext(null);
       setTransitError(null);
       return;
@@ -622,7 +622,7 @@ export function App() {
       controller.abort();
       globalThis.clearInterval(timer);
     };
-  }, [city.id, temporal.mode]);
+  }, [scope, city.id, temporal.mode]);
 
   useEffect(() => {
     if (temporal.mode !== 'forecast') {
@@ -1340,6 +1340,14 @@ export function App() {
           : scope === 'world'
             ? globalLive?.earthquakeCount ?? 0
             : liveContext?.seismic.eventCount ?? 0,
+      hazards:
+        scope === 'city' && temporal.mode === 'live' && hazardOverlay
+          ? hazardOverlay.nodes.length + hazardOverlay.edges.length
+          : 0,
+      transit:
+        scope === 'city' && temporal.mode === 'live' && transitOverlay
+          ? transitOverlay.nodes.length + transitOverlay.edges.length
+          : 0,
       energy:
         scope === 'city' && powerOverlay
           ? powerOverlay.nodes.length + powerOverlay.edges.length
@@ -1361,6 +1369,8 @@ export function App() {
     liveContext,
     temporal.mode,
     windOverlay,
+    hazardOverlay,
+    transitOverlay,
     powerOverlay,
     spatialIncidents,
     worksetGeometry,
