@@ -5,6 +5,7 @@ import { createUrlPolicy } from '../security/url-policy.mjs';
 import { createCacheStore } from './cache-store.mjs';
 import { createCircuitBreaker } from './circuit-breaker.mjs';
 import { createRateLimiter } from './rate-limiter.mjs';
+import { createProviderExecutor } from './provider-executor.mjs';
 
 export function createProviderRegistry(options = {}) {
   const rawEnv = options.env || process.env;
@@ -23,6 +24,11 @@ export function createProviderRegistry(options = {}) {
     config.terrain.elevationUrl,
     config.quantum.ibm.baseUrl,
     config.quantum.ibm.iamUrl,
+    config.futureProviders.tomorrowIo.baseUrl || 'https://api.tomorrow.io/v4',
+    config.futureProviders.nws.apiUrl || 'https://api.weather.gov',
+    config.futureProviders.eia.baseUrl || 'https://api.eia.gov/v2',
+    config.futureProviders.hydrology.baseUrl || 'https://api.water.noaa.gov/nwps/v1',
+    config.futureProviders.dwave.solverUrl || 'https://cloud.dwavesys.com/sapi/v2',
   ]);
 
   const cache = createCacheStore();
@@ -43,80 +49,125 @@ export function createProviderRegistry(options = {}) {
     return rateLimiters.get(providerId);
   }
 
-  // Initialize standard providers into health tracking
-  health.registerProvider('spatial', {
+  const executor = createProviderExecutor({
+    urlPolicy,
+    health,
+    redactor,
+    cache,
+    getBreaker,
+    getRateLimiter,
+  });
+
+  // Register exact provider IDs mapped to capabilities
+  health.registerProvider('native-webgl', {
     name: 'Native WebGL 4D Grid',
+    capability: 'spatial',
     capabilities: ['spatial'],
     status: PROVIDER_STATUS.READY,
   });
 
-  health.registerProvider('geo', {
+  health.registerProvider('osm-overpass', {
     name: 'OpenStreetMap Overpass',
+    capability: 'geo',
     capabilities: ['geo'],
-    status: config.geo.provider === 'osm-overpass' ? PROVIDER_STATUS.READY : PROVIDER_STATUS.FALLBACK,
+    status: config.geo.provider === 'osm-overpass' ? PROVIDER_STATUS.CONFIGURED : PROVIDER_STATUS.FALLBACK,
   });
 
-  health.registerProvider('terrain', {
-    name: config.terrain.provider === 'open-meteo' ? 'Open-Meteo Elevation (Copernicus DEM GLO-90)' : 'Flat Local Terrain',
+  health.registerProvider('open-meteo-elevation', {
+    name: 'Open-Meteo Elevation (Copernicus DEM GLO-90)',
+    capability: 'terrain',
     capabilities: ['terrain'],
-    status: config.terrain.provider === 'open-meteo' ? PROVIDER_STATUS.READY : PROVIDER_STATUS.FALLBACK,
+    status: config.terrain.provider === 'open-meteo' ? PROVIDER_STATUS.CONFIGURED : PROVIDER_STATUS.FALLBACK,
   });
 
-  health.registerProvider('weather', {
+  health.registerProvider('open-meteo-weather', {
     name: 'Open-Meteo Weather Forecast',
+    capability: 'weather',
     capabilities: ['weather'],
-    status: config.weather.provider === 'open-meteo' ? PROVIDER_STATUS.READY : PROVIDER_STATUS.FALLBACK,
+    status: config.weather.provider === 'open-meteo' ? PROVIDER_STATUS.CONFIGURED : PROVIDER_STATUS.FALLBACK,
   });
 
-  health.registerProvider('air-quality', {
+  health.registerProvider('open-meteo-air-quality', {
     name: 'Open-Meteo Air Quality',
+    capability: 'air-quality',
     capabilities: ['air-quality'],
-    status: config.airQuality.provider === 'open-meteo' ? PROVIDER_STATUS.READY : PROVIDER_STATUS.FALLBACK,
+    status: config.airQuality.provider === 'open-meteo' ? PROVIDER_STATUS.CONFIGURED : PROVIDER_STATUS.FALLBACK,
   });
 
-  health.registerProvider('seismic', {
+  health.registerProvider('usgs', {
     name: 'USGS Earthquake Feed',
+    capability: 'seismic',
     capabilities: ['seismic'],
-    status: config.seismic.provider === 'usgs' ? PROVIDER_STATUS.READY : PROVIDER_STATUS.FALLBACK,
+    status: config.seismic.provider === 'usgs' ? PROVIDER_STATUS.CONFIGURED : PROVIDER_STATUS.FALLBACK,
+  });
+
+  health.registerProvider('tomorrow-io', {
+    name: 'Tomorrow.io Weather API',
+    capability: 'weather',
+    capabilities: ['weather'],
+    status: config.futureProviders.tomorrowIo.apiKey ? PROVIDER_STATUS.CONFIGURED : PROVIDER_STATUS.UNCONFIGURED,
+  });
+
+  health.registerProvider('nws', {
+    name: 'US National Weather Service Alerts',
+    capability: 'hazards',
+    capabilities: ['hazards'],
+    status: PROVIDER_STATUS.CONFIGURED,
+  });
+
+  health.registerProvider('noaa-nwps', {
+    name: 'NOAA National Water Prediction Service',
+    capability: 'hydrology',
+    capabilities: ['hydrology'],
+    status: PROVIDER_STATUS.CONFIGURED,
+  });
+
+  health.registerProvider('eia', {
+    name: 'U.S. EIA Energy Context API v2',
+    capability: 'energy',
+    capabilities: ['energy'],
+    status: config.futureProviders.eia.apiKey ? PROVIDER_STATUS.CONFIGURED : PROVIDER_STATUS.UNCONFIGURED,
+  });
+
+  health.registerProvider('gtfs-rt-registry', {
+    name: 'GTFS-Realtime Transit Feed Registry',
+    capability: 'transit',
+    capabilities: ['transit'],
+    status: PROVIDER_STATUS.UNCONFIGURED,
+  });
+
+  health.registerProvider('dwave', {
+    name: 'D-Wave Ocean SAPI Quantum Cloud',
+    capability: 'quantum',
+    capabilities: ['quantum'],
+    status: config.futureProviders.dwave.token ? PROVIDER_STATUS.CONFIGURED : PROVIDER_STATUS.UNCONFIGURED,
   });
 
   const ibmConfigured = Boolean(config.quantum.ibm.apiKey && config.quantum.ibm.serviceCrn);
-  health.registerProvider('quantum', {
-    name: config.quantum.provider === 'ibm-quantum' ? 'IBM Quantum Compute' : 'Local Quantum Simulator',
+  health.registerProvider('ibm-quantum', {
+    name: 'IBM Quantum Compute',
+    capability: 'quantum',
     capabilities: ['quantum'],
-    status: config.quantum.provider === 'ibm-quantum' && !ibmConfigured ? PROVIDER_STATUS.DEGRADED : PROVIDER_STATUS.READY,
+    status: ibmConfigured ? PROVIDER_STATUS.CONFIGURED : PROVIDER_STATUS.UNCONFIGURED,
     hardwareEnabled: ibmConfigured,
   });
 
-  health.registerProvider('ai', {
-    name: config.ai.provider === 'local' ? 'Local AI Runtime' : `AI Provider (${config.ai.provider})`,
+  health.registerProvider('local-ai', {
+    name: 'Local AI Runtime',
+    capability: 'ai',
     capabilities: ['ai'],
-    status: config.ai.provider === 'local' ? PROVIDER_STATUS.READY : PROVIDER_STATUS.FALLBACK,
-  });
-
-  health.registerProvider('energy', {
-    name: 'Local Microgrid Simulation',
-    capabilities: ['energy'],
     status: PROVIDER_STATUS.READY,
   });
 
-  health.registerProvider('transit', {
-    name: config.futureProviders.transit.provider || 'Transit Provider',
-    capabilities: ['transit'],
-    status: config.futureProviders.transit.apiKey ? PROVIDER_STATUS.READY : PROVIDER_STATUS.UNCONFIGURED,
-  });
-
-  health.registerProvider('hydrology', {
-    name: config.futureProviders.hydrology.provider || 'Hydrology Provider',
-    capabilities: ['hydrology'],
-    status: config.futureProviders.hydrology.apiKey ? PROVIDER_STATUS.READY : PROVIDER_STATUS.UNCONFIGURED,
-  });
+  function executeProviderRequest(providerId, params = {}, fetcher, fallbackFetcher) {
+    return executor.execute(providerId, params, fetcher, fallbackFetcher);
+  }
 
   function getProvidersByCapability(capability) {
     const all = health.getAllStatuses();
     const matches = {};
     for (const [id, info] of Object.entries(all)) {
-      if (info.capabilities.includes(capability)) {
+      if (info.capabilities && info.capabilities.includes(capability)) {
         matches[id] = info;
       }
     }
@@ -124,49 +175,54 @@ export function createProviderRegistry(options = {}) {
   }
 
   function getSafePublicRuntimeMetadata() {
+    const healthStatuses = health.getAllStatuses();
     return Object.freeze({
       spatial: {
         provider: 'native-webgl',
-        status: PROVIDER_STATUS.READY,
+        status: healthStatuses['native-webgl']?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
       geo: {
         provider: config.geo.provider,
-        status: health.getProviderStatus('geo')?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses['osm-overpass']?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
       terrain: {
         provider: config.terrain.provider,
-        status: health.getProviderStatus('terrain')?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses['open-meteo-elevation']?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
       weather: {
         provider: config.weather.provider,
-        status: health.getProviderStatus('weather')?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses['open-meteo-weather']?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
       airQuality: {
         provider: config.airQuality.provider,
-        status: health.getProviderStatus('air-quality')?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses['open-meteo-air-quality']?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
       seismic: {
         provider: config.seismic.provider,
-        status: health.getProviderStatus('seismic')?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses.usgs?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
       quantum: {
         provider: config.quantum.provider,
-        status: health.getProviderStatus('quantum')?.status || PROVIDER_STATUS.READY,
+        status: healthStatuses['ibm-quantum']?.status || healthStatuses.dwave?.status || PROVIDER_STATUS.UNCONFIGURED,
         hardwareEnabled: ibmConfigured,
       },
       ai: {
         provider: config.ai.provider,
-        status: health.getProviderStatus('ai')?.status || PROVIDER_STATUS.FALLBACK,
+        status: healthStatuses['local-ai']?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
       energy: {
-        provider: 'local-microgrid-simulator',
-        status: PROVIDER_STATUS.READY,
+        provider: 'eia',
+        status: healthStatuses.eia?.status || PROVIDER_STATUS.UNCONFIGURED,
+      },
+      hazards: {
+        provider: 'nws',
+        status: healthStatuses.nws?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
       transit: {
-        status: health.getProviderStatus('transit')?.status || PROVIDER_STATUS.UNCONFIGURED,
+        status: healthStatuses['gtfs-rt-registry']?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
       hydrology: {
-        status: health.getProviderStatus('hydrology')?.status || PROVIDER_STATUS.UNCONFIGURED,
+        status: healthStatuses['noaa-nwps']?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
     });
   }
@@ -177,8 +233,10 @@ export function createProviderRegistry(options = {}) {
     redactor,
     urlPolicy,
     cache,
+    executor,
     getBreaker,
     getRateLimiter,
+    executeProviderRequest,
     getProvidersByCapability,
     getSafePublicRuntimeMetadata,
   };
