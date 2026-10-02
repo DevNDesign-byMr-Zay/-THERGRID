@@ -9,6 +9,15 @@ export type OperationalSourceState =
   | 'unconfigured'
   | 'unavailable';
 
+export interface OperationalFuelMixRow {
+  period: string | null;
+  respondent: string | null;
+  fuelType: string | null;
+  fuelTypeDescription: string | null;
+  value: number | null;
+  sourceUnits: string | null;
+}
+
 export interface OperationalSourceSnapshot {
   id: OperationalSourceId;
   state: OperationalSourceState;
@@ -19,6 +28,7 @@ export interface OperationalSourceSnapshot {
   attribution: string | null;
   summary: string;
   metrics: readonly { label: string; value: string }[];
+  fuelMix?: readonly OperationalFuelMixRow[];
   error: string | null;
 }
 
@@ -244,10 +254,23 @@ export async function loadEnergyContextForRegion(
   const result = await fetchJson(`/api/aethergrid/energy/context?${query.toString()}`, signal);
   if (!result.ok) return unavailable('energy', `Energy endpoint unavailable (HTTP ${result.status}).`);
   const data = object(result.payload.data ?? result.payload);
-  const fuelMix = Array.isArray(data.fuelMix) ? data.fuelMix : [];
+  const rawFuelMix = Array.isArray(data.fuelMix) ? data.fuelMix : [];
+  const fuelMix: OperationalFuelMixRow[] = rawFuelMix.map((row) => {
+    const record = object(row);
+    return {
+      period: text(record.period),
+      respondent: text(record.respondent),
+      fuelType: text(record.fueltype),
+      fuelTypeDescription: text(
+        record.fueltypeDescription ?? record.fueltype
+      ),
+      value: finite(record.value),
+      sourceUnits: text(record.sourceUnits)
+    };
+  });
   const returnedRegion = text(data.region);
   const periods = fuelMix
-    .map((row) => text(object(row).period))
+    .map((row) => row.period)
     .filter((value): value is string => Boolean(value));
   const newestPeriod = periods.length ? periods[0] : null;
   const metrics = [
@@ -255,17 +278,20 @@ export async function loadEnergyContextForRegion(
     { label: 'FUEL ROWS', value: String(fuelMix.length) },
     newestPeriod ? { label: 'LATEST', value: newestPeriod } : null
   ].filter((item): item is { label: string; value: string } => Boolean(item));
-  return normalizeCommon(
-    'energy',
-    {
-      ...result.payload,
-      sourceTime: newestPeriod
-    },
-    returnedRegion
-      ? `EIA hourly fuel-type records for ${returnedRegion}`
-      : 'Provider-backed regional energy context',
-    metrics
-  );
+  return {
+    ...normalizeCommon(
+      'energy',
+      {
+        ...result.payload,
+        sourceTime: newestPeriod
+      },
+      returnedRegion
+        ? `EIA hourly fuel-type records for ${returnedRegion}`
+        : 'Provider-backed regional energy context',
+      metrics
+    ),
+    fuelMix
+  };
 }
 
 async function transitSource(cityId: string, signal?: AbortSignal): Promise<OperationalSourceSnapshot> {
