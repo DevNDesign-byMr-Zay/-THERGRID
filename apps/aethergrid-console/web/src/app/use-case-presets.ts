@@ -32,6 +32,7 @@ export const USE_CASE_PRESETS: readonly UseCasePreset[] = [
       'seismic',
       'hazards',
       'transit',
+      'hydrology',
       'energy'
     ]
   },
@@ -56,7 +57,16 @@ export const USE_CASE_PRESETS: readonly UseCasePreset[] = [
     label: 'ENVIRONMENT',
     description: 'Terrain, water, green space, live weather and source-backed air-quality context.',
     visualMode: 'solid',
-    layers: ['terrain', 'buildings', 'water', 'green', 'weather', 'air', 'hazards']
+    layers: [
+      'terrain',
+      'buildings',
+      'water',
+      'green',
+      'weather',
+      'air',
+      'hazards',
+      'hydrology'
+    ]
   },
   {
     id: 'seismic-response',
