@@ -428,7 +428,9 @@ test('v4 runtime diagnostics report provider readiness without exposing credenti
   ]);
 
   assert.match(client, /\/api\/aethergrid\/runtime/u);
-  assert.match(panel, /PROVIDER DIAGNOSTICS/u);
+  assert.match(client, /\/api\/aethergrid\/runtime\/providers/u);
+  assert.match(panel, /CONNECTION CENTER/u);
+  assert.match(panel, /LIVE PROVIDER RUNTIME/u);
   assert.match(panel, /CLIENT SECRET EXPOSURE/u);
   assert.match(panel, /credentialsExposed/u);
   assert.match(panel, /NONE REPORTED/u);
@@ -559,7 +561,8 @@ test('v4 layer controls expose only implemented layers with live feature counts'
   assert.match(app, /powerOverlay\.nodes\.length \+ powerOverlay\.edges\.length/u);
   assert.match(app, /cityIdentity\?\.buildingCount/u);
   assert.match(app, /layerCounts\[layer\.id\] \?\? 0/u);
-  assert.doesNotMatch(app, /id: 'transit'/u);
+  assert.match(app, /id: 'transit'/u);
+  assert.match(app, /transitOverlay\.nodes\.length \+ transitOverlay\.edges\.length/u);
 });
 
 test('v4 intelligence workspace tabs preserve mounted AI scenario quantum evidence and system state', async () => {
@@ -762,7 +765,7 @@ test('v4 operational presets use only implemented layers and preserve manual cus
   assert.match(presets, /environmental/u);
   assert.match(presets, /seismic-response/u);
   assert.match(presets, /skyline-analysis/u);
-  assert.doesNotMatch(presets, /transit/u);
+  assert.match(presets, /'transit'/u);
   assert.doesNotMatch(presets, /hydrology/u);
   assert.match(app, /const applyUseCase = \(preset: UseCasePreset\)/u);
   assert.match(app, /visible: preset\.layers\.includes\(layer\.id\)/u);
