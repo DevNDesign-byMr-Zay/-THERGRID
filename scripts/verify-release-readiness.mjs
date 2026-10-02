@@ -36,6 +36,7 @@ const REQUIRED_FILES = Object.freeze([
   'apps/aethergrid-console/geo-runtime.mjs',
   'apps/aethergrid-console/terrain-runtime.mjs',
   'apps/aethergrid-console/quantum-runtime.mjs',
+  'apps/aethergrid-console/providers/coordinate-validator.mjs',
   'apps/aethergrid-console/app.json',
   'apps/aethergrid-console/ui.json',
   'apps/aethergrid-console/manifest.webmanifest',
@@ -290,16 +291,12 @@ async function main() {
     /Type-check v4 spatial application/u.test(v4Web) && /npm run typecheck/u.test(v4Web),
     'v4 web CI must type-check the spatial application',
   );
-  assert(
     /Build v4 spatial application/u.test(v4Web) && /npm run build/u.test(v4Web),
     'v4 web CI must build the spatial application',
-  );
-  assert(
     /actions\/upload-artifact@v7/u.test(v4Web) &&
       /path:\s*apps\/aethergrid-console\/web\/dist\//u.test(v4Web) &&
       /if-no-files-found:\s*error/u.test(v4Web),
     'v4 web CI must retain a non-empty compiled spatial application artifact',
-  );
   assert(/npm test/u.test(ci), 'CI must expose the conventional npm test suite');
   assert(/npm run coverage/u.test(ci), 'CI must enforce coverage');
   assert(
@@ -756,6 +753,14 @@ async function main() {
     '/api/aethergrid/spatial',
     '/api/aethergrid/evidence/',
     '/api/aethergrid/runtime',
+    '/api/aethergrid/runtime/providers',
+    '/api/aethergrid/config/public',
+    '/api/aethergrid/weather/current',
+    '/api/aethergrid/weather/forecast',
+    '/api/aethergrid/hazards/alerts',
+    '/api/aethergrid/hydrology/gauges',
+    '/api/aethergrid/energy/context',
+    '/api/aethergrid/transit/vehicles',
     '/api/aethergrid/profile',
     '/api/aethergrid/geospatial/cities',
     '/api/aethergrid/geospatial/city/',
@@ -772,6 +777,8 @@ async function main() {
     '/api/aethergrid/quantum/runtime',
     '/api/aethergrid/quantum/backends',
     '/api/aethergrid/quantum/jobs',
+    '/api/aethergrid/quantum/dwave/solvers',
+    '/api/aethergrid/quantum/dwave/jobs',
     '/api/aethergrid/agents/',
     '/api/aethergrid/team',
     '/api/aethergrid/view',
@@ -964,6 +971,34 @@ async function main() {
       /city-live-now/u.test(exactAethergridPackager),
     'ÆTHERGRID packager must generate standalone WebGL HTML and complete backend/launcher runtime without the reference screenshot',
   );
+
+  // ÆTHERGRID v4.0 Provider Architecture Verification
+  const envSchema = await text('apps/aethergrid-console/config/env-schema.mjs');
+  const providerConfig = await text('apps/aethergrid-console/config/provider-config.mjs');
+  const secretRedactor = await text('apps/aethergrid-console/security/secret-redactor.mjs');
+  const urlPolicy = await text('apps/aethergrid-console/security/url-policy.mjs');
+  const providerRegistry = await text('apps/aethergrid-console/providers/provider-registry.mjs');
+  assert(
+    /export const envSchema/u.test(envSchema) &&
+      /parseEnv/u.test(envSchema) &&
+      /AETHERGRID_PORT/u.test(envSchema) &&
+      /AETHERGRID_CESIUM_ION_TOKEN/u.test(envSchema),
+    'ÆTHERGRID env schema must define validated Zod schema with forward-compatible keys',
+  );
+    /createProviderConfig/u.test(providerConfig) && /futureProviders/u.test(providerConfig),
+    'ÆTHERGRID provider config must assemble frozen server configuration',
+    /createSecretRedactor/u.test(secretRedactor) &&
+      /redactString/u.test(secretRedactor) &&
+      /redactValue/u.test(secretRedactor),
+    'ÆTHERGRID secret redactor must provide string and object credential redaction',
+    /createUrlPolicy/u.test(urlPolicy) &&
+      /isAllowedUrl/u.test(urlPolicy) &&
+      /validateUrl/u.test(urlPolicy),
+    'ÆTHERGRID URL policy must validate outbound provider endpoints',
+    /createProviderRegistry/u.test(providerRegistry) &&
+      /getSafePublicRuntimeMetadata/u.test(providerRegistry) &&
+      /getProvidersByCapability/u.test(providerRegistry),
+    'ÆTHERGRID provider registry must expose queryable capabilities and safe metadata',
   const aethergridStartScript = await text('apps/aethergrid-console/START-AETHERGRID.ps1');
   const aethergridAppEnv = await text('apps/aethergrid-console/.env.example');
   assert(

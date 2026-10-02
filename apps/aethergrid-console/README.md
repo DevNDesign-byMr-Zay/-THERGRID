@@ -232,9 +232,7 @@ This is visualization-grade terrain fitting. The default live source is Open-Met
 ## v4 spatial operator web foundation
 
 The draft v4 migration surface lives under `apps/aethergrid-console/web/`. It is a typed React/Cesium operator application that preserves the existing Node backend and source/provenance contracts while introducing a renderer-neutral spatial layer. It does **not** replace the maintained packaged v3 surface until the v4 branch passes the release gates and is explicitly promoted.
-
 Implemented v4 behavior includes:
-
 - Cesium as the primary geographic renderer with continuous WGS84 globe → region → city → district camera travel;
 - a real source-backed native WebGL fallback that consumes the same normalized overlays, 4D time, layer state, selection state and scenario context when Cesium cannot initialize;
 - safe manual CESIUM / NATIVE switching with reversible failover and visible failure diagnostics;
@@ -257,9 +255,7 @@ Implemented v4 behavior includes:
 - operator geodesic measurement for distance, bearing and optional elevation delta/slope, with the measurement tied to its captured 4D frame rather than drifting with LIVE time;
 - Frame A / Frame B spatial comparison across cities or times using only metrics available in both captures;
 - non-authoritative local comparison export plus operator-controlled AUREN review that is explicitly separate from the server evidence ledger.
-
 Fidelity boundaries remain explicit. OpenStreetMap / terrain / Open-Meteo / air-quality / USGS data retain their source status and timestamps. Synthetic presentation effects never become authoritative observations. Scenario styling never mutates source data. Native failover preserves the operator-review surface but is not claimed to provide the same photorealistic detail as the Cesium path. Physical infrastructure actuation remains disabled.
-
 ## Windows ZIP workflow
 
 After extracting the package:
@@ -356,3 +352,14 @@ AETHERGRID_OPEN_METEO_API_KEY=
 ```
 
 When the live elevation provider is unavailable, the renderer uses a clearly labeled flat local fallback. Terrain source attribution is shown alongside OpenStreetMap attribution. Terrain summaries may be passed to the AI team as bounded context, but no terrain or AI path grants physical actuation authority.
+
+
+## ÆTHERGRID v4.0 Production Provider Foundation (Batch 18)
+Batch 18 establishes the production backend provider, configuration, secret-safety, and runtime foundation for ÆTHERGRID v4.0.
+### Features
+- **Centralized Environment Schema ()**: Schema-validated environment config powered by Zod.
+- **Secret Redaction ()**: Strips configured API keys, bearer tokens, and CRN strings from logs, runtime outputs, errors, and exports.
+- **Outbound URL Safety Policy ()**: Restricts server-side outbound HTTP calls to validated provider endpoints and safe local developer services (e.g. local Ollama).
+- **Provider Registry ()**: Wraps existing runtimes (spatial, geo, weather, air quality, seismic, terrain, quantum, AI, energy, transit, hydrology) and exposes normalized status (, , , , ).
+- **Resilience Primitives**: In-memory cache (), circuit breaker (), and per-provider rate limiter ().
+- **Public Runtime Endpoint**:  provides safe, secret-redacted provider readiness metadata.
