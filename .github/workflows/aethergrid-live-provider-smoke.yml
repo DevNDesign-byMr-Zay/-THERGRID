@@ -1,0 +1,93 @@
+name: aethergrid/live-provider-smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: "Read-only provider check to run"
+        required: true
+        default: "all-safe"
+        type: choice
+        options:
+          - all-safe
+          - tomorrow
+          - nws
+          - nwps
+          - eia
+          - ibm
+          - dwave
+          - cesium-config
+      latitude:
+        description: "Latitude for weather/hazard checks"
+        required: true
+        default: "40.7128"
+        type: string
+      longitude:
+        description: "Longitude for weather/hazard checks"
+        required: true
+        default: "-74.0060"
+        type: string
+      nwps_gauge:
+        description: "Optional NOAA NWPS gauge ID"
+        required: false
+        default: ""
+        type: string
+      eia_region:
+        description: "EIA balancing-region/respondent code"
+        required: false
+        default: "PJM"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  provider-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      AETHERGRID_LIVE_SMOKE_PROVIDER: ${{ inputs.provider }}
+      AETHERGRID_LIVE_SMOKE_LAT: ${{ inputs.latitude }}
+      AETHERGRID_LIVE_SMOKE_LON: ${{ inputs.longitude }}
+      AETHERGRID_LIVE_SMOKE_NWPS_GAUGE: ${{ inputs.nwps_gauge }}
+      AETHERGRID_LIVE_SMOKE_EIA_REGION: ${{ inputs.eia_region }}
+      AETHERGRID_LIVE_SMOKE_OUTPUT: aethergrid-live-provider-smoke.json
+
+      AETHERGRID_TOMORROW_IO_API_KEY: ${{ secrets.AETHERGRID_TOMORROW_IO_API_KEY }}
+      AETHERGRID_TOMORROW_IO_URL: ${{ secrets.AETHERGRID_TOMORROW_IO_URL }}
+      AETHERGRID_NWS_API_URL: ${{ secrets.AETHERGRID_NWS_API_URL }}
+      AETHERGRID_HYDROLOGY_BASE_URL: ${{ secrets.AETHERGRID_HYDROLOGY_BASE_URL }}
+      AETHERGRID_EIA_API_KEY: ${{ secrets.AETHERGRID_EIA_API_KEY }}
+      AETHERGRID_EIA_BASE_URL: ${{ secrets.AETHERGRID_EIA_BASE_URL }}
+      AETHERGRID_IBM_QUANTUM_API_KEY: ${{ secrets.AETHERGRID_IBM_QUANTUM_API_KEY }}
+      AETHERGRID_IBM_QUANTUM_SERVICE_CRN: ${{ secrets.AETHERGRID_IBM_QUANTUM_SERVICE_CRN }}
+      AETHERGRID_IBM_QUANTUM_BASE_URL: ${{ secrets.AETHERGRID_IBM_QUANTUM_BASE_URL }}
+      AETHERGRID_IBM_IAM_URL: ${{ secrets.AETHERGRID_IBM_IAM_URL }}
+      AETHERGRID_DWAVE_API_TOKEN: ${{ secrets.AETHERGRID_DWAVE_API_TOKEN }}
+      AETHERGRID_DWAVE_SOLVER_URL: ${{ secrets.AETHERGRID_DWAVE_SOLVER_URL }}
+      AETHERGRID_CESIUM_ION_TOKEN: ${{ secrets.AETHERGRID_CESIUM_ION_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run read-only live provider checks
+        run: node scripts/aethergrid-live-provider-smoke.mjs
+
+      - name: Upload sanitized acceptance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aethergrid-live-provider-smoke-${{ github.run_id }}
+          path: aethergrid-live-provider-smoke.json
+          if-no-files-found: warn
+          retention-days: 14
