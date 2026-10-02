@@ -119,6 +119,10 @@ import {
   loadNwsHazards,
   type NwsHazardContext
 } from '../services/nws-hazards';
+import {
+  loadGtfsTransit,
+  type GtfsTransitContext
+} from '../services/gtfs-transit';
 import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
 import type { SpatialViewBookmark } from '../services/view-bookmarks';
 import {
@@ -227,6 +231,7 @@ const INITIAL_LAYERS: readonly LayerState[] = [
   { id: 'air', visible: true },
   { id: 'seismic', visible: true },
   { id: 'hazards', visible: true },
+  { id: 'transit', visible: true },
   { id: 'energy', visible: true },
   { id: 'annotations', visible: true },
   { id: 'workset-analysis', visible: true },
@@ -289,6 +294,8 @@ export function App() {
   const [liveContext, setLiveContext] = useState<CityLiveSnapshot | null>(null);
   const [hazardContext, setHazardContext] = useState<NwsHazardContext | null>(null);
   const [hazardError, setHazardError] = useState<string | null>(null);
+  const [transitContext, setTransitContext] = useState<GtfsTransitContext | null>(null);
+  const [transitError, setTransitError] = useState<string | null>(null);
   const [globalLive, setGlobalLive] = useState<GlobalLiveContext | null>(null);
   const [liveContextError, setLiveContextError] = useState<string | null>(null);
   const [scenarioVisual, setScenarioVisual] =
@@ -587,6 +594,37 @@ export function App() {
   }, [city.id, city.latitude, city.longitude, temporal.mode]);
 
   useEffect(() => {
+    if (temporal.mode !== 'live') {
+      setTransitContext(null);
+      setTransitError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const refresh = () => {
+      void loadGtfsTransit(city.id, controller.signal)
+        .then((next) => {
+          if (!controller.signal.aborted) {
+            setTransitContext(next);
+            setTransitError(null);
+          }
+        })
+        .catch((error) => {
+          if (controller.signal.aborted) return;
+          setTransitContext(null);
+          setTransitError(error instanceof Error ? error.message : String(error));
+        });
+    };
+
+    refresh();
+    const timer = globalThis.setInterval(refresh, 30_000);
+    return () => {
+      controller.abort();
+      globalThis.clearInterval(timer);
+    };
+  }, [city.id, temporal.mode]);
+
+  useEffect(() => {
     if (temporal.mode !== 'forecast') {
       setForecastError(null);
       return;
@@ -807,6 +845,27 @@ export function App() {
                 expires: alert.expires
               }))
             }
+          : null,
+      transit:
+        scope === 'city' && transitContext && temporal.mode === 'live'
+          ? {
+              agency: transitContext.agencyName,
+              provider: transitContext.provider,
+              sourceTime: transitContext.sourceTime,
+              live: transitContext.live,
+              stale: transitContext.stale,
+              vehicleCount: transitContext.vehicles.length,
+              vehicles: transitContext.vehicles.slice(0, 20).map((vehicle) => ({
+                vehicleId: vehicle.vehicleId,
+                tripId: vehicle.tripId,
+                routeId: vehicle.routeId,
+                latitude: vehicle.latitude,
+                longitude: vehicle.longitude,
+                bearing: vehicle.bearing,
+                speedMps: vehicle.speedMps,
+                timestamp: vehicle.timestamp
+              }))
+            }
           : null
     }),
     [
@@ -821,7 +880,9 @@ export function App() {
       entityDossier,
       atmosphere,
       activeAtmosphere,
-      liveContext
+      liveContext,
+      hazardContext,
+      transitContext
     ]
   );
 
@@ -869,6 +930,18 @@ export function App() {
     [scope, hazardContext, temporal.mode]
   );
 
+  const transitOverlay = useMemo(
+    () =>
+      scope === 'city' &&
+      transitContext &&
+      temporal.mode === 'live' &&
+      !transitContext.fallback &&
+      !transitContext.unconfigured
+        ? transitContext.overlay
+        : null,
+    [scope, transitContext, temporal.mode]
+  );
+
   const airQualityOverlay = useMemo(
     () =>
       scope === 'city' && liveContext && temporal.mode === 'live'
@@ -891,6 +964,7 @@ export function App() {
             windOverlay,
             seismicOverlay,
             hazardOverlay,
+            transitOverlay,
             incidentOverlay,
             worksetGeometryOverlay,
             operatorScenarioOverlay,
@@ -908,6 +982,7 @@ export function App() {
       windOverlay,
       seismicOverlay,
       hazardOverlay,
+      transitOverlay,
       incidentOverlay,
       worksetGeometryOverlay,
       operatorScenarioOverlay,
@@ -1693,6 +1768,43 @@ export function App() {
               <span>NWS ACTIVE HAZARDS</span>
               <strong>UNAVAILABLE</strong>
               <small>{hazardError}</small>
+            </div>
+          ) : null}
+
+          {scope === 'city' && temporal.mode === 'live' && transitContext ? (
+            <div
+              className="transit-scene-badge"
+              data-source-state={
+                transitContext.unconfigured
+                  ? 'unconfigured'
+                  : transitContext.stale
+                    ? 'stale'
+                    : transitContext.live
+                      ? 'live'
+                      : 'fallback'
+              }
+            >
+              <span>GTFS-RT TRANSIT</span>
+              <strong>
+                {transitContext.unconfigured
+                  ? 'FEED NOT CONFIGURED'
+                  : `${transitContext.vehicles.length} VEHICLE${transitContext.vehicles.length === 1 ? '' : 'S'}`}
+              </strong>
+              <small>
+                {transitContext.agencyName ?? transitContext.provider ?? 'GTFS-REALTIME'}
+                {' · '}
+                {transitContext.stale
+                  ? 'STALE SOURCE POSITIONS'
+                  : transitContext.live
+                    ? 'SOURCE-BACKED POSITIONS'
+                    : 'NO LIVE POSITION FEED'}
+              </small>
+            </div>
+          ) : transitError && scope === 'city' && temporal.mode === 'live' ? (
+            <div className="transit-scene-badge" data-source-state="unavailable">
+              <span>GTFS-RT TRANSIT</span>
+              <strong>UNAVAILABLE</strong>
+              <small>{transitError}</small>
             </div>
           ) : null}
 
