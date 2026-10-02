@@ -185,7 +185,7 @@ export async function loadCityEnvironmentForecast(
             ? row.surfacePressureHpa ?? values.pressureSurfaceLevel
             : values.pressureSurfaceLevel
         ),
-        weatherCode: finiteOrNull(normalized ? row.weatherCode : null),
+        weatherCode: null,
         cloudCoverPercent: finiteOrNull(
           normalized ? row.cloudCoverPercent ?? values.cloudCover : values.cloudCover
         ),
