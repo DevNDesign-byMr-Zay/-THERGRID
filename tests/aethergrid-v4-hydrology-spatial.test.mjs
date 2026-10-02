@@ -36,15 +36,18 @@ test('v4 NOAA gauge state derives flood bands only from observed stage and provi
 });
 
 test('v4 NOAA gauge binding is coordinate-scoped and live-only in the scene', async () => {
-  const [bindings, app] = await Promise.all([
+  const [bindings, panel, app] = await Promise.all([
     text('apps/aethergrid-console/web/src/services/operational-source-bindings.ts'),
+    text('apps/aethergrid-console/web/src/components/OperationalDataPanel.tsx'),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
   ]);
 
-  assert.match(bindings, /operationalBindingScopeId/u);
-  assert.match(bindings, /latitude\.toFixed\(5\)/u);
-  assert.match(bindings, /longitude\.toFixed\(5\)/u);
   assert.match(bindings, /OPERATIONAL_SOURCE_BINDINGS_EVENT/u);
+  assert.doesNotMatch(bindings, /latitude|longitude|geocode/u);
+  assert.match(panel, /latitude\.toFixed\(5\)/u);
+  assert.match(panel, /longitude\.toFixed\(5\)/u);
+  assert.match(app, /city\.latitude\.toFixed\(5\)/u);
+  assert.match(app, /city\.longitude\.toFixed\(5\)/u);
   assert.match(app, /loadOperationalSourceBindings/u);
   assert.match(app, /OPERATIONAL_SOURCE_BINDINGS_EVENT/u);
   assert.match(app, /loadNoaaHydrologyContext/u);
