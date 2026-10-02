@@ -256,6 +256,8 @@ Implemented v4 behavior includes:
 - Frame A / Frame B spatial comparison across cities or times using only metrics available in both captures;
 - non-authoritative local comparison export plus operator-controlled AUREN review that is explicitly separate from the server evidence ledger.
 Fidelity boundaries remain explicit. OpenStreetMap / terrain / Open-Meteo / air-quality / USGS data retain their source status and timestamps. Synthetic presentation effects never become authoritative observations. Scenario styling never mutates source data. Native failover preserves the operator-review surface but is not claimed to provide the same photorealistic detail as the Cesium path. Physical infrastructure actuation remains disabled.
+
+The draft v4 operator lane also consumes the merged provider foundation for a safe provider Connection Center, normalized Tomorrow forecast samples, source-backed NWS alert geometry, decoded GTFS-Realtime vehicle positions, explicitly bound NOAA NWPS gauge geometry, EIA fuel-mix records, and a manually confirmed D-Wave annealing workflow. GTFS route lines are not inferred, NOAA gauge locations are not guessed, EIA regions are not converted into invented polygons, and D-Wave hardware execution is not claimed until the provider returns a completed answer.
 ## Windows ZIP workflow
 
 After extracting the package:
