@@ -129,7 +129,6 @@ import {
 } from '../services/noaa-hydrology';
 import {
   loadOperationalSourceBindings,
-  operationalBindingScopeId,
   OPERATIONAL_SOURCE_BINDINGS_EVENT,
   type OperationalSourceBindings
 } from '../services/operational-source-bindings';
@@ -333,7 +332,7 @@ export function App() {
   });
 
   const operationalBindingScope = useMemo(
-    () => operationalBindingScopeId(city.latitude, city.longitude),
+    () => `coord:${city.latitude.toFixed(5)}:${city.longitude.toFixed(5)}`,
     [city.latitude, city.longitude]
   );
 
