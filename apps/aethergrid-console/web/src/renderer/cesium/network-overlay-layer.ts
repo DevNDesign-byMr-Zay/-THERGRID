@@ -91,6 +91,9 @@ function nodeColor(node: SpatialOverlayNode): Color {
   if (node.kind === 'event' && node.properties?.eventType === 'earthquake') {
     return Color.fromCssColorString('#ff7b63').withAlpha(0.78 + intensity * 0.22);
   }
+  if (node.kind === 'transit' && node.properties?.eventType === 'gtfs-vehicle') {
+    return Color.fromCssColorString('#70e7ff').withAlpha(0.78 + intensity * 0.22);
+  }
   if (node.kind === 'city') {
     const category = String(node.properties?.category || 'unknown');
     const cityColor =
@@ -117,6 +120,7 @@ function nodeFarDistance(node: SpatialOverlayNode): number {
   if (node.kind === 'city' || node.kind === 'event') return 30_000_000;
   if (node.kind === 'generation') return 320_000;
   if (node.kind === 'substation') return 220_000;
+  if (node.kind === 'transit') return 180_000;
   return 180_000;
 }
 
