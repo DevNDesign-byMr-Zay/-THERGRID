@@ -153,7 +153,7 @@ export function createTomorrowWeatherProvider(options = {}) {
     id: 'tomorrow-io',
     name: 'Tomorrow.io Weather Provider',
     capability: 'weather',
-    capabilities: ['weather', 'forecast', 'air-quality'],
+    capabilities: ['weather', 'forecast'],
     configured,
     request,
   });

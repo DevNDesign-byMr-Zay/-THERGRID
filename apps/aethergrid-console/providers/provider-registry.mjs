@@ -7,6 +7,22 @@ import { createCircuitBreaker } from './circuit-breaker.mjs';
 import { createRateLimiter } from './rate-limiter.mjs';
 import { createProviderExecutor } from './provider-executor.mjs';
 
+const QUANTUM_STATUS_PRIORITY = Object.freeze([
+  PROVIDER_STATUS.READY,
+  PROVIDER_STATUS.DEGRADED,
+  PROVIDER_STATUS.CONFIGURED,
+  PROVIDER_STATUS.FALLBACK,
+  PROVIDER_STATUS.UNAVAILABLE,
+  PROVIDER_STATUS.UNCONFIGURED,
+]);
+
+function aggregateProviderStatus(statuses = []) {
+  for (const candidate of QUANTUM_STATUS_PRIORITY) {
+    if (statuses.includes(candidate)) return candidate;
+  }
+  return PROVIDER_STATUS.UNCONFIGURED;
+}
+
 export function createProviderRegistry(options = {}) {
   const rawEnv = options.env || process.env;
   const config = createProviderConfig(rawEnv);
@@ -136,11 +152,13 @@ export function createProviderRegistry(options = {}) {
     status: PROVIDER_STATUS.UNCONFIGURED,
   });
 
+  const dwaveConfigured = Boolean(config.futureProviders.dwave.token);
   health.registerProvider('dwave', {
     name: 'D-Wave Ocean SAPI Quantum Cloud',
     capability: 'quantum',
     capabilities: ['quantum'],
-    status: config.futureProviders.dwave.token ? PROVIDER_STATUS.CONFIGURED : PROVIDER_STATUS.UNCONFIGURED,
+    status: dwaveConfigured ? PROVIDER_STATUS.CONFIGURED : PROVIDER_STATUS.UNCONFIGURED,
+    hardwareEnabled: dwaveConfigured,
   });
 
   const ibmConfigured = Boolean(config.quantum.ibm.apiKey && config.quantum.ibm.serviceCrn);
@@ -203,8 +221,29 @@ export function createProviderRegistry(options = {}) {
       },
       quantum: {
         provider: config.quantum.provider,
-        status: healthStatuses['ibm-quantum']?.status || healthStatuses.dwave?.status || PROVIDER_STATUS.UNCONFIGURED,
-        hardwareEnabled: ibmConfigured,
+        status: aggregateProviderStatus([
+          healthStatuses['ibm-quantum']?.status,
+          healthStatuses.dwave?.status,
+          config.quantum.provider === 'local-simulator' ? PROVIDER_STATUS.READY : undefined,
+        ].filter(Boolean)),
+        hardwareEnabled: ibmConfigured || dwaveConfigured,
+        providers: {
+          ibm: {
+            configured: ibmConfigured,
+            status: healthStatuses['ibm-quantum']?.status || PROVIDER_STATUS.UNCONFIGURED,
+            hardwareEnabled: ibmConfigured,
+          },
+          dwave: {
+            configured: dwaveConfigured,
+            status: healthStatuses.dwave?.status || PROVIDER_STATUS.UNCONFIGURED,
+            hardwareEnabled: dwaveConfigured,
+          },
+          local: {
+            configured: true,
+            status: PROVIDER_STATUS.READY,
+            hardwareEnabled: false,
+          },
+        },
       },
       ai: {
         provider: config.ai.provider,
