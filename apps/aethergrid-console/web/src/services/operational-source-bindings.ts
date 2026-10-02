@@ -18,6 +18,15 @@ const EMPTY_BINDINGS: OperationalSourceBindings = {
   updatedAt: null
 };
 
+
+export function operationalBindingScopeId(
+  latitude: number,
+  longitude: number
+): string {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return '';
+  return `coord:${latitude.toFixed(5)}:${longitude.toFixed(5)}`;
+}
+
 function boundedScopeId(value: unknown): string {
   return String(value ?? '')
     .replace(/[\u0000-\u001F\u007F]/gu, '')
