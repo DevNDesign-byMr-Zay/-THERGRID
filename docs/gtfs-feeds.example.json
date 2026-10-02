@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "feeds": [
+    {
+      "id": "example-city-transit",
+      "cityId": "example-city",
+      "agencyName": "Example Transit Agency",
+      "url": "https://transit.example.org/gtfs-realtime.pb",
+      "enabled": true,
+      "authHeaderEnv": "AETHERGRID_EXAMPLE_GTFS_AUTH"
+    }
+  ]
+}
