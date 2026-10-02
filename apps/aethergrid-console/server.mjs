@@ -6,6 +6,7 @@ import { createNwsAlertsProvider } from './providers/nws-alerts-provider.mjs';
 import { createNoaaNwpsHydrologyProvider } from './providers/noaa-nwps-provider.mjs';
 import { createEiaProvider } from './providers/eia-provider.mjs';
 import { createTransitRegistry } from './providers/transit-registry.mjs';
+import { loadTransitFeedConfig } from './providers/transit-feed-config.mjs';
 import { createDwaveProvider } from './providers/dwave-provider.mjs';
 import { createProviderRegistry } from './providers/provider-registry.mjs';
 import http from 'node:http';
@@ -48,7 +49,26 @@ const dwaveProvider = createDwaveProvider({
   solverUrl: providerRegistry.config.futureProviders.dwave.solverUrl,
 });
 
-const transitRegistry = createTransitRegistry();
+const transitFeedConfig = loadTransitFeedConfig(
+  providerRegistry.config.futureProviders.transit.feedsFile,
+  { env: process.env },
+);
+
+for (const feed of Object.values(transitFeedConfig.feeds)) {
+  providerRegistry.urlPolicy.addAllowedOrigin(feed.feedUrl);
+}
+
+const transitRegistry = createTransitRegistry({ feeds: transitFeedConfig.feeds });
+providerRegistry.health.updateStatus(
+  'gtfs-rt-registry',
+  transitFeedConfig.metadata.enabledFeedCount > 0 ? 'configured' : 'unconfigured',
+  {
+    message:
+      transitFeedConfig.metadata.enabledFeedCount > 0
+        ? `${transitFeedConfig.metadata.enabledFeedCount} GTFS-Realtime production feed(s) configured`
+        : 'No GTFS-Realtime production feeds configured',
+  },
+);
 
 const root = fileURLToPath(new URL('./', import.meta.url));
 const port = Number(providerRegistry.config.app.port);
@@ -1106,10 +1126,21 @@ const server = http.createServer(async (request, response) => {
     }
 
 if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime/providers') {
+      const runtimeMetadata = providerRegistry.getSafePublicRuntimeMetadata();
+      const safeRuntimeMetadata = {
+        ...runtimeMetadata,
+        transit: {
+          ...runtimeMetadata.transit,
+          configuredFeedCount: transitFeedConfig.metadata.configuredFeedCount,
+          enabledFeedCount: transitFeedConfig.metadata.enabledFeedCount,
+          cityCount: transitFeedConfig.metadata.cityCount,
+          configSource: transitFeedConfig.metadata.source,
+        },
+      };
       return json(
         response,
         200,
-        providerRegistry.redactor.redactValue(providerRegistry.getSafePublicRuntimeMetadata()),
+        providerRegistry.redactor.redactValue(safeRuntimeMetadata),
       );
     }
 
