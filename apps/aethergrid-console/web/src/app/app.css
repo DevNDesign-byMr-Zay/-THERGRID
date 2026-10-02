@@ -6252,3 +6252,76 @@ button {
 .hydrology-scene-badge[data-source-state='unavailable'] strong {
   color: #ff8e83;
 }
+
+
+.eia-fuel-mix {
+  display: grid;
+  gap: 5px;
+  padding: 7px 0 2px;
+}
+
+.eia-fuel-mix-head,
+.eia-fuel-row {
+  display: grid;
+  align-items: center;
+  gap: 6px;
+}
+
+.eia-fuel-mix-head {
+  grid-template-columns: 1fr auto;
+}
+
+.eia-fuel-mix-head span {
+  color: #61778a;
+  font-size: 6px;
+  letter-spacing: 0.08em;
+}
+
+.eia-fuel-mix-head strong {
+  color: #8da4b5;
+  font-size: 6px;
+}
+
+.eia-fuel-row {
+  grid-template-columns: minmax(64px, 0.9fr) minmax(48px, 1fr) auto;
+}
+
+.eia-fuel-row > span,
+.eia-fuel-row > strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 6px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eia-fuel-row > span {
+  color: #7f93a4;
+}
+
+.eia-fuel-row > strong {
+  color: #a9bac6;
+  font-weight: 600;
+}
+
+.eia-fuel-row > i {
+  position: relative;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.eia-fuel-row > i > b {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: block;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(112, 231, 255, 0.34), rgba(155, 124, 255, 0.6));
+}
+
+.eia-fuel-mix > small {
+  color: #556b7d;
+  font-size: 5px;
+  letter-spacing: 0.045em;
+}
