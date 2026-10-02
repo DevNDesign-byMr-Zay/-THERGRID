@@ -64,3 +64,27 @@ Future provider adapters (e.g., Cesium, Tomorrow.io, Overture, EIA, D-Wave) regi
 1. Schema additions in `env-schema.mjs`.
 2. A wrapped adapter invoking `getBreaker(id)`, `getRateLimiter(id)`, and `urlPolicy.validateUrl(...)`.
 3. Capability registration via `providerHealth.registerProvider(id, { name, capabilities, status })`.
+
+
+---
+
+## GTFS-Realtime Production Feed Registry
+
+Production GTFS-Realtime feeds are configured server-side with `AETHERGRID_GTFS_FEEDS_FILE`.
+
+The referenced JSON document uses schema version 1 and maps one enabled feed to each city ID supported by the current runtime. A maintained example is available at `docs/gtfs-feeds.example.json`.
+
+Authentication values are never embedded in the JSON. A feed may name an `authHeaderEnv` environment variable; the server resolves that variable at startup and keeps the resulting authorization value private.
+
+At startup ÆTHERGRID:
+
+1. validates the registry document;
+2. ignores disabled feed entries;
+3. resolves any authorization header from the named server environment variable;
+4. adds only the validated feed origins to the outbound URL allowlist;
+5. registers the feeds with the GTFS-Realtime decoder/runtime;
+6. reports only safe counts and configuration state through `/api/aethergrid/runtime/providers`.
+
+A missing registry path or missing registry file degrades to an unconfigured transit provider rather than making the application fail to start. Malformed configured documents fail validation so unsafe or ambiguous feeds are not silently accepted.
+
+The current production contract intentionally permits one enabled feed per city. Multi-feed aggregation remains a separate follow-up so it can be implemented explicitly without changing the established single-feed behavior or inventing cross-agency merge semantics.
