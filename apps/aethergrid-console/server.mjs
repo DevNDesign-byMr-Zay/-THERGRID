@@ -45,10 +45,45 @@ const noaaNwpsProvider = createNoaaNwpsHydrologyProvider({
 
 const dwaveProvider = createDwaveProvider({
   token: providerRegistry.config.futureProviders.dwave.token,
-  solverUrl: providerRegistry.config.futureProviders.dwave.solverUrl,
+  baseUrl: providerRegistry.config.futureProviders.dwave.baseUrl || providerRegistry.config.futureProviders.dwave.solverUrl,
+  solverUrl: providerRegistry.config.futureProviders.dwave.baseUrl || providerRegistry.config.futureProviders.dwave.solverUrl,
 });
 
-const transitRegistry = createTransitRegistry();
+function parseTransitFeedsConfig(rawJson, env = {}) {
+  const feeds = {};
+  if (rawJson && typeof rawJson === 'string' && rawJson.trim().length > 0) {
+    try {
+      const parsed = JSON.parse(rawJson);
+      if (parsed && typeof parsed === 'object') {
+        for (const [key, val] of Object.entries(parsed)) {
+          if (val && typeof val === 'object' && val.feedUrl) {
+            const feedId = String(key).toLowerCase().trim();
+            const headers = { ...(val.headers || {}) };
+            if (val.authHeaderRef && env[val.authHeaderRef]) {
+              headers['Authorization'] = env[val.authHeaderRef];
+            } else if (val.authHeader) {
+              headers['Authorization'] = val.authHeader;
+            }
+            feeds[feedId] = {
+              agencyName: val.agencyName || val.agency || feedId,
+              agency: val.agency || val.agencyName || feedId,
+              feedUrl: val.feedUrl,
+              gtfsRealtimeUrl: val.feedUrl,
+              headers,
+            };
+          }
+        }
+      }
+    } catch {
+      // Ignore invalid JSON
+    }
+  }
+  return feeds;
+}
+
+const transitRegistry = createTransitRegistry({
+  feeds: parseTransitFeedsConfig(providerRegistry.config.futureProviders.transit.feedsJson, process.env),
+});
 
 const root = fileURLToPath(new URL('./', import.meta.url));
 const port = Number(providerRegistry.config.app.port);

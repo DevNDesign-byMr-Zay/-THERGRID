@@ -100,6 +100,25 @@
 
 - Current package candidate: `0.1.3`. The `v0.1.2` release is the latest hosted milestone; this candidate is not published until the gated manual release workflow publishes it.
 
+## 0.1.4 — Unreleased — v4 provider runtime closure and production governance
+
+### Added
+
+- Added `apps/aethergrid-console/providers/coordinate-validator.mjs` enforcing valid latitude [-90, 90] and longitude [-180, 180] with HTTP 400 Bad Request client error responses for malformed input.
+- Added a server-side, configuration-driven GTFS transit feeds registry (`AETHERGRID_TRANSIT_FEEDS`) supporting agency feeds, headers, and secret references without hardcoded city claims.
+- Added a manually triggered `provider-acceptance.yml` GitHub Actions workflow (`workflow_dispatch`) for credential-backed live provider acceptance checks without executing hardware submissions or leaking log secrets.
+
+### Fixed
+
+- Harmonized D-Wave configuration contract across environment schema, provider config, server.mjs, and `dwave-provider.mjs` (`baseUrl` with `solverUrl` fallback).
+- Separated D-Wave status (`/problems/{id}/`) and answer (`/problems/{id}/answer/`) requests into independent governed executor calls and added `GET /api/aethergrid/quantum/dwave/jobs/:id/result`.
+- Governed NOAA NWPS hydrology metadata and stageflow requests independently, preserving truthful partial state if stageflow is unavailable.
+- Normalized Tomorrow.io weather realtime/forecast response structures with distinct `observedAt` and `retrievedAt` timestamps.
+- Normalized U.S. EIA fuel-mix missing/invalid generation values to `null` (never zero) and enforced strict region code validation.
+- Preserved complete NWS active hazard alert fields (`instruction`, `onset`, `affectedZones`, GeoJSON `geometry`) and preserved zero-alert responses as `count: 0, live: true`.
+- Refined `/api/aethergrid/runtime/providers` quantum status aggregation so an unconfigured IBM provider entry cannot mask an active D-Wave provider.
+- Aligned Tomorrow.io declared capabilities with implemented runtime methods (`['weather', 'forecast']`).
+
 ## 0.1.1 — 2026-09-24 — post-release hardening
 
 ### Added
