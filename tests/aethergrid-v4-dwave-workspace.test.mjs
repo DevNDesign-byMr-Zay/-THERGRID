@@ -69,15 +69,17 @@ test('v4 D-Wave workspace has dedicated compact operator styling', async () => {
   assert.match(styles, /\.dwave-result/u);
 });
 
-
 test('v4 D-Wave discovery failure does not block IBM or local gate-model startup', async () => {
   const panel = await text('apps/aethergrid-console/web/src/components/QuantumPanel.tsx');
 
-  assert.match(panel, /Promise\.all\(\[\s*loadQuantumRuntime\(\),\s*loadQuantumBackends\(\),\s*loadQuantumJobs\(\)\s*\]\)/u);
+  assert.match(
+    panel,
+    /Promise\.all\(\[\s*loadQuantumRuntime\(\),\s*loadQuantumBackends\(\),\s*loadQuantumJobs\(\)\s*\]\)/u,
+  );
   assert.match(panel, /void loadDwaveSolvers\(\)/u);
   assert.match(panel, /setDwaveError/u);
   assert.doesNotMatch(
     panel,
-    /Promise\.all\(\[[\s\S]{0,220}loadDwaveSolvers\(\)[\s\S]{0,120}\]\)/u
+    /Promise\.all\(\[[\s\S]{0,220}loadDwaveSolvers\(\)[\s\S]{0,120}\]\)/u,
   );
 });
