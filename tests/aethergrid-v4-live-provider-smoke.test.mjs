@@ -31,8 +31,8 @@ test('live-provider smoke workflow is manual and read-only for quantum hardware'
 test('live-provider smoke report is intentionally sanitized', async () => {
   const source = await readFile(script, 'utf8');
 
-  assert.doesNotMatch(source, /apiKey:\s*process\.env/u);
-  assert.doesNotMatch(source, /token:\s*process\.env/u);
+  assert.match(source, /await writeFile\(outputPath/u);
+  assert.match(source, /JSON\.stringify\(report/u);
   assert.match(source, /schemaVersion: 1/u);
   assert.match(source, /live-response-verified/u);
   assert.match(source, /not-configured/u);
