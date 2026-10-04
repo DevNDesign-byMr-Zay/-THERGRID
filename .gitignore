@@ -13,6 +13,7 @@ dist/
 .env
 .env.*
 !.env.example
+!.env.secrets.example
 
 # Editor / OS
 .DS_Store
@@ -22,3 +23,11 @@ dist/
 # ÆTHERGRID local runtime persistence
 .aethergrid-data/
 apps/aethergrid-console/.aethergrid-data/
+
+# Explicit local secret material
+.env.secrets
+**/.env.secrets
+secrets.env
+**/secrets.env
+.aethergrid-secrets/
+apps/aethergrid-console/.aethergrid-secrets/
