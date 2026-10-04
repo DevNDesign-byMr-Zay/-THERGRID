@@ -1,7 +1,7 @@
 {
   "config": {
-    "configFile": "/workspace/scratch/da0166acc61a/thergrid/apps/aethergrid-console/web/playwright.config.ts",
-    "rootDir": "/workspace/scratch/da0166acc61a/thergrid/apps/aethergrid-console/web/tests",
+    "configFile": "./apps/aethergrid-console/web/playwright.config.ts",
+    "rootDir": "./apps/aethergrid-console/web/tests",
     "forbidOnly": false,
     "fullyParallel": false,
     "globalSetup": null,
@@ -16,7 +16,7 @@
     "preserveOutput": "always",
     "projects": [
       {
-        "outputDir": "/workspace/scratch/da0166acc61a/thergrid/apps/aethergrid-console/web/test-results",
+        "outputDir": "./apps/aethergrid-console/web/test-results",
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
@@ -24,7 +24,7 @@
         },
         "id": "",
         "name": "",
-        "testDir": "/workspace/scratch/da0166acc61a/thergrid/apps/aethergrid-console/web/tests",
+        "testDir": "./apps/aethergrid-console/web/tests",
         "testIgnore": [],
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
@@ -55,10 +55,104 @@
     "updateSnapshots": "missing",
     "updateSourceMethod": "patch",
     "version": "1.58.2",
-    "workers": 4,
+    "workers": 1,
     "webServer": null
   },
   "suites": [
+    {
+      "title": "cesium-acceptance.spec.ts",
+      "file": "cesium-acceptance.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "credentialed Cesium globe and city descent",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "location": {
+                    "file": "./apps/aethergrid-console/web/tests/cesium-acceptance.spec.ts",
+                    "line": 4,
+                    "column": 8
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "skipped",
+                  "duration": 83,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-04T11:06:14.476Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "location": {
+                        "file": "./apps/aethergrid-console/web/tests/cesium-acceptance.spec.ts",
+                        "line": 4,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "c085438376125db83d7a-005d5ce9cf3febd6e12d",
+          "file": "cesium-acceptance.spec.ts",
+          "line": 3,
+          "column": 1
+        },
+        {
+          "title": "Cesium static assets keep their package-relative URLs",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 56,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-04T11:06:14.618Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c085438376125db83d7a-f573470d314fa4b844d8",
+          "file": "cesium-acceptance.spec.ts",
+          "line": 36,
+          "column": 1
+        }
+      ]
+    },
     {
       "title": "command-center.spec.ts",
       "file": "command-center.spec.ts",
@@ -81,12 +175,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 5288,
+                  "duration": 10919,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-04T05:41:28.506Z",
+                  "startTime": "2026-10-04T11:06:14.704Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -96,7 +190,7 @@
           ],
           "id": "90127bfc0141c8431dbe-1da8c97cb235e6164184",
           "file": "command-center.spec.ts",
-          "line": 6,
+          "line": 13,
           "column": 3
         },
         {
@@ -115,12 +209,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 5209,
+                  "duration": 13066,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-04T05:41:33.888Z",
+                  "startTime": "2026-10-04T11:06:25.632Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -130,7 +224,7 @@
           ],
           "id": "90127bfc0141c8431dbe-18a2c5ee051737aa4293",
           "file": "command-center.spec.ts",
-          "line": 6,
+          "line": 13,
           "column": 3
         },
         {
@@ -149,12 +243,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 3492,
+                  "duration": 10241,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-04T05:41:39.114Z",
+                  "startTime": "2026-10-04T11:06:38.707Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -164,7 +258,7 @@
           ],
           "id": "90127bfc0141c8431dbe-496d1391f64d6af0a583",
           "file": "command-center.spec.ts",
-          "line": 6,
+          "line": 13,
           "column": 3
         },
         {
@@ -183,12 +277,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 5135,
+                  "duration": 15125,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-04T05:41:42.621Z",
+                  "startTime": "2026-10-04T11:06:48.958Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -198,7 +292,7 @@
           ],
           "id": "90127bfc0141c8431dbe-db5a67c47840715e7acb",
           "file": "command-center.spec.ts",
-          "line": 6,
+          "line": 13,
           "column": 3
         },
         {
@@ -217,12 +311,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 7089,
+                  "duration": 14097,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-04T05:41:47.778Z",
+                  "startTime": "2026-10-04T11:07:04.095Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -232,7 +326,7 @@
           ],
           "id": "90127bfc0141c8431dbe-177e456d501f50f2051f",
           "file": "command-center.spec.ts",
-          "line": 6,
+          "line": 13,
           "column": 3
         },
         {
@@ -251,12 +345,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 6249,
+                  "duration": 8284,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-04T05:41:54.890Z",
+                  "startTime": "2026-10-04T11:07:18.207Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -266,7 +360,7 @@
           ],
           "id": "90127bfc0141c8431dbe-4616a187cf1ddbb8eb23",
           "file": "command-center.spec.ts",
-          "line": 6,
+          "line": 13,
           "column": 3
         },
         {
@@ -285,12 +379,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 2810,
+                  "duration": 6096,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-04T05:42:01.153Z",
+                  "startTime": "2026-10-04T11:07:26.502Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -300,7 +394,7 @@
           ],
           "id": "90127bfc0141c8431dbe-ac651a2aea58bae62a9b",
           "file": "command-center.spec.ts",
-          "line": 51,
+          "line": 58,
           "column": 1
         },
         {
@@ -319,12 +413,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 2690,
+                  "duration": 8268,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-04T05:42:03.975Z",
+                  "startTime": "2026-10-04T11:07:32.608Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -334,7 +428,7 @@
           ],
           "id": "90127bfc0141c8431dbe-76a5e4e2b72842960f15",
           "file": "command-center.spec.ts",
-          "line": 62,
+          "line": 69,
           "column": 1
         },
         {
@@ -353,12 +447,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 4000,
+                  "duration": 23015,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-04T05:42:06.698Z",
+                  "startTime": "2026-10-04T11:07:40.885Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -368,7 +462,7 @@
           ],
           "id": "90127bfc0141c8431dbe-83720cde8e9718e70a3b",
           "file": "command-center.spec.ts",
-          "line": 72,
+          "line": 79,
           "column": 1
         },
         {
@@ -387,12 +481,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 5339,
+                  "duration": 19042,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-04T05:42:10.715Z",
+                  "startTime": "2026-10-04T11:08:03.912Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -402,7 +496,7 @@
           ],
           "id": "90127bfc0141c8431dbe-ded65bbef2a532b31efe",
           "file": "command-center.spec.ts",
-          "line": 88,
+          "line": 100,
           "column": 1
         },
         {
@@ -421,12 +515,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 4598,
+                  "duration": 26509,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-04T05:42:16.067Z",
+                  "startTime": "2026-10-04T11:08:22.966Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -436,7 +530,7 @@
           ],
           "id": "90127bfc0141c8431dbe-284bd3b82ed4deaa5509",
           "file": "command-center.spec.ts",
-          "line": 103,
+          "line": 116,
           "column": 1
         },
         {
@@ -455,12 +549,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 5060,
+                  "duration": 17233,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-04T05:42:20.676Z",
+                  "startTime": "2026-10-04T11:08:49.490Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -470,7 +564,7 @@
           ],
           "id": "90127bfc0141c8431dbe-8119274c89f7f89dc3b8",
           "file": "command-center.spec.ts",
-          "line": 121,
+          "line": 136,
           "column": 1
         },
         {
@@ -489,12 +583,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 3546,
+                  "duration": 8392,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-04T05:42:25.755Z",
+                  "startTime": "2026-10-04T11:09:06.733Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -504,7 +598,7 @@
           ],
           "id": "90127bfc0141c8431dbe-5b4986e1cdf266a2695c",
           "file": "command-center.spec.ts",
-          "line": 137,
+          "line": 152,
           "column": 1
         }
       ]
@@ -512,10 +606,10 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-10-04T05:41:26.124Z",
-    "duration": 64666.746999999996,
-    "expected": 13,
-    "skipped": 0,
+    "startTime": "2026-10-04T11:06:12.750Z",
+    "duration": 183219.561,
+    "expected": 14,
+    "skipped": 1,
     "unexpected": 0,
     "flaky": 0
   }

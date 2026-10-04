@@ -5,6 +5,7 @@ export default defineConfig({
   timeout: 45_000,
   use: {
     baseURL: 'http://127.0.0.1:5174', screenshot: 'only-on-failure',
+    proxy: process.env.AETHERGRID_TEST_PROXY ? { server: process.env.AETHERGRID_TEST_PROXY, bypass: '127.0.0.1,localhost' } : undefined,
     launchOptions: process.env.AETHERGRID_TEST_CHROMIUM ? {
       executablePath: process.env.AETHERGRID_TEST_CHROMIUM,
       args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader']

@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test';
 
+const requireCloudAI = process.env.AETHERGRID_TEST_REQUIRE_CLOUD_AI === '1';
+function verifyCloudRuntime(runtime: { provider: string; model: string; fallbackUsed: boolean }) {
+  expect(runtime.provider).toBe('openai-compatible');
+  expect(runtime.model).toBe('openai/gpt-oss-20b');
+  expect(runtime.fallbackUsed).toBe(false);
+}
+
 const resolutions = [[1536, 1024], [1440, 900], [1366, 768], [1024, 768], [768, 1024], [390, 844]];
 
 for (const [width, height] of resolutions) {
@@ -70,6 +77,7 @@ test('spatial handoff exits the active secondary inspector', async ({ page }) =>
 });
 
 test('TEAM retains real specialist contributions and provider truth', async ({ page }) => {
+  if (requireCloudAI) test.setTimeout(120_000);
   await page.setViewportSize({ width: 1536, height: 1024 });
   await page.goto('/');
   await page.getByRole('navigation', { name: 'Product modes' }).getByRole('button', { name: 'AI', exact: true }).click();
@@ -78,6 +86,10 @@ test('TEAM retains real specialist contributions and provider truth', async ({ p
   await page.getByRole('button', { name: 'SEND', exact: true }).click();
   const response = await responsePromise;
   const result = await response.json();
+  if (requireCloudAI) {
+    verifyCloudRuntime(result.runtime);
+    for (const contribution of result.contributions) verifyCloudRuntime(contribution.runtime);
+  }
   await expect(page.getByText('Specialist contributions · 3', { exact: true })).toBeVisible();
   await page.getByText('Specialist contributions · 3', { exact: true }).click();
   await expect(page.locator('.agent-contributions article')).toHaveCount(3);
@@ -92,6 +104,7 @@ test('global renderer remains usable with explicit engine provenance', async ({ 
   await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer-ready', 'true', { timeout: 15_000 });
   const engine = await page.locator('.spatial-shell').getAttribute('data-renderer');
   expect(['cesium', 'native-webgl']).toContain(engine);
+  if (process.env.AETHERGRID_TEST_REQUIRE_CESIUM === '1') expect(engine).toBe('cesium');
   await expect(page.locator('.spatial-canvas canvas')).toBeVisible();
   await expect(page.locator('.viewport-status')).toContainText(engine === 'cesium' ? 'CESIUM WORLD' : 'NATIVE FALLBACK');
   await page.getByText('Renderer tools', { exact: true }).click();
@@ -101,6 +114,7 @@ test('global renderer remains usable with explicit engine provenance', async ({ 
 });
 
 test('specialist conversations consume the actual runtime contract', async ({ page }) => {
+  if (requireCloudAI) test.setTimeout(120_000);
   await page.setViewportSize({ width: 1536, height: 1024 });
   await page.goto('/');
   await page.getByRole('navigation', { name: 'Product modes' }).getByRole('button', { name: 'AI', exact: true }).click();
@@ -112,6 +126,7 @@ test('specialist conversations consume the actual runtime contract', async ({ pa
     const response = await pending;
     expect(response.ok()).toBeTruthy();
     const result = await response.json();
+    if (requireCloudAI) verifyCloudRuntime(result.runtime);
     await expect(page.locator('.agent-runtime')).toContainText(result.runtime.provider);
     await expect(page.locator('.agent-runtime')).toContainText(result.runtime.fallbackUsed ? 'FALLBACK' : 'PROVIDER');
     await expect(page.locator('.agent-message.assistant')).toBeVisible();
@@ -154,5 +169,5 @@ test('compact drawers contain focus and switch exclusively', async ({ page }) =>
   await page.getByRole('navigation', { name: 'Product modes' }).getByRole('button', { name: 'AI', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Intelligence workspace' })).toBeVisible();
   await expect(drawer).not.toBeVisible();
-  await expect(page.locator('[aria-modal="true"]')).toHaveCount(1);
+  await expect(page.locator('#aethergrid-navigation[aria-modal="true"], #aethergrid-intelligence-rail[aria-modal="true"]')).toHaveCount(1);
 });

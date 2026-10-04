@@ -8,54 +8,57 @@ Canonical ÆTHERGRID, AUREN, VÆLON, and SOLVÆR assets restored. The shell fits
 
 The exact resolutions exercised are **1536×1024, 1440×900, 1366×768, 1024×768, 768×1024, and 390×844**. Automated assertions check `document.documentElement.scrollHeight <= innerHeight`, `document.body.scrollHeight <= innerHeight`, and body width <= viewport width at all six sizes. At 1536×1024, both initial rail content surfaces have at most one pixel of rounding overflow. The stage occupies over 45% of desktop width and over 50% of viewport height. Mobile tools may scroll horizontally inside their bounded toolbar; the page does not scroll.
 
-Screenshots in this directory are actual automated browser captures. A native fallback canvas is visible because Cesium ion is unconfigured; they are **not proof of a real globe**. A pending badge is also not a live-provider assertion.
+Screenshots are actual automated browser captures. The latest credentialed surface initializes the Cesium engine but remains degraded: external imagery/terrain/building retrieval is not verified. The visible geodetic grid is **not proof of source imagery or a source-backed city**. A pending badge is also not a live-provider assertion.
 
 ## Runtime evidence
 
-Checks used the real application server and real API responses, with no mocked provider replies. Public endpoints were exercised separately from the browser suite. Runtime timestamps below describe the check, not guaranteed future availability.
+Checks used the real application server and provider APIs. Timestamps describe each check, not guaranteed future availability. Sanitized receipts and metadata are in [provider-activation.json](provider-activation.json).
 
 | Capability | Observed result | Remaining requirement |
 | --- | --- | --- |
-| Cesium / globe / city descent | Public config: native-webgl, token absent, reality unavailable. Browser canvas ready; explicit native fallback provenance. | Restricted Cesium ion token; then validate actual globe, imagery, terrain and descent. |
-| Open-Meteo weather | HTTP 200, source live true; NYC model time 2026-10-04 01:15 UTC, fetched approximately 05:24 UTC. | Repeat with deployment credentials/configuration. Weather model time remains separate from fetch time. |
-| Open-Meteo forecast | HTTP 200; hourly forecast retrieved. | Forecast is model output, not observation. |
-| AQI | CAMS/Open-Meteo live retrieval; US AQI 44 at model time 01:00 UTC. | Preserve model-time provenance. |
-| USGS | Successful live retrieval; zero nearby events. | Zero events is not a provider failure. |
-| NWS | HTTP 200, live receipt; zero active alerts in tested region. | Preserve receipt. |
-| Elevation | HTTP 200 Open-Meteo DEM grid. | Not a Cesium terrain or photorealistic-city validation. |
-| NOAA NWPS | Unconfigured: explicit gauge binding required. | Real station/gauge selection; no invented binding. |
-| Tomorrow.io | Not live validated. | Missing credential. |
-| EIA | NYIS request reports unconfigured, empty fuel mix, fallback true. | Missing credential. |
-| Transitland | No successful discovery validation. | Missing credential and backend discovery contract confirmation. |
-| Direct GTFS-Realtime | Zero configured feeds; empty vehicles and explicit unconfigured status. | Verified regional feed registry; Transitland does not itself replace realtime feeds. |
-| AUREN / VÆLON / SOLVÆR / TEAM | All real application endpoints exercised; local fallback metadata shown. TEAM returns three contributions. | Groq cloud execution for all four is **not validated**; API key unavailable. |
-| Local quantum | Actual simulator request; local provider and no hardware execution. | IBM/D-Wave remain separate paths. |
-| IBM Quantum | Unconfigured; account instance/CRN not verified. | API key and service/instance CRN. No authenticated IBM account evidence was available. |
-| OSM city geometry | Backend returned local-fallback after too few Overpass footprints, including generated buildings. | Frontend withholds this geometry. Jules-owned source retrieval needs successful real footprints. |
+| Cesium | Authenticated terrain endpoint HTTP 200, type TERRAIN. Engine initializes. Packaged terrain JSON, JPEG and worker paths pass their actual HTTP content checks after fixing static-copy paths. | Credentialed globe/descent acceptance fails: managed headless browser external requests report `ERR_CERT_AUTHORITY_INVALID`. Imagery, terrain tile and building tile success are not claimed. Repeat in a browser with the managed network trust correctly configured. |
+| Tomorrow.io | Existing safe smoke: live response, observed 2026-10-04 06:22:00 UTC, 6979ms. | UI baseline remains Open-Meteo; Tomorrow live smoke is separate from integrated UI weather. |
+| EIA | PJM historical smoke passed. NYIS live response at 11:00 UTC, 24 electricity-mix records, 13884ms. | Preserve source/model/cache timestamps in the integrated UI. |
+| Transitland | Authenticated geographic feed query centered on Midtown, radius 15km: HTTP 200, 10 real New York-area feeds at 11:06 UTC. Initial text search returned zero. | Jules-owned backend discovery integration and verified realtime vehicle-feed registry. Static-feed discovery does not validate realtime vehicles. |
+| Direct GTFS-Realtime | Zero registered feeds, explicit unconfigured status. | Verified regional feed bindings. No vehicle positions fabricated. |
+| AUREN / VÆLON / SOLVÆR | Actual application POSTs HTTP 200 at 10:53 UTC, provider openai-compatible, model openai/gpt-oss-20b, fallbackUsed false, request IDs and receipts retained. | Groq availability remains subject to account rate limits. |
+| TEAM | Actual application POST HTTP 200 with three real specialist contributions. Initial run hit Groq's 8000 tokens/minute limit and truthfully reported partial fallback. | Fresh-quota retest at 11:26 UTC passed: TEAM synthesis and all three specialist contributions used Groq, fallbackUsed false. Rate limits can still cause later requests to fall back. |
+| Open-Meteo weather / forecast / AQI | Real server/browser retrieval succeeded. Latest UI screenshots show weather and CAMS model-time provenance. | Forecast and CAMS values are modeled data, not direct observation. |
+| USGS / NWS / elevation | Earlier real API checks succeeded, including zero nearby seismic events and zero active NWS alerts. DEM retrieved separately. | DEM success is not Cesium terrain validation. |
+| NOAA NWPS | Gauge not configured. | Real station binding; no invented gauge selection. |
+| IBM Quantum | API key installed. Read-only IAM exchange returned HTTP 405, text/html; instance discovery could not continue. | Verified account instance/service CRN and successful backend discovery. No CRN invented or paid instance created. |
+| Local quantum | Actual Bell simulator request; local provider, no hardware execution. | IBM and D-Wave remain separate paths; no hardware job submitted. |
+| D-Wave | Credential unavailable. | D-Wave token, safe discovery first. |
+| OSM geometry | Overpass retrieval returned local fallback after too few real footprints. | Generated city buildings are withheld. Jules-owned source retrieval needs successful real footprints. |
 
 ## Secrets and activation
 
-GitHub secrets are **not installed**. After the user signed in on 2026-10-04, the authenticated Actions settings page confirmed **“This repository has no secrets.”** The environment-secrets section also reports no secrets. Repository secret names verified present: **none**. The brief references earlier credentials, but no credential values are available in this conversation. A new-secret form is prepared for secure user entry. The requested names are:
+All six supplied credentials are saved in encrypted GitHub **repository Actions secrets**. The authenticated table confirmed these names; the Groq value was replaced with the exact supplied value and GitHub displayed “Secret updated” at approximately 11:24 UTC. [Names-only proof](repository-secret-names.jpg) contains no values.
 
-- `AETHERGRID_OPENAI_API_KEY`
+- `AETHERGRID_OPENAI_API_KEY` — supplied Groq key
 - `AETHERGRID_CESIUM_ION_TOKEN`
 - `AETHERGRID_TOMORROW_IO_API_KEY`
 - `AETHERGRID_EIA_API_KEY`
 - `AETHERGRID_TRANSIT_API_KEY`
 - `AETHERGRID_IBM_QUANTUM_API_KEY`
-- `AETHERGRID_IBM_QUANTUM_SERVICE_CRN` (only if the real account instance supplies it)
 
-The ignored local environment contains only non-secret provider selection settings: OpenAI-compatible Groq endpoint/model, Transitland base URL, and the Open-Meteo baseline. No private credential was copied into source, public configuration, reports, or screenshots.
+`AETHERGRID_IBM_QUANTUM_SERVICE_CRN` remains absent because no verified real instance was obtained. The ignored local runtime file is mode 600 and was used for authorized checks. No credential value is in committed source, acceptance JSON, screenshots or this report. GitHub Actions secrets do not automatically inject credentials into a deployed application; production runtime wiring remains a separate activation step.
+
+## Activation fixes
+
+A real Groq response rejected the unsupported `context` property on a chat message. The narrow OpenAI-compatible transport fix sends only `role` and `content`; spatial context remains embedded in the existing system message, and local fallback retains its rich context. The regression fake provider rejects unsupported message properties and failed before the fix, then passed after it. Ollama and provider adapters are unchanged.
+
+Vite static-copy v4 retained the full package path beneath `/cesium`, causing terrain JSON, sky textures and worker URLs to return HTML. `rename.stripBase: 5` now preserves paths relative to each Cesium asset group. Actual HTTP content checks guard the three resource classes. The drawer test scopes exclusive modal counting to the workspace drawers because Cesium retains a hidden attribution dialog in the DOM.
 
 ## Verification and limits
 
 The committed browser suite covers six viewport sizes, exclusive workspaces, inspector-to-analysis handoff, real TEAM and individual agent responses, ready canvas/provenance, local quantum, and responsive keyboard/drawer containment. It guards quantum acceptance so hardware providers are never submitted through this test. Development and compiled Vite preview runs are separate; the preview uses the existing API proxy. The repository's production server still serves its maintained existing console; this change does not claim a deployed v4 frontend.
 
-Root repository tests, lint, typecheck, strict renderer typecheck, applicable Prettier check, web typecheck, and web production build were run. **474/474 root tests, 13/13 compiled-preview browser tests, and 12/12 development browser tests passed.** The final compact-drawer regression also passed in its targeted compiled-preview run. Tests ran under Node 24.19.0 in the managed runtime; the repository requests Node 22. GitHub engineering CI, CodeQL, and the v4 web build subsequently passed at frontend commit `46402d36ece3712f1f8aaeb40c9c2c9bfaabd956`, including the Node 22 web workflow. Browser checks used headless Chromium with SwiftShader; no native GPU or cloud-browser production acceptance is claimed. The Cesium bundle still triggers the existing large-chunk warning.
+Root repository tests, lint, typecheck, strict renderer typecheck, applicable Prettier check, web typecheck, and web production build were run. **474/474 root tests and 14 compiled-preview browser tests passed in the final activation run; one opt-in credentialed Cesium source test was skipped in that run and failed separately for the external certificate blocker.** The earlier frontend run passed 12 development browser tests. The two targeted AI adapter regression tests also passed. Tests ran under Node 24.19.0 in the managed runtime; the repository requests Node 22. GitHub engineering CI, CodeQL, and the v4 web build subsequently passed at frontend commit `46402d36ece3712f1f8aaeb40c9c2c9bfaabd956`, including the Node 22 web workflow. Browser checks used headless Chromium with SwiftShader; no native GPU or cloud-browser production acceptance is claimed. The Cesium bundle still triggers the existing large-chunk warning.
 
 The dashboard reference WebP in the repository is corrupt and cannot be decoded; canonical brand assets decode correctly. A valid reference is needed for pixel-level reference comparison.
 
-Backend follow-up for Jules: expose source-backed Transitland discovery results and verified realtime feed bindings; recover real OSM footprints; provide safe per-provider live-verification timestamps, request duration, cache age and fallback/error metadata (including Tomorrow/Transitland). Current readiness summaries alone cannot prove those capabilities live. The frontend consumes existing contracts without rewriting provider adapters, IBM, D-Wave, or registry internals.
+Backend follow-up for Jules: expose source-backed Transitland discovery results and verified realtime feed bindings; recover real OSM footprints; provide safe per-provider live-verification timestamps, request duration, cache age and fallback/error metadata (including Tomorrow/Transitland). Current readiness summaries alone cannot prove those capabilities live. The frontend consumes existing contracts; only the proven OpenAI chat transport contract was corrected. Provider adapters, IBM, D-Wave and registry internals are unchanged.
 
 ## Captures
 
@@ -66,3 +69,7 @@ Backend follow-up for Jules: expose source-backed Transitland discovery results 
 - [command-center-390x844.png](command-center-390x844.png)
 - [command-center-768x1024.png](command-center-768x1024.png)
 - [global-renderer-1536x1024.png](global-renderer-1536x1024.png)
+
+- [cesium-global-1536x1024.png](cesium-global-1536x1024.png) — degraded engine, source acceptance blocked
+- [cesium-city-1536x1024.png](cesium-city-1536x1024.png) — not source-backed city acceptance
+- [repository-secret-names.jpg](repository-secret-names.jpg) — six encrypted secret names
