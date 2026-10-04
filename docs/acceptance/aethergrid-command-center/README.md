@@ -35,7 +35,7 @@ Checks used the real application server and real API responses, with no mocked p
 
 ## Secrets and activation
 
-GitHub secrets were **not installed**. The GitHub settings browser was signed out; repository secret administration could not be verified. The brief references earlier credentials, but no credential values are available in this conversation. Existing secret names are **unknown**, not confirmed absent. The requested names are:
+GitHub secrets are **not installed**. After the user signed in on 2026-10-04, the authenticated Actions settings page confirmed **“This repository has no secrets.”** The environment-secrets section also reports no secrets. Repository secret names verified present: **none**. The brief references earlier credentials, but no credential values are available in this conversation. A new-secret form is prepared for secure user entry. The requested names are:
 
 - `AETHERGRID_OPENAI_API_KEY`
 - `AETHERGRID_CESIUM_ION_TOKEN`
@@ -51,7 +51,7 @@ The ignored local environment contains only non-secret provider selection settin
 
 The committed browser suite covers six viewport sizes, exclusive workspaces, inspector-to-analysis handoff, real TEAM and individual agent responses, ready canvas/provenance, local quantum, and responsive keyboard/drawer containment. It guards quantum acceptance so hardware providers are never submitted through this test. Development and compiled Vite preview runs are separate; the preview uses the existing API proxy. The repository's production server still serves its maintained existing console; this change does not claim a deployed v4 frontend.
 
-Root repository tests, lint, typecheck, strict renderer typecheck, applicable Prettier check, web typecheck, and web production build were run. **474/474 root tests, 13/13 compiled-preview browser tests, and 12/12 development browser tests passed.** The final compact-drawer regression also passed in its targeted compiled-preview run. Tests ran under Node 24.19.0 in the managed runtime; the repository requests Node 22, so CI under the supported runtime remains required. Browser checks used headless Chromium with SwiftShader; no native GPU or cloud-browser production acceptance is claimed. The Cesium bundle still triggers the existing large-chunk warning.
+Root repository tests, lint, typecheck, strict renderer typecheck, applicable Prettier check, web typecheck, and web production build were run. **474/474 root tests, 13/13 compiled-preview browser tests, and 12/12 development browser tests passed.** The final compact-drawer regression also passed in its targeted compiled-preview run. Tests ran under Node 24.19.0 in the managed runtime; the repository requests Node 22. GitHub engineering CI, CodeQL, and the v4 web build subsequently passed at frontend commit `46402d36ece3712f1f8aaeb40c9c2c9bfaabd956`, including the Node 22 web workflow. Browser checks used headless Chromium with SwiftShader; no native GPU or cloud-browser production acceptance is claimed. The Cesium bundle still triggers the existing large-chunk warning.
 
 The dashboard reference WebP in the repository is corrupt and cannot be decoded; canonical brand assets decode correctly. A valid reference is needed for pixel-level reference comparison.
 
