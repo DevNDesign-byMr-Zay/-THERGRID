@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { BRAND } from '../components/brand';
+import { useCommandDrawer } from '../hooks/use-command-drawer';
 
 import {
   AgentDock,
@@ -292,9 +294,22 @@ export function App() {
   const [searchValue, setSearchValue] = useState('');
   const [searchError, setSearchError] = useState<string | null>(null);
   const [intelOpen, setIntelOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+  const [navigationTab, setNavigationTab] = useState('world');
+  const [inspector, setInspector] = useState('overview');
+  const [productMode, setProductMode] = useState('GRID');
+  const navigationDrawer = useCommandDrawer(navOpen, () => setNavOpen(false));
+  const intelligenceDrawer = useCommandDrawer(intelOpen, () => setIntelOpen(false));
   const [intelWorkspace, setIntelWorkspace] = useState<
     'context' | 'operations' | 'analysis' | 'ai' | 'scenario' | 'quantum' | 'evidence' | 'system'
   >('context');
+  const openIntelligence = () => { setNavOpen(false); setIntelOpen(true); };
+  const showIntelligence = (workspace: typeof intelWorkspace) => {
+    setInspector('overview'); setIntelWorkspace(workspace); openIntelligence();
+  };
+  useEffect(() => {
+    setProductMode(scope === 'world' ? 'GLOBAL' : visualMode === 'holographic' ? 'HOLOGRAPHIC' : 'GRID');
+  }, [scope, visualMode]);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [atmosphere, setAtmosphere] = useState<AtmosphericOverlaySnapshot | null>(null);
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
@@ -544,6 +559,9 @@ export function App() {
 
     void spatialRequest
       .then((bundle) => {
+        if (bundle.power.fallback || bundle.identity.sourceProvider === 'local-fallback') {
+          throw new Error('Mapped city geometry unavailable · modeled fallback withheld.');
+        }
         setPowerOverlay(bundle.power);
         setIlluminationOverlay(bundle.illumination);
         setSemanticOverlays(bundle.semantics);
@@ -771,7 +789,7 @@ export function App() {
     showWorld: () => setScope('world'),
     showCity: () => setScope('city'),
     goLive: () => clock.goLive(),
-    toggleIntel: () => setIntelOpen((open) => !open)
+    toggleIntel: () => { setNavOpen(false); setIntelOpen((open) => !open); }
   });
 
   const navigateSearch = (value: string) => {
@@ -1204,8 +1222,7 @@ export function App() {
         `Entity relationship: ${entityRelation}. Mutually available numeric changes: ${deltas || 'none'}. ` +
         'Use the active spatial context and provenance. Distinguish observation from modeled context, do not infer causation from correlation, identify missing/non-comparable fields, and suggest evidence needed before an operator decision.'
     }));
-    setIntelWorkspace('ai');
-    setIntelOpen(true);
+    showIntelligence('ai');
   };
 
   const analyzeEntityDossier = (dossier: SpatialEntityDossier) => {
@@ -1227,8 +1244,7 @@ export function App() {
         `Matching captured frames: ${dossier.matchingObservations.map((item) => item.slot).join(', ') || 'none'}. ` +
         'Treat the dossier as non-authoritative operator analysis. Separate entity-specific facts from surrounding context, preserve missing fields, do not infer a GERS join or causation where none is proven, and identify the next evidence needed before an operator decision.'
     }));
-    setIntelWorkspace('ai');
-    setIntelOpen(true);
+    showIntelligence('ai');
   };
   const locateSpatialIncident = (incident: SpatialIncident) => {
     setSelection(null);
@@ -1243,7 +1259,7 @@ export function App() {
       custom: true
     });
     setScope('city');
-    setIntelOpen(true);
+    openIntelligence();
   };
 
   const analyzeSpatialIncident = (incident: SpatialIncident) => {
@@ -1257,8 +1273,7 @@ export function App() {
         `Operator note: ${incident.note || 'none'}. ` +
         'Treat this strictly as a non-authoritative operator annotation. Do not treat its severity/status as provider-confirmed fact, do not infer causation, and identify what source-backed evidence would be required to verify or dismiss the concern.'
     }));
-    setIntelWorkspace('ai');
-    setIntelOpen(true);
+    showIntelligence('ai');
   };
   const locateEntityDossier = (dossier: SpatialEntityDossier) => {
     const { latitude, longitude } = dossier.entity.position;
@@ -1277,7 +1292,7 @@ export function App() {
       custom: true
     });
     setScope('city');
-    setIntelOpen(true);
+    openIntelligence();
   };
   const analyzeSpatialInvestigation = (
     investigation: SpatialInvestigation
@@ -1302,8 +1317,7 @@ export function App() {
         `Operator hypotheses: ${hypotheses || 'none'}. Open questions: ${openQuestions || 'none'}. ` +
         'Treat every hypothesis assessment as a human-entered analytical judgment, not a verified finding. Treat local incidents and workset geometry as non-authoritative operator context. Use provenance-ledger references only as pointers to evidence that must be inspected independently. Separate confirmed observations from assumptions, contradictions, uncertainty and missing evidence before suggesting next investigative steps.'
     }));
-    setIntelWorkspace('ai');
-    setIntelOpen(true);
+    showIntelligence('ai');
   };
   const activateOperatorScenario = (scenario: OperatorScenario) => {
     const comparison = compareOperatorScenario(scenario);
@@ -1315,8 +1329,7 @@ export function App() {
       clock.setMode('scenario', scenario.id);
       clock.scrub(scenario.startIso, 'scenario');
     }
-    setIntelWorkspace('scenario');
-    setIntelOpen(true);
+    showIntelligence('scenario');
   };
 
   const deactivateOperatorScenario = () => {
@@ -1361,8 +1374,7 @@ export function App() {
         `Captured references: ${references}. Assumptions: ${assumptions || 'none explicitly recorded'}. ` +
         'Treat every parameter, assumption, visual factor and scenario geometry as hypothetical operator input. Do not call it live data, a provider forecast, a probability, a causal finding or a verified real-world outcome. Separate what is merely assumed from what the referenced source evidence could support, identify sensitivity to assumptions, and specify what real data or simulation would be needed before an operational recommendation.'
     }));
-    setIntelWorkspace('ai');
-    setIntelOpen(true);
+    showIntelligence('ai');
   };
   const centerWorksetGeometry = () => {
     if (!worksetGeometry.centroid) return;
@@ -1386,7 +1398,7 @@ export function App() {
       custom: true
     });
     setScope('city');
-    setIntelOpen(true);
+    openIntelligence();
   };
 
   const analyzeWorksetGeometry = (
@@ -1410,14 +1422,12 @@ export function App() {
         `Analytical edges: ${edgeSummary || 'none'}. ` +
         'Treat these links strictly as minimum-spanning spatial geometry derived from operator-pinned coordinates. Do not infer physical, electrical, transit, ownership, dependency, operational, or causal relationships from the lines. Identify only defensible spatial patterns and the source-backed evidence required before asserting any real-world relationship.'
     }));
-    setIntelWorkspace('ai');
-    setIntelOpen(true);
+    showIntelligence('ai');
   };
   const changeInteractionMode = (mode: SpatialInteractionMode) => {
     setInteractionMode(mode);
     if (mode === 'measure') {
-      setIntelWorkspace('analysis');
-      setIntelOpen(true);
+      showIntelligence('analysis');
     }
   };
 
@@ -1628,7 +1638,7 @@ export function App() {
     saveSpatialWorkset(session.workspace.workset);
     setSpatialIncidents(saveSpatialIncidents(session.workspace.incidents));
     setPendingSessionRestore(session);
-    setIntelOpen(true);
+    openIntelligence();
   };
 
   const applyUseCase = (preset: UseCasePreset) => {
@@ -1656,7 +1666,7 @@ export function App() {
     <main className="aethergrid-app">
       <header className="topbar">
         <div className="brand-lockup">
-          <span className="brand-mark" aria-hidden="true">Æ</span>
+          <img className="brand-logo" src={BRAND.product} alt="ÆTHERGRID" />
           <span>
             <strong>ÆTHERGRID</strong>
             <small>4D SPATIAL INTELLIGENCE</small>
@@ -1685,12 +1695,15 @@ export function App() {
         </form>
 
         <div className="topbar-actions">
+          <button className="navigation-toggle" type="button" aria-label="Navigation and layers"
+            aria-expanded={navOpen} aria-controls="aethergrid-navigation"
+            onClick={() => { setNavOpen((open) => !open); setIntelOpen(false); }}>☰</button>
           <button
             className="intel-toggle"
             type="button"
             aria-expanded={intelOpen}
             aria-controls="aethergrid-intelligence-rail"
-            onClick={() => setIntelOpen((open) => !open)}
+            onClick={() => { setIntelOpen((open) => !open); setNavOpen(false); }}
           >
             INTEL
           </button>
@@ -1706,20 +1719,50 @@ export function App() {
           <ProfileMenu />
           <div className="live-cluster">
             <span className="status-dot live" />
-            <span>LIVE WORLD</span>
+            <span>{temporal.mode.toUpperCase()} FRAME</span>
             <strong>{new Date(temporal.liveIso).toLocaleTimeString()}</strong>
           </div>
         </div>
       </header>
 
+      <nav className="product-navigation" aria-label="Product modes">
+        {['GRID', 'GLOBAL', 'HOLOGRAPHIC', 'QUANTUM', 'AI', 'EVIDENCE', 'SCENARIOS', 'SETTINGS'].map((mode) => (
+          <button key={mode} type="button" aria-pressed={productMode === mode}
+            className={productMode === mode ? 'active' : ''}
+            onClick={() => {
+              setProductMode(mode); setInspector('overview'); setNavOpen(false);
+              if (mode === 'GLOBAL') { setScope('world'); setIntelOpen(false); }
+              else if (mode === 'GRID' || mode === 'HOLOGRAPHIC') {
+                setScope('city'); setVisualMode(mode === 'HOLOGRAPHIC' ? 'holographic' : 'solid');
+                setIntelWorkspace('context'); setIntelOpen(false);
+              } else {
+                setIntelWorkspace(mode === 'AI' ? 'ai' : mode === 'QUANTUM' ? 'quantum' : mode === 'EVIDENCE' ? 'evidence' : mode === 'SCENARIOS' ? 'scenario' : 'system');
+                openIntelligence();
+              }
+            }}>{mode}</button>
+        ))}
+      </nav>
       <section className="operator-layout">
-        <aside className="left-rail">
+        <aside id="aethergrid-navigation" className={navOpen ? 'left-rail open' : 'left-rail'}
+          ref={navigationDrawer.ref} tabIndex={-1}
+          role={navigationDrawer.compact ? 'dialog' : 'complementary'}
+          aria-modal={navigationDrawer.compact && navOpen ? true : undefined}
+          aria-label="Navigation and layers" inert={navigationDrawer.compact && !navOpen}>
+          <div className="drawer-heading"><strong>NAVIGATION</strong>
+            <button type="button" aria-label="Close navigation drawer" onClick={() => setNavOpen(false)}>×</button></div>
           <div className="rail-section">
             <span className="rail-kicker">WORLD</span>
             <h2>{city.name}</h2>
             <p>{city.district}</p>
           </div>
 
+          <nav className="navigation-tabs" aria-label="Navigation workspace">
+            {['world', 'layers', 'operations', 'saved', 'session'].map((tab) => (
+              <button key={tab} type="button" aria-pressed={navigationTab === tab}
+                onClick={() => setNavigationTab(tab)}>{tab.toUpperCase()}</button>
+            ))}
+          </nav>
+          <div className="navigation-content" data-tab={navigationTab}>
           <nav className="city-list" aria-label="City targets">
             {CITY_TARGETS.map((target) => (
               <button
@@ -1784,9 +1827,10 @@ export function App() {
               </label>
             ))}
           </div>
+          </div>
         </aside>
 
-        <section className="world-stage">
+        <section className="world-stage" inert={navigationDrawer.compact && (navOpen || intelOpen)}>
           <div className="stage-toolbar">
             <div>
               <span className="eyebrow">ACTIVE FRAME</span>
@@ -2103,6 +2147,10 @@ export function App() {
           id="aethergrid-intelligence-rail"
           className={intelOpen ? 'intel-rail open' : 'intel-rail'}
           data-workspace={intelWorkspace}
+          ref={intelligenceDrawer.ref} tabIndex={-1}
+          role={intelligenceDrawer.compact ? 'dialog' : 'complementary'}
+          aria-modal={intelligenceDrawer.compact && intelOpen ? true : undefined}
+          aria-label="Intelligence workspace" inert={intelligenceDrawer.compact && !intelOpen}
         >
           <div className="intel-mobile-head">
             <span>INTELLIGENCE</span>
@@ -2126,7 +2174,8 @@ export function App() {
                 key={id}
                 className={intelWorkspace === id ? 'active' : ''}
                 aria-pressed={intelWorkspace === id}
-                onClick={() =>
+                onClick={() => {
+                  setInspector('overview');
                   setIntelWorkspace(
                     id as
                       | 'context'
@@ -2137,13 +2186,22 @@ export function App() {
                       | 'quantum'
                       | 'evidence'
                       | 'system'
-                  )
-                }
+                  );
+                }}
               >
                 {label}
               </button>
             ))}
           </nav>
+          <label className="inspector-selector">INSPECTOR
+            <select aria-label="Inspector view" value={inspector} onChange={(event) => setInspector(event.currentTarget.value)}>
+              {['overview', 'entity', 'workset', 'geometry', 'investigations', 'incidents', 'events'].map((id) => (
+                <option key={id} value={id}>{id.toUpperCase()}</option>
+              ))}
+            </select>
+          </label>
+          <div className="intelligence-content" data-inspector={inspector}>
+          <div className="workspace-primary">
           <section className="identity-card intel-context-panel">
             <div className="identity-head">
               <span>
@@ -2481,39 +2539,8 @@ export function App() {
             <RuntimeDiagnosticsPanel />
           </div>
 
-          <section className="intel-card intel-context-panel">
-            <div className="intel-head">
-              <span className="status-dot live" />
-              <span>
-                <small>SPATIAL INTELLIGENCE</small>
-                <strong>AUREN</strong>
-              </span>
-            </div>
-            <p>Infrastructure, topology, terrain and live spatial context.</p>
-          </section>
-
-          <section className="intel-card intel-context-panel">
-            <div className="intel-head">
-              <span className="status-dot quantum" />
-              <span>
-                <small>OPTIMIZATION</small>
-                <strong>VÆLON</strong>
-              </span>
-            </div>
-            <p>Scenario exploration, classical baselines and quantum-ready workloads.</p>
-          </section>
-
-          <section className="intel-card intel-context-panel">
-            <div className="intel-head">
-              <span className="status-dot evidence" />
-              <span>
-                <small>EVIDENCE</small>
-                <strong>SOLVÆR</strong>
-              </span>
-            </div>
-            <p>Simulation, provenance, uncertainty and reproducible validation.</p>
-          </section>
-
+          </div>
+          <div className="inspector-secondary">
           <EntityDossierPanel
             current={entityDossier}
             frozen={frozenDossier}
@@ -2564,6 +2591,8 @@ export function App() {
             events={temporalEvents}
             onScenarioEvent={restoreScenarioFromTemporalEvent}
           />
+          </div>
+          </div>
         </aside>
       </section>
 

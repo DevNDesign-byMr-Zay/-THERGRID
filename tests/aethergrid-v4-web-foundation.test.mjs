@@ -88,17 +88,20 @@ test('v4 temporal model separates live, historical, forecast and scenario time',
 });
 
 test('v4 operator shell keeps the spatial viewport dominant and responsive', async () => {
-  const [app, viewport, styles] = await Promise.all([
+  const [app, viewport, styles, agents, shell] = await Promise.all([
     text('apps/aethergrid-console/web/src/app/App.tsx'),
     text('apps/aethergrid-console/web/src/components/SpatialViewport.tsx'),
     text('apps/aethergrid-console/web/src/app/app.css'),
+    text('apps/aethergrid-console/web/src/components/AgentDock.tsx'),
+    text('apps/aethergrid-console/web/src/app/command-center.css'),
   ]);
 
   assert.match(app, /<SpatialViewport/u);
   assert.match(app, /<TemporalRail/u);
-  assert.match(app, /AUREN/u);
-  assert.match(app, /VÆLON/u);
-  assert.match(app, /SOLVÆR/u);
+  assert.match(agents, /AUREN/u);
+  assert.match(agents, /VÆLON/u);
+  assert.match(agents, /SOLVÆR/u);
+  assert.match(shell, /height: 100dvh/u);
   assert.match(viewport, /new CesiumSpatialRenderer\(\)/u);
   assert.match(viewport, /new NativeWebglSpatialRenderer\(\)/u);
   assert.match(viewport, /loadPublicRuntimeConfig/u);
@@ -430,7 +433,7 @@ test('v4 runtime diagnostics report provider readiness without exposing credenti
   assert.match(client, /\/api\/aethergrid\/runtime/u);
   assert.match(client, /\/api\/aethergrid\/runtime\/providers/u);
   assert.match(panel, /CONNECTION CENTER/u);
-  assert.match(panel, /LIVE PROVIDER RUNTIME/u);
+  assert.match(panel, /PROVIDER READINESS/u);
   assert.match(panel, /CLIENT SECRET EXPOSURE/u);
   assert.match(panel, /credentialsExposed/u);
   assert.match(panel, /NONE REPORTED/u);
@@ -735,7 +738,7 @@ test('v4 selected spatial entities expose layer provenance and hand off to AI co
   assert.match(layer, /fetchedAt: snapshot\.fetchedAt/u);
   assert.match(layer, /fallback: snapshot\.fallback/u);
   assert.match(dossierPanel, /ANALYZE WITH AUREN/u);
-  assert.match(app, /setIntelWorkspace\('ai'\)/u);
+  assert.match(app, /showIntelligence\('ai'\)/u);
   assert.match(dossier, /sourceTime: propertyString\(selection\.properties, 'sourceTime'\)/u);
   assert.match(dossier, /fetchedAt: propertyString\(selection\.properties, 'fetchedAt'\)/u);
 });

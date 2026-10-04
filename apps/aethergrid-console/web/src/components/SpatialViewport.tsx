@@ -326,6 +326,8 @@ export function SpatialViewport({
   return (
     <div
       className="spatial-shell"
+      data-renderer={status.engine}
+      data-renderer-ready={status.ready}
       data-solar-phase={status.solar?.phase ?? 'unknown'}
       data-interaction-mode={interactionMode}
       data-performance-tier={performance.resolved}
@@ -357,6 +359,8 @@ export function SpatialViewport({
               : `${status.detailLevel?.toUpperCase() ?? 'STREAM'} · STREAMING`
             : 'INITIALIZING'}
         </small>
+        <details className="renderer-tools">
+        <summary>Renderer tools</summary>
         <div className="renderer-engine-switch" role="group" aria-label="Spatial renderer">
           {[
             ['cesium', 'CESIUM'],
@@ -403,6 +407,7 @@ export function SpatialViewport({
           ))}
           <em>{performance.resolved.toUpperCase()}</em>
         </div>
+        </details>
       </div>
 
       {status.busy ? (
