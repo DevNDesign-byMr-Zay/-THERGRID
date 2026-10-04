@@ -22,7 +22,7 @@ Recommended secret names:
 | Cesium ion | `AETHERGRID_CESIUM_ION_TOKEN` |
 | Tomorrow.io | `AETHERGRID_TOMORROW_IO_API_KEY` |
 | U.S. EIA | `AETHERGRID_EIA_API_KEY` |
-| Transitland | `AETHERGRID_TRANSITLAND_API_KEY` |
+| Transitland | `AETHERGRID_TRANSIT_API_KEY` |
 | IBM Quantum | `AETHERGRID_IBM_QUANTUM_API_KEY` |
 | IBM Quantum instance | `AETHERGRID_IBM_QUANTUM_SERVICE_CRN` |
 | D-Wave | `AETHERGRID_DWAVE_API_TOKEN` |
@@ -46,8 +46,9 @@ The key remains server-side. Groq documents `https://api.groq.com/openai/v1` as 
 Use Transitland as a feed-discovery/catalog integration, not as a replacement for the source GTFS-Realtime feed registry.
 
 ```dotenv
-AETHERGRID_TRANSITLAND_BASE_URL=https://transit.land/api/v2/rest
-AETHERGRID_TRANSITLAND_API_KEY=<encrypted Transitland key>
+AETHERGRID_TRANSIT_PROVIDER=transitland
+AETHERGRID_TRANSIT_BASE_URL=https://transit.land/api/v2/rest
+AETHERGRID_TRANSIT_API_KEY=<encrypted Transitland key>
 ```
 
 Transitland supports the `apikey` header/query parameter. Prefer the header so credentials do not enter URLs or logs.
