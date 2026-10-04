@@ -143,12 +143,22 @@ export function createProviderRegistry(options = {}) {
     status: config.futureProviders.dwave.token ? PROVIDER_STATUS.CONFIGURED : PROVIDER_STATUS.UNCONFIGURED,
   });
 
-  const ibmConfigured = Boolean(config.quantum.ibm.apiKey && config.quantum.ibm.serviceCrn);
+  const ibmHasKey = Boolean(config.quantum.ibm.apiKey);
+  const ibmHasCrn = Boolean(config.quantum.ibm.serviceCrn);
+  const ibmConfigured = ibmHasKey && ibmHasCrn;
+
+  let ibmInitialStatus = PROVIDER_STATUS.UNCONFIGURED;
+  if (ibmConfigured) {
+    ibmInitialStatus = PROVIDER_STATUS.CONFIGURED;
+  } else if (ibmHasKey && !ibmHasCrn) {
+    ibmInitialStatus = 'instance_required';
+  }
+
   health.registerProvider('ibm-quantum', {
     name: 'IBM Quantum Compute',
     capability: 'quantum',
     capabilities: ['quantum'],
-    status: ibmConfigured ? PROVIDER_STATUS.CONFIGURED : PROVIDER_STATUS.UNCONFIGURED,
+    status: ibmInitialStatus,
     hardwareEnabled: ibmConfigured,
   });
 

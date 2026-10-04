@@ -1,16 +1,28 @@
-name: ÆTHERGRID Live Provider Smoke Verification
+name: ÆTHERGRID Live Provider Smoke Acceptance
 
 on:
   workflow_dispatch:
     inputs:
-      target_provider:
-        description: 'Target provider to smoke test (tomorrow, nws, nwps, eia, gtfs, ibm, dwave, all-safe)'
-        required: true
+      provider:
+        description: 'Selected provider or all-safe for smoke check'
+        required: false
         default: 'all-safe'
+        type: choice
+        options:
+          - all-safe
+          - groq
+          - tomorrow
+          - nws
+          - nwps
+          - eia
+          - transitland
+          - gtfs
+          - ibm
+          - dwave
 
 jobs:
-  smoke-verification:
-    name: Live Provider Connectivity & Discovery Verification
+  smoke:
+    name: Live Provider Smoke Acceptance Run
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -25,18 +37,21 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Execute Live Provider Smoke Verification
-        run: node scripts/live-provider-smoke.mjs --target=${{ github.event.inputs.target_provider }}
+      - name: Execute Live Provider Smoke Suite
+        run: node scripts/live-provider-smoke.mjs --provider=${{ github.event.inputs.provider || 'all-safe' }}
         env:
+          AETHERGRID_OPENAI_API_KEY: ${{ secrets.AETHERGRID_OPENAI_API_KEY }}
           AETHERGRID_TOMORROW_IO_API_KEY: ${{ secrets.AETHERGRID_TOMORROW_IO_API_KEY }}
           AETHERGRID_EIA_API_KEY: ${{ secrets.AETHERGRID_EIA_API_KEY }}
+          AETHERGRID_TRANSIT_API_KEY: ${{ secrets.AETHERGRID_TRANSIT_API_KEY }}
           AETHERGRID_IBM_QUANTUM_API_KEY: ${{ secrets.AETHERGRID_IBM_QUANTUM_API_KEY }}
           AETHERGRID_IBM_QUANTUM_SERVICE_CRN: ${{ secrets.AETHERGRID_IBM_QUANTUM_SERVICE_CRN }}
           AETHERGRID_DWAVE_API_TOKEN: ${{ secrets.AETHERGRID_DWAVE_API_TOKEN }}
-          AETHERGRID_GTFS_FEEDS_FILE: ${{ secrets.AETHERGRID_GTFS_FEEDS_FILE }}
+          AETHERGRID_CESIUM_ION_TOKEN: ${{ secrets.AETHERGRID_CESIUM_ION_TOKEN }}
 
-      - name: Upload Sanitized Smoke Verification Artifact
+      - name: Upload Sanitized Smoke Acceptance Report Artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: live-provider-smoke-report
+          name: live-provider-acceptance-report
           path: dist/live-provider-smoke-report.json

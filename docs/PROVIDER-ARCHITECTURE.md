@@ -73,3 +73,33 @@ Future provider adapters (e.g., Cesium, Tomorrow.io, Overture, EIA, D-Wave) regi
   - `POST /v1/prepare`: Transpiles OpenQASM 3 abstract circuits into backend-specific ISA circuits using preset pass managers, maps Estimator observables to physical layouts, and generates circuit metrics & evidence receipts.
   - `POST /v1/dry-run`: Executes preflight validation (`dry_run=True`) against IBM Quantum APIs without QPU hardware execution.
 - **Safety Boundary**: Quantum worker operates strictly in `PREPARED` and `DRY_RUN_VALIDATED` states. QPU hardware submission requires explicit operator approval (`APPROVAL_REQUIRED`).
+
+## Provider Status & Acceptance Classification
+
+To ensure complete operational truth, all runtime providers are classified across four clear readiness categories:
+
+1. **IMPLEMENTED / OPERATIONAL (No API Key Required)**:
+   - Open-Meteo Weather (`open-meteo`)
+   - Open-Meteo Air Quality (`open-meteo-air-quality`)
+   - Open-Meteo Elevation (`open-meteo-elevation`)
+   - USGS Seismic (`usgs`)
+   - US National Weather Service Hazards (`nws`)
+   - NOAA NWPS Hydrology (`noaa-nwps`)
+   - OpenStreetMap / Overpass (`osm-overpass`)
+
+2. **IMPLEMENTED / REQUIRES CREDENTIALS**:
+   - Tomorrow.io Weather (`tomorrow-io`): Requires `AETHERGRID_TOMORROW_IO_API_KEY`
+   - U.S. EIA Electricity Mix (`eia`): Requires `AETHERGRID_EIA_API_KEY`
+   - Transitland Mobility Discovery (`transitland`): Requires `AETHERGRID_TRANSIT_API_KEY`
+   - GTFS-Realtime Transit (`gtfs-rt-registry`): Configured via `AETHERGRID_GTFS_FEEDS_FILE` or `AETHERGRID_TRANSIT_FEEDS`
+   - IBM Quantum Compute (`ibm-quantum`): Requires `AETHERGRID_IBM_QUANTUM_API_KEY` and `AETHERGRID_IBM_QUANTUM_SERVICE_CRN`
+   - D-Wave Quantum Annealing (`dwave`): Requires `AETHERGRID_DWAVE_API_TOKEN` (`AETHERGRID_DWAVE_SOLVER_URL`)
+   - Cesium 3D Tiles (`cesium`): Requires `AETHERGRID_CESIUM_ION_TOKEN`
+   - Groq / OpenAI AI Runtime (`openai-compatible`): Requires `AETHERGRID_OPENAI_API_KEY`
+
+3. **UNCONFIGURED**:
+   - Optional providers without supplied deployment API keys or endpoints operate in safe fallback or unconfigured state without crashing the platform.
+
+4. **FUTURE BATCHES**:
+   - IBM Qiskit Transpilation Worker (Python microservice)
+   - Overture Maps Semantic City Pipeline

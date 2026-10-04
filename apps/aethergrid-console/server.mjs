@@ -1,3 +1,4 @@
+import { createTransitlandProvider } from './providers/transitland-provider.mjs';
 import { createQuantumWorkerClient } from './quantum/quantum-worker-client.mjs';
 import { validateCoordinates } from "./providers/coordinate-validator.mjs";
 import { createRequestContext } from './providers/request-context.mjs';
@@ -1033,6 +1034,12 @@ const server = http.createServer(async (request, response) => {
         { region },
         execCtx,
       );
+      return json(response, 200, providerRegistry.redactor.redactValue(result));
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/transit/discovery') {
+      const city = url.searchParams.get('city') || url.searchParams.get('cityId') || 'new-york';
+      const result = await transitlandProvider.request({ city }, execCtx);
       return json(response, 200, providerRegistry.redactor.redactValue(result));
     }
 
