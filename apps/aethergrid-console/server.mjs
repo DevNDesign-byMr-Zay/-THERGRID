@@ -57,8 +57,8 @@ providerRegistry.health.registerProvider('transitland', {
 });
 
 const dwaveProvider = createDwaveProvider({
-  token: providerRegistry.config.futureProviders.dwave.token,
-  solverUrl: providerRegistry.config.futureProviders.dwave.solverUrl,
+  token: providerRegistry.config.providers.dwave.token,
+  baseUrl: providerRegistry.config.providers.dwave.baseUrl || providerRegistry.config.providers.dwave.solverUrl,
 });
 
 const transitFeedConfig = loadTransitFeedConfig(

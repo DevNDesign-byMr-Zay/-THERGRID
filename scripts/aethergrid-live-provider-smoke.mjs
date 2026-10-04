@@ -73,8 +73,11 @@ function wants(name) {
 async function runCheck(name, configured, task, details = {}) {
   if (!wants(name)) return;
   if (!configured) {
+    const isInputRequired = Boolean(
+      details.reason && (details.reason.includes('not set') || details.reason.includes('required')),
+    );
     rawReport.providers[name] = {
-      state: 'not-configured',
+      state: isInputRequired ? 'input-required' : 'not-configured',
       configured: false,
       ...details,
     };
@@ -84,10 +87,23 @@ async function runCheck(name, configured, task, details = {}) {
   const started = Date.now();
   try {
     const result = await task();
+    const isLive = result.live === true && result.fallbackUsed !== true;
+    const isFallback = result.fallbackUsed === true || result.live === false;
+    const isConfigOnly = result.configOnly === true;
+
+    let computedState = 'live-response-verified';
+    if (isConfigOnly) {
+      computedState = 'configured';
+    } else if (isFallback) {
+      computedState = 'fallback';
+    } else if (isLive) {
+      computedState = 'live-response-verified';
+    }
+
     rawReport.providers[name] = {
-      state: 'live-response-verified',
+      state: computedState,
       configured: true,
-      reachable: true,
+      reachable: isLive,
       latencyMs: Date.now() - started,
       retrievedAt: new Date().toISOString(),
       ...details,
@@ -112,7 +128,7 @@ await runCheck(
   true,
   async () => {
     const envRuntime = createCityEnvironmentRuntime({ env: process.env });
-    const data = await envRuntime.current(latitude, longitude);
+    const data = await envRuntime.current({ lat: latitude, lon: longitude });
     return {
       live: data.source?.live === true,
       provider: data.source?.provider || 'open-meteo',
@@ -129,7 +145,7 @@ await runCheck(
   true,
   async () => {
     const envRuntime = createCityEnvironmentRuntime({ env: process.env });
-    const data = await envRuntime.forecast(latitude, longitude);
+    const data = await envRuntime.forecast({ lat: latitude, lon: longitude });
     return {
       live: data.source?.live === true,
       provider: data.source?.provider || 'open-meteo',
@@ -241,9 +257,13 @@ await runCheck(
   async () => {
     const geoRuntime = createGeoRuntime({ env: process.env });
     const data = await geoRuntime.pointMesh({ lat: latitude, lon: longitude });
+    const isLive = data?.source?.live === true;
     return {
-      live: Boolean(data && data.buildings),
+      live: isLive,
+      fallbackUsed: !isLive,
+      provider: data?.source?.provider || 'osm-overpass',
       buildingCount: Array.isArray(data?.buildings) ? data.buildings.length : 0,
+      roadCount: Array.isArray(data?.roads) ? data.roads.length : 0,
     };
   },
   { coordinates: { latitude, longitude } },
@@ -255,12 +275,17 @@ await runCheck(
   Boolean(process.env.AETHERGRID_OPENAI_API_KEY),
   async () => {
     const aiRuntime = createAgentRuntime({ env: process.env });
-    const summary = aiRuntime.status();
+    const res = await aiRuntime.runAgent('AUREN', {
+      message: 'Return the single word READY.',
+    });
+    const fallbackUsed = res?.runtime?.fallbackUsed === true;
     return {
-      live: summary.configured === true,
-      provider: summary.provider,
-      model: summary.model,
-      configured: summary.configured,
+      live: !fallbackUsed,
+      fallbackUsed,
+      agent: 'AUREN',
+      provider: res?.runtime?.provider || process.env.AETHERGRID_AI_PROVIDER || 'openai-compatible',
+      model: res?.runtime?.model || process.env.AETHERGRID_AI_MODEL || null,
+      providerRequestId: res?.runtime?.providerRequestId || null,
     };
   },
   {},
@@ -357,12 +382,30 @@ await runCheck(
   Boolean(process.env.AETHERGRID_GTFS_FEEDS_FILE),
   async () => {
     const transitConfig = loadTransitFeedConfig(process.env.AETHERGRID_GTFS_FEEDS_FILE);
+    const cities = Object.keys(transitConfig.feeds || {}).sort();
+    if (cities.length === 0) {
+      return {
+        live: false,
+        fallbackUsed: false,
+        configuredFeedCount: transitConfig.metadata.configuredFeedCount,
+        enabledFeedCount: 0,
+        cityCount: 0,
+        reason: 'No enabled GTFS-Realtime feeds configured in feed file',
+      };
+    }
+    const targetCity = cities[0];
+    const feed = transitConfig.feeds[targetCity];
     const registry = createTransitRegistry({ feeds: transitConfig.feeds });
+    const res = await registry.adapter.request({ cityId: targetCity });
     return {
-      live: transitConfig.metadata.enabledFeedCount > 0,
-      configuredFeedCount: transitConfig.metadata.configuredFeedCount,
-      enabledFeedCount: transitConfig.metadata.enabledFeedCount,
-      cityCount: transitConfig.metadata.cityCount,
+      live: res.receipt?.live === true,
+      fallbackUsed: res.receipt?.fallback === true,
+      cityId: targetCity,
+      agencyName: feed?.agencyName || null,
+      feedId: feed?.id || null,
+      vehicleCount: Array.isArray(res.data?.vehicles) ? res.data.vehicles.length : 0,
+      sourceTimestamp: res.data?.feedTimestamp || null,
+      stale: res.data?.stale === true,
     };
   },
   {},

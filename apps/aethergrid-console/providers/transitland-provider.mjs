@@ -14,6 +14,20 @@ function validateHttpsUrl(urlString) {
   }
 }
 
+const DISALLOWED_CREDENTIAL_PARAMS = new Set([
+  'key',
+  'api_key',
+  'apikey',
+  'token',
+  'access_token',
+  'auth',
+  'authorization',
+  'secret',
+  'password',
+  'credential',
+  'client_secret',
+]);
+
 export function validateDiscoveredFeedUrl(feedUrl) {
   if (!feedUrl || typeof feedUrl !== 'string') {
     return { valid: false, reason: 'feed_url_missing_or_not_string' };
@@ -26,6 +40,14 @@ export function validateDiscoveredFeedUrl(feedUrl) {
     }
     if (parsed.protocol === 'http:' && parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1') {
       return { valid: false, reason: 'remote_production_feeds_must_use_https' };
+    }
+    if (parsed.username || parsed.password) {
+      return { valid: false, reason: 'url_embedded_basic_auth_not_permitted' };
+    }
+    for (const paramKey of parsed.searchParams.keys()) {
+      if (DISALLOWED_CREDENTIAL_PARAMS.has(paramKey.toLowerCase())) {
+        return { valid: false, reason: 'credential_query_parameter_requires_server_side_auth' };
+      }
     }
     return { valid: true, url: cleanUrl, origin: parsed.origin };
   } catch {

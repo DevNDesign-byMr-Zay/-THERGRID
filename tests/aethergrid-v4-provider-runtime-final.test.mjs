@@ -44,3 +44,14 @@ test('provider registry: canonical providers and futureProviders aliases match',
     registry.config.futureProviders.dwave.solverUrl,
   );
 });
+
+test('dwave config: maps AETHERGRID_DWAVE_SOLVER_URL to providers.dwave.baseUrl', () => {
+  const registry = createProviderRegistry({
+    env: {
+      AETHERGRID_DWAVE_API_TOKEN: 'fake-dwave-token',
+      AETHERGRID_DWAVE_SOLVER_URL: 'https://custom-sapi.dwavesys.com/v2',
+    },
+  });
+
+  assert.equal(registry.config.providers.dwave.baseUrl, 'https://custom-sapi.dwavesys.com/v2');
+});

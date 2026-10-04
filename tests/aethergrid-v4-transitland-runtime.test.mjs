@@ -33,8 +33,7 @@ test('transitland: sends API key via apikey header and not in query string', asy
                 id: 'f-mta-bus',
                 spec: 'gtfs-rt',
                 urls: {
-                  realtime_vehicle_positions:
-                    'https://api-endpoint.mta.info/AccessSubway?key=secret',
+                  realtime_vehicle_positions: 'https://api-endpoint.mta.info/AccessSubway',
                 },
               },
             ],
@@ -52,7 +51,7 @@ test('transitland: sends API key via apikey header and not in query string', asy
   assert.equal(res.data.status, 'Transitland Catalog Discovered');
   assert.equal(res.data.feeds.length, 1);
   assert.equal(res.data.feeds[0].feedUrlValid, true);
-  assert.equal(res.data.feeds[0].feedUrl, 'https://api-endpoint.mta.info/AccessSubway?key=secret');
+  assert.equal(res.data.feeds[0].feedUrl, 'https://api-endpoint.mta.info/AccessSubway');
 });
 
 test('validateDiscoveredFeedUrl: enforces HTTPS for remote feeds and allows HTTP for localhost', () => {
@@ -66,4 +65,18 @@ test('validateDiscoveredFeedUrl: enforces HTTPS for remote feeds and allows HTTP
 
   const invalidProto = validateDiscoveredFeedUrl('ftp://example.com/gtfs.pb');
   assert.equal(invalidProto.valid, false);
+});
+
+test('validateDiscoveredFeedUrl: rejects URLs with embedded credentials or secret query parameters', () => {
+  const withKey = validateDiscoveredFeedUrl('https://example.com/feed.pb?key=secret123');
+  assert.equal(withKey.valid, false);
+  assert.equal(withKey.reason, 'credential_query_parameter_requires_server_side_auth');
+
+  const withToken = validateDiscoveredFeedUrl('https://example.com/feed.pb?token=abc');
+  assert.equal(withToken.valid, false);
+  assert.equal(withToken.reason, 'credential_query_parameter_requires_server_side_auth');
+
+  const withBasicAuth = validateDiscoveredFeedUrl('https://user:pass@example.com/feed.pb');
+  assert.equal(withBasicAuth.valid, false);
+  assert.equal(withBasicAuth.reason, 'url_embedded_basic_auth_not_permitted');
 });
