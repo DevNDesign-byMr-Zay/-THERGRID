@@ -5,11 +5,24 @@ import { createNwsAlertsProvider } from '../apps/aethergrid-console/providers/nw
 import { createNoaaNwpsHydrologyProvider } from '../apps/aethergrid-console/providers/noaa-nwps-provider.mjs';
 import { createEiaProvider } from '../apps/aethergrid-console/providers/eia-provider.mjs';
 import { createDwaveProvider } from '../apps/aethergrid-console/providers/dwave-provider.mjs';
+import { createTransitlandProvider } from '../apps/aethergrid-console/providers/transitland-provider.mjs';
 import { createQuantumRuntime } from '../apps/aethergrid-console/quantum-runtime.mjs';
+import { createCityEnvironmentRuntime } from '../apps/aethergrid-console/city-environment-runtime.mjs';
+import { createGeoRuntime } from '../apps/aethergrid-console/geo-runtime.mjs';
+import { createAgentRuntime } from '../apps/aethergrid-console/ai-runtime.mjs';
+import { loadTransitFeedConfig } from '../apps/aethergrid-console/providers/transit-feed-config.mjs';
+import { createTransitRegistry } from '../apps/aethergrid-console/providers/transit-registry.mjs';
+import { createSecretRedactor } from '../apps/aethergrid-console/security/secret-redactor.mjs';
 
-const selected = String(
+const redactor = createSecretRedactor();
+redactor.registerSecretsFromConfig(process.env);
+
+const rawSelected = String(
   process.env.AETHERGRID_LIVE_SMOKE_PROVIDER || process.argv[2] || 'all-safe',
 ).toLowerCase();
+
+const selected = rawSelected === 'tomorrow' ? 'tomorrow-realtime' : rawSelected;
+
 const latitude = Number(process.env.AETHERGRID_LIVE_SMOKE_LAT || 40.7128);
 const longitude = Number(process.env.AETHERGRID_LIVE_SMOKE_LON || -74.006);
 const nwpsGauge = String(process.env.AETHERGRID_LIVE_SMOKE_NWPS_GAUGE || '').trim();
@@ -20,10 +33,20 @@ const outputPath = String(
 
 const allowed = new Set([
   'all-safe',
-  'tomorrow',
+  'open-meteo-weather',
+  'open-meteo-forecast',
+  'open-meteo-air-quality',
+  'open-meteo-elevation',
+  'usgs',
   'nws',
   'nwps',
+  'overpass',
+  'groq',
+  'tomorrow-realtime',
+  'tomorrow-forecast',
   'eia',
+  'transitland',
+  'gtfs',
   'ibm',
   'dwave',
   'cesium-config',
@@ -66,43 +89,113 @@ async function runCheck(name, configured, task, details = {}) {
       configured: true,
       reachable: true,
       latencyMs: Date.now() - started,
+      retrievedAt: new Date().toISOString(),
       ...details,
       ...result,
     };
   } catch (error) {
+    const rawMsg = error instanceof Error ? error.message : String(error);
     report.providers[name] = {
       state: 'failed',
       configured: true,
       reachable: false,
       latencyMs: Date.now() - started,
       ...details,
-      error: error instanceof Error ? error.message : String(error),
+      error: redactor.redactString(rawMsg),
     };
   }
 }
 
+// 1. OPEN-METEO WEATHER
 await runCheck(
-  'tomorrow',
-  Boolean(process.env.AETHERGRID_TOMORROW_IO_API_KEY),
+  'open-meteo-weather',
+  true,
   async () => {
-    const provider = createTomorrowWeatherProvider({
-      apiKey: process.env.AETHERGRID_TOMORROW_IO_API_KEY,
-      baseUrl: process.env.AETHERGRID_TOMORROW_IO_URL,
-    });
-    const result = await provider.request({
-      lat: latitude,
-      lon: longitude,
-      mode: 'realtime',
-    });
+    const envRuntime = createCityEnvironmentRuntime({ env: process.env });
+    const data = await envRuntime.current(latitude, longitude);
     return {
-      live: result.receipt?.live === true,
-      observedAt: result.data?.observedAt || null,
-      dataset: result.receipt?.dataset || 'weather-realtime',
+      live: data.source?.live === true,
+      provider: data.source?.provider || 'open-meteo',
+      retrievedAt: data.source?.fetchedAt || new Date().toISOString(),
+      temperature: data.current?.temperatureC ?? null,
     };
   },
   { coordinates: { latitude, longitude } },
 );
 
+// 2. OPEN-METEO FORECAST
+await runCheck(
+  'open-meteo-forecast',
+  true,
+  async () => {
+    const envRuntime = createCityEnvironmentRuntime({ env: process.env });
+    const data = await envRuntime.forecast(latitude, longitude);
+    return {
+      live: data.source?.live === true,
+      provider: data.source?.provider || 'open-meteo',
+      retrievedAt: data.source?.fetchedAt || new Date().toISOString(),
+      hourlyCount: Array.isArray(data.hourly) ? data.hourly.length : 0,
+    };
+  },
+  { coordinates: { latitude, longitude } },
+);
+
+// 3. OPEN-METEO AIR QUALITY
+await runCheck(
+  'open-meteo-air-quality',
+  true,
+  async () => {
+    const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${latitude}&longitude=${longitude}&current=us_aqi`;
+    const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!resp.ok) throw new Error(`Open-Meteo Air Quality HTTP ${resp.status}`);
+    const json = await resp.json();
+    return {
+      live: true,
+      provider: 'open-meteo',
+      usAqi: json.current?.us_aqi ?? null,
+    };
+  },
+  { coordinates: { latitude, longitude } },
+);
+
+// 4. OPEN-METEO ELEVATION
+await runCheck(
+  'open-meteo-elevation',
+  true,
+  async () => {
+    const url = `https://api.open-meteo.com/v1/elevation?latitude=${latitude}&longitude=${longitude}`;
+    const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!resp.ok) throw new Error(`Open-Meteo Elevation HTTP ${resp.status}`);
+    const json = await resp.json();
+    const elev = Array.isArray(json.elevation) ? json.elevation[0] : json.elevation;
+    return {
+      live: true,
+      provider: 'open-meteo',
+      elevationMeters: elev ?? null,
+    };
+  },
+  { coordinates: { latitude, longitude } },
+);
+
+// 5. USGS EARTHQUAKES
+await runCheck(
+  'usgs',
+  true,
+  async () => {
+    const url = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson';
+    const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!resp.ok) throw new Error(`USGS Earthquake Feed HTTP ${resp.status}`);
+    const json = await resp.json();
+    return {
+      live: true,
+      provider: 'usgs',
+      featureCount: Array.isArray(json.features) ? json.features.length : 0,
+    };
+  },
+  {},
+);
+
+// 6. NWS ALERTS
 await runCheck(
   'nws',
   true,
@@ -123,6 +216,7 @@ await runCheck(
   { coordinates: { latitude, longitude } },
 );
 
+// 7. NOAA NWPS
 await runCheck(
   'nwps',
   Boolean(nwpsGauge),
@@ -140,6 +234,85 @@ await runCheck(
   nwpsGauge ? { gaugeId: nwpsGauge } : { reason: 'AETHERGRID_LIVE_SMOKE_NWPS_GAUGE not set' },
 );
 
+// 8. OSM OVERPASS
+await runCheck(
+  'overpass',
+  true,
+  async () => {
+    const geoRuntime = createGeoRuntime({ env: process.env });
+    const data = await geoRuntime.pointMesh({ lat: latitude, lon: longitude });
+    return {
+      live: Boolean(data && data.buildings),
+      buildingCount: Array.isArray(data?.buildings) ? data.buildings.length : 0,
+    };
+  },
+  { coordinates: { latitude, longitude } },
+);
+
+// 9. GROQ / AI RUNTIME
+await runCheck(
+  'groq',
+  Boolean(process.env.AETHERGRID_OPENAI_API_KEY),
+  async () => {
+    const aiRuntime = createAgentRuntime({ env: process.env });
+    const summary = aiRuntime.status();
+    return {
+      live: summary.configured === true,
+      provider: summary.provider,
+      model: summary.model,
+      configured: summary.configured,
+    };
+  },
+  {},
+);
+
+// 10. TOMORROW.IO REALTIME
+await runCheck(
+  'tomorrow-realtime',
+  Boolean(process.env.AETHERGRID_TOMORROW_IO_API_KEY),
+  async () => {
+    const provider = createTomorrowWeatherProvider({
+      apiKey: process.env.AETHERGRID_TOMORROW_IO_API_KEY,
+      baseUrl: process.env.AETHERGRID_TOMORROW_IO_URL,
+    });
+    const result = await provider.request({
+      lat: latitude,
+      lon: longitude,
+      mode: 'realtime',
+    });
+    return {
+      live: result.receipt?.live === true,
+      observedAt: result.data?.observedAt || null,
+      dataset: result.receipt?.dataset || 'weather-realtime',
+    };
+  },
+  { coordinates: { latitude, longitude } },
+);
+
+// 11. TOMORROW.IO FORECAST
+await runCheck(
+  'tomorrow-forecast',
+  Boolean(process.env.AETHERGRID_TOMORROW_IO_API_KEY),
+  async () => {
+    const provider = createTomorrowWeatherProvider({
+      apiKey: process.env.AETHERGRID_TOMORROW_IO_API_KEY,
+      baseUrl: process.env.AETHERGRID_TOMORROW_IO_URL,
+    });
+    const result = await provider.request({
+      lat: latitude,
+      lon: longitude,
+      mode: 'forecast',
+    });
+    return {
+      live: result.receipt?.live === true,
+      observedAt: result.data?.retrievedAt || null,
+      dataset: result.receipt?.dataset || 'weather-forecast',
+    };
+  },
+  { coordinates: { latitude, longitude } },
+);
+
+// 12. EIA
 await runCheck(
   'eia',
   Boolean(process.env.AETHERGRID_EIA_API_KEY),
@@ -159,6 +332,43 @@ await runCheck(
   { region: eiaRegion },
 );
 
+// 13. TRANSITLAND
+await runCheck(
+  'transitland',
+  Boolean(process.env.AETHERGRID_TRANSIT_API_KEY),
+  async () => {
+    const provider = createTransitlandProvider({
+      apiKey: process.env.AETHERGRID_TRANSIT_API_KEY,
+      baseUrl: process.env.AETHERGRID_TRANSIT_BASE_URL,
+    });
+    const result = await provider.request({ city: 'New York' });
+    return {
+      live: result.receipt?.live === true,
+      agencyCount: result.data?.agencyCount ?? 0,
+      feedCount: Array.isArray(result.data?.feeds) ? result.data.feeds.length : 0,
+    };
+  },
+  {},
+);
+
+// 14. GTFS
+await runCheck(
+  'gtfs',
+  Boolean(process.env.AETHERGRID_GTFS_FEEDS_FILE),
+  async () => {
+    const transitConfig = loadTransitFeedConfig(process.env.AETHERGRID_GTFS_FEEDS_FILE);
+    const registry = createTransitRegistry({ feeds: transitConfig.feeds });
+    return {
+      live: transitConfig.metadata.enabledFeedCount > 0,
+      configuredFeedCount: transitConfig.metadata.configuredFeedCount,
+      enabledFeedCount: transitConfig.metadata.enabledFeedCount,
+      cityCount: transitConfig.metadata.cityCount,
+    };
+  },
+  {},
+);
+
+// 15. IBM QUANTUM (Discovery Only)
 await runCheck(
   'ibm',
   Boolean(
@@ -184,6 +394,7 @@ await runCheck(
   { discoveryOnly: true, hardwareSubmitted: false, hardwareExecuted: false },
 );
 
+// 16. D-WAVE QUANTUM (Discovery Only)
 await runCheck(
   'dwave',
   Boolean(process.env.AETHERGRID_DWAVE_API_TOKEN),
@@ -204,6 +415,7 @@ await runCheck(
   { discoveryOnly: true, hardwareSubmitted: false, hardwareExecuted: false },
 );
 
+// 17. CESIUM CONFIG
 if (wants('cesium-config')) {
   const configured = Boolean(process.env.AETHERGRID_CESIUM_ION_TOKEN);
   report.providers['cesium-config'] = {
@@ -214,22 +426,24 @@ if (wants('cesium-config')) {
   };
 }
 
-await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+const sanitizedReport = redactor.redactValue(report);
 
-const attempted = Object.values(report.providers);
+await writeFile(outputPath, `${JSON.stringify(sanitizedReport, null, 2)}\n`, 'utf8');
+
+const attempted = Object.values(sanitizedReport.providers);
 const failures = attempted.filter((item) => item.state === 'failed');
 
 console.log(
   JSON.stringify(
-    {
+    redactor.redactValue({
       outputPath,
       selected,
       checked: attempted.length,
       failed: failures.length,
       states: Object.fromEntries(
-        Object.entries(report.providers).map(([name, value]) => [name, value.state]),
+        Object.entries(sanitizedReport.providers).map(([name, value]) => [name, value.state]),
       ),
-    },
+    }),
     null,
     2,
   ),

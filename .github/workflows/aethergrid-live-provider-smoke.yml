@@ -10,10 +10,20 @@ on:
         type: choice
         options:
           - all-safe
-          - tomorrow
+          - open-meteo-weather
+          - open-meteo-forecast
+          - open-meteo-air-quality
+          - open-meteo-elevation
+          - usgs
           - nws
           - nwps
+          - overpass
+          - groq
+          - tomorrow-realtime
+          - tomorrow-forecast
           - eia
+          - transitland
+          - gtfs
           - ibm
           - dwave
           - cesium-config
