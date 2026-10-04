@@ -194,6 +194,10 @@ export function createProviderRegistry(options = {}) {
 
   function getSafePublicRuntimeMetadata() {
     const healthStatuses = health.getAllStatuses();
+    const ibmApiKeyPresent = Boolean(config.quantum?.ibm?.apiKey && config.quantum.ibm.apiKey.trim().length > 0);
+    const ibmServiceCrnPresent = Boolean(config.quantum?.ibm?.serviceCrn && config.quantum.ibm.serviceCrn.trim().length > 0);
+    const ibmConfigured = ibmApiKeyPresent && ibmServiceCrnPresent;
+    const dwaveConfigured = Boolean(config.providers?.dwave?.token && config.providers.dwave.token.trim().length > 0);
     return Object.freeze({
       spatial: {
         provider: 'native-webgl',
