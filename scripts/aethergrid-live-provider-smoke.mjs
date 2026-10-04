@@ -58,7 +58,7 @@ if (!allowed.has(selected)) {
   );
 }
 
-const report = {
+const rawReport = {
   schemaVersion: 1,
   runAt: new Date().toISOString(),
   commit: process.env.GITHUB_SHA || null,
@@ -73,7 +73,7 @@ function wants(name) {
 async function runCheck(name, configured, task, details = {}) {
   if (!wants(name)) return;
   if (!configured) {
-    report.providers[name] = {
+    rawReport.providers[name] = {
       state: 'not-configured',
       configured: false,
       ...details,
@@ -84,7 +84,7 @@ async function runCheck(name, configured, task, details = {}) {
   const started = Date.now();
   try {
     const result = await task();
-    report.providers[name] = {
+    rawReport.providers[name] = {
       state: 'live-response-verified',
       configured: true,
       reachable: true,
@@ -95,7 +95,7 @@ async function runCheck(name, configured, task, details = {}) {
     };
   } catch (error) {
     const rawMsg = error instanceof Error ? error.message : String(error);
-    report.providers[name] = {
+    rawReport.providers[name] = {
       state: 'failed',
       configured: true,
       reachable: false,
@@ -418,7 +418,7 @@ await runCheck(
 // 17. CESIUM CONFIG
 if (wants('cesium-config')) {
   const configured = Boolean(process.env.AETHERGRID_CESIUM_ION_TOKEN);
-  report.providers['cesium-config'] = {
+  rawReport.providers['cesium-config'] = {
     state: configured ? 'configured' : 'not-configured',
     configured,
     liveResponseVerified: false,
@@ -426,11 +426,11 @@ if (wants('cesium-config')) {
   };
 }
 
-const sanitizedReport = redactor.redactValue(report);
+const report = redactor.redactValue(rawReport);
 
-await writeFile(outputPath, `${JSON.stringify(sanitizedReport, null, 2)}\n`, 'utf8');
+await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 
-const attempted = Object.values(sanitizedReport.providers);
+const attempted = Object.values(report.providers);
 const failures = attempted.filter((item) => item.state === 'failed');
 
 console.log(
@@ -441,7 +441,7 @@ console.log(
       checked: attempted.length,
       failed: failures.length,
       states: Object.fromEntries(
-        Object.entries(sanitizedReport.providers).map(([name, value]) => [name, value.state]),
+        Object.entries(report.providers).map(([name, value]) => [name, value.state]),
       ),
     }),
     null,
