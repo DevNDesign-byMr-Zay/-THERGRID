@@ -136,21 +136,106 @@ export function createQuantumRuntime({
   let tokenCache = null;
 
   function summary() {
+    const ibmApiKeyPresent = Boolean(apiKey && apiKey.trim().length > 0);
+    const ibmServiceCrnPresent = Boolean(serviceCrn && serviceCrn.trim().length > 0);
+    const ibmConfigured = ibmApiKeyPresent && ibmServiceCrnPresent;
+    const ibmStatus = ibmConfigured
+      ? 'configured'
+      : ibmApiKeyPresent
+        ? 'instance_required'
+        : 'unconfigured';
+
+    const dwaveToken = String(env.AETHERGRID_DWAVE_API_TOKEN || '').trim();
+    const dwaveConfigured = Boolean(dwaveToken.length > 0);
+    const dwaveStatus = dwaveConfigured ? 'configured' : 'unconfigured';
+
+    const selectedProvider = provider;
+    let selectedProviderStatus = 'unconfigured';
+    if (selectedProvider === 'ibm-quantum') {
+      selectedProviderStatus = ibmStatus;
+    } else if (selectedProvider === 'dwave') {
+      selectedProviderStatus = dwaveStatus;
+    } else {
+      selectedProviderStatus = 'ready';
+    }
+
+    const selectedHardwareEnabled =
+      selectedProvider === 'ibm-quantum'
+        ? ibmConfigured
+        : selectedProvider === 'dwave'
+          ? dwaveConfigured
+          : false;
+
+    let alternateProvider = null;
+    let alternateProviderAvailable = false;
+    let aggregateStatus = selectedProviderStatus;
+
+    if (selectedProviderStatus !== 'configured' && selectedProviderStatus !== 'ready') {
+      if (selectedProvider === 'ibm-quantum' && dwaveConfigured) {
+        alternateProvider = 'dwave';
+        alternateProviderAvailable = true;
+        aggregateStatus = 'alternate-available';
+      } else if (selectedProvider === 'dwave' && ibmConfigured) {
+        alternateProvider = 'ibm-quantum';
+        alternateProviderAvailable = true;
+        aggregateStatus = 'alternate-available';
+      } else {
+        alternateProvider = 'local-simulator';
+        alternateProviderAvailable = true;
+      }
+    } else {
+      if (selectedProvider === 'ibm-quantum' && dwaveConfigured) {
+        alternateProvider = 'dwave';
+        alternateProviderAvailable = true;
+      } else if (selectedProvider === 'dwave' && ibmConfigured) {
+        alternateProvider = 'ibm-quantum';
+        alternateProviderAvailable = true;
+      } else if (selectedProvider !== 'local-simulator') {
+        alternateProvider = 'local-simulator';
+        alternateProviderAvailable = true;
+      }
+    }
+
     return {
-      provider,
+      provider: selectedProvider,
+      selectedProvider,
+      selectedProviderStatus,
+      aggregateStatus,
+      alternateProviderAvailable,
+      alternateProvider,
+      hardwareEnabled: selectedHardwareEnabled,
       apiVersion: API_VERSION,
-      configured:
-        provider === 'ibm-quantum'
-          ? Boolean(apiKey && serviceCrn && defaultBackend)
-          : true,
+      configured: selectedProviderStatus === 'configured' || selectedProviderStatus === 'ready',
       defaultBackend:
         defaultBackend ||
-        (provider === 'local-simulator' ? 'aethergrid-local-sampler' : null),
+        (selectedProvider === 'local-simulator' ? 'aethergrid-local-sampler' : null),
       baseUrl:
-        provider === 'ibm-quantum' ? safeUrl(baseUrl, 'IBM Quantum base URL').origin : null,
+        selectedProvider === 'ibm-quantum' ? safeUrl(baseUrl, 'IBM Quantum base URL').origin : null,
       primitives: ['sampler', 'estimator'],
-      hardwareExecution: provider === 'ibm-quantum',
+      hardwareExecution: selectedHardwareEnabled,
       credentialsExposed: false,
+      providers: {
+        ibm: {
+          provider: 'ibm-quantum',
+          status: ibmStatus,
+          configured: ibmConfigured,
+          apiKeyPresent: ibmApiKeyPresent,
+          serviceCrnPresent: ibmServiceCrnPresent,
+          hardwareEnabled: ibmConfigured,
+        },
+        dwave: {
+          provider: 'dwave',
+          status: dwaveStatus,
+          configured: dwaveConfigured,
+          hardwareEnabled: dwaveConfigured,
+        },
+        local: {
+          provider: 'local-simulator',
+          status: 'ready',
+          configured: true,
+          hardwareEnabled: false,
+        },
+      },
     };
   }
 
