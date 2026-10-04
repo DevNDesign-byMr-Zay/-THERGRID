@@ -5,6 +5,7 @@ export interface AtmosphericCurrentState {
   relativeHumidityPercent: number | null;
   surfacePressureHpa: number | null;
   weatherCode: number | null;
+  weatherCodeSystem?: 'wmo' | 'tomorrow';
   cloudCoverPercent: number | null;
   isDay: boolean | null;
   precipitationMm: number | null;
@@ -49,6 +50,15 @@ export function weatherPhenomenon(
   const current = snapshot?.current;
   if (!current) return 'unavailable';
   const code = Number(current.weatherCode ?? -1);
+  if (current.weatherCodeSystem === 'tomorrow') {
+    if ([1000, 1100].includes(code)) return 'clear';
+    if ([1001, 1101, 1102].includes(code)) return 'cloudy';
+    if ([2000, 2100].includes(code)) return 'fog';
+    if ([4000, 4001, 4200, 4201].includes(code)) return 'rain';
+    if ([5000, 5001, 5100, 5101].includes(code)) return 'snow';
+    if (code === 8000) return 'thunderstorm';
+    return 'mixed';
+  }
   if ([45, 48].includes(code)) return 'fog';
   if ([71, 73, 75, 77, 85, 86].includes(code)) return 'snow';
   if (code >= 95 && code <= 99) return 'thunderstorm';

@@ -194,10 +194,10 @@
         "receipt": "d019b4b5713500b2331ac9f2907edf2ac336147367bb67b21107ee09a7a1668f"
       },
       {
-        "agent": "V\u00c6LON",
+        "agent": "VÆLON",
         "http": 200,
         "runtime": {
-          "agent": "V\u00c6LON",
+          "agent": "VÆLON",
           "role": "Optimization & Scenario Exploration",
           "provider": "openai-compatible",
           "model": "openai/gpt-oss-20b",
@@ -222,10 +222,10 @@
         "receipt": "7051ec040e99563cede7eab141ec3a3187ae2f04901996c408f42b7fceeffe69"
       },
       {
-        "agent": "SOLV\u00c6R",
+        "agent": "SOLVÆR",
         "http": 200,
         "runtime": {
-          "agent": "SOLV\u00c6R",
+          "agent": "SOLVÆR",
           "role": "Simulation & Evidence Generation",
           "provider": "openai-compatible",
           "model": "openai/gpt-oss-20b",
@@ -264,9 +264,9 @@
         "receipt": "b27b5505ebcff68d14182864d5a3fb21ee5cc287caed0b6bc19f278b65b6fac1",
         "contributions": [
           {
-            "agent": "V\u00c6LON",
+            "agent": "VÆLON",
             "runtime": {
-              "agent": "V\u00c6LON",
+              "agent": "VÆLON",
               "role": "Optimization & Scenario Exploration",
               "provider": "openai-compatible",
               "model": "openai/gpt-oss-20b",
@@ -307,9 +307,9 @@
             "receipt": "d6569c976bf7b3d8bf55563cf2880d505a069a523d0b9a2a817d1dfec01b3b50"
           },
           {
-            "agent": "SOLV\u00c6R",
+            "agent": "SOLVÆR",
             "runtime": {
-              "agent": "SOLV\u00c6R",
+              "agent": "SOLVÆR",
               "role": "Simulation & Evidence Generation",
               "provider": "openai-compatible",
               "model": "openai/gpt-oss-20b",
@@ -355,9 +355,9 @@
         "receipt": "f94f6fc3f2424d1aee7a60b7e364f4b61def2ac8bd7637bce646198e173c0d26",
         "contributions": [
           {
-            "agent": "V\u00c6LON",
+            "agent": "VÆLON",
             "runtime": {
-              "agent": "V\u00c6LON",
+              "agent": "VÆLON",
               "role": "Optimization & Scenario Exploration",
               "provider": "openai-compatible",
               "model": "openai/gpt-oss-20b",
@@ -409,9 +409,9 @@
             "receipt": "f1eeb5a3f4c3f948079bde0427c5ba977fbce4e1531a57240b32ba4851fc7c1d"
           },
           {
-            "agent": "SOLV\u00c6R",
+            "agent": "SOLVÆR",
             "runtime": {
-              "agent": "SOLV\u00c6R",
+              "agent": "SOLVÆR",
               "role": "Simulation & Evidence Generation",
               "provider": "openai-compatible",
               "model": "openai/gpt-oss-20b",
@@ -458,5 +458,61 @@
       "/v1/assets/2275207/endpoint"
     ],
     "queryStringsRecorded": false
+  },
+  "followUp20261004": {
+    "cesium": {
+      "credentialedBrowserResult": "passed",
+      "resourceTypes": [
+        "Cesium Ion terrain quantized-mesh",
+        "Bing source imagery JPEG",
+        "Cesium Ion building glb/b3dm"
+      ],
+      "successfulBuildingTiles": 17,
+      "retainedUpdatedScreenshot": false,
+      "mappedOsmIdentity": "pending"
+    },
+    "tomorrowIo": {
+      "currentLive": true,
+      "forecastLive": true,
+      "hourlyForecastSamples": 120,
+      "retrievedAt": "2026-10-04T11:51:28Z",
+      "runtimeProviderSelection": "tomorrow-io during validation"
+    },
+    "eia": {
+      "region": "NYIS",
+      "live": true,
+      "retrievedAt": "2026-10-04T11:51:07Z"
+    },
+    "noaa": {
+      "gaugeId": "BATN6",
+      "name": "New York Harbor at The Battery (IN MLLW)",
+      "live": true,
+      "observedAt": "2026-10-04T11:30:00Z",
+      "observedStageFeet": 2.5,
+      "forecastStageFeet": 6,
+      "missingFlowSentinelWithheld": true,
+      "floodThresholds": null
+    },
+    "nycFerry": {
+      "publisherEndpoint": "https://nycferry.connexionz.net/rtt/public/utility/gtfsrealtime.aspx/vehicleposition",
+      "httpStatus": 200,
+      "contentType": "application/x-protobuf",
+      "decodedVehiclePositions": 1,
+      "feedTimestampUnix": 1791115389,
+      "runtimeFile": "verified-gtfs-feeds.json"
+    },
+    "ibm": {
+      "accountPage": "unavailable in cloud browser",
+      "verifiedServiceCrn": false,
+      "hardwareSubmission": false
+    },
+    "osm": {
+      "alternateOverpassResult": "timeout",
+      "mappedIdentity": "pending"
+    },
+    "production": {
+      "deployed": false,
+      "runtimeSecretInjectionVerified": false
+    }
   }
 }

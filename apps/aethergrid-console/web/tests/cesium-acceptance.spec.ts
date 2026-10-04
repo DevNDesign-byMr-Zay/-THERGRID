@@ -28,7 +28,9 @@ test('credentialed Cesium globe and city descent', async ({ page }, testInfo) =>
   await testInfo.attach('cesium-source-network', { body: Buffer.from(JSON.stringify({ network, failures }, null, 2)), contentType: 'application/json' });
   const resources = network.filter((item) => item.status === 200 && /(^|\.)cesium\.com$/.test(item.host));
   expect(resources.some((item) => /\.terrain$/.test(item.path) || item.type?.includes('quantized-mesh')), 'successful terrain tile').toBeTruthy();
-  expect(resources.some((item) => /image\/(jpeg|png|webp)/.test(item.type ?? '')), 'successful imagery tile').toBeTruthy();
+  const imagery = network.filter((item) => item.status === 200 &&
+    /(^|\.)(cesium\.com|tiles\.virtualearth\.net)$/.test(item.host));
+  expect(imagery.some((item) => /image\/(jpeg|png|webp)/.test(item.type ?? '') && /\/tiles\//.test(item.path)), 'successful source imagery tile').toBeTruthy();
   expect(resources.some((item) => /\.(b3dm|glb)$/.test(item.path)), 'successful city building tile').toBeTruthy();
   await expect(page.locator('.cesium-widget-errorPanel')).not.toBeVisible();
 });

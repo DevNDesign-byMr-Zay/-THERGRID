@@ -2427,7 +2427,7 @@ export function App() {
               weatherCurrent={
                 activeAtmosphere
                   ? {
-                      live: temporal.mode === 'live' && activeAtmosphere.live,
+                      live: temporal.mode === 'live' && activeAtmosphere.live && !activeAtmosphere.fallback && !activeAtmosphere.stale,
                       state:
                         temporal.mode === 'forecast'
                           ? activeAtmosphere.stale
@@ -2435,7 +2435,11 @@ export function App() {
                             : activeAtmosphere.fallback
                               ? 'fallback'
                               : 'forecast'
-                          : undefined,
+                          : activeAtmosphere.stale
+                            ? 'stale'
+                            : activeAtmosphere.fallback
+                              ? 'fallback'
+                              : undefined,
                       provider: activeAtmosphere.attribution,
                       sourceTime: activeAtmosphere.sourceTime,
                       fetchedAt: activeAtmosphere.fetchedAt,

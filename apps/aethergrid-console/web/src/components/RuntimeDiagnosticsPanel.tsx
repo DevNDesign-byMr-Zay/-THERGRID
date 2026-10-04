@@ -190,6 +190,16 @@ export function RuntimeDiagnosticsPanel() {
         are never rendered here.
       </p>
 
+      <p className="provider-connection-note">
+        IBM: {providers?.quantum?.providers?.ibm?.configured ? 'CONFIGURED · NOT LIVE VERIFIED' : 'UNCONFIGURED · VERIFIED INSTANCE REQUIRED'}.
+        {' '}D-Wave: {providers?.quantum?.providers?.dwave?.configured ? 'CONFIGURED · NOT LIVE VERIFIED' : 'UNCONFIGURED'}.
+        {' '}Local quantum: SIMULATION.
+      </p>
+      <p className="provider-connection-note">
+        Last successful request, latency, cache age and circuit state: UNKNOWN.
+        The readiness endpoint does not supply these measurements. Source receipts in OPS show the results of actual data requests.
+      </p>
+
       {error ? <div className="agent-error">{error}</div> : null}
     </section>
   );

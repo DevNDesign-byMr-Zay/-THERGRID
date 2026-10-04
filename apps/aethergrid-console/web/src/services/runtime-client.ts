@@ -72,6 +72,7 @@ export interface PublicProviderCapability {
   provider?: string;
   status?: PublicProviderStatus;
   hardwareEnabled?: boolean;
+  providers?: Record<string, { configured?: boolean; status?: string; hardwareEnabled?: boolean }>;
 }
 
 export interface PublicProviderRuntime {

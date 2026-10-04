@@ -32,9 +32,10 @@ test('v4 forecast weather keeps Tomorrow and Open-Meteo shapes separate without 
   assert.match(service, /providerData\.timelines/u);
   assert.match(service, /legacyTomorrowHourly/u);
   assert.match(service, /tomorrowHourly/u);
-  assert.match(service, /weatherCode: null/u);
+  assert.match(service, /weatherCodeSystem: 'tomorrow'/u);
+  assert.match(service, /row\.weatherCode \?\? values\.weatherCode/u);
   assert.match(service, /temperatureApparent/u);
-  assert.match(service, /windSpeed\) \* 3\.6/u);
+  assert.match(service, /scaled\(values\.windSpeed, 3\.6\)/u);
 });
 
 test('v4 forecast cursor drives one active atmosphere through scene operations and AI context', async () => {

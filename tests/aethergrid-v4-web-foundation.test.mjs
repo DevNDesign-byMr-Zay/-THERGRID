@@ -175,7 +175,7 @@ test('v4 live atmosphere is source-backed and drives Cesium clouds and fog', asy
   assert.match(contract, /'rain'/u);
   assert.match(contract, /'snow'/u);
   assert.match(contract, /'fog'/u);
-  assert.match(service, /\/api\/aethergrid\/environment/u);
+  assert.match(service, /\/api\/aethergrid\/weather\/current/u);
   assert.match(service, /source\.live === true/u);
   assert.match(service, /modelTimeToIso/u);
   assert.match(weatherLayer, /CloudCollection/u);
