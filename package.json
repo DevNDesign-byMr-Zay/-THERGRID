@@ -42,9 +42,9 @@
     "node-test"
   ],
   "devDependencies": {
-    "eslint": "10.10.0",
-    "prettier": "3.6.2",
-    "typescript": "5.9.3"
+    "eslint": "10.11.0",
+    "prettier": "3.9.9",
+    "typescript": "7.0.2"
   },
   "main": "src/platform-health-service.mjs",
   "exports": "./src/platform-health-service.mjs"
