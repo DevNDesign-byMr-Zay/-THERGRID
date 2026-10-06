@@ -1148,3 +1148,25 @@ test('vNext Settings opens Appearance and nests Connection Center under Develope
   assert.match(settings, /appearance\.setMode\('light'\)/u);
   assert.match(settings, /appearance\.setMode\('system'\)/u);
 });
+
+
+test('vNext light mode separates light-surface text from intentionally dark overlay text', async () => {
+  const styles = await text('apps/aethergrid-console/web/src/app/app.css');
+
+  assert.match(styles, /--text-primary:/u);
+  assert.match(styles, /--text-muted:/u);
+  assert.match(styles, /--text-on-dark:/u);
+  assert.match(styles, /--surface-card:/u);
+  assert.match(
+    styles,
+    /:root\[data-theme='light'\][\s\S]*--text-on-dark:\s*#edf8ff/u,
+  );
+  assert.match(
+    styles,
+    /:root\[data-theme='light'\][\s\S]*\.viewport-status[\s\S]*color:\s*var\(--text-on-dark\)/u,
+  );
+  assert.match(
+    styles,
+    /:root\[data-theme='light'\][\s\S]*\.intel-card[\s\S]*color:\s*var\(--text-primary\)/u,
+  );
+});
