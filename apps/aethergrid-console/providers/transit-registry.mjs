@@ -481,6 +481,7 @@ export function createTransitRegistry(options = {}) {
           longitude: Number.isFinite(v.position?.longitude) ? v.position.longitude : null,
           bearing: Number.isFinite(v.position?.bearing) ? v.position.bearing : null,
           speed: Number.isFinite(v.position?.speed) ? v.position.speed : null,
+          currentStatus: v.currentStatus ?? null,
           stopId: v.stopId || null,
           stopSequence: v.currentStopSequence ?? null,
           timestamp: v.timestamp || feedHeaderTimestamp || null,
