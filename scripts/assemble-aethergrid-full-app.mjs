@@ -61,7 +61,6 @@ const REQUIRED_RUNTIME_FILES = Object.freeze([
   'legacy/index.html',
   'legacy/styles.css',
   'legacy/app.js',
-  'legacy/standalone.html',
   'node_modules/zod/package.json',
 ]);
 
@@ -322,6 +321,7 @@ for (const [path, mime] of [
   legacyStandalone = legacyStandalone.replaceAll(`./${path}`, `data:${mime};base64,${bytes.toString('base64')}`);
 }
 payload.set('legacy/standalone.html', Buffer.from(legacyStandalone, 'utf8'));
+assert(payload.get('legacy/standalone.html')?.length > 0, 'legacy standalone compatibility HTML must be generated');
 
 assertNoPrivateBrowserSecrets(payload);
 
