@@ -54,6 +54,38 @@ export function summarizeProvider(result, provider, { records = 1 } = {}) {
   };
 }
 
+export function summarizeQuantumDiscovery(result, runtimeSummary = {}) {
+  const backends = Array.isArray(result?.backends) ? result.backends : [];
+  const validBackends = backends.filter(
+    (backend) => typeof backend?.name === 'string' && backend.name.trim().length > 0,
+  );
+  const ibm = runtimeSummary?.providers?.ibm || {};
+  const configured =
+    ibm.configured === true &&
+    ibm.apiKeyPresent === true &&
+    ibm.serviceCrnPresent === true &&
+    runtimeSummary.credentialsExposed === false;
+  const verified =
+    configured &&
+    result?.provider === 'ibm-quantum' &&
+    validBackends.length > 0;
+
+  return {
+    verified,
+    acceptanceState: verified ? 'live-authenticated-discovery-verified' : null,
+    provider: result?.provider || 'unconfigured',
+    configured,
+    discoveryOnly: true,
+    backendCount: validBackends.length,
+    hardwareBackendCount: validBackends.filter((backend) => backend.simulator !== true).length,
+    simulatorCount: validBackends.filter((backend) => backend.simulator === true).length,
+    apiVersion: runtimeSummary.apiVersion || null,
+    hardwareSubmitted: false,
+    hardwareExecuted: false,
+    credentialsExposed: runtimeSummary.credentialsExposed === true,
+  };
+}
+
 export function summarizeScheduledRealtime(
   result,
   provider,
