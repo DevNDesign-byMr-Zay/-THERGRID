@@ -30,6 +30,14 @@ const REQUIRED_FILES = Object.freeze([
   'apps/aethergrid-console/styles.css',
   'apps/aethergrid-console/app.js',
   'apps/aethergrid-console/server.mjs',
+  'apps/aethergrid-console/web-runtime.mjs',
+  'apps/aethergrid-console/web/package.json',
+  'apps/aethergrid-console/web/package-lock.json',
+  'apps/aethergrid-console/web/vite.config.ts',
+  'apps/aethergrid-console/web/index.html',
+  'apps/aethergrid-console/web/src/main.tsx',
+  'apps/aethergrid-console/web/src/app/App.tsx',
+  'apps/aethergrid-console/web/README.md',
   'apps/aethergrid-console/agent-config.mjs',
   'apps/aethergrid-console/ai-runtime.mjs',
   'apps/aethergrid-console/profile-store.mjs',
@@ -430,327 +438,104 @@ async function main() {
     'README must document renderer-neutral spatial evidence',
   );
 
-  const exactAethergridHtml = await text('apps/aethergrid-console/index.html');
-  const exactAethergridStyles = await text('apps/aethergrid-console/styles.css');
-  const exactAethergridJs = await text('apps/aethergrid-console/app.js');
+  const exactAethergridLegacyHtml = await text('apps/aethergrid-console/index.html');
   const exactAethergridServer = await text('apps/aethergrid-console/server.mjs');
+  const exactAethergridWebRuntime = await text('apps/aethergrid-console/web-runtime.mjs');
   const exactAethergridPackager = await text('scripts/assemble-aethergrid-full-app.mjs');
   const exactAethergridApp = JSON.parse(await text('apps/aethergrid-console/app.json'));
   const exactAethergridUi = JSON.parse(await text('apps/aethergrid-console/ui.json'));
+  const exactAethergridWebPackage = JSON.parse(
+    await text('apps/aethergrid-console/web/package.json'),
+  );
+  const exactAethergridWebVite = await text('apps/aethergrid-console/web/vite.config.ts');
+  const exactAethergridWebReadme = await text('apps/aethergrid-console/web/README.md');
+  const exactAethergridWebMain = await text('apps/aethergrid-console/web/src/main.tsx');
+  const exactAethergridWebApp = await text('apps/aethergrid-console/web/src/app/App.tsx');
 
   assert(
-    /<canvas id="spatialGrid"/u.test(exactAethergridHtml) &&
-      /id="timeSlider"/u.test(exactAethergridHtml) &&
-      /data-map-tool="buildings"/u.test(exactAethergridHtml) &&
-      /data-workspace="grid"/u.test(exactAethergridHtml) &&
-      /data-workspace="global"/u.test(exactAethergridHtml) &&
-      /id="globalGlobe"/u.test(exactAethergridHtml) &&
-      /id="cityGrid"/u.test(exactAethergridHtml) &&
-      /id="globalPointLat"/u.test(exactAethergridHtml) &&
-      /id="globalPointLon"/u.test(exactAethergridHtml) &&
-      /id="globalTimeSlider"/u.test(exactAethergridHtml) &&
-      /data-action="city-live-now"/u.test(exactAethergridHtml) &&
-      /data-global-layer="infrastructure"/u.test(exactAethergridHtml) &&
-      /data-global-layer="terrain"/u.test(exactAethergridHtml) &&
-      /data-global-layer="weather"/u.test(exactAethergridHtml) &&
-      /data-global-layer="clouds"/u.test(exactAethergridHtml) &&
-      /data-global-layer="illumination"/u.test(exactAethergridHtml) &&
-      /data-global-layer="landmarks"/u.test(exactAethergridHtml) &&
-      /data-global-layer="water"/u.test(exactAethergridHtml) &&
-      /data-global-layer="green"/u.test(exactAethergridHtml) &&
-      /id="cityIdentity"/u.test(exactAethergridHtml) &&
-      /data-global-layer="air"/u.test(exactAethergridHtml) &&
-      /data-global-layer="seismic"/u.test(exactAethergridHtml) &&
-      /id="globalLiveStatus"/u.test(exactAethergridHtml) &&
-      /value="weather-readiness"/u.test(exactAethergridHtml) &&
-      /value="air-quality-exposure"/u.test(exactAethergridHtml) &&
-      /value="seismic-awareness"/u.test(exactAethergridHtml) &&
-      /value="heat-stress"/u.test(exactAethergridHtml) &&
-      /value="visibility-operations"/u.test(exactAethergridHtml) &&
-      /value="flood-context"/u.test(exactAethergridHtml) &&
-      /value="green-infrastructure"/u.test(exactAethergridHtml) &&
-      /id="globalSolarStatus"/u.test(exactAethergridHtml) &&
-      /id="globalGridStats"/u.test(exactAethergridHtml) &&
-      /Terrain Fit/u.test(exactAethergridHtml) &&
-      /id="cityTransitionOverlay"/u.test(exactAethergridHtml) &&
-      /data-city-visual="solid"/u.test(exactAethergridHtml) &&
-      /id="cityUseCaseSelect"/u.test(exactAethergridHtml) &&
-      /data-action="run-city-use-case"/u.test(exactAethergridHtml) &&
-      /id="agentThreadBadge"/u.test(exactAethergridHtml) &&
-      /data-workspace="holographic"/u.test(exactAethergridHtml) &&
-      /data-workspace="quantum"/u.test(exactAethergridHtml) &&
-      /data-workspace="ai"/u.test(exactAethergridHtml) &&
-      /data-workspace="scenarios"/u.test(exactAethergridHtml) &&
-      /data-workspace="evidence"/u.test(exactAethergridHtml) &&
-      /data-workspace="settings"/u.test(exactAethergridHtml) &&
-      /id="settingTheme"/u.test(exactAethergridHtml) &&
-      /id="settingDefaultWorkspace"/u.test(exactAethergridHtml) &&
-      /id="profileForm"/u.test(exactAethergridHtml) &&
-      /id="quantumCircuit"/u.test(exactAethergridHtml) &&
-      /data-action="submit-quantum-job"/u.test(exactAethergridHtml) &&
-      /data-agent="TEAM"/u.test(exactAethergridHtml) &&
-      /data-scenario="custom"/u.test(exactAethergridHtml) &&
-      /id="customLoad"/u.test(exactAethergridHtml) &&
-      /id="quantumCanvas"/u.test(exactAethergridHtml) &&
-      /id="scenarioChart"/u.test(exactAethergridHtml),
-    'ÆTHERGRID runtime HTML must expose real semantic controls and canvas surfaces',
+    exactAethergridApp.version === exactAethergridWebPackage.version &&
+      exactAethergridUi.version === exactAethergridWebPackage.version,
+    'canonical app.json, ui.json and React workspace must share the v4 frontend version',
   );
   assert(
-    !/dashboard-reference/iu.test(exactAethergridHtml) &&
-      !/class="dashboard-reference"/u.test(exactAethergridHtml) &&
-      exactAethergridApp.visualContract?.runtimeUsesBackgroundReferenceImage === false &&
-      exactAethergridUi.runtimeUsesBackgroundReferenceImage === false,
-    'ÆTHERGRID runtime must not use the dashboard reference as a background image',
-  );
-  assert(
-    /class SpatialGrid4D/u.test(exactAethergridJs) &&
-      /attribute vec4 a_position/u.test(exactAethergridJs) &&
-      /gl\.drawArrays/u.test(exactAethergridJs) &&
-      /pointerdown/u.test(exactAethergridJs) &&
-      /wheel/u.test(exactAethergridJs) &&
-      /loadGraph\(graph\)/u.test(exactAethergridJs) &&
-      /function switchWorkspace/u.test(exactAethergridJs) &&
-      /localStorage\.setItem\(SETTINGS_KEY/u.test(exactAethergridJs) &&
-      /pickNode\(clientX, clientY\)/u.test(exactAethergridJs) &&
-      /activateScenario\(name, parameters/u.test(exactAethergridJs) &&
-      /async function loadLiveCity/u.test(exactAethergridJs) &&
-      /async function loadCoordinateCity/u.test(exactAethergridJs) &&
-      /infrastructureLines/u.test(exactAethergridJs) &&
-      /terrainLines/u.test(exactAethergridJs) &&
-      /function bilinearTerrainElevation/u.test(exactAethergridJs) &&
-      /terrainSurfaceYAtSource/u.test(exactAethergridJs) &&
-      /terrainConformance/u.test(exactAethergridJs) &&
-      /loadTerrainFor/u.test(exactAethergridJs) &&
-      /powerAssets/u.test(exactAethergridJs) &&
-      /buildingFaces/u.test(exactAethergridJs) &&
-      /roofFaces/u.test(exactAethergridJs) &&
-      /roofLines/u.test(exactAethergridJs) &&
-      /weatherLines/u.test(exactAethergridJs) &&
-      /cloudParticles/u.test(exactAethergridJs) &&
-      /cityLights/u.test(exactAethergridJs) &&
-      /landmarkCandidates/u.test(exactAethergridJs) &&
-      /landmarkSpines/u.test(exactAethergridJs) &&
-      /waterLines/u.test(exactAethergridJs) &&
-      /waterFaces/u.test(exactAethergridJs) &&
-      /greenLines/u.test(exactAethergridJs) &&
-      /greenFaces/u.test(exactAethergridJs) &&
-      /materialGlassFaces/u.test(exactAethergridJs) &&
-      /materialMasonryFaces/u.test(exactAethergridJs) &&
-      /materialMetalFaces/u.test(exactAethergridJs) &&
-      /materialNaturalFaces/u.test(exactAethergridJs) &&
-      /snowParticles/u.test(exactAethergridJs) &&
-      /fogParticles/u.test(exactAethergridJs) &&
-      /stormLines/u.test(exactAethergridJs) &&
-      /weatherPhenomenon/u.test(exactAethergridJs) &&
-      /function updateCityIdentity/u.test(exactAethergridJs) &&
-      /precipitationLines/u.test(exactAethergridJs) &&
-      /airParticles/u.test(exactAethergridJs) &&
-      /u_flow/u.test(exactAethergridJs) &&
-      /u_drop/u.test(exactAethergridJs) &&
-      /solarPosition/u.test(exactAethergridJs) &&
-      /updateSolarGeometry/u.test(exactAethergridJs) &&
-      /seismicLines/u.test(exactAethergridJs) &&
-      /setLiveActivity/u.test(exactAethergridJs) &&
-      /updateUtcSweep/u.test(exactAethergridJs) &&
-      /setOperationProfile/u.test(exactAethergridJs) &&
-      /environmentHour/u.test(exactAethergridJs) &&
-      /resolvedTheme/u.test(exactAethergridJs) &&
-      /cityCameraTarget/u.test(exactAethergridJs) &&
-      /gl\.TRIANGLES/u.test(exactAethergridJs) &&
-      /cinematicEntrance/u.test(exactAethergridJs) &&
-      /async function runCityUseCase/u.test(exactAethergridJs) &&
-      /AGENT_CHAT_STORAGE_KEY/u.test(exactAethergridJs) &&
-      /agentHistory\(name\)/u.test(exactAethergridJs) &&
-      /descendToCity\(city, durationMs/u.test(exactAethergridJs) &&
-      /async function submitQuantumJob/u.test(exactAethergridJs) &&
-      /async function loadQuantumJobDetail/u.test(exactAethergridJs) &&
-      /async function saveProfile/u.test(exactAethergridJs),
-    'ÆTHERGRID must keep native WebGL 4D geometry, interaction controls, and backend graph loading',
-  );
-  assert(
-    /#spatialGrid/u.test(exactAethergridStyles) &&
-      /\.map-card/u.test(exactAethergridStyles) &&
-      /\.quantum-canvas/u.test(exactAethergridStyles) &&
-      /\.city-transition-overlay/u.test(exactAethergridStyles) &&
-      /\.city-operation-result/u.test(exactAethergridStyles) &&
-      /\.thread-pill/u.test(exactAethergridStyles) &&
-      /html\[data-theme="light"\]/u.test(exactAethergridStyles) &&
-      /\.operation-live-badge/u.test(exactAethergridStyles) &&
-      /live-layer-pulse/u.test(exactAethergridStyles) &&
-      /#globalSolarStatus/u.test(exactAethergridStyles) &&
-      /\.city-identity/u.test(exactAethergridStyles) &&
-      /\.identity-anchor/u.test(exactAethergridStyles),
-    'ÆTHERGRID styles must target real runtime elements',
-  );
-  assert(
-    exactAethergridApp.entrypoints?.standaloneHtml === 'standalone.html' &&
-      exactAethergridApp.entrypoints?.webApp === 'index.html' &&
+    exactAethergridApp.entrypoints?.webApp === 'web/dist/index.html' &&
       exactAethergridApp.entrypoints?.backend === 'server.mjs' &&
-      exactAethergridApp.capabilities?.nativeWebGL4DGrid === true &&
-      exactAethergridApp.capabilities?.interactiveWireframeMap === true &&
-      exactAethergridApp.capabilities?.workspaceRouter === true &&
-      exactAethergridApp.capabilities?.persistentOperatorSettings === true &&
-      exactAethergridApp.capabilities?.individualAgentRuntime === true &&
-      exactAethergridApp.capabilities?.teamAgentRuntime === true &&
-      exactAethergridApp.capabilities?.directWebGlNodePicking === true &&
-      exactAethergridApp.capabilities?.customScenarioBuilder === true &&
-      exactAethergridApp.capabilities?.weightedOptimizationControls === true &&
-      exactAethergridApp.capabilities?.evidenceDrillDown === true &&
-      exactAethergridApp.capabilities?.agentEvidenceReceipts === true &&
-      exactAethergridApp.capabilities?.holographicTemporalCompare === true &&
-      exactAethergridApp.capabilities?.savedCameraViews === true &&
-      exactAethergridApp.capabilities?.scenarioDuplication === true &&
-      exactAethergridApp.capabilities?.auditTimeline === true &&
-      exactAethergridApp.capabilities?.classicalExperimentalComparison === true &&
-      exactAethergridApp.capabilities?.persistentOperatorProfile === true &&
-      exactAethergridApp.capabilities?.globalWebGlGlobe === true &&
-      exactAethergridApp.capabilities?.liveOpenStreetMapCityMeshes === true &&
-      exactAethergridApp.capabilities?.ibmQuantumComputeIntegration === true &&
-      exactAethergridApp.capabilities?.quantumJobSubmission === true &&
-      exactAethergridApp.capabilities?.quantumJobResults === true &&
-      exactAethergridApp.capabilities?.quantumJobMetrics === true &&
-      exactAethergridApp.capabilities?.liveOpenStreetMapRoadTopology === true &&
-      exactAethergridApp.capabilities?.animatedGlobeCityDescent === true &&
-      exactAethergridApp.capabilities?.arbitraryCoordinateExplorer === true &&
-      exactAethergridApp.capabilities?.liveOpenStreetMapPowerGrid === true &&
-      exactAethergridApp.capabilities?.independentPowerGridLayer === true &&
-      exactAethergridApp.capabilities?.globalTemporalCityScrubbing === true &&
-      exactAethergridApp.capabilities?.liveTerrainElevation === true &&
-      exactAethergridApp.capabilities?.independentTerrainLayer === true &&
-      exactAethergridApp.capabilities?.terrainFallback === true &&
-      exactAethergridApp.capabilities?.liveAgentExternalContext === true &&
-      exactAethergridApp.capabilities?.liveElevationTerrain === true &&
-      exactAethergridApp.capabilities?.terrainWireframeLayer === true &&
-      exactAethergridApp.capabilities?.solidOpenStreetMapCityVolumes === true &&
-      exactAethergridApp.capabilities?.osmBuildingParts === true &&
-      exactAethergridApp.capabilities?.cityVisualModes === true &&
-      exactAethergridApp.capabilities?.cinematicGlobeCityTransition === true &&
-      exactAethergridApp.capabilities?.cityOperationsUseCases === true &&
-      exactAethergridApp.capabilities?.dedicatedPersistentAgentChats === true &&
-      exactAethergridApp.capabilities?.agentConversationHistory === true &&
-      exactAethergridApp.capabilities?.liveOpenWeatherCityContext === true &&
-      exactAethergridApp.capabilities?.realTimeCityTimeSync === true &&
-      exactAethergridApp.capabilities?.sourceBackedRoofGeometry === true &&
-      exactAethergridApp.capabilities?.relationBuildingGeometry === true &&
-      exactAethergridApp.capabilities?.skylineDataQualityReadout === true &&
-      exactAethergridApp.capabilities?.lightDarkSystemAppearance === true &&
-      exactAethergridApp.capabilities?.citySpecificCameraFraming === true &&
-      exactAethergridApp.capabilities?.liveGlobalSeismicFeed === true &&
-      exactAethergridApp.capabilities?.liveCityAirQuality === true &&
-      exactAethergridApp.capabilities?.weatherVectorAnimation === true &&
-      exactAethergridApp.capabilities?.precipitationAnimation === true &&
-      exactAethergridApp.capabilities?.airQualityParticleAnimation === true &&
-      exactAethergridApp.capabilities?.seismicPulseAnimation === true &&
-      exactAethergridApp.capabilities?.globalAirQualityCityPulses === true &&
-      exactAethergridApp.capabilities?.globalUtcSweep === true &&
-      exactAethergridApp.capabilities?.sourceDrivenCityUseCaseAnimation === true &&
-      exactAethergridApp.capabilities?.weatherReadinessUseCase === true &&
-      exactAethergridApp.capabilities?.airQualityExposureUseCase === true &&
-      exactAethergridApp.capabilities?.seismicAwarenessUseCase === true &&
-      exactAethergridApp.capabilities?.realTimeSolarTerminator === true &&
-      exactAethergridApp.capabilities?.liveSubsolarPoint === true &&
-      exactAethergridApp.capabilities?.nightSideCityIllumination === true &&
-      exactAethergridApp.capabilities?.windDrivenCloudDeck === true &&
-      exactAethergridApp.capabilities?.directionalPrecipitationMotion === true &&
-      exactAethergridApp.capabilities?.proceduralSkylineLighting === true &&
-      exactAethergridApp.capabilities?.solarDaylightContext === true &&
-      exactAethergridApp.capabilities?.humidityPressureContext === true &&
-      exactAethergridApp.capabilities?.heatStressUseCase === true &&
-      exactAethergridApp.capabilities?.visibilityOperationsUseCase === true &&
-      exactAethergridApp.capabilities?.sourceBackedCityIdentity === true &&
-      exactAethergridApp.capabilities?.namedStructureAnchors === true &&
-      exactAethergridApp.capabilities?.interactiveLandmarkLayer === true &&
-      exactAethergridApp.capabilities?.semanticWeatherRendering === true &&
-      exactAethergridApp.capabilities?.modeledSnowAnimation === true &&
-      exactAethergridApp.capabilities?.modeledFogAnimation === true &&
-      exactAethergridApp.capabilities?.modeledThunderstormAnimation === true &&
-      exactAethergridApp.capabilities?.sourceBackedWaterAreas === true &&
-      exactAethergridApp.capabilities?.sourceBackedWaterways === true &&
-      exactAethergridApp.capabilities?.sourceBackedCoastlines === true &&
-      exactAethergridApp.capabilities?.sourceBackedGreenAreas === true &&
-      exactAethergridApp.capabilities?.sourceTaggedBuildingMaterialOverlays === true &&
-      exactAethergridApp.capabilities?.floodContextUseCase === true &&
-      exactAethergridApp.capabilities?.greenInfrastructureUseCase === true &&
-      exactAethergridApp.capabilities?.noInventedEnvironmentalGeometry === true &&
-      exactAethergridApp.capabilities?.terrainConformingCityGeometry === true &&
-      exactAethergridApp.capabilities?.bilinearTerrainInterpolation === true &&
-      exactAethergridApp.capabilities?.terrainAnchoredBuildings === true &&
-      exactAethergridApp.capabilities?.terrainDrapedRoads === true &&
-      exactAethergridApp.capabilities?.terrainDrapedWaterways === true &&
-      exactAethergridApp.capabilities?.terrainAlignedGreenSpace === true &&
-      exactAethergridApp.capabilities?.terrainDrapedInfrastructure === true &&
-      exactAethergridApp.capabilities?.levelWaterAreaPresentation === true &&
-      exactAethergridApp.visualContract?.proceduralCityLightsRepresentOccupancy === false &&
-      exactAethergridApp.visualContract?.sourceTaggedMaterialStyling === true &&
-      exactAethergridApp.visualContract?.environmentalGeometryFallbackInvented === false &&
-      exactAethergridApp.visualContract?.surveyGradeElevation === false &&
-      exactAethergridApp.visualContract?.waterAreasWarpedToTerrain === false &&
-      exactAethergridApp.visualContract?.unnamedTallLandmarkRequiresSourceBackedHeight === true &&
-      exactAethergridApp.visualContract?.landmarkIdentityRequiresSourceNameOrTallGeometry ===
-        true &&
-      exactAethergridApp.visualContract?.thunderstormLinesRepresentDetectedStrikes === false &&
-      exactAethergridApp.visualContract?.fogSnowRainVisualsRepresentStreetLevelSensors === false &&
-      exactAethergridApp.aiRuntime?.replaceableByConfiguration === true &&
-      Array.isArray(exactAethergridApp.aiRuntime?.externalContext) &&
-      exactAethergridApp.aiRuntime.externalContext.includes('geospatial-summary') &&
-      exactAethergridApp.aiRuntime.externalContext.includes('quantum-job-summary') &&
-      exactAethergridApp.aiRuntime.externalContext.includes('city-operation-summary') &&
-      exactAethergridApp.aiRuntime?.dedicatedPersistentThreads === true &&
-      exactAethergridApp.geospatialRuntime?.liveFetchOnExplicitOperatorAction === true &&
-      exactAethergridApp.geospatialRuntime?.supportsCustomCoordinates === true &&
-      exactAethergridApp.geospatialRuntime?.livePowerLineGeometry === true &&
-      exactAethergridApp.geospatialRuntime?.livePowerAssetGeometry === true &&
-      exactAethergridApp.geospatialRuntime?.layers?.includes('building-parts') &&
-      exactAethergridApp.geospatialRuntime?.layers?.includes('roofs') &&
-      exactAethergridApp.geospatialRuntime?.sourceBackedRoofGeometry === true &&
-      exactAethergridApp.geospatialRuntime?.relationBuildingGeometry === true &&
-      exactAethergridApp.geospatialRuntime?.maxSupportedBuildingHeightM === 1200 &&
-      exactAethergridApp.geospatialRuntime?.solidBuildingVolumes === true &&
-      exactAethergridApp.geospatialRuntime?.buildingParts === true &&
-      exactAethergridApp.geospatialRuntime?.layers?.includes('terrain') &&
-      exactAethergridApp.geospatialRuntime?.layers?.includes('water-areas') &&
-      exactAethergridApp.geospatialRuntime?.layers?.includes('waterways') &&
-      exactAethergridApp.geospatialRuntime?.layers?.includes('coastline') &&
-      exactAethergridApp.geospatialRuntime?.layers?.includes('green-areas') &&
-      exactAethergridApp.geospatialRuntime?.geographicIdentity?.fallbackInventsWaterOrGreen ===
-        false &&
-      exactAethergridApp.geospatialRuntime?.cityOperations?.includes('flood-context') &&
-      exactAethergridApp.geospatialRuntime?.cityOperations?.includes('green-infrastructure') &&
-      exactAethergridApp.environmentRuntime?.module === 'city-environment-runtime.mjs' &&
-      exactAethergridApp.environmentRuntime?.browserSecrets === false &&
-      exactAethergridApp.environmentRuntime?.solarContext === true &&
-      exactAethergridApp.environmentRuntime?.currentVariables?.includes('relative_humidity_2m') &&
-      exactAethergridApp.environmentRuntime?.dailyVariables?.includes('sunrise') &&
-      exactAethergridApp.liveContextRuntime?.module === 'city-live-runtime.mjs' &&
-      exactAethergridApp.liveContextRuntime?.browserSecrets === false &&
-      exactAethergridApp.liveContextRuntime?.seismicFeed === 'M2.5+ past day GeoJSON' &&
-      exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('weather') &&
-      exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('clouds') &&
-      exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('illumination') &&
-      exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('landmarks') &&
-      exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('water') &&
-      exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('green') &&
-      exactAethergridApp.geospatialRuntime?.skylineIdentity?.namedStructures === true &&
-      exactAethergridApp.geospatialRuntime?.skylineIdentity?.interactiveAnchors === true &&
-      exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('air') &&
-      exactAethergridApp.geospatialRuntime?.liveAnimatedLayers?.includes('seismic') &&
-      Array.isArray(exactAethergridApp.settingsRuntime?.appearanceModes) &&
-      exactAethergridApp.settingsRuntime.appearanceModes.includes('light') &&
-      exactAethergridApp.settingsRuntime.appearanceModes.includes('dark') &&
-      exactAethergridApp.settingsRuntime.appearanceModes.includes('system') &&
-      exactAethergridApp.terrainRuntime?.module === 'terrain-runtime.mjs' &&
-      exactAethergridApp.terrainRuntime?.credentialsExposedToBrowser === false &&
-      exactAethergridApp.terrainRuntime?.interpolation === 'bilinear-local-grid' &&
-      exactAethergridApp.terrainRuntime?.cityConformance?.surveyGrade === false &&
-      exactAethergridUi.globalWorkspace?.terrainConformance?.enabled === true &&
-      exactAethergridUi.globalWorkspace?.terrainConformance?.surveyGrade === false &&
-      exactAethergridApp.quantumRuntime?.ibmApiVersion === '2026-04-15' &&
-      exactAethergridUi.workspaceRouting?.mode === 'exclusive-view' &&
-      exactAethergridUi.spatialModel?.renderEngine === 'native-webgl' &&
-      JSON.stringify(exactAethergridUi.spatialModel?.dimensions) ===
-        JSON.stringify(['x', 'y', 'z', 'time']),
-    'ÆTHERGRID manifests must describe the semantic WebGL 4D runtime',
+      exactAethergridApp.entrypoints?.legacyWebApp === 'legacy/index.html' &&
+      exactAethergridApp.entrypoints?.standaloneHtml === 'legacy/standalone.html',
+    'ÆTHERGRID entrypoints must identify the built React app as canonical and native v3 as legacy',
   );
+  assert(
+    exactAethergridApp.frontend?.canonical === true &&
+      exactAethergridApp.frontend?.framework === 'react-typescript-vite' &&
+      exactAethergridApp.frontend?.spatialRenderer === 'cesium-primary-native-fallback' &&
+      exactAethergridApp.frontend?.privateProviderSecretsInBrowser === false &&
+      exactAethergridApp.legacyCompatibility?.canonical === false,
+    'app manifest must preserve the canonical React/Cesium and explicit legacy boundary',
+  );
+  assert(
+    exactAethergridApp.visualContract?.runtimeUsesBackgroundReferenceImage === false &&
+      exactAethergridUi.runtimeUsesBackgroundReferenceImage === false &&
+      exactAethergridUi.runtimeComposition === 'react-typescript-cesium' &&
+      exactAethergridUi.spatialModel?.renderEngine === 'cesium-primary-native-fallback' &&
+      exactAethergridUi.globalWorkspace?.renderEngine === 'cesium-primary-native-fallback' &&
+      exactAethergridUi.canonicalSurface?.build === 'web/dist' &&
+      exactAethergridUi.legacyCompatibility?.canonical === false,
+    'UI contract must identify React/Cesium as canonical without reintroducing the old reference image',
+  );
+  assert(
+    /createCanonicalWebRuntime/u.test(exactAethergridServer) &&
+      /canonicalWebRuntime\.serve\(request, response, url\)/u.test(exactAethergridServer) &&
+      !/url\.pathname === '\/' \? '\/index\.html'/u.test(exactAethergridServer),
+    'Node server must delegate production static serving to the canonical React runtime',
+  );
+  assert(
+    /web['"], ['"]dist/u.test(exactAethergridWebRuntime) &&
+      /canonical_web_build_missing/u.test(exactAethergridWebRuntime) &&
+      /url\.pathname\.startsWith\('\/api\/'\)/u.test(exactAethergridWebRuntime) &&
+      /await serveFile\(request, response, indexPath\)/u.test(exactAethergridWebRuntime),
+    'canonical static runtime must serve web/dist, support SPA fallback, and never shadow API routes',
+  );
+  assert(
+    /run\(npm, \['ci'\], WEB_ROOT\)/u.test(exactAethergridPackager) &&
+      /run\(npm, \['run', 'build'\], WEB_ROOT\)/u.test(exactAethergridPackager) &&
+      /web\/dist\/index\.html/u.test(exactAethergridPackager) &&
+      /legacy\/index\.html/u.test(exactAethergridPackager) &&
+      /legacy\/standalone\.html/u.test(exactAethergridPackager) &&
+      /node_modules\/zod\/package\.json/u.test(exactAethergridPackager) &&
+      /PRIVATE_BROWSER_ENV_NAMES/u.test(exactAethergridPackager),
+    'full-app packaging must deterministically build React, bundle runtime dependencies, and isolate legacy compatibility',
+  );
+  assert(
+    pkg.scripts?.['build:aethergrid-web']?.includes('apps/aethergrid-console/web') &&
+      pkg.scripts?.['aethergrid-app']?.startsWith('npm run build:aethergrid-web'),
+    'maintained ÆTHERGRID launch path must build the canonical React frontend first',
+  );
+  assert(
+    exactAethergridWebPackage.private === true &&
+      exactAethergridWebPackage.scripts?.build === 'tsc --noEmit && vite build' &&
+      typeof exactAethergridWebPackage.dependencies?.react === 'string' &&
+      typeof exactAethergridWebPackage.dependencies?.cesium === 'string',
+    'canonical web workspace must remain a locked React/Cesium production build',
+  );
+  assert(
+    /CESIUM_BASE_URL/u.test(exactAethergridWebVite) &&
+      /outDir: 'dist'/u.test(exactAethergridWebVite) &&
+      /'\/api': 'http:\/\/127\.0\.0\.1:8090'/u.test(exactAethergridWebVite),
+    'Vite must emit dist assets, preserve Cesium assets, and proxy API calls only in development',
+  );
+  assert(
+    /canonical/iu.test(exactAethergridWebReadme) &&
+      /production/u.test(exactAethergridWebReadme) &&
+      /createRoot/u.test(exactAethergridWebMain) &&
+      /Product modes/u.test(exactAethergridWebApp),
+    'React workspace documentation and source must describe the promoted command center',
+  );
+  assert(
+    /<canvas id="spatialGrid"/u.test(exactAethergridLegacyHtml) &&
+      !/dashboard-reference/iu.test(exactAethergridLegacyHtml),
+    'native v3 source must remain available only as verified compatibility/fallback material',
+  );
+
   for (const route of [
     '/api/aethergrid/telemetry',
     '/api/aethergrid/stream',
