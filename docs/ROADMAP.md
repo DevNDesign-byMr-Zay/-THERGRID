@@ -10,12 +10,13 @@ This roadmap separates delivered application work from future integration and de
 - Provider registry, real weather/energy/hydrology/transit/spatial adapters, agent/TEAM runtime and local/remote quantum adapter contracts.
 - Root and browser regression suites, coverage thresholds, lint/types, Engineering CI, fresh-clone/container verification and CodeQL.
 - Backend PR #145 and responsive command-center PR #144 converged on main.
+- Canonical React/Cesium production serving, deterministic full-app packaging and packaged-runtime smoke integrated through PR #148.
 
 ## Remaining integration and release work
 
-1. Land the canonical React/Cesium backend/runtime/ZIP migration in its integration lane.
-2. Reconcile repository release semver with the migration's compatibility contract; see [VERSIONING.md](VERSIONING.md).
-3. Merge intended safe city-provider hardening, then validate every maintained gate on the exact final main SHA.
+1. Confirm intended safe city-provider hardening is integrated before selecting the final submission SHA.
+2. Retain the reconciled 0.2.0 repository candidate and independent product-generation versions; see [VERSIONING.md](VERSIONING.md).
+3. Validate every maintained gate on the exact final main SHA after all intended hardening and reconciliation changes are merged.
 4. Run protected canonical live-provider acceptance with installed Actions secrets; retain sanitized evidence, including explicit unavailable hardware states.
 5. Select production hosting and configure its server-side environment, persistence and operating controls.
 

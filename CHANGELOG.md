@@ -1,8 +1,12 @@
 # Changelog
 
-## Unreleased — pre-rescore detector hardening
+## Unreleased — 0.2.0
 
 ### Changed
+
+- Promoted React/TypeScript/Cesium to the canonical Node-served and full-ZIP application through #148, preserving same-origin provider APIs and explicit native v3 compatibility.
+- Reconciled root package/lockfile to the unreleased 0.2.0 delivery milestone; canonical application generation remains 4.0.0-alpha.1 and the earlier evidence console tracks repository delivery at 0.2.0.
+- Updated startup and roadmap status to the merged production build/package contract; final-main and canonical live-provider evidence remain required before publication.
 
 - Reconciled the repository introduction and scope with the maintained Node.js backend, React/TypeScript/Cesium frontend, provider/agent/quantum runtimes and advisory evidence boundary.
 - Archived completed roadmap foundation work, expanded maintained application classification to apps/docs and documented independent version roles.
@@ -125,7 +129,7 @@
 
 - Integrated the draft v4 React/Cesium operator lane with the merged production provider foundation: safe provider Connection Center, normalized Tomorrow forecast compatibility, source-backed NWS alert boundaries, decoded GTFS-Realtime vehicle positions, coordinate-bound NOAA NWPS gauge visualization, source-unit-preserving EIA fuel-mix presentation, and an explicitly confirmed D-Wave annealing workflow with genuine job/result polling.
 - Preserved truth boundaries throughout the integration: no inferred GTFS route geometry, no guessed hydrology locations, no invented EIA region polygons, no cross-provider weather-code equivalence, and no hardware-executed quantum claim before a provider-completed result.
-- Current package candidate: `0.1.3`. The `v0.1.2` release is the latest hosted milestone; this candidate is not published until the gated manual release workflow publishes it.
+- Current package candidate: `0.2.0`. The `v0.1.2` release is the latest hosted milestone; this candidate is not published until the gated manual release workflow publishes it.
 
 ## 0.1.1 — 2026-09-24 — post-release hardening
 
