@@ -40,12 +40,25 @@ NYC Ferry was the only blocking provider. The trip-update endpoint was live, non
 
 The GTFS-Realtime decoder field mappings were also reconciled with the canonical GTFS-Realtime protobuf schema while making this change. No vehicle position is inferred from trip updates.
 
+## IBM Quantum credential activation
+
+The IBM Quantum service CRN is now configured in repository Actions secrets alongside the existing IBM API key. The next protected canonical-live revision promotes IBM from prerequisite-only reporting to real authenticated discovery:
+
+- exchange the API key for an IBM Cloud IAM bearer token;
+- call IBM Quantum backend discovery with the configured service CRN;
+- require at least one normalized backend record;
+- retain only backend counts, API version and non-secret configuration state;
+- keep `hardwareSubmitted: false` and `hardwareExecuted: false`;
+- do not call Sampler/Estimator submission endpoints.
+
+D-Wave remains unconfigured until a Leap/SAPI token is installed.
+
 ## Outstanding prerequisites
 
 1. Confirm all intended safe city-provider hardening is merged. The event for #148 establishes canonical migration, not completion of a separate hardening lane; no open city-hardening PR was found at inspection time.
 2. Land/identify the protected canonical live-provider workflow. The currently maintained `aethergrid-live-provider-smoke.yml` has no protected environment and its script checks AUREN alone and `cesium-config`, not all specialist agents/TEAM or real Cesium terrain/imagery/building tiles. Running it cannot satisfy the requested acceptance contract.
 3. After all intended work is merged, run every maintained release gate on one exact final main SHA, including web/browser, fresh-clone/container and CodeQL, then the comprehensive protected live-provider gate with sanitized artifacts. Do not promote historical live receipts to final evidence.
-4. IBM hardware remains unconfigured/degraded without a verified service CRN. D-Wave hardware remains unconfigured without a Leap/SAPI token. Production hosting, secret injection and persistence remain deployment work.
+4. IBM now has the required API key + service CRN and must pass authenticated backend discovery on the next exact-main canonical-live run. D-Wave remains unconfigured without a Leap/SAPI token. Production hosting, secret injection and persistence remain deployment work.
 
 The webhook watch remains enabled for subsequent merges. No hardware job or release was submitted by this checkpoint.
 
