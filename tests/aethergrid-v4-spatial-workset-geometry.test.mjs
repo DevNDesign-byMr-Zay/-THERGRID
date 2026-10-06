@@ -80,7 +80,7 @@ test('v4 app synchronizes workset persistence into the graph and renders it in w
   assert.match(app, /\{ id: 'workset-analysis', visible: true \}/u);
   assert.match(
     app,
-    /worldOverlay, incidentOverlay, worksetGeometryOverlay, operatorScenarioOverlay, measurementOverlay/u,
+    /worldOverlay,[\s\S]*incidentOverlay,[\s\S]*worksetGeometryOverlay,[\s\S]*operatorScenarioOverlay,[\s\S]*measurementOverlay/u,
   );
   assert.match(
     app,

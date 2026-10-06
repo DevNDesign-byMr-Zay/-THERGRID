@@ -22,11 +22,21 @@ import { SpatialInvestigationBoard } from '../components/SpatialInvestigationBoa
 import { SpatialWorksetGeometryPanel } from '../components/SpatialWorksetGeometryPanel';
 import { SpatialWorksetPanel } from '../components/SpatialWorksetPanel';
 import { RuntimeDiagnosticsPanel } from '../components/RuntimeDiagnosticsPanel';
+import { SettingsPanel } from '../components/SettingsPanel';
 import { SpatialViewport } from '../components/SpatialViewport';
 import { TemporalEventNavigator } from '../components/TemporalEventNavigator';
 import { TemporalRail } from '../components/TemporalRail';
 import { ViewBookmarksPanel } from '../components/ViewBookmarksPanel';
 import { useAppearance } from '../hooks/use-appearance';
+import {
+  DOMAIN_DEFINITIONS,
+  type DomainId
+} from '../domains/domain-registry';
+import {
+  aviationOverlay as buildAviationOverlay,
+  mergeAviationSnapshot,
+  type AviationDomainState
+} from '../domains/aviation/aviation-domain';
 import { useOperatorShortcuts } from '../hooks/use-operator-shortcuts';
 import { useTemporalClock } from '../hooks/use-temporal-clock';
 import {
@@ -52,6 +62,7 @@ import {
   type AtmosphericForecastSeries
 } from '../services/city-environment';
 import type { ScenarioVisualState } from '../services/scenario-client';
+import { loadAviationSnapshot } from '../services/aviation-client';
 import {
   compareOperatorScenario,
   loadOperatorScenarios,
@@ -240,6 +251,7 @@ const INITIAL_LAYERS: readonly LayerState[] = [
   { id: 'grid', visible: true },
   { id: 'weather', visible: true },
   { id: 'air', visible: true },
+  { id: 'aviation', visible: true },
   { id: 'seismic', visible: true },
   { id: 'hazards', visible: true },
   { id: 'transit', visible: true },
@@ -298,10 +310,19 @@ export function App() {
   const [navigationTab, setNavigationTab] = useState('world');
   const [inspector, setInspector] = useState('overview');
   const [productMode, setProductMode] = useState('GRID');
+  const [activeDomain, setActiveDomain] = useState<DomainId>('energy');
   const navigationDrawer = useCommandDrawer(navOpen, () => setNavOpen(false));
   const intelligenceDrawer = useCommandDrawer(intelOpen, () => setIntelOpen(false));
   const [intelWorkspace, setIntelWorkspace] = useState<
-    'context' | 'operations' | 'analysis' | 'ai' | 'scenario' | 'quantum' | 'evidence' | 'system'
+    | 'context'
+    | 'operations'
+    | 'analysis'
+    | 'ai'
+    | 'scenario'
+    | 'quantum'
+    | 'evidence'
+    | 'system'
+    | 'settings'
   >('context');
   const openIntelligence = () => { setNavOpen(false); setIntelOpen(true); };
   const showIntelligence = (workspace: typeof intelWorkspace) => {
@@ -321,6 +342,8 @@ export function App() {
   const [hazardError, setHazardError] = useState<string | null>(null);
   const [transitContext, setTransitContext] = useState<GtfsTransitContext | null>(null);
   const [transitError, setTransitError] = useState<string | null>(null);
+  const [aviationState, setAviationState] = useState<AviationDomainState | null>(null);
+  const [aviationError, setAviationError] = useState<string | null>(null);
   const [operationalBindings, setOperationalBindings] =
     useState<OperationalSourceBindings>({
       gaugeId: null,
@@ -730,6 +753,63 @@ export function App() {
   }, [scope, city.id, temporal.mode]);
 
   useEffect(() => {
+    const aviationEnabled = layers.some(
+      (layer) => layer.id === 'aviation' && layer.visible
+    );
+    if (!aviationEnabled || temporal.mode !== 'live') return;
+
+    const controller = new AbortController();
+    let timer: ReturnType<typeof globalThis.setTimeout> | null = null;
+
+    const schedule = (delayMs: number) => {
+      if (controller.signal.aborted) return;
+      timer = globalThis.setTimeout(refresh, delayMs);
+    };
+
+    const refresh = () => {
+      const query =
+        scope === 'world'
+          ? { scope: 'global' as const }
+          : {
+              scope: 'city' as const,
+              latitude: city.latitude,
+              longitude: city.longitude,
+              radiusKm: 250
+            };
+
+      void loadAviationSnapshot(query, controller.signal)
+        .then((incoming) => {
+          if (controller.signal.aborted) return;
+          setAviationState((previous) =>
+            mergeAviationSnapshot(previous, incoming)
+          );
+          setAviationError(null);
+          schedule(15_000);
+        })
+        .catch((error) => {
+          if (controller.signal.aborted) return;
+          setAviationError(
+            error instanceof Error ? error.message : String(error)
+          );
+          schedule(60_000);
+        });
+    };
+
+    refresh();
+    return () => {
+      controller.abort();
+      if (timer) globalThis.clearTimeout(timer);
+    };
+  }, [
+    scope,
+    city.id,
+    city.latitude,
+    city.longitude,
+    temporal.mode,
+    layers
+  ]);
+
+  useEffect(() => {
     if (temporal.mode !== 'forecast') {
       setForecastError(null);
       return;
@@ -1075,6 +1155,14 @@ export function App() {
     [scope, hydrologyContext, temporal.mode]
   );
 
+  const aviationOverlay = useMemo(
+    () =>
+      aviationState
+        ? buildAviationOverlay(aviationState, temporal.mode)
+        : null,
+    [aviationState, temporal.mode]
+  );
+
   const airQualityOverlay = useMemo(
     () =>
       scope === 'city' && liveContext && temporal.mode === 'live'
@@ -1086,10 +1174,16 @@ export function App() {
     [scope, liveContext, temporal.mode, atmosphere]
   );
 
-  const activeOverlays = useMemo(
-    () =>
-      (scope === 'world'
-        ? [worldOverlay, incidentOverlay, worksetGeometryOverlay, operatorScenarioOverlay, measurementOverlay]
+  const activeOverlays = useMemo(() => {
+    const contextualOverlays =
+      scope === 'world'
+        ? [
+            worldOverlay,
+            incidentOverlay,
+            worksetGeometryOverlay,
+            operatorScenarioOverlay,
+            measurementOverlay
+          ]
         : [
             ...semanticOverlays,
             activeIllumination,
@@ -1103,27 +1197,28 @@ export function App() {
             worksetGeometryOverlay,
             operatorScenarioOverlay,
             measurementOverlay
-          ]
-      ).filter(
-        (snapshot): snapshot is SpatialOverlaySnapshot => Boolean(snapshot)
-      ),
-    [
-      scope,
-      worldOverlay,
-      semanticOverlays,
-      activeIllumination,
-      powerOverlay,
-      windOverlay,
-      seismicOverlay,
-      hazardOverlay,
-      transitOverlay,
-      hydrologyOverlay,
-      incidentOverlay,
-      worksetGeometryOverlay,
-      operatorScenarioOverlay,
-      measurementOverlay
-    ]
-  );
+          ];
+
+    return [aviationOverlay, ...contextualOverlays].filter(
+      (snapshot): snapshot is SpatialOverlaySnapshot => Boolean(snapshot)
+    );
+  }, [
+    scope,
+    worldOverlay,
+    aviationOverlay,
+    semanticOverlays,
+    activeIllumination,
+    powerOverlay,
+    windOverlay,
+    seismicOverlay,
+    hazardOverlay,
+    transitOverlay,
+    hydrologyOverlay,
+    incidentOverlay,
+    worksetGeometryOverlay,
+    operatorScenarioOverlay,
+    measurementOverlay
+  ]);
 
   const handleSpatialSelection = (next: SpatialFeatureSelection | null) => {
     const bound = next
@@ -1461,6 +1556,10 @@ export function App() {
         liveContext?.airQuality.current?.usAqi != null
           ? 1
           : 0,
+      aviation:
+        temporal.mode === 'live' && aviationOverlay
+          ? aviationOverlay.nodes.length + aviationOverlay.edges.length
+          : 0,
       seismic:
         temporal.mode !== 'live'
           ? 0
@@ -1736,7 +1835,19 @@ export function App() {
                 setScope('city'); setVisualMode(mode === 'HOLOGRAPHIC' ? 'holographic' : 'solid');
                 setIntelWorkspace('context'); setIntelOpen(false);
               } else {
-                setIntelWorkspace(mode === 'AI' ? 'ai' : mode === 'QUANTUM' ? 'quantum' : mode === 'EVIDENCE' ? 'evidence' : mode === 'SCENARIOS' ? 'scenario' : 'system');
+                setIntelWorkspace(
+                  mode === 'AI'
+                    ? 'ai'
+                    : mode === 'QUANTUM'
+                      ? 'quantum'
+                      : mode === 'EVIDENCE'
+                        ? 'evidence'
+                        : mode === 'SCENARIOS'
+                          ? 'scenario'
+                          : mode === 'SETTINGS'
+                            ? 'settings'
+                            : 'system'
+                );
                 openIntelligence();
               }
             }}>{mode}</button>
@@ -1813,6 +1924,30 @@ export function App() {
             onRestore={restoreOperatorSession}
           />
 
+          <div className="rail-section domain-list">
+            <span className="rail-kicker">DOMAINS</span>
+            <div className="domain-grid" role="group" aria-label="Operational domains">
+              {DOMAIN_DEFINITIONS.map((domain) => (
+                <button
+                  type="button"
+                  key={domain.id}
+                  className={activeDomain === domain.id ? 'active' : ''}
+                  aria-pressed={activeDomain === domain.id}
+                  disabled={domain.status !== 'active'}
+                  title={
+                    domain.status === 'active'
+                      ? domain.animationLanguage
+                      : `${domain.label} provider/visual pack is not wired yet`
+                  }
+                  onClick={() => setActiveDomain(domain.id)}
+                >
+                  <span>{domain.label}</span>
+                  <em>{domain.status === 'active' ? 'READY' : 'FOUNDATION'}</em>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="rail-section layer-list">
             <span className="rail-kicker">LAYERS</span>
             {layers.map((layer) => (
@@ -1875,7 +2010,6 @@ export function App() {
                   type="button"
                   className={mode === visualMode ? 'active' : ''}
                   onClick={() => {
-                    setActiveUseCase(null);
                     setVisualMode(mode);
                   }}
                 >
@@ -1898,6 +2032,32 @@ export function App() {
             onSelection={handleSpatialSelection}
             onSurfacePoint={handleSurfacePoint}
           />
+
+          {temporal.mode === 'live' && (aviationState || aviationError) ? (
+            <div
+              className="aviation-scene-badge"
+              data-source-state={
+                aviationError
+                  ? 'unavailable'
+                  : aviationState?.stale
+                    ? 'stale'
+                    : aviationState?.live
+                      ? 'live'
+                      : 'fallback'
+              }
+            >
+              <span>AIR TRAFFIC</span>
+              <strong>
+                {aviationError
+                  ? 'PROVIDER UNAVAILABLE'
+                  : `${aviationState?.aircraft.length ?? 0} AIRCRAFT TRACKED`}
+              </strong>
+              <small>
+                {aviationError ??
+                  `${aviationState?.provider ?? 'PROVIDER'} · ${aviationState?.sourceTime ?? 'SOURCE TIME PENDING'}`}
+              </small>
+            </div>
+          ) : null}
 
           {scope === 'city' && Object.values(cityLoad).some(Boolean) ? (
             <div className="city-load-status" aria-live="polite">
@@ -2186,6 +2346,7 @@ export function App() {
                       | 'quantum'
                       | 'evidence'
                       | 'system'
+                      | 'settings'
                   );
                 }}
               >
@@ -2541,6 +2702,9 @@ export function App() {
           </div>
           <div className="intel-workspace intel-system">
             <RuntimeDiagnosticsPanel />
+          </div>
+          <div className="intel-workspace intel-settings">
+            <SettingsPanel appearance={appearance} />
           </div>
 
           </div>

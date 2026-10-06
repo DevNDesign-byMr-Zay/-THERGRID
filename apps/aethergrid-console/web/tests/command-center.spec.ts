@@ -63,6 +63,9 @@ test('exclusive workspaces and source truth survive mode changes', async ({ page
   await expect(page.locator('.intel-ai')).not.toBeVisible();
   await expect(page.locator('.entity-dossier')).not.toBeVisible();
   await page.getByRole('button', { name: 'SETTINGS', exact: true }).click();
+  await expect(page.getByText('APPEARANCE', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Connection Center', { exact: false }).first()).not.toBeVisible();
+  await page.getByRole('button', { name: 'DEVELOPER / DIAGNOSTICS', exact: true }).click();
   await expect(page.getByText('Connection Center', { exact: false }).first()).toBeVisible();
 });
 

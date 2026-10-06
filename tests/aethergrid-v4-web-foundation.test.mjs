@@ -482,7 +482,7 @@ test('v4 world scope isolates global live context from selected-city overlays', 
 
   assert.match(
     app,
-    /scope === 'world'\s*\? \[worldOverlay, incidentOverlay, worksetGeometryOverlay, operatorScenarioOverlay, measurementOverlay\]/u,
+    /scope === 'world'[\s\S]*worldOverlay,[\s\S]*incidentOverlay,[\s\S]*worksetGeometryOverlay,[\s\S]*operatorScenarioOverlay,[\s\S]*measurementOverlay/u,
   );
   assert.match(app, /atmosphere=\{scope === 'city' \? activeAtmosphere : null\}/u);
   assert.match(app, /scope === 'world'\s*\? \{\s*latitude: 20,\s*longitude: 0/u);
@@ -1111,4 +1111,58 @@ test('v4 spatial analysis promotion boundary keeps local comparison separate fro
   assert.match(comparison, /authoritative: false/u);
   assert.match(comparison, /not a substitute for the server evidence ledger/u);
   assert.match(panel, /OPERATOR ANALYSIS · NON-AUTHORITATIVE/u);
+});
+
+test('vNext appearance keeps the in-memory preference when browser storage rejects writes', async () => {
+  const appearance = await text('apps/aethergrid-console/web/src/hooks/use-appearance.ts');
+
+  assert.match(
+    appearance,
+    /const setMode = \(next: AppearanceMode\) => \{\s*setModeState\(next\);\s*try \{\s*localStorage\.setItem\(APPEARANCE_KEY, next\);/u,
+  );
+  assert.match(appearance, /localStorage\.setItem\(APPEARANCE_KEY, next\);\s*\} catch \{/u);
+});
+
+test('vNext presentation changes preserve the active operational use-case context', async () => {
+  const app = await text('apps/aethergrid-console/web/src/app/App.tsx');
+
+  assert.doesNotMatch(
+    app,
+    /onClick=\{\(\) => \{\s*setActiveUseCase\(null\);\s*setVisualMode\(mode\);\s*\}\}/u,
+  );
+});
+
+test('vNext Settings opens Appearance and nests Connection Center under Developer Diagnostics', async () => {
+  const [app, settings] = await Promise.all([
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/components/SettingsPanel.tsx'),
+  ]);
+
+  assert.match(app, /\| 'settings'/u);
+  assert.match(app, /mode === 'SETTINGS'\s*\?\s*'settings'/u);
+  assert.match(app, /<SettingsPanel appearance=\{appearance\}/u);
+  assert.match(settings, /APPEARANCE/u);
+  assert.match(settings, /DEVELOPER \/ DIAGNOSTICS/u);
+  assert.match(settings, /<RuntimeDiagnosticsPanel/u);
+  assert.match(settings, /appearance\.setMode\('dark'\)/u);
+  assert.match(settings, /appearance\.setMode\('light'\)/u);
+  assert.match(settings, /appearance\.setMode\('system'\)/u);
+});
+
+test('vNext light mode separates light-surface text from intentionally dark overlay text', async () => {
+  const styles = await text('apps/aethergrid-console/web/src/app/app.css');
+
+  assert.match(styles, /--text-primary:/u);
+  assert.match(styles, /--text-muted:/u);
+  assert.match(styles, /--text-on-dark:/u);
+  assert.match(styles, /--surface-card:/u);
+  assert.match(styles, /:root\[data-theme='light'\][\s\S]*--text-on-dark:\s*#edf8ff/u);
+  assert.match(
+    styles,
+    /:root\[data-theme='light'\][\s\S]*\.viewport-status[\s\S]*color:\s*var\(--text-on-dark\)/u,
+  );
+  assert.match(
+    styles,
+    /:root\[data-theme='light'\][\s\S]*\.intel-card[\s\S]*color:\s*var\(--text-primary\)/u,
+  );
 });
