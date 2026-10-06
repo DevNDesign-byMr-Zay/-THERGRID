@@ -22,3 +22,7 @@ These checks are **not** the final exact-main submission gate. GitHub gates and 
 4. IBM hardware remains unconfigured/degraded without a verified service CRN. D-Wave hardware remains unconfigured without a Leap/SAPI token. Production hosting, secret injection and persistence remain deployment work.
 
 The webhook watch remains enabled for subsequent merges. No hardware job or release was submitted by this checkpoint.
+
+## Canonical acceptance gate implementation
+
+The verification lane adds `aethergrid-canonical-live.yml` and canonical browser mode. The gate refuses a mismatched/superseded main SHA or absent exact-main successful Engineering CI/CodeQL push runs; credentials enter only the final provider/browser step. Its receipt checks reject fallback, stale, empty or metadata-only observations. Uploaded evidence excludes raw responses, browser traces and screenshots. The six installed repository secrets are reused; IBM service CRN and D-Wave token remain optional configuration blockers, never hardware validation. Final submission remains pending merge and exact-main live execution; prior checkpoint counts are historical, not final results.

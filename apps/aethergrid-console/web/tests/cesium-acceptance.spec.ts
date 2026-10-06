@@ -1,3 +1,4 @@
+import { mkdir, writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 
 test('credentialed Cesium globe and city descent', async ({ page }, testInfo) => {
@@ -33,6 +34,14 @@ test('credentialed Cesium globe and city descent', async ({ page }, testInfo) =>
   expect(imagery.some((item) => /image\/(jpeg|png|webp)/.test(item.type ?? '') && /\/tiles\//.test(item.path)), 'successful source imagery tile').toBeTruthy();
   expect(resources.some((item) => /\.(b3dm|glb)$/.test(item.path)), 'successful city building tile').toBeTruthy();
   await expect(page.locator('.cesium-widget-errorPanel')).not.toBeVisible();
+  if (process.env.AETHERGRID_TEST_CANONICAL === '1') {
+    await mkdir('../../../canonical-evidence', { recursive: true });
+    await writeFile('../../../canonical-evidence/cesium.json', JSON.stringify({
+      commit: process.env.GITHUB_SHA || null, canonical: true, terrain: 'live-tile-verified', imagery: 'live-tile-verified',
+      buildings: 'live-tile-verified', buildingTileCount: resources.filter((item) => /\.(b3dm|glb)$/.test(item.path)).length,
+      globeAndCityDescent: true, testedAt: new Date().toISOString()
+    }, null, 2));
+  }
 });
 
 test('Cesium static assets keep their package-relative URLs', async ({ request }) => {
