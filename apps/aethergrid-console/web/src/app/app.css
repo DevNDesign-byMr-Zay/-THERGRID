@@ -2736,7 +2736,8 @@ button {
 .intel-rail[data-workspace='scenario'] .intel-scenario,
 .intel-rail[data-workspace='quantum'] .intel-quantum,
 .intel-rail[data-workspace='evidence'] .intel-evidence,
-.intel-rail[data-workspace='system'] .intel-system {
+.intel-rail[data-workspace='system'] .intel-system,
+.intel-rail[data-workspace='settings'] .intel-settings {
   display: block;
 }
 
@@ -6324,4 +6325,92 @@ button {
   color: #556b7d;
   font-size: 5px;
   letter-spacing: 0.045em;
+}
+
+
+.settings-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-panel-head,
+.settings-section-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.settings-panel-head {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-panel-head small,
+.settings-section-copy small {
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+
+.settings-panel-head > span {
+  color: var(--cyan);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+.settings-section-tabs,
+.settings-choice-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-section-tabs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.settings-section-tabs button,
+.settings-choice-grid button {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--panel-strong) 88%, transparent);
+  cursor: pointer;
+}
+
+.settings-section-tabs button.active,
+.settings-choice-grid button.active {
+  border-color: var(--line-strong);
+  color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 8%, var(--panel-strong));
+}
+
+.settings-section {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-section-copy strong {
+  color: inherit;
+}
+
+.settings-section-copy p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.settings-choice-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.settings-choice-grid button {
+  display: grid;
+  place-items: center;
+  gap: 5px;
+  padding: 10px 6px;
+}
+
+.settings-choice-grid button > span {
+  font-size: 18px;
 }
