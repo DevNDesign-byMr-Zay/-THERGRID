@@ -79,7 +79,7 @@ test('v4 app renders incidents in world and city scenes while incident navigatio
   assert.match(app, /spatialIncidentsToOverlay/u);
   assert.match(
     app,
-    //worldOverlay,[\s\S]*incidentOverlay,[\s\S]*worksetGeometryOverlay,[\s\S]*operatorScenarioOverlay,[\s\S]*measurementOverlay/u,
+    /worldOverlay,[\s\S]*incidentOverlay,[\s\S]*worksetGeometryOverlay,[\s\S]*operatorScenarioOverlay,[\s\S]*measurementOverlay/u,
   );
   assert.match(
     app,
