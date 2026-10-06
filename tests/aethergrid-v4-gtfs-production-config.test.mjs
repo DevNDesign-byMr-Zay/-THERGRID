@@ -77,6 +77,26 @@ describe('ÆTHERGRID GTFS production feed configuration', () => {
     assert.equal(JSON.stringify(result.metadata).includes('super-secret-test-token'), false);
   });
 
+  it('loads an explicit documented trip-updates feed without relabeling it as vehicle positions', () => {
+    const { file } = writeRegistry({
+      schemaVersion: 1,
+      feeds: [
+        {
+          id: 'nyc-ferry-trip-updates',
+          cityId: 'new-york',
+          agencyName: 'NYC Ferry',
+          url: 'https://nycferry.example.test/tripupdate',
+          messageType: 'trip-updates',
+          enabled: true,
+        },
+      ],
+    });
+
+    const result = loadTransitFeedConfig(file);
+    assert.equal(result.feeds['new-york'].messageType, 'trip-updates');
+    assert.equal(result.feeds['new-york'].feedUrl, 'https://nycferry.example.test/tripupdate');
+  });
+
   it('rejects malformed or credential-bearing feed URLs', () => {
     const { file } = writeRegistry({
       schemaVersion: 1,
