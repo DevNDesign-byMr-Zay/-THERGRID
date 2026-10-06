@@ -13,7 +13,7 @@
     "syntax": "find src tests scripts apps \\( -path '*/node_modules/*' -o -path '*/dist/*' \\) -prune -o \\( -name '*.mjs' -o -name '*.js' \\) -print0 | xargs -0 -n1 node --check",
     "demo": "node scripts/demo.mjs",
     "dashboard-demo": "node scripts/dashboard-demo.mjs",
-    "check": "npm run verify:release && npm run package:aethergrid && npm run package:aethergrid-app && npm run syntax && npm run lint && npm run typecheck && npm run typecheck:strict-renderer && npm run format:check && npm run coverage && npm run demo && npm run dashboard-demo",
+    "check": "npm run verify:release && npm run package:aethergrid && npm run package:aethergrid-app && npm run smoke:aethergrid-app && npm run syntax && npm run lint && npm run typecheck && npm run typecheck:strict-renderer && npm run format:check && npm run coverage && npm run demo && npm run dashboard-demo",
     "lint": "eslint --max-warnings=0 src tests scripts apps/operator-console/app.js apps/aethergrid-console/app.js apps/aethergrid-console/server.mjs apps/aethergrid-console/web-runtime.mjs apps/aethergrid-console/agent-config.mjs apps/aethergrid-console/ai-runtime.mjs apps/aethergrid-console/profile-store.mjs apps/aethergrid-console/geo-runtime.mjs apps/aethergrid-console/city-environment-runtime.mjs apps/aethergrid-console/city-live-runtime.mjs apps/aethergrid-console/terrain-runtime.mjs apps/aethergrid-console/quantum-runtime.mjs apps/aethergrid-console/config/*.mjs apps/aethergrid-console/security/*.mjs apps/aethergrid-console/providers/*.mjs",
     "format:check": "prettier --check 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs' 'apps/aethergrid-console/**/*.{html,css,js,mjs,json}'",
     "format": "prettier --write 'src/**/*.mjs' 'tests/**/*.mjs' 'scripts/**/*.mjs' 'apps/aethergrid-console/**/*.{html,css,js,mjs,json}'",
@@ -25,7 +25,8 @@
     "aethergrid-app": "npm run build:aethergrid-web && node apps/aethergrid-console/server.mjs",
     "package:aethergrid": "node scripts/assemble-aethergrid-package.mjs",
     "package:aethergrid-app": "node scripts/assemble-aethergrid-full-app.mjs",
-    "build:aethergrid-web": "npm --prefix apps/aethergrid-console/web ci && npm --prefix apps/aethergrid-console/web run build"
+    "build:aethergrid-web": "npm --prefix apps/aethergrid-console/web ci && npm --prefix apps/aethergrid-console/web run build",
+    "smoke:aethergrid-app": "node scripts/smoke-aethergrid-full-app.mjs"
   },
   "dependencies": {
     "pino": "10.3.1",
