@@ -22,6 +22,7 @@ import { SpatialInvestigationBoard } from '../components/SpatialInvestigationBoa
 import { SpatialWorksetGeometryPanel } from '../components/SpatialWorksetGeometryPanel';
 import { SpatialWorksetPanel } from '../components/SpatialWorksetPanel';
 import { RuntimeDiagnosticsPanel } from '../components/RuntimeDiagnosticsPanel';
+import { SettingsPanel } from '../components/SettingsPanel';
 import { SpatialViewport } from '../components/SpatialViewport';
 import { TemporalEventNavigator } from '../components/TemporalEventNavigator';
 import { TemporalRail } from '../components/TemporalRail';
@@ -301,7 +302,15 @@ export function App() {
   const navigationDrawer = useCommandDrawer(navOpen, () => setNavOpen(false));
   const intelligenceDrawer = useCommandDrawer(intelOpen, () => setIntelOpen(false));
   const [intelWorkspace, setIntelWorkspace] = useState<
-    'context' | 'operations' | 'analysis' | 'ai' | 'scenario' | 'quantum' | 'evidence' | 'system'
+    | 'context'
+    | 'operations'
+    | 'analysis'
+    | 'ai'
+    | 'scenario'
+    | 'quantum'
+    | 'evidence'
+    | 'system'
+    | 'settings'
   >('context');
   const openIntelligence = () => { setNavOpen(false); setIntelOpen(true); };
   const showIntelligence = (workspace: typeof intelWorkspace) => {
@@ -1736,7 +1745,19 @@ export function App() {
                 setScope('city'); setVisualMode(mode === 'HOLOGRAPHIC' ? 'holographic' : 'solid');
                 setIntelWorkspace('context'); setIntelOpen(false);
               } else {
-                setIntelWorkspace(mode === 'AI' ? 'ai' : mode === 'QUANTUM' ? 'quantum' : mode === 'EVIDENCE' ? 'evidence' : mode === 'SCENARIOS' ? 'scenario' : 'system');
+                setIntelWorkspace(
+                  mode === 'AI'
+                    ? 'ai'
+                    : mode === 'QUANTUM'
+                      ? 'quantum'
+                      : mode === 'EVIDENCE'
+                        ? 'evidence'
+                        : mode === 'SCENARIOS'
+                          ? 'scenario'
+                          : mode === 'SETTINGS'
+                            ? 'settings'
+                            : 'system'
+                );
                 openIntelligence();
               }
             }}>{mode}</button>
@@ -2185,6 +2206,7 @@ export function App() {
                       | 'quantum'
                       | 'evidence'
                       | 'system'
+                      | 'settings'
                   );
                 }}
               >
@@ -2540,6 +2562,9 @@ export function App() {
           </div>
           <div className="intel-workspace intel-system">
             <RuntimeDiagnosticsPanel />
+          </div>
+          <div className="intel-workspace intel-settings">
+            <SettingsPanel appearance={appearance} />
           </div>
 
           </div>
