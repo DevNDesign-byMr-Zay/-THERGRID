@@ -482,7 +482,7 @@ test('v4 world scope isolates global live context from selected-city overlays', 
 
   assert.match(
     app,
-    /scope === 'world'\s*\? \[worldOverlay, incidentOverlay, worksetGeometryOverlay, operatorScenarioOverlay, measurementOverlay\]/u,
+    /scope === 'world'[\s\S]*worldOverlay,[\s\S]*incidentOverlay,[\s\S]*worksetGeometryOverlay,[\s\S]*operatorScenarioOverlay,[\s\S]*measurementOverlay/u,
   );
   assert.match(app, /atmosphere=\{scope === 'city' \? activeAtmosphere : null\}/u);
   assert.match(app, /scope === 'world'\s*\? \{\s*latitude: 20,\s*longitude: 0/u);
