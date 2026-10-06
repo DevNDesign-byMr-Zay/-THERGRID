@@ -1132,7 +1132,6 @@ test('vNext presentation changes preserve the active operational use-case contex
   );
 });
 
-
 test('vNext Settings opens Appearance and nests Connection Center under Developer Diagnostics', async () => {
   const [app, settings] = await Promise.all([
     text('apps/aethergrid-console/web/src/app/App.tsx'),
@@ -1140,7 +1139,7 @@ test('vNext Settings opens Appearance and nests Connection Center under Develope
   ]);
 
   assert.match(app, /\| 'settings'/u);
-  assert.match(app, /mode === 'SETTINGS' \? 'settings'/u);
+  assert.match(app, /mode === 'SETTINGS'\s*\?\s*'settings'/u);
   assert.match(app, /<SettingsPanel appearance=\{appearance\}/u);
   assert.match(settings, /APPEARANCE/u);
   assert.match(settings, /DEVELOPER \/ DIAGNOSTICS/u);
