@@ -1174,12 +1174,11 @@ export function App() {
     [scope, liveContext, temporal.mode, atmosphere]
   );
 
-  const activeOverlays = useMemo(
-    () =>
-      (scope === 'world'
+  const activeOverlays = useMemo(() => {
+    const contextualOverlays =
+      scope === 'world'
         ? [
             worldOverlay,
-            aviationOverlay,
             incidentOverlay,
             worksetGeometryOverlay,
             operatorScenarioOverlay,
@@ -1187,7 +1186,6 @@ export function App() {
           ]
         : [
             ...semanticOverlays,
-            aviationOverlay,
             activeIllumination,
             powerOverlay,
             windOverlay,
@@ -1199,28 +1197,28 @@ export function App() {
             worksetGeometryOverlay,
             operatorScenarioOverlay,
             measurementOverlay
-          ]
-      ).filter(
-        (snapshot): snapshot is SpatialOverlaySnapshot => Boolean(snapshot)
-      ),
-    [
-      scope,
-      worldOverlay,
-      aviationOverlay,
-      semanticOverlays,
-      activeIllumination,
-      powerOverlay,
-      windOverlay,
-      seismicOverlay,
-      hazardOverlay,
-      transitOverlay,
-      hydrologyOverlay,
-      incidentOverlay,
-      worksetGeometryOverlay,
-      operatorScenarioOverlay,
-      measurementOverlay
-    ]
-  );
+          ];
+
+    return [aviationOverlay, ...contextualOverlays].filter(
+      (snapshot): snapshot is SpatialOverlaySnapshot => Boolean(snapshot)
+    );
+  }, [
+    scope,
+    worldOverlay,
+    aviationOverlay,
+    semanticOverlays,
+    activeIllumination,
+    powerOverlay,
+    windOverlay,
+    seismicOverlay,
+    hazardOverlay,
+    transitOverlay,
+    hydrologyOverlay,
+    incidentOverlay,
+    worksetGeometryOverlay,
+    operatorScenarioOverlay,
+    measurementOverlay
+  ]);
 
   const handleSpatialSelection = (next: SpatialFeatureSelection | null) => {
     const bound = next
