@@ -148,9 +148,7 @@ try {
     };
   });
   const ibmPrerequisites = {
-    AETHERGRID_IBM_QUANTUM_API_KEY: Boolean(
-      process.env.AETHERGRID_IBM_QUANTUM_API_KEY?.trim(),
-    ),
+    AETHERGRID_IBM_QUANTUM_API_KEY: Boolean(process.env.AETHERGRID_IBM_QUANTUM_API_KEY?.trim()),
     AETHERGRID_IBM_QUANTUM_SERVICE_CRN: Boolean(
       process.env.AETHERGRID_IBM_QUANTUM_SERVICE_CRN?.trim(),
     ),
