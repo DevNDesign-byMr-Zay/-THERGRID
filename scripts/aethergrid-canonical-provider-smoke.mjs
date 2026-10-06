@@ -42,9 +42,7 @@ async function check(name, task) {
     const result = await task();
     report.providers[name] = {
       ...result,
-      state: result.verified
-        ? result.acceptanceState || 'live-response-verified'
-        : 'degraded',
+      state: result.verified ? result.acceptanceState || 'live-response-verified' : 'degraded',
     };
   } catch {
     report.providers[name] = {
