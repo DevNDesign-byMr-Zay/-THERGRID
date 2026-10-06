@@ -680,84 +680,15 @@ export function createGeoRuntime({
     };
   }
 
-const BACKUP_OVERPASS_ENDPOINTS = [
-  "https://overpass.k33.org/api/interpreter",
-  "https://overpass.private.coffee/api/interpreter",
-];
-
-async function fetchOverpassQuery(targetEndpoint, query, { fetchImpl, userAgent, timeoutMs = 20_000 }) {
-  const apiUrl = validateEndpoint(targetEndpoint);
-  const response = await fetchImpl(apiUrl, {
-    method: "POST",
-    headers: {
-      "content-type": "application/x-www-form-urlencoded;charset=UTF-8",
-      "user-agent": userAgent,
-      accept: "application/json",
-    },
-    body: new URLSearchParams({ data: query }),
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  if (!response.ok) throw new Error("Overpass HTTP " + response.status);
-  return response.json();
-}
-
-function buildOverpassQuery(lat, lon, radiusM) {
-  return (
-    `[out:json][timeout:20];(` +
-    `nwr["building"](around:${radiusM},${lat},${lon});` +
-    `nwr["building:part"](around:${radiusM},${lat},${lon});` +
-    `way["highway"](around:${radiusM},${lat},${lon});` +
-    `nwr["natural"="water"](around:${radiusM},${lat},${lon});` +
-    `way["natural"="coastline"](around:${radiusM},${lat},${lon});` +
-    `way["waterway"~"^(river|canal|stream|tidal_channel)$"](around:${radiusM},${lat},${lon});` +
-    `nwr["leisure"~"^(park|garden|nature_reserve)$"](around:${radiusM},${lat},${lon});` +
-    `nwr["landuse"~"^(grass|recreation_ground|meadow)$"](around:${radiusM},${lat},${lon});` +
-    `nwr["natural"~"^(wood|grassland)$"](around:${radiusM},${lat},${lon});` +
-    `way["power"~"^(line|minor_line|cable)$"](around:${radiusM},${lat},${lon});` +
-    `nwr["power"~"^(substation|plant|generator|transformer)$"](around:${radiusM},${lat},${lon});` +
-    `);out tags geom center;`
-  );
-}
-
-function mergeOverpassElements(payloads = []) {
-  const mergedElements = [];
-  const seenKeys = new Set();
-  let latestOsmBase = null;
-
-  for (const payload of payloads) {
-    if (payload?.osm3s?.timestamp_osm_base) {
-      latestOsmBase = payload.osm3s.timestamp_osm_base;
-    }
-    for (const element of payload?.elements || []) {
-      const key = `${element.type}/${element.id}`;
-      if (!seenKeys.has(key)) {
-        seenKeys.add(key);
-        mergedElements.push(element);
-      }
-    }
-  }
-
-  return {
-    elements: mergedElements,
-    osm3s: latestOsmBase ? { timestamp_osm_base: latestOsmBase } : null,
-  };
-}
-
   async function meshForCity(city, { force = false } = {}) {
     const cacheKey = `${city.id}:${city.lat.toFixed(5)}:${city.lon.toFixed(5)}:${city.radiusM}`;
     const cached = cache.get(cacheKey);
     if (!force && cached && now() - cached.cachedAt < cacheTtlMs) return cached.value;
 
-    if (provider !== "osm-overpass") {
+    if (provider !== 'osm-overpass') {
       const power = fallbackPower(city);
       const buildings = seededFallback(city);
-      const source = {
-        provider: "local-fallback",
-        live: false,
-        fallbackUsed: true,
-        completeness: "fallback",
-        attribution: null,
-      };
+      const source = { provider: 'local-fallback', live: false, attribution: null };
       return {
         schemaVersion: 4,
         city,
@@ -773,97 +704,50 @@ function mergeOverpassElements(payloads = []) {
       };
     }
 
-    const endpointsToTry = [
-      endpoint,
-      ...BACKUP_OVERPASS_ENDPOINTS.filter((ep) => ep !== endpoint),
-    ];
-
-    let payload = null;
-    let successfulEndpoint = null;
-    let endpointsTried = [];
-    let queryTileCount = 1;
-    let lastError = null;
-
-    const primaryQuery = buildOverpassQuery(city.lat, city.lon, city.radiusM);
-    for (const ep of endpointsToTry) {
-      endpointsTried.push(ep);
-      try {
-        payload = await fetchOverpassQuery(ep, primaryQuery, { fetchImpl, userAgent });
-        successfulEndpoint = ep;
-        break;
-      } catch (err) {
-        lastError = err;
-      }
-    }
-
-    if (payload) {
-      let buildings = parseOverpassBuildings(payload, city);
-      if (buildings.length < 5 && successfulEndpoint) {
-        try {
-          const deltaLat = (city.radiusM / 111000) * 0.5;
-          const deltaLon = (city.radiusM / (111000 * Math.cos((city.lat * Math.PI) / 180))) * 0.5;
-          const subRadius = Math.round(city.radiusM * 0.6);
-
-          const subTiles = [
-            { lat: city.lat + deltaLat, lon: city.lon + deltaLon },
-            { lat: city.lat + deltaLat, lon: city.lon - deltaLon },
-            { lat: city.lat - deltaLat, lon: city.lon + deltaLon },
-            { lat: city.lat - deltaLat, lon: city.lon - deltaLon },
-          ];
-
-          queryTileCount += subTiles.length;
-          const subPayloads = [payload];
-
-          for (const tile of subTiles) {
-            const tileQuery = buildOverpassQuery(tile.lat, tile.lon, subRadius);
-            try {
-              const subPayload = await fetchOverpassQuery(successfulEndpoint, tileQuery, { fetchImpl, userAgent, timeoutMs: 15_000 });
-              subPayloads.push(subPayload);
-            } catch {
-              // Ignore tile fail
-            }
-          }
-
-          payload = mergeOverpassElements(subPayloads);
-          buildings = parseOverpassBuildings(payload, city);
-        } catch {
-          // Keep primary
-        }
-      }
-
+    try {
+      const apiUrl = validateEndpoint(endpoint);
+      const query =
+        `[out:json][timeout:25];(` +
+        `nwr["building"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `nwr["building:part"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `way["highway"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `nwr["natural"="water"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `way["natural"="coastline"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `way["waterway"~"^(river|canal|stream|tidal_channel)$"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `nwr["leisure"~"^(park|garden|nature_reserve)$"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `nwr["landuse"~"^(grass|recreation_ground|meadow)$"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `nwr["natural"~"^(wood|grassland)$"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `way["power"~"^(line|minor_line|cable)$"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `nwr["power"~"^(substation|plant|generator|transformer)$"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `);out tags geom center;`;
+      const response = await fetchImpl(apiUrl, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          'user-agent': userAgent,
+          accept: 'application/json',
+        },
+        body: new URLSearchParams({ data: query }),
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (!response.ok) throw new Error(`Overpass HTTP ${response.status}`);
+      const payload = await response.json();
+      const buildings = parseOverpassBuildings(payload, city);
       const roads = parseOverpassRoads(payload, city);
       const water = parseOverpassWater(payload, city);
       const greenAreas = parseOverpassGreen(payload, city);
       const power = parseOverpassPower(payload, city);
-
-      const buildingCount = buildings.length;
-      const roadCount = roads.length;
-      const featureCount = buildingCount + roadCount + water.waterAreas.length + power.powerLines.length + greenAreas.length;
-
-      let completeness = "complete";
-      if (buildingCount === 0) {
-        completeness = "empty";
-      } else if (buildingCount < 10) {
-        completeness = "partial";
+      if (buildings.length < 5) {
+        throw new Error('Overpass returned too few building footprints');
       }
-
       const source = {
-        provider: "OpenStreetMap Overpass",
+        provider: 'OpenStreetMap Overpass',
         live: true,
-        fallbackUsed: false,
-        completeness,
-        buildingCount,
-        roadCount,
-        featureCount,
-        queryTileCount,
-        endpointsTried,
-        endpointUsed: successfulEndpoint,
-        attribution: "© OpenStreetMap contributors",
+        attribution: '© OpenStreetMap contributors',
         fetchedAt: new Date().toISOString(),
         upstreamTimestamp: payload?.osm3s?.timestamp_osm_base || null,
-        freshnessModel: "OpenStreetMap upstream database at request time",
+        freshnessModel: 'OpenStreetMap upstream database at request time',
       };
-
       const value = {
         schemaVersion: 4,
         city,
@@ -875,35 +759,31 @@ function mergeOverpassElements(payloads = []) {
         greenAreas,
         ...power,
       };
-
       cache.set(cacheKey, { cachedAt: now(), value });
       return value;
+    } catch (error) {
+      const power = fallbackPower(city);
+      const buildings = seededFallback(city);
+      const source = {
+        provider: 'local-fallback',
+        live: false,
+        attribution: 'Live OpenStreetMap geometry unavailable for this request.',
+        error: error instanceof Error ? error.message : String(error),
+      };
+      return {
+        schemaVersion: 4,
+        city,
+        source,
+        buildings,
+        skylineProfile: skylineProfile(city, buildings, source),
+        roads: fallbackRoads(city),
+        waterAreas: [],
+        waterways: [],
+        coastlines: [],
+        greenAreas: [],
+        ...power,
+      };
     }
-
-    const power = fallbackPower(city);
-    const buildings = seededFallback(city);
-    const source = {
-      provider: "local-fallback",
-      live: false,
-      fallbackUsed: true,
-      completeness: "fallback",
-      attribution: "Live OpenStreetMap geometry unavailable for this request.",
-      endpointsTried,
-      error: lastError instanceof Error ? lastError.message : String(lastError || "All Overpass endpoints failed"),
-    };
-    return {
-      schemaVersion: 4,
-      city,
-      source,
-      buildings,
-      skylineProfile: skylineProfile(city, buildings, source),
-      roads: fallbackRoads(city),
-      waterAreas: [],
-      waterways: [],
-      coastlines: [],
-      greenAreas: [],
-      ...power,
-    };
   }
 
   async function cityMesh(cityId, options = {}) {

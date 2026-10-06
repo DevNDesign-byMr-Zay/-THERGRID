@@ -7,14 +7,12 @@ import { createNoaaNwpsHydrologyProvider } from './providers/noaa-nwps-provider.
 import { createEiaProvider } from './providers/eia-provider.mjs';
 import { createTransitRegistry } from './providers/transit-registry.mjs';
 import { createTransitlandProvider } from './providers/transitland-provider.mjs';
-import { createOvertureProvider } from './providers/overture-provider.mjs';
 import { loadTransitFeedConfig } from './providers/transit-feed-config.mjs';
 import { createDwaveProvider } from './providers/dwave-provider.mjs';
 import { createProviderRegistry } from './providers/provider-registry.mjs';
 import http from 'node:http';
 import { createHash } from 'node:crypto';
-import { readFile, stat } from 'node:fs/promises';
-import { extname, join, normalize } from 'node:path';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { createAgentRuntime } from './ai-runtime.mjs';
@@ -24,6 +22,7 @@ import { createGeoRuntime } from './geo-runtime.mjs';
 import { createProfileStore } from './profile-store.mjs';
 import { createQuantumRuntime } from './quantum-runtime.mjs';
 import { createTerrainRuntime } from './terrain-runtime.mjs';
+import { createCanonicalWebRuntime } from './web-runtime.mjs';
 
 const providerRegistry = createProviderRegistry({ env: process.env });
 
@@ -44,17 +43,6 @@ const eiaProvider = createEiaProvider({
 
 const noaaNwpsProvider = createNoaaNwpsHydrologyProvider({
   baseUrl: providerRegistry.config.futureProviders.hydrology.baseUrl,
-});
-
-const overtureProvider = createOvertureProvider({
-  apiKey: providerRegistry.config.providers.overture.apiKey,
-  baseUrl: providerRegistry.config.providers.overture.baseUrl,
-});
-providerRegistry.health.registerProvider('overture', {
-  id: 'overture',
-  name: 'Overture Maps Foundation City Data Provider',
-  capability: 'geo',
-  capabilities: ['geo', 'buildings', 'places'],
 });
 
 const transitlandProvider = createTransitlandProvider({
@@ -95,6 +83,7 @@ providerRegistry.health.updateStatus(
 );
 
 const root = fileURLToPath(new URL('./', import.meta.url));
+const canonicalWebRuntime = createCanonicalWebRuntime({ appRoot: root });
 const port = Number(providerRegistry.config.app.port);
 
 function createPipelineFetch(providerId) {
@@ -1081,16 +1070,30 @@ const server = http.createServer(async (request, response) => {
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/transit/discovery') {
       const city = url.searchParams.get('city') || url.searchParams.get('query') || '';
-      const result = await transitlandProvider.request({ city, query: city }, execCtx);
+      const latitude = url.searchParams.get('lat') ?? url.searchParams.get('latitude');
+      const longitude = url.searchParams.get('lon') ?? url.searchParams.get('longitude');
+      const radius = url.searchParams.get('radius');
+      const limit = url.searchParams.get('limit');
+      const result = await transitlandProvider.request(
+        {
+          city,
+          query: city,
+          ...(latitude !== null ? { lat: latitude } : {}),
+          ...(longitude !== null ? { lon: longitude } : {}),
+          ...(radius !== null ? { radius } : {}),
+          ...(limit !== null ? { limit } : {}),
+        },
+        execCtx,
+      );
       return json(response, 200, providerRegistry.redactor.redactValue(result));
     }
 
-    if (request.method === 'GET' && url.pathname === '/api/aethergrid/transit/vehicles') {
+    if (
+      request.method === 'GET' &&
+      ['/api/aethergrid/transit/vehicles', '/api/aethergrid/transit/realtime'].includes(url.pathname)
+    ) {
       const cityId = url.searchParams.get('cityId') || undefined;
-      const result = await transitRegistry.adapter.request(
-        { cityId },
-        execCtx,
-      );
+      const result = await transitRegistry.adapter.request({ cityId }, execCtx);
       return json(response, 200, providerRegistry.redactor.redactValue(result));
     }
 
@@ -2014,32 +2017,11 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
       return json(response, 405, { error: 'method_not_allowed' });
     }
 
-    const requested = url.pathname === '/' ? '/index.html' : url.pathname;
-    const safe = normalize(requested)
-      .replace(/^(\.\.[/\\])+/, '')
-      .replace(/^[/\\]+/, '');
-    const filePath = join(root, safe);
-
-    if (
-      !filePath.startsWith(root) ||
-      safe === '.aethergrid-data' ||
-      safe.startsWith('.aethergrid-data/') ||
-      safe.startsWith('.aethergrid-data\\')
-    ) {
-      return json(response, 403, { error: 'forbidden' });
+    if (url.pathname.startsWith('/api/')) {
+      return json(response, 404, { error: 'not_found' });
     }
 
-    const info = await stat(filePath);
-    if (!info.isFile()) return json(response, 404, { error: 'not_found' });
-
-    const data = await readFile(filePath);
-    response.writeHead(200, {
-      'content-type': mime[extname(filePath).toLowerCase()] || 'application/octet-stream',
-      'cache-control': 'no-cache',
-      'x-content-type-options': 'nosniff',
-    });
-    if (request.method === 'HEAD') return response.end();
-    response.end(data);
+    return canonicalWebRuntime.serve(request, response, url);
   } catch (error) {
     if (error?.code === 'ENOENT') return json(response, 404, { error: 'not_found' });
     const status = Number(error?.status || 500);

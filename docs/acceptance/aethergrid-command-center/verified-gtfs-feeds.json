@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "feeds": [
+    {
+      "id": "nyc-ferry-trip-updates",
+      "cityId": "new-york",
+      "agencyName": "NYC Ferry",
+      "url": "https://nycferry.connexionz.net/rtt/public/utility/gtfsrealtime.aspx/tripupdate",
+      "enabled": true,
+      "messageType": "trip-updates"
+    }
+  ]
+}

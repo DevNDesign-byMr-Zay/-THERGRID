@@ -66,8 +66,14 @@ function boolean(value: unknown): boolean {
 }
 
 function finiteOrNull(value: unknown): number | null {
+  if (value == null || value === '') return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+function scaled(value: unknown, factor: number): number | null {
+  const number = finiteOrNull(value);
+  return number == null ? null : number * factor;
 }
 
 function modelTimeToIso(value: string | null | undefined, utcOffsetSeconds: number): string | null {
@@ -108,9 +114,10 @@ export async function loadCityEnvironmentForecast(
     text(receipt.provider) ??
     text(source.provider) ??
     text(envelope.provider);
-  const sourceBacked =
+  const sourceBacked = receipt.fallback !== true && (
     boolean(receipt.live) ||
-    (boolean(source.live) && receipt.fallback !== true);
+    boolean(source.live)
+  );
   const stale = boolean(receipt.stale);
   const fetchedAt =
     text(receipt.retrievedAt) ??
@@ -168,7 +175,7 @@ export async function loadCityEnvironmentForecast(
       return {
         time: text(row.time ?? row.eventTime),
         temperatureC: finiteOrNull(
-          normalized ? row.temperatureC ?? values.temperature : values.temperature
+          normalized ? row.temperatureCelsius ?? row.temperatureC ?? values.temperature : values.temperature
         ),
         apparentTemperatureC: finiteOrNull(
           normalized
@@ -177,7 +184,7 @@ export async function loadCityEnvironmentForecast(
         ),
         relativeHumidityPercent: finiteOrNull(
           normalized
-            ? row.relativeHumidityPercent ?? values.humidity
+            ? row.humidityPercent ?? row.relativeHumidityPercent ?? values.humidity
             : values.humidity
         ),
         surfacePressureHpa: finiteOrNull(
@@ -185,18 +192,19 @@ export async function loadCityEnvironmentForecast(
             ? row.surfacePressureHpa ?? values.pressureSurfaceLevel
             : values.pressureSurfaceLevel
         ),
-        weatherCode: null,
+        weatherCode: finiteOrNull(row.weatherCode ?? values.weatherCode),
+        weatherCodeSystem: 'tomorrow',
         cloudCoverPercent: finiteOrNull(
           normalized ? row.cloudCoverPercent ?? values.cloudCover : values.cloudCover
         ),
         isDay: typeof row.isDay === 'boolean' ? row.isDay : null,
         precipitationMm: finiteOrNull(
           normalized
-            ? row.precipitationMm ?? values.rainIntensity
-            : values.rainIntensity
+            ? row.precipitationMm
+            : null
         ),
         windSpeedKph: normalized
-          ? finiteOrNull(row.windSpeedKph)
+          ? finiteOrNull(row.windSpeedKph) ?? scaled(values.windSpeed, 3.6)
           : finiteOrNull(values.windSpeed) == null
             ? null
             : Number(values.windSpeed) * 3.6,
@@ -204,7 +212,7 @@ export async function loadCityEnvironmentForecast(
           normalized ? row.windDirectionDegrees ?? values.windDirection : values.windDirection
         ),
         windGustsKph: normalized
-          ? finiteOrNull(row.windGustsKph)
+          ? finiteOrNull(row.windGustsKph) ?? scaled(values.windGust, 3.6)
           : finiteOrNull(values.windGust) == null
             ? null
             : Number(values.windGust) * 3.6,
@@ -212,7 +220,7 @@ export async function loadCityEnvironmentForecast(
           normalized ? row.shortwaveRadiationWm2 : null
         ),
         visibilityM: normalized
-          ? finiteOrNull(row.visibilityM)
+          ? finiteOrNull(row.visibilityM) ?? scaled(values.visibility, 1000)
           : finiteOrNull(values.visibility) == null
             ? null
             : Number(values.visibility) * 1000
@@ -291,7 +299,7 @@ export async function loadCityEnvironment(
     lat: String(latitude),
     lon: String(longitude)
   });
-  const response = await fetch(`/api/aethergrid/environment?${query.toString()}`, {
+  const response = await fetch(`/api/aethergrid/weather/current?${query.toString()}`, {
     headers: { accept: 'application/json' },
     signal
   });
@@ -299,9 +307,30 @@ export async function loadCityEnvironment(
     throw new Error(`city environment request failed with HTTP ${response.status}`);
   }
 
-  const payload = (await response.json()) as EnvironmentResponse;
-  const source = payload.source ?? {};
-  const current = payload.current;
+  const envelope = object(await response.json());
+  const receipt = object(envelope.receipt) as ForecastReceipt;
+  const data = object(envelope.data ?? envelope);
+  const tomorrow = receipt.provider === 'tomorrow-io';
+  const payload = data as EnvironmentResponse;
+  const source = {
+    ...payload.source,
+    provider: receipt.provider ?? payload.source?.provider,
+    live: receipt.live ?? payload.source?.live,
+    attribution: receipt.attribution ?? payload.source?.attribution,
+    fetchedAt: receipt.retrievedAt ?? payload.source?.fetchedAt
+  };
+  const current: Partial<AtmosphericCurrentState> | null | undefined = tomorrow ? {
+    time: text(data.observedAt),
+    temperatureC: finiteOrNull(data.temperatureCelsius),
+    apparentTemperatureC: finiteOrNull(data.temperatureApparentCelsius),
+    relativeHumidityPercent: finiteOrNull(data.humidityPercent),
+    surfacePressureHpa: finiteOrNull(data.pressureSurfaceLevelHpa),
+    weatherCode: finiteOrNull(data.weatherCode),
+    weatherCodeSystem: 'tomorrow',
+    windSpeedKph: scaled(data.windSpeedMps, 3.6),
+    windDirectionDegrees: finiteOrNull(data.windDirectionDegrees),
+    visibilityM: scaled(data.visibilityKm, 1000)
+  } : payload.current;
   const fetchedAt = source.fetchedAt ?? new Date().toISOString();
   const utcOffsetSeconds = finiteOrNull(payload.utcOffsetSeconds) ?? 0;
   const sourceTime = modelTimeToIso(source.modelTime ?? current?.time, utcOffsetSeconds);
@@ -316,8 +345,8 @@ export async function loadCityEnvironment(
     sourceTime,
     fetchedAt,
     live: source.live === true,
-    stale: false,
-    fallback: source.live !== true,
+    stale: receipt.stale === true,
+    fallback: receipt.fallback === true || source.live !== true,
     attribution: source.attribution ?? source.provider ?? null,
     timezone: payload.timezone ?? null,
     utcOffsetSeconds,
@@ -329,6 +358,7 @@ export async function loadCityEnvironment(
           relativeHumidityPercent: finiteOrNull(current.relativeHumidityPercent),
           surfacePressureHpa: finiteOrNull(current.surfacePressureHpa),
           weatherCode: finiteOrNull(current.weatherCode),
+          weatherCodeSystem: current.weatherCodeSystem ?? 'wmo',
           cloudCoverPercent: finiteOrNull(current.cloudCoverPercent),
           isDay: typeof current.isDay === 'boolean' ? current.isDay : null,
           precipitationMm: finiteOrNull(current.precipitationMm),

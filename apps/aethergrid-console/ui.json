@@ -25,6 +25,9 @@
     "EVIDENCE"
   ],
   "interactiveCapabilities": [
+    "react-typescript-command-center",
+    "cesium-primary-renderer",
+    "native-webgl-fallback",
     "native-webgl-4d-grid",
     "orbit-camera",
     "wheel-zoom",
@@ -193,7 +196,7 @@
     "scenarios",
     "views"
   ],
-  "runtimeComposition": "semantic-dom-native-webgl",
+  "runtimeComposition": "react-typescript-cesium",
   "runtimeUsesBackgroundReferenceImage": false,
   "spatialModel": {
     "dimensions": [
@@ -202,7 +205,7 @@
       "z",
       "time"
     ],
-    "renderEngine": "native-webgl",
+    "renderEngine": "cesium-primary-native-fallback",
     "vertexAttribute": "vec4(x,y,z,timePhase)",
     "interaction": [
       "pointer-orbit",
@@ -215,7 +218,7 @@
     "backendEndpoint": "GET /api/aethergrid/spatial",
     "backgroundImageRequired": false
   },
-  "designReferenceRepositoryPath": "assets/dashboard-reference.webp",
+  "designReferenceRepositoryPath": "docs/acceptance/aethergrid-command-center/command-center-1536x1024.png",
   "designReferenceIncludedInRuntimePackage": false,
   "workspaceRouting": {
     "mode": "exclusive-view",
@@ -355,7 +358,7 @@
     }
   },
   "globalWorkspace": {
-    "renderEngine": "native-webgl",
+    "renderEngine": "cesium-primary-native-fallback",
     "globe": "latitude-longitude wireframe sphere",
     "cityNodes": "real geographic coordinates",
     "cityDescent": true,
@@ -543,5 +546,19 @@
     "maxGridSize": 9,
     "serverSideCredentials": true
   },
-  "version": "2.9.1"
+  "version": "4.0.0-alpha.1",
+  "canonicalSurface": {
+    "source": "web",
+    "build": "web/dist",
+    "framework": "React + TypeScript + Vite",
+    "primarySpatialRenderer": "CesiumJS",
+    "fallbackSpatialRenderer": "native WebGL",
+    "backend": "server.mjs",
+    "sameOriginApiPrefix": "/api/aethergrid"
+  },
+  "legacyCompatibility": {
+    "canonical": false,
+    "packagedDirectory": "legacy",
+    "standaloneHtml": "legacy/standalone.html"
+  }
 }

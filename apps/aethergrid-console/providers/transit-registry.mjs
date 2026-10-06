@@ -136,9 +136,9 @@ function decodeVehiclePosition(bytes) {
     if (tag.fieldNumber === 1 && tag.wireType === 2) vehicle.trip = decodeTripDescriptor(sub.readBytes());
     else if (tag.fieldNumber === 2 && tag.wireType === 2) vehicle.position = decodePosition(sub.readBytes());
     else if (tag.fieldNumber === 3 && tag.wireType === 0) vehicle.currentStopSequence = sub.readVarint();
-    else if (tag.fieldNumber === 4 && tag.wireType === 2) vehicle.stopId = sub.readString();
-    else if (tag.fieldNumber === 5 && tag.wireType === 0) vehicle.currentStatus = sub.readVarint();
-    else if (tag.fieldNumber === 6 && tag.wireType === 0) vehicle.timestamp = sub.readVarint();
+    else if (tag.fieldNumber === 4 && tag.wireType === 0) vehicle.currentStatus = sub.readVarint();
+    else if (tag.fieldNumber === 5 && tag.wireType === 0) vehicle.timestamp = sub.readVarint();
+    else if (tag.fieldNumber === 7 && tag.wireType === 2) vehicle.stopId = sub.readString();
     else if (tag.fieldNumber === 8 && tag.wireType === 2) vehicle.vehicle = decodeVehicleDescriptor(sub.readBytes());
     else sub.skip(tag.wireType);
   }
@@ -194,10 +194,11 @@ function decodeTripUpdate(bytes) {
     const tag = sub.readTag();
     if (!tag) break;
     if (tag.fieldNumber === 1 && tag.wireType === 2) tu.trip = decodeTripDescriptor(sub.readBytes());
-    else if (tag.fieldNumber === 2 && tag.wireType === 2) tu.vehicle = decodeVehicleDescriptor(sub.readBytes());
-    else if (tag.fieldNumber === 3 && tag.wireType === 2) {
+    else if (tag.fieldNumber === 2 && tag.wireType === 2) {
       tu.stopTimeUpdate = tu.stopTimeUpdate || [];
       tu.stopTimeUpdate.push(decodeStopTimeUpdate(sub.readBytes()));
+    } else if (tag.fieldNumber === 3 && tag.wireType === 2) {
+      tu.vehicle = decodeVehicleDescriptor(sub.readBytes());
     } else if (tag.fieldNumber === 4 && tag.wireType === 0) tu.timestamp = sub.readVarint();
     else if (tag.fieldNumber === 5 && tag.wireType === 0) tu.delay = sub.readVarint();
     else sub.skip(tag.wireType);
@@ -341,6 +342,13 @@ export function createTransitRegistry(options = {}) {
 
     const feed = feeds[cityId];
     const url = feed.feedUrl || feed.gtfsRealtimeUrl;
+    const messageType = feed.messageType || 'vehicle-positions';
+    const dataset =
+      messageType === 'trip-updates'
+        ? 'transit-trip-updates'
+        : messageType === 'alerts'
+          ? 'transit-alerts'
+          : 'transit-vehicles';
 
     const fetcher = async ({ signal } = {}) => {
       if (typeof options.fetchFn === 'function') {
@@ -374,7 +382,7 @@ export function createTransitRegistry(options = {}) {
           {
             url,
             capability: 'transit',
-            dataset: 'transit-vehicles',
+            dataset,
             requestId: params.requestId || context.requestId,
             ttlMs: 15000,
             attribution: `GTFS-RT Feed (${feed.agencyName || feed.agency || cityId})`,
@@ -395,6 +403,7 @@ export function createTransitRegistry(options = {}) {
           cityId,
           agencyName: feed.agencyName || feed.agency || cityId,
           gtfsRealtimeUrl: url,
+          messageType,
           status: 'feed_fetch_failed',
           message: 'Failed to retrieve GTFS-Realtime feed.',
           vehicles: [],
@@ -405,7 +414,7 @@ export function createTransitRegistry(options = {}) {
         receipt: {
           provider: 'gtfs-rt-registry',
           capability: 'transit',
-          dataset: 'transit-vehicles',
+          dataset,
           requestId: params.requestId || context.requestId,
           live: false,
           fallback: true,
@@ -436,6 +445,7 @@ export function createTransitRegistry(options = {}) {
           cityId,
           agencyName: feed.agencyName || feed.agency || cityId,
           gtfsRealtimeUrl: url,
+          messageType,
           status: 'feed_retrieved_undecoded',
           message: 'GTFS-Realtime binary feed retrieved but failed to decode protobuf payload.',
           vehicles: [],
@@ -471,6 +481,7 @@ export function createTransitRegistry(options = {}) {
           longitude: Number.isFinite(v.position?.longitude) ? v.position.longitude : null,
           bearing: Number.isFinite(v.position?.bearing) ? v.position.bearing : null,
           speed: Number.isFinite(v.position?.speed) ? v.position.speed : null,
+          currentStatus: v.currentStatus ?? null,
           stopId: v.stopId || null,
           stopSequence: v.currentStopSequence ?? null,
           timestamp: v.timestamp || feedHeaderTimestamp || null,
@@ -507,15 +518,22 @@ export function createTransitRegistry(options = {}) {
     const nowSec = Math.floor(Date.now() / 1000);
     const isStale = feedHeaderTimestamp ? nowSec - Number(feedHeaderTimestamp) > 300 : false;
 
+    const feedObservedAt =
+      Number.isFinite(Number(feedHeaderTimestamp)) && Number(feedHeaderTimestamp) > 0
+        ? new Date(Number(feedHeaderTimestamp) * 1000).toISOString()
+        : null;
+
     const data = {
       cityId,
       agencyName: feed.agencyName || feed.agency || cityId,
       gtfsRealtimeUrl: url,
+      messageType,
       status: 'GTFS-Realtime Live',
       vehicles,
       tripUpdates,
       alerts,
       count: vehicles.length,
+      recordCount: vehicles.length + tripUpdates.length + alerts.length,
       feedHeaderTimestamp,
       retrievedAt: new Date().toISOString(),
       live: true,
@@ -527,9 +545,10 @@ export function createTransitRegistry(options = {}) {
       receipt: {
         provider: 'gtfs-rt-registry',
         capability: 'transit',
-        dataset: 'transit-vehicles',
+        dataset,
         requestId: params.requestId || context.requestId,
         retrievedAt: data.retrievedAt,
+        observedAt: feedObservedAt,
         live: true,
         stale: isStale,
         attribution: `GTFS-RT Feed (${data.agencyName})`,

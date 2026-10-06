@@ -1,6 +1,30 @@
 # THERGRID Roadmap
 
-> **Scope note:** This document describes planned phase outcomes. The maintained source tree already contains a deterministic synthetic vertical slice and advisory contracts for some later-phase boundaries; those contracts do not imply live integrations, operator UI delivery, or physical actuation. See the README's **Implemented today** section for current claims.
+This roadmap separates delivered application work from future integration and deployment milestones. Phase descriptions below preserve the design sequence; they are not an uncompleted checklist for capabilities already in the source tree.
+
+## Delivered foundation and application
+
+- Node.js 22 backend and health service; React/TypeScript web workspace with Cesium.
+- Initial asset/topology/telemetry/snapshot schemas, validation, synthetic microgrid fixture and deterministic twin output.
+- Forecast, classical proposals, simulation, decision receipts, provenance and renderer-neutral spatial contracts.
+- Provider registry, real weather/energy/hydrology/transit/spatial adapters, agent/TEAM runtime and local/remote quantum adapter contracts.
+- Root and browser regression suites, coverage thresholds, lint/types, Engineering CI, fresh-clone/container verification and CodeQL.
+- Backend PR #145 and responsive command-center PR #144 converged on main.
+- Canonical React/Cesium production serving, deterministic full-app packaging and packaged-runtime smoke integrated through PR #148.
+
+## Remaining integration and release work
+
+1. Confirm intended safe city-provider hardening is integrated before selecting the final submission SHA.
+2. Retain the reconciled 0.2.0 repository candidate and independent product-generation versions; see [VERSIONING.md](VERSIONING.md).
+3. Validate every maintained gate on the exact final main SHA after all intended hardening and reconciliation changes are merged.
+4. Run protected canonical live-provider acceptance with installed Actions secrets; retain sanitized evidence, including explicit unavailable hardware states.
+5. Select production hosting and configure its server-side environment, persistence and operating controls.
+
+## Future pilot work
+
+Tenant/environment isolation, authorization, incident response and representative live telemetry pilots remain deployment work. Quantum hardware validation requires external service credentials and allocation. AR/VR device delivery and physical actuation remain separate research milestones.
+
+## Archived design phases
 
 ## Phase 0 — Foundation
 
@@ -109,11 +133,6 @@ Required before any actuator is enabled:
 
 No production actuation should be added merely to demonstrate capability.
 
-## Immediate work queue
+## Archived initial work queue — completed
 
-1. Choose and record the initial runtime/workspace stack.
-2. Define `Asset`, `GridTopology`, `TelemetryPoint`, and `GridSnapshot` schemas.
-3. Add the synthetic microgrid fixture.
-4. Implement telemetry validation.
-5. Produce deterministic `TwinState` output.
-6. Add tests before moving into model or quantum integrations.
+The former queue (runtime selection, initial schemas, synthetic fixture, telemetry validation, deterministic twin state and initial tests) is complete and recorded in the delivered section above. It is retained here as history, not future work.

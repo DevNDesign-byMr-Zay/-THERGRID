@@ -17,6 +17,10 @@ const feedSchema = z.object({
   cityId: feedId,
   agencyName: z.string().min(1).max(160),
   url: httpUrl,
+  messageType: z
+    .enum(['vehicle-positions', 'trip-updates', 'alerts'])
+    .optional()
+    .default('vehicle-positions'),
   enabled: z.boolean().optional().default(true),
   authHeaderEnv: z.string().min(1).max(160).optional(),
 });
@@ -83,6 +87,7 @@ export function loadTransitFeedConfig(filePath, options = {}) {
       cityId: definition.cityId,
       agencyName: definition.agencyName,
       feedUrl: definition.url,
+      messageType: definition.messageType,
       ...(authHeader ? { authHeader } : {}),
     });
     enabledFeedCount += 1;

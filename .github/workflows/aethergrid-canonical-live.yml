@@ -1,0 +1,102 @@
+name: aethergrid/canonical-live
+
+on:
+  workflow_dispatch:
+    inputs:
+      submission_sha:
+        description: "Exact final main SHA with successful Engineering CI and CodeQL"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: aethergrid-canonical-live
+  cancel-in-progress: false
+
+jobs:
+  canonical-live:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: aethergrid-live-verification
+    env:
+      SUBMISSION_SHA: ${{ inputs.submission_sha }}
+    steps:
+      - name: Checkout exact dispatch commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+      - name: Refuse mismatched or superseded main
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SUBMISSION_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$SUBMISSION_SHA" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD)" = "$SUBMISSION_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$SUBMISSION_SHA"
+      - name: Require exact-SHA engineering and security gates
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { data } = await github.rest.actions.listWorkflowRunsForRepo({ ...context.repo, head_sha: process.env.SUBMISSION_SHA, per_page: 100 });
+            for (const [name, path] of [['engineering/ci', '.github/workflows/ci.yml'], ['security/codeql', '.github/workflows/codeql.yml']]) {
+              const run = data.workflow_runs.filter(r => r.name === name && r.path === path && r.head_branch === 'main' && r.head_sha === process.env.SUBMISSION_SHA && r.event === 'push').sort((a,b) => b.id-a.id)[0];
+              if (!run || run.status !== 'completed' || run.conclusion !== 'success') core.setFailed(`${name} is not successful on this exact main SHA`);
+            }
+      - name: Node 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked root dependencies
+        run: npm ci --ignore-scripts
+      - name: Validate maintained chain and canonical package
+        run: npm run check
+      - name: Install browser from maintained Playwright package
+        working-directory: apps/aethergrid-console/web
+        run: npx playwright install --with-deps chromium
+      - name: Canonical browser and responsive acceptance without credentials
+        working-directory: apps/aethergrid-console/web
+        env:
+          AETHERGRID_TEST_CANONICAL: '1'
+        run: npm test -- --workers=1
+      - name: Credentialed canonical API and Cesium acceptance
+        env:
+          AETHERGRID_AI_PROVIDER: openai-compatible
+          AETHERGRID_AI_MODEL: openai/gpt-oss-20b
+          AETHERGRID_OPENAI_BASE_URL: https://api.groq.com/openai/v1
+          AETHERGRID_OPENAI_API_KEY: ${{ secrets.AETHERGRID_OPENAI_API_KEY }}
+          AETHERGRID_ENVIRONMENT_PROVIDER: tomorrow-io
+          AETHERGRID_TOMORROW_IO_API_KEY: ${{ secrets.AETHERGRID_TOMORROW_IO_API_KEY }}
+          AETHERGRID_EIA_API_KEY: ${{ secrets.AETHERGRID_EIA_API_KEY }}
+          AETHERGRID_TRANSIT_API_KEY: ${{ secrets.AETHERGRID_TRANSIT_API_KEY }}
+          AETHERGRID_TRANSIT_PROVIDER: transitland
+          AETHERGRID_TRANSIT_BASE_URL: https://transit.land/api/v2/rest
+          AETHERGRID_GTFS_FEEDS_FILE: ${{ github.workspace }}/docs/acceptance/aethergrid-command-center/verified-gtfs-feeds.json
+          AETHERGRID_CESIUM_ION_TOKEN: ${{ secrets.AETHERGRID_CESIUM_ION_TOKEN }}
+          AETHERGRID_IBM_QUANTUM_API_KEY: ${{ secrets.AETHERGRID_IBM_QUANTUM_API_KEY }}
+          AETHERGRID_IBM_QUANTUM_SERVICE_CRN: ${{ secrets.AETHERGRID_IBM_QUANTUM_SERVICE_CRN }}
+          AETHERGRID_DWAVE_API_TOKEN: ${{ secrets.AETHERGRID_DWAVE_API_TOKEN }}
+          AETHERGRID_TEST_CANONICAL: '1'
+          AETHERGRID_TEST_REQUIRE_CESIUM: '1'
+        shell: bash
+        run: |
+          set +e
+          node scripts/aethergrid-canonical-provider-smoke.mjs
+          provider_status=$?
+          (cd apps/aethergrid-console/web && npx playwright test tests/cesium-acceptance.spec.ts --workers=1 --reporter=line)
+          cesium_status=$?
+          node scripts/sanitize-canonical-artifacts.mjs
+          sanitation_status=$?
+          test "$provider_status" = 0 && test "$cesium_status" = 0 && test "$sanitation_status" = 0
+      - name: Retain only sanitized acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: aethergrid-canonical-live-${{ github.sha }}-${{ github.run_id }}
+          path: canonical-evidence/*.json
+          if-no-files-found: error
+          retention-days: 30

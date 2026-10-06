@@ -2,24 +2,28 @@ export const AGENT_DEFINITIONS = Object.freeze({
   'VÆLON': Object.freeze({
     envPrefix: 'AETHERGRID_VAELON',
     role: 'Optimization & Scenario Exploration',
+    defaultGroqModel: 'openai/gpt-oss-120b',
     systemPrompt:
       'You are VÆLON inside ÆTHERGRID. Focus on bounded optimization, operating scenarios, constraints, tradeoffs and classical-baseline comparison. Never claim authority to actuate infrastructure. Distinguish observed state, assumptions and recommendations.',
   }),
   AUREN: Object.freeze({
     envPrefix: 'AETHERGRID_AUREN',
     role: 'Semantic Analysis & Spatial Intelligence',
+    defaultGroqModel: 'qwen/qwen3.8-27b',
     systemPrompt:
       'You are AUREN inside ÆTHERGRID. Focus on semantic interpretation, 4D spatial relationships, topology, resilience, risk correlation and operator-readable context. Never invent authoritative telemetry or physical actuation authority.',
   }),
   'SOLVÆR': Object.freeze({
     envPrefix: 'AETHERGRID_SOLVAER',
     role: 'Simulation & Evidence Generation',
+    defaultGroqModel: 'qwen/qwen3.8-27b',
     systemPrompt:
       'You are SOLVÆR inside ÆTHERGRID. Focus on simulation design, reproducibility, evidence, provenance, validation, uncertainty and comparison against historical or classical baselines. Never promote a recommendation without evidence.',
   }),
   TEAM: Object.freeze({
     envPrefix: 'AETHERGRID_TEAM',
     role: 'Multi-Agent Synthesis',
+    defaultGroqModel: 'openai/gpt-oss-120b',
     systemPrompt:
       'You are the ÆTHERGRID team synthesizer. Reconcile VÆLON optimization, AUREN spatial/semantic analysis and SOLVÆR evidence. Produce one concise operator-facing synthesis, call out disagreements or missing evidence, and preserve the advisory-only authority boundary.',
   }),
@@ -34,7 +38,7 @@ const DEFAULTS = Object.freeze({
 
 function normalizeProvider(value) {
   const provider = String(value || 'local').trim().toLowerCase();
-  if (provider === 'openai' || provider === 'openai-compatible') return 'openai-compatible';
+  if (provider === 'openai' || provider === 'openai-compatible' || provider === 'groq') return 'openai-compatible';
   if (provider === 'ollama') return 'ollama';
   return 'local';
 }
@@ -56,7 +60,7 @@ export function resolveAgentConfig(env = process.env) {
       const model =
         env[`${prefix}_MODEL`] ||
         sharedModel ||
-        (provider === 'ollama' ? 'llama3.2' : provider === 'openai-compatible' ? '' : `local-${id.toLowerCase()}`);
+        (provider === 'openai-compatible' ? definition.defaultGroqModel : provider === 'ollama' ? 'llama3.2' : `local-${id.toLowerCase()}`);
       return [
         id,
         {
@@ -65,6 +69,7 @@ export function resolveAgentConfig(env = process.env) {
           systemPrompt: definition.systemPrompt,
           provider,
           model,
+          defaultGroqModel: definition.defaultGroqModel,
           timeoutMs: numberFromEnv(env[`${prefix}_TIMEOUT_MS`], sharedTimeout),
           openAiBaseUrl:
             env[`${prefix}_BASE_URL`] ||

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { AGENT_ROLES, BRAND } from './brand';
 
 import {
   runAgent,
@@ -38,12 +39,17 @@ export function AgentDock({ context, handoff = null }: AgentDockProps) {
 
   useEffect(() => {
     if (!handoff) return;
+    controllerRef.current?.abort();
+    controllerRef.current = null;
+    setRunning(false);
     setAgent(handoff.agent);
     setDraft(handoff.prompt);
     setLastRun(null);
     setError(null);
     globalThis.setTimeout(() => textareaRef.current?.focus(), 0);
   }, [handoff?.id]);
+
+  useEffect(() => () => controllerRef.current?.abort(), []);
 
   const history = histories[agent];
   const visibleHistory = useMemo(() => history.slice(-6), [history]);
@@ -77,8 +83,10 @@ export function AgentDock({ context, handoff = null }: AgentDockProps) {
       if (controller.signal.aborted) return;
       setError(runError instanceof Error ? runError.message : String(runError));
     } finally {
-      if (controllerRef.current === controller) controllerRef.current = null;
-      setRunning(false);
+      if (controllerRef.current === controller) {
+        controllerRef.current = null;
+        setRunning(false);
+      }
     }
   };
 
@@ -92,12 +100,28 @@ export function AgentDock({ context, handoff = null }: AgentDockProps) {
         <em>ADVISORY ONLY</em>
       </div>
 
-      <div className="agent-tabs" role="tablist" aria-label="ÆTHERGRID agents">
+      <div className="agent-identities" aria-label="Specialist identities">
+        {(['AUREN', 'VÆLON', 'SOLVÆR'] as const).map((id) => (
+          <button type="button" key={id} aria-pressed={agent === id} disabled={running}
+            onClick={() => { setAgent(id); setLastRun(null); setError(null); }}>
+            <img src={BRAND[id]} alt={`${id} mark`} />
+            <strong>{id}</strong>
+          </button>
+        ))}
+      </div>
+      <p className="agent-role">{AGENT_ROLES[agent]}</p>
+      <span className="agent-run-state" role="status">
+        {running ? 'RUNNING' : lastRun ? (lastRun.runtime.fallbackUsed ? 'LOCAL FALLBACK' : 'PROVIDER RESPONSE') : 'READY TO REQUEST · PROVIDER NOT YET VERIFIED'}
+      </span>
+
+      <div className="agent-tabs" role="group" aria-label="ÆTHERGRID agents">
         {AGENTS.map((id) => (
           <button
             key={id}
             type="button"
             className={agent === id ? 'active' : ''}
+            disabled={running}
+            aria-pressed={agent === id}
             onClick={() => {
               setAgent(id);
               setLastRun(null);
@@ -138,6 +162,23 @@ export function AgentDock({ context, handoff = null }: AgentDockProps) {
 
       {error ? <div className="agent-error">{error}</div> : null}
 
+      {lastRun?.contributions?.length ? (
+        <details className="agent-contributions">
+          <summary>Specialist contributions · {lastRun.contributions.length}</summary>
+          {lastRun.contributions.map((contribution) => (
+            <article key={contribution.agent}>
+              <strong>{contribution.agent}</strong>
+              <small>{contribution.runtime.provider} · {contribution.runtime.model ?? 'local'} · {contribution.runtime.fallbackUsed ? 'FALLBACK' : 'PROVIDER'}</small>
+              <p>{contribution.reply}</p>
+              <code>{contribution.receipt || 'NO RECEIPT'}</code>
+            </article>
+          ))}
+        </details>
+      ) : null}
+      {lastRun?.evidence?.id ? (
+        <p className="agent-evidence">Evidence · {lastRun.evidence.title ?? lastRun.evidence.id} · {lastRun.evidence.status ?? 'Recorded'}</p>
+      ) : null}
+
       <form
         className="agent-compose"
         onSubmit={(event) => {
@@ -149,6 +190,7 @@ export function AgentDock({ context, handoff = null }: AgentDockProps) {
           ref={textareaRef}
           value={draft}
           rows={2}
+          aria-label={`Message ${agent}`}
           placeholder={`Ask ${agent} about this spatial context…`}
           onChange={(event) => setDraft(event.currentTarget.value)}
           disabled={running}

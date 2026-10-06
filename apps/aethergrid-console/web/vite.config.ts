@@ -12,11 +12,12 @@ export default defineConfig({
   plugins: [
     react(),
     viteStaticCopy({
+      // Strip node_modules/cesium/Build/Cesium/<group>, preserving nested asset paths.
       targets: [
-        { src: `${cesiumBuild}/Assets/**/*`, dest: 'cesium/Assets' },
-        { src: `${cesiumBuild}/ThirdParty/**/*`, dest: 'cesium/ThirdParty' },
-        { src: `${cesiumBuild}/Widgets/**/*`, dest: 'cesium/Widgets' },
-        { src: `${cesiumBuild}/Workers/**/*`, dest: 'cesium/Workers' }
+        { src: `${cesiumBuild}/Assets/**/*`, dest: 'cesium/Assets', rename: { stripBase: 5 } },
+        { src: `${cesiumBuild}/ThirdParty/**/*`, dest: 'cesium/ThirdParty', rename: { stripBase: 5 } },
+        { src: `${cesiumBuild}/Widgets/**/*`, dest: 'cesium/Widgets', rename: { stripBase: 5 } },
+        { src: `${cesiumBuild}/Workers/**/*`, dest: 'cesium/Workers', rename: { stripBase: 5 } }
       ]
     })
   ],

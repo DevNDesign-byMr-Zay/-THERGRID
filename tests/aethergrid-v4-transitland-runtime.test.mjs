@@ -14,7 +14,7 @@ test('transitland: unconfigured state when API key is missing', async () => {
   assert.equal(res.receipt.live, false);
 });
 
-test('transitland: sends API key via apikey header and not in query string', async () => {
+test('transitland: discovers source feeds geographically without leaking the API key', async () => {
   let capturedUrl = '';
 
   const provider = createTransitlandProvider({
@@ -23,18 +23,19 @@ test('transitland: sends API key via apikey header and not in query string', asy
     fetchFn: async (url) => {
       capturedUrl = url;
       return {
-        agencies: [
+        feeds: [
           {
-            agency_id: 'MTA',
-            agency_name: 'MTA Bus',
-            city: 'New York',
-            feeds: [
+            onestop_id: 'f-nycferry~rt',
+            name: 'NYC Ferry realtime',
+            spec: 'GTFS_RT',
+            urls: {
+              realtime_vehicle_positions: 'https://nycferry.example.test/vehicle-positions.pb',
+              realtime_trip_updates: 'https://nycferry.example.test/trip-updates.pb',
+            },
+            associated_operators: [
               {
-                id: 'f-mta-bus',
-                spec: 'gtfs-rt',
-                urls: {
-                  realtime_vehicle_positions: 'https://api-endpoint.mta.info/AccessSubway',
-                },
+                onestop_id: 'o-dr5r-nycferry',
+                name: 'NYC Ferry',
               },
             ],
           },
@@ -44,14 +45,46 @@ test('transitland: sends API key via apikey header and not in query string', asy
   });
 
   assert.equal(provider.configured(), true);
-  const res = await provider.request({ city: 'New York' });
+  const res = await provider.request({
+    lat: 40.758,
+    lon: -73.9855,
+    radius: 15_000,
+    limit: 20,
+  });
 
+  assert.match(capturedUrl, /\/feeds\?/u);
+  assert.match(capturedUrl, /lat=40\.758/u);
+  assert.match(capturedUrl, /lon=-73\.9855/u);
+  assert.match(capturedUrl, /radius=10000/u);
   assert.equal(capturedUrl.includes('apiKey='), false);
   assert.equal(capturedUrl.includes('apikey='), false);
   assert.equal(res.data.status, 'Transitland Catalog Discovered');
+  assert.equal(res.data.feedCount, 1);
+  assert.equal(res.data.agencyCount, 1);
   assert.equal(res.data.feeds.length, 1);
   assert.equal(res.data.feeds[0].feedUrlValid, true);
-  assert.equal(res.data.feeds[0].feedUrl, 'https://api-endpoint.mta.info/AccessSubway');
+  assert.equal(res.data.feeds[0].feedUrl, 'https://nycferry.example.test/vehicle-positions.pb');
+  assert.equal(res.data.feeds[0].vehiclePositionsAvailable, true);
+  assert.equal(res.data.feeds[0].tripUpdatesAvailable, true);
+  assert.equal(res.receipt.dataset, 'feed-catalog');
+});
+
+test('transitland: text discovery still uses the feed catalog search contract', async () => {
+  let capturedUrl = '';
+  const provider = createTransitlandProvider({
+    apiKey: 'test-transitland-key-123',
+    baseUrl: 'https://transit.land/api/v2/rest',
+    fetchFn: async (url) => {
+      capturedUrl = url;
+      return { feeds: [] };
+    },
+  });
+
+  const res = await provider.request({ city: 'New York' });
+  assert.match(capturedUrl, /\/feeds\?/u);
+  assert.match(capturedUrl, /search=New\+York/u);
+  assert.equal(res.data.feedCount, 0);
+  assert.equal(res.receipt.dataset, 'feed-catalog');
 });
 
 test('validateDiscoveredFeedUrl: enforces HTTPS for remote feeds and allows HTTP for localhost', () => {

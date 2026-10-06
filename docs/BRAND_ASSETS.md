@@ -1,6 +1,6 @@
 # ÆTHERGRID Brand Assets
 
-The maintained operator console keeps reusable product and AI-agent artwork under `apps/operator-console/assets/brand/`.
+The React command center uses product and AI-agent artwork from `apps/aethergrid-console/assets/brand/` through `web/src/components/brand.ts`. Earlier reusable artwork remains under `apps/operator-console/assets/brand/`. The verified command-center design reference is documented in [DESIGN_REFERENCE.md](DESIGN_REFERENCE.md).
 
 ## Product mark
 

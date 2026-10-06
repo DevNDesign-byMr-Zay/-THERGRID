@@ -1,8 +1,8 @@
 # Project Scope
 
-THERGRID is a maintained **Node.js application service**, not an infrastructure-as-code repository.
+ÆTHERGRID / THERGRID is a maintained **application platform with a Node.js backend and React/TypeScript/Cesium frontend**, not an infrastructure-as-code repository.
 
-Its primary application entrypoint is `src/platform-health-service.mjs` (executed via `npm start`), with core application logic under `src/`, tests under `tests/`, and maintained verification/demo tooling under `scripts/`. The Dockerfile and `docker-compose.yml` reproduce and smoke-test the application runtime; they are packaging and verification assets, not Terraform, Kubernetes, Helm, Pulumi, Ansible, or another infrastructure provisioning product.
+The operator application backend is `apps/aethergrid-console/server.mjs`, and the React/TypeScript command center and Cesium engine live under `apps/aethergrid-console/web/`. Provider adapters, AI-agent orchestration and quantum runtime modules live beside that backend. Its independent platform health-service entrypoint is `src/platform-health-service.mjs` (executed via `npm start`), with core application logic under `src/`, tests under `tests/`, maintained verification/demo tooling under `scripts/`, and architecture/provider/acceptance evidence under `docs/`. The Dockerfile and `docker-compose.yml` reproduce and smoke-test the application runtime; they are packaging and verification assets, not Terraform, Kubernetes, Helm, Pulumi, Ansible, or another infrastructure provisioning product.
 
 ## Primary application concerns
 

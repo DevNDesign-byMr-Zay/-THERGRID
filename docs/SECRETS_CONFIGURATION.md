@@ -62,7 +62,7 @@ AETHERGRID_IBM_QUANTUM_API_KEY=<encrypted key>
 AETHERGRID_IBM_QUANTUM_SERVICE_CRN=<instance CRN>
 ```
 
-Until both are present, runtime status must remain unconfigured for IBM hardware.
+Until both are present, runtime status must remain unconfigured for IBM hardware. When both are present, the protected canonical-live gate performs IBM IAM authentication and backend discovery only; it records backend counts and API-version metadata without submitting Sampler/Estimator jobs.
 
 ## Cesium ion
 
