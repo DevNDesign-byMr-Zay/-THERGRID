@@ -4,6 +4,10 @@
 
 ### Changed
 
+- Reconciled the repository introduction and scope with the maintained Node.js backend, React/TypeScript/Cesium frontend, provider/agent/quantum runtimes and advisory evidence boundary.
+- Archived completed roadmap foundation work, expanded maintained application classification to apps/docs and documented independent version roles.
+- Replaced corrupt dashboard-reference manifest links with the verified React command-center capture and aligned the legacy UI contract version with its app manifest.
+
 - Exposed the maintained health service through conventional Node.js `main`, `exports`, and `npm start` application entrypoints.
 - Added plainly named lint/typecheck/test/coverage/container CI jobs plus a zero-cache fresh-clone smoke path to improve machine-detectable application verification.
 - Added scheduled dependency-freshness evidence without automatic dependency mutation.

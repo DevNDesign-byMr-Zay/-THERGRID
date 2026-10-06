@@ -215,7 +215,7 @@
     "backendEndpoint": "GET /api/aethergrid/spatial",
     "backgroundImageRequired": false
   },
-  "designReferenceRepositoryPath": "assets/dashboard-reference.webp",
+  "designReferenceRepositoryPath": "docs/acceptance/aethergrid-command-center/command-center-1536x1024.png",
   "designReferenceIncludedInRuntimePackage": false,
   "workspaceRouting": {
     "mode": "exclusive-view",
@@ -543,5 +543,5 @@
     "maxGridSize": 9,
     "serverSideCredentials": true
   },
-  "version": "2.9.1"
+  "version": "3.0.0"
 }
