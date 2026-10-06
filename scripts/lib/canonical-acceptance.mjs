@@ -78,9 +78,7 @@ export function summarizeScheduledRealtime(
     }).format(runDate),
   );
   const withinServiceHours =
-    Number.isFinite(localHour) &&
-    localHour >= serviceStartHour &&
-    localHour < serviceEndHour;
+    Number.isFinite(localHour) && localHour >= serviceStartHour && localHour < serviceEndHour;
 
   const timestampSeconds = Number(sourceTimestamp);
   const sourceDate =
@@ -92,9 +90,7 @@ export function summarizeScheduledRealtime(
       ? Math.round((runDate.getTime() - sourceDate.getTime()) / 1000)
       : null;
   const sourceFresh =
-    sourceAgeSeconds != null &&
-    sourceAgeSeconds >= -60 &&
-    sourceAgeSeconds <= maxSourceAgeSeconds;
+    sourceAgeSeconds != null && sourceAgeSeconds >= -60 && sourceAgeSeconds <= maxSourceAgeSeconds;
 
   const transportVerified =
     receipt.live === true &&
@@ -104,10 +100,8 @@ export function summarizeScheduledRealtime(
     receipt.provider === provider &&
     (!expectedDataset || receipt.dataset === expectedDataset);
   const nonempty = records > 0;
-  const freshEmptyOutsideServiceHours =
-    !withinServiceHours && records === 0 && sourceFresh;
-  const verified =
-    transportVerified && (nonempty || freshEmptyOutsideServiceHours);
+  const freshEmptyOutsideServiceHours = !withinServiceHours && records === 0 && sourceFresh;
+  const verified = transportVerified && (nonempty || freshEmptyOutsideServiceHours);
 
   return {
     verified,
@@ -129,9 +123,7 @@ export function summarizeScheduledRealtime(
       withinServiceHours,
     },
     expectedEmptyOutsideServiceHours: freshEmptyOutsideServiceHours,
-    acceptanceState: freshEmptyOutsideServiceHours
-      ? 'live-empty-outside-service-hours'
-      : null,
+    acceptanceState: freshEmptyOutsideServiceHours ? 'live-empty-outside-service-hours' : null,
   };
 }
 
