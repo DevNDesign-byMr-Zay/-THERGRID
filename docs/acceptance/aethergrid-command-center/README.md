@@ -2,6 +2,12 @@
 
 Base: `ab644bc478883f873976cb9629ed94abac78924f` (main; engineering CI and CodeQL green when inspected). Branch: `feat/aethergrid-branded-command-center`. PR is a draft because credential-backed production activation is incomplete. No merge, deployment, or quantum hardware submission was performed.
 
+## 2026-10-06 canonical live-gate update
+
+The protected exact-main gate introduced by PR #151 was dispatched on `80b30b886445a82b3f3eb171c6fe9a257eb243a4` after Engineering CI and CodeQL passed. Canonical browser/Cesium acceptance succeeded, including live terrain, imagery and building tiles. Sanitized provider evidence verified Groq VÆLON/AUREN/SOLVÆR/TEAM, Tomorrow.io, EIA NYIS and NOAA BATN6. The gate failed only because Transitland discovery and the configured NYC Ferry vehicle-position feed returned zero records; IBM still lacked a service CRN and D-Wave still lacked a token.
+
+The recovery follows the current provider contracts rather than treating an empty response as success. Transitland uses its `/api/v2/rest/feeds` geographic search. NYC Ferry's current official Developer Tools page publishes real-time Trip Updates at `https://nycferry.connexionz.net/rtt/public/utility/gtfsrealtime.aspx/tripupdate` and real-time Alerts, but no vehicle-position endpoint. The tracked NYC Ferry acceptance binding therefore uses the documented trip-update feed and preserves that message type in the runtime receipt. Vehicle map nodes remain coordinate-backed only; no trip update is converted into an invented position.
+
 ## Frontend result
 
 Canonical ÆTHERGRID, AUREN, VÆLON, and SOLVÆR assets restored. The shell fits the viewport, with exclusive navigation and intelligence workspaces, dedicated secondary inspectors, responsive drawers, keyboard focus containment/restoration, and reduced-motion styles. Spatial tools remain available through a compact renderer-tools disclosure. Agent requests show actual provider/fallback metadata; TEAM retains all three real contributions. Provider readiness is explicitly distinguished from live verification. Generated fallback city geometry is withheld rather than presented as mapped evidence.
