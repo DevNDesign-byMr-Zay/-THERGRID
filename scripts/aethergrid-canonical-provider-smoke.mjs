@@ -127,7 +127,9 @@ try {
   });
   await check('nyc-ferry-GTFS', async () => {
     const result = await request('/api/aethergrid/transit/realtime?cityId=new-york');
-    const tripUpdates = Array.isArray(result.data?.tripUpdates) ? result.data.tripUpdates.length : 0;
+    const tripUpdates = Array.isArray(result.data?.tripUpdates)
+      ? result.data.tripUpdates.length
+      : 0;
     const summary = summarizeProvider(result, 'gtfs-rt-registry', { records: tripUpdates });
     return {
       ...summary,
