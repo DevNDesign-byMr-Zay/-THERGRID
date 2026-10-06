@@ -116,20 +116,13 @@ test('live observations reject NOAA metadata-only and empty Tomorrow data', () =
   }
 });
 
-
 test('canonical transit acceptance uses geo feed discovery and documented NYC Ferry trip updates', () => {
   const smoke = readFileSync('scripts/aethergrid-canonical-provider-smoke.mjs', 'utf8');
   const feedConfig = JSON.parse(
-    readFileSync(
-      'docs/acceptance/aethergrid-command-center/verified-gtfs-feeds.json',
-      'utf8',
-    ),
+    readFileSync('docs/acceptance/aethergrid-command-center/verified-gtfs-feeds.json', 'utf8'),
   );
 
-  assert.match(
-    smoke,
-    /transit\/discovery\?lat=40\.758&lon=-73\.9855&radius=10000&limit=20/u,
-  );
+  assert.match(smoke, /transit\/discovery\?lat=40\.758&lon=-73\.9855&radius=10000&limit=20/u);
   assert.match(smoke, /transit\/realtime\?cityId=new-york/u);
   assert.match(smoke, /transit-trip-updates/u);
 
