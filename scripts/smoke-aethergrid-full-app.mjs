@@ -1,10 +1,11 @@
 import { spawn } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import net from 'node:net';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 
-const repoRoot = resolve(new URL('../', import.meta.url).pathname);
+const repoRoot = fileURLToPath(new URL('../', import.meta.url));
 const archivePath = join(repoRoot, 'dist', 'aethergrid-functional-app.zip');
 
 function assert(condition, message) {
@@ -123,7 +124,7 @@ try {
 
   const baseUrl = `http://127.0.0.1:${port}`;
   const health = await waitFor(`${baseUrl}/api/aethergrid/health`, child);
-  assert.equal?.(health.status, 200);
+  assert(health.status === 200, `packaged health returned HTTP ${health.status}`);
 
   const root = await fetch(`${baseUrl}/`);
   assert(root.status === 200, `packaged root returned HTTP ${root.status}`);
