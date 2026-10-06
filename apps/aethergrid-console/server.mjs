@@ -6,6 +6,7 @@ import { createNwsAlertsProvider } from './providers/nws-alerts-provider.mjs';
 import { createNoaaNwpsHydrologyProvider } from './providers/noaa-nwps-provider.mjs';
 import { createEiaProvider } from './providers/eia-provider.mjs';
 import { createTransitRegistry } from './providers/transit-registry.mjs';
+import { createTransitlandProvider } from './providers/transitland-provider.mjs';
 import { loadTransitFeedConfig } from './providers/transit-feed-config.mjs';
 import { createDwaveProvider } from './providers/dwave-provider.mjs';
 import { createProviderRegistry } from './providers/provider-registry.mjs';
@@ -44,9 +45,20 @@ const noaaNwpsProvider = createNoaaNwpsHydrologyProvider({
   baseUrl: providerRegistry.config.futureProviders.hydrology.baseUrl,
 });
 
+const transitlandProvider = createTransitlandProvider({
+  apiKey: providerRegistry.config.futureProviders.transit.apiKey,
+  baseUrl: providerRegistry.config.futureProviders.transit.baseUrl,
+});
+providerRegistry.health.registerProvider('transitland', {
+  id: 'transitland',
+  name: 'Transitland v2 Catalog Discovery Provider',
+  capability: 'transit-discovery',
+  capabilities: ['transit-discovery', 'agency-catalog'],
+});
+
 const dwaveProvider = createDwaveProvider({
-  token: providerRegistry.config.futureProviders.dwave.token,
-  solverUrl: providerRegistry.config.futureProviders.dwave.solverUrl,
+  token: providerRegistry.config.providers.dwave.token,
+  baseUrl: providerRegistry.config.providers.dwave.baseUrl || providerRegistry.config.providers.dwave.solverUrl,
 });
 
 const transitFeedConfig = loadTransitFeedConfig(
@@ -1052,6 +1064,12 @@ const server = http.createServer(async (request, response) => {
         { region },
         execCtx,
       );
+      return json(response, 200, providerRegistry.redactor.redactValue(result));
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/transit/discovery') {
+      const city = url.searchParams.get('city') || url.searchParams.get('query') || '';
+      const result = await transitlandProvider.request({ city, query: city }, execCtx);
       return json(response, 200, providerRegistry.redactor.redactValue(result));
     }
 
