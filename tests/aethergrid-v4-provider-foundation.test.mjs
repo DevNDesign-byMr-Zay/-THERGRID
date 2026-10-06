@@ -126,7 +126,7 @@ function createGtfsTripUpdateProtobuf({ tripId, routeId, delay }) {
   const stuBytes = [...encodeVarintField(1, 1), ...encodeStringField(4, 'STOP-10')];
   const tuBytes = [
     ...(tripBytes.length ? encodeSubMessageField(1, tripBytes) : []),
-    ...encodeSubMessageField(3, stuBytes),
+    ...encodeSubMessageField(2, stuBytes),
     ...(delay !== undefined ? encodeVarintField(5, delay) : []),
   ];
 
