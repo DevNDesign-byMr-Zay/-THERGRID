@@ -330,7 +330,7 @@ export function createTransitRegistry(options = {}) {
         receipt: {
           provider: 'gtfs-rt-registry',
           capability: 'transit',
-          dataset,
+          dataset: 'transit-vehicles',
           requestId: params.requestId || context.requestId,
           live: false,
           fallback: true,
