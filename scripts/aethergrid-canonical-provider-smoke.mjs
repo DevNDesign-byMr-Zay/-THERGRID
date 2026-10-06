@@ -120,14 +120,20 @@ try {
     ),
   );
   await check('transitland', async () => {
-    const result = await request('/api/aethergrid/transit/discovery?city=New%20York');
+    const result = await request(
+      '/api/aethergrid/transit/discovery?lat=40.758&lon=-73.9855&radius=10000&limit=20',
+    );
     return summarizeProvider(result, 'transitland', { records: result.data?.feeds?.length || 0 });
   });
   await check('nyc-ferry-GTFS', async () => {
-    const result = await request('/api/aethergrid/transit/vehicles?cityId=new-york');
-    return summarizeProvider(result, 'gtfs-rt-registry', {
-      records: result.data?.vehicles?.length || 0,
-    });
+    const result = await request('/api/aethergrid/transit/realtime?cityId=new-york');
+    const tripUpdates = Array.isArray(result.data?.tripUpdates) ? result.data.tripUpdates.length : 0;
+    const summary = summarizeProvider(result, 'gtfs-rt-registry', { records: tripUpdates });
+    return {
+      ...summary,
+      verified: summary.verified && result.receipt?.dataset === 'transit-trip-updates',
+      messageType: result.data?.messageType || null,
+    };
   });
   for (const [name, names] of [
     ['ibm', ['AETHERGRID_IBM_QUANTUM_API_KEY', 'AETHERGRID_IBM_QUANTUM_SERVICE_CRN']],
