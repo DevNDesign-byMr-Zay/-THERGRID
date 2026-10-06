@@ -556,6 +556,7 @@ async function main() {
     '/api/aethergrid/hydrology/gauges',
     '/api/aethergrid/energy/context',
     '/api/aethergrid/transit/vehicles',
+    '/api/aethergrid/transit/realtime',
     '/api/aethergrid/profile',
     '/api/aethergrid/geospatial/cities',
     '/api/aethergrid/geospatial/city/',
