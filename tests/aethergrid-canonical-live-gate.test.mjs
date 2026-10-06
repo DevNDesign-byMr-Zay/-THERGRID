@@ -133,7 +133,6 @@ test('canonical transit acceptance uses geo feed discovery and documented NYC Fe
   assert.doesNotMatch(feedConfig.feeds[0].url, /vehicleposition/u);
 });
 
-
 test('scheduled realtime acceptance requires records during service hours but permits a fresh empty feed after hours', () => {
   const feedHeaderTimestamp = Date.parse('2026-10-06T02:54:00Z') / 1000;
   const payload = {
