@@ -3,16 +3,17 @@
   "primaryClass": "application-service",
   "secondaryClasses": [
     "backend-application",
+    "frontend-application",
+    "geospatial",
     "digital-twin",
     "energy-simulation",
     "spatial-intelligence"
   ],
-  "excludedClasses": [
-    "infrastructure-as-code"
-  ],
-  "maintainedSurfaces": [
-    "src",
-    "tests",
-    "scripts"
-  ]
+  "excludedClasses": ["infrastructure-as-code"],
+  "maintainedSurfaces": ["src", "apps", "tests", "scripts", "docs"],
+  "packagingAssets": {
+    "Dockerfile": "application runtime packaging and verification",
+    "docker-compose.yml": "application runtime packaging and smoke verification",
+    "compose.yml": "application runtime packaging and smoke verification"
+  }
 }

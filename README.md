@@ -1,84 +1,76 @@
-# THERGRID
+# ÆTHERGRID · THERGRID application platform
 
-THERGRID is a self-auditing Node.js renewable-energy digital-twin application service. Its maintained vertical slice produces advisory evidence and renderer-neutral presentation plans; it does not operate physical infrastructure.
+ÆTHERGRID is a maintained application platform for advisory energy digital twins and spatial intelligence. It combines a **Node.js application backend**, a **React + TypeScript frontend**, the **Cesium spatial engine**, provider adapters, real data integrations, an AI-agent runtime and quantum adapters. The repository/package name remains THERGRID / `thergrid`.
 
-> **Repository classification:** THERGRID is a Node.js application service for digital-twin, energy-simulation, and spatial-intelligence workflows. It is **not an infrastructure-as-code repository**; Docker/Compose are used only for reproducible application verification. See [docs/PROJECT_SCOPE.md](docs/PROJECT_SCOPE.md).
+Operators explore global and city views, compare scenarios, inspect source receipts and work with VÆLON, AUREN, SOLVÆR and TEAM. Recommendations support human decisions. **Simulation before actuation:** the application has no authority to control physical infrastructure, and quantum experiments require a classical baseline.
 
-
-## ÆTHERGRID product identity
-
-**ÆTHERGRID** is the operator-facing intelligence experience built on the maintained THERGRID application service. Its purpose is to let an operator **see the grid, explore scenarios, and verify every recommendation** through one evidence-bound surface that combines the energy digital twin, AI collaboration, quantum/quantum-inspired optimization experiments, holographic spatial presentation, and the existing audit/safety plane.
-
-The repository/package names remain THERGRID / `thergrid` for continuity. ÆTHERGRID names the maintained operator product, not a separate authority layer.
-
-The first real UI now lives at `apps/operator-console/` and is runnable with:
-
-```bash
-npm run operator-console
-```
-
-It exposes **GRID / HOLOGRAPHIC / QUANTUM / AI / EVIDENCE** views. The same UI is also described by `apps/operator-console/app.json` and `apps/operator-console/ui.json`, and `npm run package:aethergrid` produces a verified ZIP containing the complete HTML/CSS/JS UI, brand assets, populated JSON runtime snapshots, a file inventory, and SHA-256 checksums. The console now reads both a local capability contract and a validated operator-state contract: the latter runs a maintained synthetic microgrid through the existing digital twin, SOLVÆR simulation projection, operator evidence package/dashboard view, attention-enriched spatial scene, and holographic render-packet boundaries. The UI remains explicit that this is validated synthetic evidence, not live telemetry. See [docs/OPERATOR_CONSOLE.md](docs/OPERATOR_CONSOLE.md).
-
-
-## Project direction
-
-The goal is to build a defensible systems platform that can model distributed energy assets, ingest live or simulated telemetry, estimate grid state, test operating strategies, visualize the system spatially, and produce an auditable record of every recommendation. Autonomous action is not implemented.
-
-THERGRID should grow as a modular platform rather than one monolithic AI. The current Mr. Zay model family — ROARY with the next-generation VÆLON, AUREN, and SOLVÆR concepts — should connect through explicit contracts so each intelligence layer can evolve without breaking the digital twin, spatial interface, audit plane, or simulation stack.
+> **Repository classification:** maintained application service and frontend. Docker/Compose are application packaging and runtime verification assets. This is **not an infrastructure-as-code repository**. See [Project scope](docs/PROJECT_SCOPE.md) and [.repo-class.json](.repo-class.json).
 
 ## Implemented today
 
-The current maintained application already provides a tested vertical slice rather than empty platform scaffolding:
+- **Backend:** `apps/aethergrid-console/server.mjs` serves application APIs, provider readiness, agent conversations, profiles, spatial data and quantum runtime contracts. `src/` maintains the digital twin, simulation, health service and renderer-neutral evidence boundaries.
+- **Frontend:** `apps/aethergrid-console/web/` contains the React/TypeScript command center, Cesium globe/city rendering, temporal and layer controls, responsive workspaces, agent conversations and provider diagnostics.
+- **Real data adapters:** Cesium Ion terrain/imagery/buildings, OpenStreetMap, Tomorrow.io and Open-Meteo weather, EIA energy, NOAA NWPS hydrology, NWS hazards, Transitland discovery and configured GTFS-Realtime feeds. Each response retains source, freshness and fallback status; adapter availability is distinct from a successful live receipt.
+- **AI runtime:** replaceable server-side model configuration, individual VÆLON/AUREN/SOLVÆR threads, TEAM contributions and explicit provider/model/fallback provenance. Groq is supported through the OpenAI-compatible adapter.
+- **Quantum runtime:** local simulation plus IBM Quantum and D-Wave adapters. IBM hardware requires its service CRN and credentials; D-Wave hardware requires a Leap/SAPI token. Missing configuration is reported explicitly and never presented as hardware validation.
+- **Evidence and tests:** validated synthetic microgrid fixtures, deterministic twin/scenario/solver results, decision receipts, provenance checks, browser acceptance tests and advisory human-review contracts.
+- **CI:** root tests, blocking coverage, lint/format, JavaScript and frontend typechecks, fresh-clone and container smoke checks, packaging, release-readiness and CodeQL. The dedicated v4 web workflow builds the React workspace.
 
-- validated microgrid snapshot contracts and derived digital-twin state;
-- deterministic persistence forecasting and baseline operating proposals;
-- advisory-only simulation with explicit no-actuation safety evidence;
-- decision receipts, provenance, and reproducible evidence fingerprints;
-- renderer-neutral spatial/holographic presentation contracts;
-- model-routing and SOLVÆR collaboration boundaries that remain advisory;
-- runtime health/observability, dependency auditing, coverage gates, CodeQL, and container smoke verification.
+## Run the application surfaces
 
-## Core capability pillars
+Use Node.js 22 and the committed lockfiles. In PowerShell, run the backend in one terminal:
 
-1. **Energy digital twin** — asset topology, telemetry normalization, state estimation, forecasting, scenario replay, and renewable-generation/storage/load models.
-2. **AI orchestration** — policy-aware planning, optimization, anomaly detection, recommendation ranking, tool routing, and explainable decision traces.
-3. **Spatial / holographic command surface** — a 2D/3D scene model that can render grid assets, flows, alerts, simulations, and operator controls without coupling the UI to one rendering vendor.
-4. **Quantum simulation gateway** — provider-neutral interfaces for optimization and simulation experiments, with deterministic classical baselines and fallbacks so quantum claims remain measurable.
-5. **Audit and safety plane** — immutable decision receipts, approval boundaries, replayable simulations, provenance, model/version tracking, and fail-closed controls for anything that could affect physical infrastructure.
-
-## Target architecture (not yet the current tree)
-
-```text
-apps/
-  operator-console/          # IMPLEMENTED ÆTHERGRID web / spatial operator experience
-services/
-  twin-engine/               # topology, state, telemetry and scenario model
-  optimization-engine/       # renewable generation, storage and load planning
-  simulation-gateway/        # classical + quantum backend adapters
-  audit-ledger/              # decision receipts, provenance and replay evidence
-packages/
-  contracts/                 # shared schemas and API/event contracts
-  telemetry/                 # normalization, validation and sample fixtures
-  spatial-scene/             # renderer-neutral scene graph / view models
-  model-routing/             # ROARY / VÆLON / AUREN / SOLVÆR routing contracts
-  safety/                    # policies, approvals and actuation guards
-docs/
-  ARCHITECTURE.md
-  ROADMAP.md
-tests/
-  integration/
-  fixtures/
+```powershell
+npm ci --ignore-scripts
+npm run aethergrid-app
 ```
 
-The folders above remain the target architecture except `apps/operator-console/`, which is now a real maintained application surface. Add the remaining folders only as real code or documentation lands; do not create empty scaffolding just to make the tree look complete.
+In another terminal, run the React command center:
 
-## Phase 1 acceptance target
+```powershell
+cd apps/aethergrid-console/web
+npm ci --ignore-scripts
+npm run dev
+```
 
-The first working vertical slice takes a small synthetic microgrid fixture through the entire chain:
+Open the Vite URL shown in the terminal (normally `http://localhost:5174`). Its API proxy connects to the backend on port 8090. See the [web workspace README](apps/aethergrid-console/web/README.md) for build and browser-test commands.
 
-`telemetry -> validated twin state -> forecast/scenario -> optimization proposal -> audit receipt -> spatial scene payload`
+The React command center is merged and maintained. Canonical runtime/ZIP packaging migration is a separate integration milestone; until that migration lands, `npm run aethergrid-app` serves the legacy native-WebGL console directly and the web workspace runs through Vite. Existing ZIP verification does not establish that the ZIP launches React. `npm start` runs the independent platform health service; `npm run operator-console` runs the earlier evidence console.
 
-Phase 1 is considered reproducible only when that path is deterministic, tested from a fresh clone, and produces no unaudited side effects.
+## Maintained repository surfaces
+
+| Path | Implemented responsibility |
+| --- | --- |
+| `src/` | Digital-twin contracts, simulation, advisory decisions, evidence and health service |
+| `apps/aethergrid-console/` | Node application backend, providers, AI/quantum runtime and legacy console |
+| `apps/aethergrid-console/web/` | React/TypeScript/Cesium command center and Playwright tests |
+| `apps/operator-console/` | Earlier maintained evidence console and brand assets |
+| `tests/`, `fixtures/` | Root regression suites and deterministic fixtures |
+| `scripts/` | Verification, demos, packaging and sanitized provider smoke tooling |
+| `docs/` | Architecture, scope, provider contracts, roadmap and acceptance evidence |
+
+## Verification and evidence
+
+```powershell
+npm test
+npm run coverage
+npm run lint
+npm run typecheck
+npm run typecheck:strict-renderer
+npm run check
+```
+
+[Engineering CI](.github/workflows/ci.yml), [v4 web CI](.github/workflows/aethergrid-v4-web.yml) and [CodeQL](.github/workflows/codeql.yml) bind results to tested commits. [Command-center acceptance evidence](docs/acceptance/aethergrid-command-center/README.md) distinguishes historical provider checks from final-main submission evidence. Credentialed tests are opt-in; an ordinary green test run is not proof of live provider or quantum hardware execution.
+
+The final submission gate must run on one exact `main` SHA after canonical packaging and intended hardening are merged, followed by the protected canonical live-provider workflow and its sanitized artifact. [Release readiness](docs/RELEASE_READINESS.md) and [version scheme](docs/VERSIONING.md) define that boundary. No production hosting target is configured by repository Actions secrets alone.
+
+## Environment configuration
+
+The root `.env.example` configures the health service without secrets. The application backend's [environment example](apps/aethergrid-console/.env.example) documents server-side provider configuration. Keep credentials in encrypted Actions secrets or an ignored deployment/runtime environment; never commit them. Public provider/runtime endpoints redact server credentials.
+
+## Current status and future work
+
+Backend/provider PR #145 and React command-center PR #144 are integrated. Current work is canonical application packaging, final submission evidence and production deployment configuration. The runtime stack, initial schemas, synthetic fixture and initial test/CI foundation are complete. [Roadmap](docs/ROADMAP.md) separates that delivered work from future pilots and actuation research.
 
 ## Reproducible verification
 
@@ -101,16 +93,6 @@ npm run verify:release
 Pull requests and pushes to `main` run the same reproducible install, dependency audit, release-readiness contract, syntax checks, test coverage, demo path, and container smoke test. CodeQL runs separately as the maintained static security-analysis gate. `npm run verify:release` confirms those maintained quality/security/safety gates are still present before a real semantic tag is cut; it does not claim that a release already exists.
 
 `npm run typecheck:strict-renderer` applies TypeScript strict checking to the compact renderer evidence and no-actuation policy boundary. It retains the existing JavaScript migration's explicit `noImplicitAny: false` exception; broad strict-mode conversion is intentionally not claimed.
-
-## Environment configuration
-
-The maintained runtime uses only non-secret local configuration. Copy the committed example when you need to override defaults:
-
-```bash
-cp .env.example .env
-```
-
-`PORT` and `SERVICE_NAME` configure the HTTP health service. `THERGRID_PORT` and `THERGRID_LOG_LEVEL` configure the reusable runtime-observability contract. The example contains no credentials, tokens, customer data, or infrastructure secrets.
 
 ### Container startup
 
@@ -140,23 +122,20 @@ The blocking Node coverage gate now writes raw V8 coverage from the exact CI tes
 - Never commit credentials, live customer/grid data, private keys, or environment secrets.
 - Treat spatial/holographic UI as a consumer of stable scene contracts, not the source of grid truth.
 
-## Current status
+## Provider runtime foundation (product generation v4)
 
-**Working deterministic vertical slice under hardening.** The repository now contains the synthetic microgrid path, evidence/provenance gates, simulation-bound model handoffs, renderer-neutral spatial output, source-backed topology and operator-attention identity, plus operational scene evidence for asset power state, forecast deltas, and simulation outcomes. Current work is focused on reproducibility, security evidence, adversarial validation, and keeping every model boundary advisory until explicit downstream authorization exists.
-
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/ROADMAP.md`](docs/ROADMAP.md) for the working technical plan.
-
-
-## ÆTHERGRID v4.0 Production Provider Foundation (Batch 18)
-
-ÆTHERGRID v4.0 Batch 18 introduces a server-side provider runtime and configuration registry that normalizes all external integrations (spatial, geospatial, weather, air quality, seismic, terrain, quantum, AI, energy, transit, and hydrology).
+The maintained server-side runtime includes a provider configuration registry that normalizes all external integrations (spatial, geospatial, weather, air quality, seismic, terrain, quantum, AI, energy, transit, and hydrology).
 
 Key capabilities in this batch:
 1. **Central Validated Environment Configuration**: `zod`-validated config schema supporting current and forward-compatible providers (Cesium, Tomorrow.io, Overture, EIA, D-Wave, NWS, transit, hydrology).
 2. **Provider Registry**: Normalized readiness tracking (`ready`, `degraded`, `unconfigured`, `unavailable`, `fallback`).
 3. **Secret Redaction**: Defensive credential redaction from runtime responses, logs, errors, and exports.
 4. **Outbound Provider URL Policy**: Bounded outbound URL policy restricting server-side fetch calls to approved provider endpoints.
-5. **Resilience Infrastructure**: Memory cache store, circuit breaker, and provider rate limiters.
+5. **Provider resilience**: Memory cache store, circuit breaker, and provider rate limiters.
 6. **Safe Public Runtime Endpoint**: `GET /api/aethergrid/runtime/providers` exposing secret-redacted provider readiness metadata.
 
 See [docs/PROVIDER-ARCHITECTURE.md](docs/PROVIDER-ARCHITECTURE.md) for full architectural specifications.
+
+## Target architecture (not yet the current tree)
+
+Future extraction into separate twin, optimization, simulation and audit services remains optional architecture work. Those services are currently implemented as maintained modules in the paths above. New directories should appear only when real code lands; the target decomposition does not describe missing application capabilities.

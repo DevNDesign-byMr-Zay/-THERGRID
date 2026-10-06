@@ -19,7 +19,7 @@
       1024
     ],
     "target": "approved-aethergrid-command-center",
-    "designReferenceRepositoryPath": "assets/dashboard-reference.webp",
+    "designReferenceRepositoryPath": "docs/acceptance/aethergrid-command-center/command-center-1536x1024.png",
     "designReferenceIncludedInRuntimePackage": false,
     "proceduralCityLightsRepresentOccupancy": false,
     "proceduralCityLightsBasis": "mapped building geometry + daylight state",
