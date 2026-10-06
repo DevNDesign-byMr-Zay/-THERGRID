@@ -72,6 +72,7 @@ test('loadTransitFeedConfig: one feed with secret header reference', () => {
     assert.ok(res.feeds.nyc);
     assert.equal(res.feeds.nyc.feedUrl, 'https://api-endpoint.mta.info/AccessSubway');
     assert.equal(res.feeds.nyc.authHeader, 'secret-key-999');
+    assert.equal(res.feeds.nyc.messageType, 'vehicle-positions');
   });
 });
 
@@ -180,4 +181,42 @@ test('transitRegistry: requests city feed and reports unconfigured when city not
   const resUnknown = await registry.adapter.request({ cityId: 'unknown-city' });
   assert.equal(resUnknown.data.status, 'unconfigured');
   assert.equal(resUnknown.receipt.live, false);
+});
+
+
+test('transitRegistry: preserves non-vehicle GTFS-Realtime message provenance', async () => {
+  const timestamp = Math.floor(Date.now() / 1000);
+  const registry = createTransitRegistry({
+    feeds: {
+      'new-york': {
+        id: 'nyc-ferry-trip-updates',
+        cityId: 'new-york',
+        agencyName: 'NYC Ferry',
+        feedUrl: 'https://nycferry.example.test/tripupdate',
+        messageType: 'trip-updates',
+      },
+    },
+    fetchFn: async () => ({
+      header: { timestamp },
+      entities: [
+        {
+          id: 'trip-update-1',
+          tripUpdate: {
+            trip: { tripId: 'trip-1', routeId: 'ER' },
+            stopTimeUpdate: [],
+            timestamp,
+          },
+        },
+      ],
+    }),
+  });
+
+  const result = await registry.adapter.request({ cityId: 'new-york' });
+  assert.equal(result.receipt.live, true);
+  assert.equal(result.receipt.stale, false);
+  assert.equal(result.receipt.dataset, 'transit-trip-updates');
+  assert.equal(result.data.messageType, 'trip-updates');
+  assert.equal(result.data.vehicles.length, 0);
+  assert.equal(result.data.tripUpdates.length, 1);
+  assert.equal(result.data.recordCount, 1);
 });
