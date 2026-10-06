@@ -29,8 +29,7 @@ test('transitland: discovers source feeds geographically without leaking the API
             name: 'NYC Ferry realtime',
             spec: 'GTFS_RT',
             urls: {
-              realtime_vehicle_positions:
-                'https://nycferry.example.test/vehicle-positions.pb',
+              realtime_vehicle_positions: 'https://nycferry.example.test/vehicle-positions.pb',
               realtime_trip_updates: 'https://nycferry.example.test/trip-updates.pb',
             },
             associated_operators: [
@@ -64,10 +63,7 @@ test('transitland: discovers source feeds geographically without leaking the API
   assert.equal(res.data.agencyCount, 1);
   assert.equal(res.data.feeds.length, 1);
   assert.equal(res.data.feeds[0].feedUrlValid, true);
-  assert.equal(
-    res.data.feeds[0].feedUrl,
-    'https://nycferry.example.test/vehicle-positions.pb',
-  );
+  assert.equal(res.data.feeds[0].feedUrl, 'https://nycferry.example.test/vehicle-positions.pb');
   assert.equal(res.data.feeds[0].vehiclePositionsAvailable, true);
   assert.equal(res.data.feeds[0].tripUpdatesAvailable, true);
   assert.equal(res.receipt.dataset, 'feed-catalog');
