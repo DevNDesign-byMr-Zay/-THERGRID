@@ -1,4 +1,5 @@
 import {
+  Cartesian2,
   Cartesian3,
   Color,
   ColorMaterialProperty,
@@ -6,10 +7,17 @@ import {
   CustomDataSource,
   DistanceDisplayCondition,
   Entity,
+  HeadingPitchRoll,
+  HorizontalOrigin,
+  LabelGraphics,
+  Math as CesiumMath,
+  ModelGraphics,
   PointGraphics,
   PolygonGraphics,
   PolygonHierarchy,
   PolylineGraphics,
+  Transforms,
+  VerticalOrigin,
   Viewer
 } from 'cesium';
 
@@ -135,7 +143,9 @@ function nodeColor(node: SpatialOverlayNode): Color {
 
 
 function nodeFarDistance(node: SpatialOverlayNode): number {
-  if (node.kind === 'city' || node.kind === 'event') return 30_000_000;
+  if (node.kind === 'city' || node.kind === 'event' || node.kind === 'aircraft') {
+    return 30_000_000;
+  }
   if (node.kind === 'generation') return 320_000;
   if (node.kind === 'substation') return 220_000;
   if (node.kind === 'transit') return 180_000;
@@ -171,28 +181,88 @@ function provenanceProperties(
   };
 }
 
+function aircraftHeading(node: SpatialOverlayNode): number {
+  const value = Number(node.properties?.trackDegrees);
+  return Number.isFinite(value) ? value : 0;
+}
+
 function nodeEntity(
   node: SpatialOverlayNode,
   provenance: Readonly<Record<string, unknown>>
 ): Entity {
   const intensity = overlayIntensity(node.intensity);
+  const position = coordinate(node.position);
+  const aircraft =
+    node.kind === 'aircraft' && node.properties?.eventType === 'aircraft';
+  const staleAircraft = aircraft && node.properties?.truthState === 'stale';
+
   return new Entity({
     id: node.id,
     name: node.label ?? node.id,
-    position: coordinate(node.position),
+    position,
+    orientation: aircraft
+      ? Transforms.headingPitchRollQuaternion(
+          position,
+          new HeadingPitchRoll(
+            CesiumMath.toRadians(aircraftHeading(node)),
+            0,
+            0
+          )
+        )
+      : undefined,
     point: new PointGraphics({
-      pixelSize: 5 + intensity * 7,
-      color: nodeColor(node),
+      pixelSize: aircraft ? 4 + intensity * 3 : 5 + intensity * 7,
+      color: aircraft
+        ? Color.fromCssColorString(
+            staleAircraft ? '#8193a1' : '#70e7ff'
+          ).withAlpha(staleAircraft ? 0.58 : 0.92)
+        : nodeColor(node),
       outlineColor: new ConstantProperty(Color.WHITE.withAlpha(0.35)),
-      outlineWidth: 1.25,
+      outlineWidth: aircraft ? 0.8 : 1.25,
       distanceDisplayCondition: new ConstantProperty(
-        new DistanceDisplayCondition(0, nodeFarDistance(node))
+        aircraft
+          ? new DistanceDisplayCondition(850_000, nodeFarDistance(node))
+          : new DistanceDisplayCondition(0, nodeFarDistance(node))
       ),
       disableDepthTestDistance:
-        node.kind === 'city' || node.kind === 'event'
+        node.kind === 'city' || node.kind === 'event' || aircraft
           ? Number.POSITIVE_INFINITY
           : 1_500_000
     }),
+    model: aircraft
+      ? new ModelGraphics({
+          uri: '/models/aethergrid-aircraft.gltf',
+          scale: 8,
+          minimumPixelSize: 12,
+          maximumScale: 18,
+          color: Color.fromCssColorString(
+            staleAircraft ? '#71828f' : '#79eaff'
+          ).withAlpha(staleAircraft ? 0.62 : 0.96),
+          silhouetteColor: Color.fromCssColorString('#dff8ff').withAlpha(0.68),
+          silhouetteSize: 0.5,
+          distanceDisplayCondition: new ConstantProperty(
+            new DistanceDisplayCondition(0, 900_000)
+          )
+        })
+      : undefined,
+    label: aircraft
+      ? new LabelGraphics({
+          text: node.label ?? node.id,
+          font: '11px Inter, sans-serif',
+          fillColor: Color.fromCssColorString('#edf8ff'),
+          outlineColor: Color.fromCssColorString('#06101a').withAlpha(0.94),
+          outlineWidth: 3,
+          horizontalOrigin: HorizontalOrigin.CENTER,
+          verticalOrigin: VerticalOrigin.BOTTOM,
+          pixelOffset: new Cartesian2(0, -18),
+          showBackground: true,
+          backgroundColor: Color.fromCssColorString('#06101a').withAlpha(0.72),
+          distanceDisplayCondition: new ConstantProperty(
+            new DistanceDisplayCondition(0, 420_000)
+          ),
+          disableDepthTestDistance: Number.POSITIVE_INFINITY
+        })
+      : undefined,
     properties: {
       overlayKind: node.kind,
       sourceName: node.label ?? node.id,
