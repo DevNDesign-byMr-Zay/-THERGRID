@@ -731,7 +731,7 @@ describe('ÆTHERGRID v4.0 Provider Runtime Execution Layer & Verification', () =
       assert.equal(decodedRes.data.vehicles[0].vehicleId, 'TRAIN-101');
       assert.equal(decodedRes.data.vehicles[0].routeId, 'YAMANOTE');
       assert.equal(Math.round(decodedRes.data.vehicles[0].latitude), 36);
-      assert.equal(decodedRes.data.vehicles[0].currentStatus, undefined);
+      assert.equal(decodedRes.data.vehicles[0].currentStatus, 2);
       assert.equal(decodedRes.data.vehicles[0].stopId, 'STOP-1');
       assert.equal(typeof decodedRes.data.vehicles[0].timestamp, 'number');
       assert.equal(decodedRes.receipt.live, true);
