@@ -190,7 +190,6 @@ test('scheduled realtime acceptance requires records during service hours but pe
   assert.equal(staleAfterHours.verified, false);
 });
 
-
 test('IBM canonical discovery requires authenticated configured runtime and at least one backend without submitting hardware', () => {
   const summary = {
     apiVersion: '2026-04-15',
@@ -252,5 +251,8 @@ test('canonical IBM acceptance performs discovery only and contains no hardware 
   assert.match(smoke, /AETHERGRID_QUANTUM_PROVIDER: 'ibm-quantum'/u);
   assert.match(smoke, /runtime\.listBackends\(\)/u);
   assert.match(smoke, /summarizeQuantumDiscovery/u);
-  assert.doesNotMatch(smoke, /submitSampler|submitEstimator|POST \/api\/aethergrid\/quantum\/jobs/u);
+  assert.doesNotMatch(
+    smoke,
+    /submitSampler|submitEstimator|POST \/api\/aethergrid\/quantum\/jobs/u,
+  );
 });
