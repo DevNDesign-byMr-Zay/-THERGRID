@@ -54,6 +54,79 @@ export function summarizeProvider(result, provider, { records = 1 } = {}) {
   };
 }
 
+export function summarizeScheduledRealtime(
+  result,
+  provider,
+  {
+    records = 0,
+    expectedDataset = null,
+    runAt = new Date(),
+    sourceTimestamp = null,
+    timeZone = 'America/New_York',
+    serviceStartHour = 6,
+    serviceEndHour = 22,
+    maxSourceAgeSeconds = 300,
+  } = {},
+) {
+  const receipt = result?.receipt || {};
+  const runDate = runAt instanceof Date ? runAt : new Date(runAt);
+  const localHour = Number(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hour: '2-digit',
+      hourCycle: 'h23',
+    }).format(runDate),
+  );
+  const withinServiceHours =
+    Number.isFinite(localHour) && localHour >= serviceStartHour && localHour < serviceEndHour;
+
+  const timestampSeconds = Number(sourceTimestamp);
+  const sourceDate =
+    Number.isFinite(timestampSeconds) && timestampSeconds > 0
+      ? new Date(timestampSeconds * 1000)
+      : null;
+  const sourceAgeSeconds =
+    sourceDate && Number.isFinite(runDate.getTime())
+      ? Math.round((runDate.getTime() - sourceDate.getTime()) / 1000)
+      : null;
+  const sourceFresh =
+    sourceAgeSeconds != null && sourceAgeSeconds >= -60 && sourceAgeSeconds <= maxSourceAgeSeconds;
+
+  const transportVerified =
+    receipt.live === true &&
+    receipt.fallback !== true &&
+    receipt.stale !== true &&
+    result?.data?.stale !== true &&
+    receipt.provider === provider &&
+    (!expectedDataset || receipt.dataset === expectedDataset);
+  const nonempty = records > 0;
+  const freshEmptyOutsideServiceHours = !withinServiceHours && records === 0 && sourceFresh;
+  const verified = transportVerified && (nonempty || freshEmptyOutsideServiceHours);
+
+  return {
+    verified,
+    records,
+    provider: receipt.provider || 'unconfigured',
+    dataset: receipt.dataset || null,
+    live: receipt.live === true,
+    stale: receipt.stale === true,
+    fallback: receipt.fallback === true,
+    observedAt: sourceDate ? sourceDate.toISOString() : receipt.observedAt || null,
+    retrievedAt: receipt.retrievedAt || null,
+    sourceFresh,
+    sourceAgeSeconds,
+    serviceWindow: {
+      timeZone,
+      startHour: serviceStartHour,
+      endHour: serviceEndHour,
+      localHour,
+      withinServiceHours,
+    },
+    expectedEmptyOutsideServiceHours: freshEmptyOutsideServiceHours,
+    acceptanceState: freshEmptyOutsideServiceHours ? 'live-empty-outside-service-hours' : null,
+  };
+}
+
 export function summarizeObservation(result, kind) {
   const data = result?.data || {};
   const timestamp =

@@ -5,6 +5,7 @@ import {
   summarizeAgent,
   summarizeProvider,
   summarizeObservation,
+  summarizeScheduledRealtime,
   sanitizeAcceptance,
 } from '../scripts/lib/canonical-acceptance.mjs';
 
@@ -130,4 +131,60 @@ test('canonical transit acceptance uses geo feed discovery and documented NYC Fe
   assert.equal(feedConfig.feeds[0].messageType, 'trip-updates');
   assert.match(feedConfig.feeds[0].url, /\/tripupdate$/u);
   assert.doesNotMatch(feedConfig.feeds[0].url, /vehicleposition/u);
+});
+
+test('scheduled realtime acceptance requires records during service hours but permits a fresh empty feed after hours', () => {
+  const feedHeaderTimestamp = Date.parse('2026-10-06T02:54:00Z') / 1000;
+  const payload = {
+    receipt: {
+      provider: 'gtfs-rt-registry',
+      dataset: 'transit-trip-updates',
+      live: true,
+      fallback: false,
+      stale: false,
+      retrievedAt: '2026-10-06T02:54:12Z',
+    },
+    data: {
+      stale: false,
+      feedHeaderTimestamp,
+    },
+  };
+
+  const afterHours = summarizeScheduledRealtime(payload, 'gtfs-rt-registry', {
+    records: 0,
+    expectedDataset: 'transit-trip-updates',
+    runAt: '2026-10-06T02:54:12Z',
+    sourceTimestamp: feedHeaderTimestamp,
+    timeZone: 'America/New_York',
+    serviceStartHour: 6,
+    serviceEndHour: 22,
+  });
+  assert.equal(afterHours.serviceWindow.withinServiceHours, false);
+  assert.equal(afterHours.sourceFresh, true);
+  assert.equal(afterHours.verified, true);
+  assert.equal(afterHours.acceptanceState, 'live-empty-outside-service-hours');
+
+  const duringService = summarizeScheduledRealtime(payload, 'gtfs-rt-registry', {
+    records: 0,
+    expectedDataset: 'transit-trip-updates',
+    runAt: '2026-10-05T18:00:12Z',
+    sourceTimestamp: Date.parse('2026-10-05T18:00:00Z') / 1000,
+    timeZone: 'America/New_York',
+    serviceStartHour: 6,
+    serviceEndHour: 22,
+  });
+  assert.equal(duringService.serviceWindow.withinServiceHours, true);
+  assert.equal(duringService.verified, false);
+
+  const staleAfterHours = summarizeScheduledRealtime(payload, 'gtfs-rt-registry', {
+    records: 0,
+    expectedDataset: 'transit-trip-updates',
+    runAt: '2026-10-06T02:54:12Z',
+    sourceTimestamp: Date.parse('2026-10-06T02:40:00Z') / 1000,
+    timeZone: 'America/New_York',
+    serviceStartHour: 6,
+    serviceEndHour: 22,
+  });
+  assert.equal(staleAfterHours.sourceFresh, false);
+  assert.equal(staleAfterHours.verified, false);
 });

@@ -5,6 +5,7 @@ import {
   summarizeAgent,
   summarizeProvider,
   summarizeObservation,
+  summarizeScheduledRealtime,
   sanitizeAcceptance,
 } from './lib/canonical-acceptance.mjs';
 
@@ -41,7 +42,7 @@ async function check(name, task) {
     const result = await task();
     report.providers[name] = {
       ...result,
-      state: result.verified ? 'live-response-verified' : 'degraded',
+      state: result.verified ? result.acceptanceState || 'live-response-verified' : 'degraded',
     };
   } catch {
     report.providers[name] = {
@@ -130,10 +131,17 @@ try {
     const tripUpdates = Array.isArray(result.data?.tripUpdates)
       ? result.data.tripUpdates.length
       : 0;
-    const summary = summarizeProvider(result, 'gtfs-rt-registry', { records: tripUpdates });
     return {
-      ...summary,
-      verified: summary.verified && result.receipt?.dataset === 'transit-trip-updates',
+      ...summarizeScheduledRealtime(result, 'gtfs-rt-registry', {
+        records: tripUpdates,
+        expectedDataset: 'transit-trip-updates',
+        runAt: report.runAt,
+        sourceTimestamp: result.data?.feedHeaderTimestamp,
+        timeZone: 'America/New_York',
+        serviceStartHour: 6,
+        serviceEndHour: 22,
+        maxSourceAgeSeconds: 300,
+      }),
       messageType: result.data?.messageType || null,
     };
   });
