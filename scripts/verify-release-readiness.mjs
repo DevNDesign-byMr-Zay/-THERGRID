@@ -79,6 +79,7 @@ const REQUIRED_FILES = Object.freeze([
   'scripts/create-release-manifest.mjs',
   'scripts/assemble-aethergrid-package.mjs',
   'scripts/assemble-aethergrid-full-app.mjs',
+  'scripts/smoke-aethergrid-full-app.mjs',
 ]);
 
 function assert(condition, message) {
@@ -509,6 +510,11 @@ async function main() {
     pkg.scripts?.['build:aethergrid-web']?.includes('apps/aethergrid-console/web') &&
       pkg.scripts?.['aethergrid-app']?.startsWith('npm run build:aethergrid-web'),
     'maintained ÆTHERGRID launch path must build the canonical React frontend first',
+  );
+  assert(
+    pkg.scripts?.['smoke:aethergrid-app'] === 'node scripts/smoke-aethergrid-full-app.mjs' &&
+      pkg.scripts?.check?.includes('npm run smoke:aethergrid-app'),
+    'release check must launch the packaged canonical application, not only create its ZIP',
   );
   assert(
     exactAethergridWebPackage.private === true &&
