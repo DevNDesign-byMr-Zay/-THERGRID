@@ -106,7 +106,9 @@ export function mergeAviationSnapshot(
   previous: AviationDomainState | null,
   incoming: AviationProviderSnapshot
 ): AviationDomainState {
-  const sameProvider = previous?.provider === incoming.provider;
+  const sameProvider = previous
+    ? previous.provider === incoming.provider
+    : false;
   const nextHistory: Record<string, readonly AviationTrackPoint[]> =
     sameProvider ? { ...(previous?.history ?? {}) } : {};
 
