@@ -8,6 +8,12 @@ The protected exact-main gate introduced by PR #151 was dispatched on `80b30b886
 
 The recovery follows the current provider contracts rather than treating an empty response as success. Transitland uses its `/api/v2/rest/feeds` geographic search. NYC Ferry's current official Developer Tools page publishes real-time Trip Updates at `https://nycferry.connexionz.net/rtt/public/utility/gtfsrealtime.aspx/tripupdate` and real-time Alerts, but no vehicle-position endpoint. The tracked NYC Ferry acceptance binding therefore uses the documented trip-update feed and preserves that message type in the runtime receipt. Vehicle map nodes remain coordinate-backed only; no trip update is converted into an invented position.
 
+## 2026-10-06 after-hours canonical rerun
+
+Exact-main `b98d394883f91c2decf89e5d4920ff32603c4eab` passed Engineering CI and CodeQL before the protected canonical-live dispatch. Groq specialists/TEAM, Tomorrow.io, EIA NYIS, NOAA BATN6, Transitland geographic discovery and credentialed Cesium all verified live. Transitland returned 20 source feed records; Cesium verified terrain, imagery and 19 building tiles.
+
+The NYC Ferry trip-update feed returned a live/nonfallback/nonstale receipt but zero updates at approximately 22:54 America/New_York, after NYC Ferry's published daily 06:00–22:00 operating window. The next gate revision therefore keeps nonempty realtime records mandatory during service hours, but permits a clearly labeled `live-empty-outside-service-hours` result only when the source GTFS-Realtime header timestamp is fresh within five minutes. A missing or stale source timestamp still fails. This preserves the no-fabrication boundary while avoiding a false engineering failure for a legitimately idle provider.
+
 ## Frontend result
 
 Canonical ÆTHERGRID, AUREN, VÆLON, and SOLVÆR assets restored. The shell fits the viewport, with exclusive navigation and intelligence workspaces, dedicated secondary inspectors, responsive drawers, keyboard focus containment/restoration, and reduced-motion styles. Spatial tools remain available through a compact renderer-tools disclosure. Agent requests show actual provider/fallback metadata; TEAM retains all three real contributions. Provider readiness is explicitly distinguished from live verification. Generated fallback city geometry is withheld rather than presented as mapped evidence.
