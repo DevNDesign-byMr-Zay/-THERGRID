@@ -1131,3 +1131,21 @@ test('vNext presentation changes preserve the active operational use-case contex
     /onClick=\{\(\) => \{\s*setActiveUseCase\(null\);\s*setVisualMode\(mode\);\s*\}\}/u,
   );
 });
+
+
+test('vNext Settings opens Appearance and nests Connection Center under Developer Diagnostics', async () => {
+  const [app, settings] = await Promise.all([
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/components/SettingsPanel.tsx'),
+  ]);
+
+  assert.match(app, /\| 'settings'/u);
+  assert.match(app, /mode === 'SETTINGS' \? 'settings'/u);
+  assert.match(app, /<SettingsPanel appearance=\{appearance\}/u);
+  assert.match(settings, /APPEARANCE/u);
+  assert.match(settings, /DEVELOPER \/ DIAGNOSTICS/u);
+  assert.match(settings, /<RuntimeDiagnosticsPanel/u);
+  assert.match(settings, /appearance\.setMode\('dark'\)/u);
+  assert.match(settings, /appearance\.setMode\('light'\)/u);
+  assert.match(settings, /appearance\.setMode\('system'\)/u);
+});
