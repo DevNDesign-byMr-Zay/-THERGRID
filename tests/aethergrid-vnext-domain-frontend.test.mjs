@@ -45,6 +45,9 @@ test('vNext aviation state preserves same-provider history and excludes current 
   assert.match(aviation, /history/u);
   assert.match(aviation, /temporalMode !== 'live'/u);
   assert.match(aviation, /return null/u);
+  assert.match(aviation, /aircraft\.truthState === 'observed'/u);
+  assert.match(aviation, /aircraft\.truthState === 'stale'/u);
+  assert.match(aviation, /render3d: canRenderAircraftModel\(aircraft\)/u);
 });
 
 test('vNext aviation relationship geometry requires source-backed relationships', async () => {
@@ -71,4 +74,6 @@ test('vNext aviation uses the canonical provider path and the existing Cesium ov
   assert.match(cesiumLayer, /eventType === 'aircraft'/u);
   assert.match(cesiumLayer, /ModelGraphics/u);
   assert.match(cesiumLayer, /aethergrid-aircraft\.gltf/u);
+  assert.match(cesiumLayer, /node\.properties\?\.render3d === true/u);
+  assert.match(cesiumLayer, /eventType !== 'aircraft-history'/u);
 });
