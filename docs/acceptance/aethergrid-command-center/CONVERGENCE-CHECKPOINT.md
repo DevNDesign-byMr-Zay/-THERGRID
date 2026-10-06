@@ -25,6 +25,21 @@ That run correctly failed instead of promoting partial evidence because Transitl
 
 Acceptance continues to reject stale, fallback, empty and metadata-only success.
 
+## Exact-main canonical live rerun — b98d3948
+
+The protected canonical-live run on `b98d394883f91c2decf89e5d4920ff32603c4eab` completed after exact-main Engineering CI and CodeQL passed. The run verified:
+
+- Groq VÆLON, AUREN, SOLVÆR and TEAM with no fallback;
+- Tomorrow.io current weather plus 120 forecast records;
+- EIA NYIS with 24 fuel-mix records;
+- NOAA BATN6 live observation;
+- Transitland geographic discovery with 20 source feed records;
+- Cesium terrain, imagery and buildings, including 19 building tiles and globe-to-city descent.
+
+NYC Ferry was the only blocking provider. The trip-update endpoint was live, nonfallback and nonstale but returned zero records at approximately 22:54 America/New_York. NYC Ferry documents normal service as approximately 06:00–22:00 daily, so this run occurred after its published service window. The acceptance gate is being tightened to distinguish a **fresh empty feed outside scheduled service** from an empty feed during service: daytime emptiness still fails; after-hours emptiness is accepted only when the GTFS-Realtime feed header proves a fresh source timestamp within five minutes. Missing, stale, fallback or metadata-only feed evidence still fails.
+
+The GTFS-Realtime decoder field mappings were also reconciled with the canonical GTFS-Realtime protobuf schema while making this change. No vehicle position is inferred from trip updates.
+
 ## Outstanding prerequisites
 
 1. Confirm all intended safe city-provider hardening is merged. The event for #148 establishes canonical migration, not completion of a separate hardening lane; no open city-hardening PR was found at inspection time.
