@@ -220,6 +220,9 @@ for (const absolute of await collectFiles(APP_ROOT)) {
   if (
     relativePath === '.aethergrid-data' ||
     relativePath.startsWith('.aethergrid-data/') ||
+    relativePath === '.aethergrid.pid' ||
+    ((relativePath === '.env' || relativePath.startsWith('.env.')) &&
+      relativePath !== '.env.example') ||
     relativePath.startsWith('web/node_modules/') ||
     relativePath.startsWith('web/dist/') ||
     relativePath.startsWith('web/src/') ||
@@ -271,8 +274,12 @@ for (const required of REQUIRED_RUNTIME_FILES) {
 }
 
 assert(
-  ![...payload.keys()].some((path) => path === '.env' || path.endsWith('/.env')),
-  'populated .env files must never be included in the distributable ZIP',
+  ![...payload.keys()].some(
+    (path) =>
+      (path === '.env' || path.startsWith('.env.') || /\/\.env(?:\..*)?$/u.test(path)) &&
+      !path.endsWith('.env.example'),
+  ),
+  'populated .env or .env.* files must never be included in the distributable ZIP',
 );
 assert(
   ![...payload.keys()].some((path) => path.startsWith('web/node_modules/')),
