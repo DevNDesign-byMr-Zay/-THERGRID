@@ -48,8 +48,12 @@ export function useAppearance() {
   }, [mode]);
 
   const setMode = (next: AppearanceMode) => {
-    localStorage.setItem(APPEARANCE_KEY, next);
     setModeState(next);
+    try {
+      localStorage.setItem(APPEARANCE_KEY, next);
+    } catch {
+      // Locked/private browsing can reject storage; the in-memory preference still applies.
+    }
   };
 
   const cycle = () => {
