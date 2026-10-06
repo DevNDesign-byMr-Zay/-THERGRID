@@ -1156,10 +1156,7 @@ test('vNext light mode separates light-surface text from intentionally dark over
   assert.match(styles, /--text-muted:/u);
   assert.match(styles, /--text-on-dark:/u);
   assert.match(styles, /--surface-card:/u);
-  assert.match(
-    styles,
-    /:root\[data-theme='light'\][\s\S]*--text-on-dark:\s*#edf8ff/u,
-  );
+  assert.match(styles, /:root\[data-theme='light'\][\s\S]*--text-on-dark:\s*#edf8ff/u);
   assert.match(
     styles,
     /:root\[data-theme='light'\][\s\S]*\.viewport-status[\s\S]*color:\s*var\(--text-on-dark\)/u,
