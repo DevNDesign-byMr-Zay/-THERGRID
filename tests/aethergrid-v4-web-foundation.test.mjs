@@ -1112,3 +1112,26 @@ test('v4 spatial analysis promotion boundary keeps local comparison separate fro
   assert.match(comparison, /not a substitute for the server evidence ledger/u);
   assert.match(panel, /OPERATOR ANALYSIS · NON-AUTHORITATIVE/u);
 });
+
+
+test('vNext appearance keeps the in-memory preference when browser storage rejects writes', async () => {
+  const appearance = await text('apps/aethergrid-console/web/src/hooks/use-appearance.ts');
+
+  assert.match(
+    appearance,
+    /const setMode = \(next: AppearanceMode\) => \{\s*setModeState\(next\);\s*try \{\s*localStorage\.setItem\(APPEARANCE_KEY, next\);/u,
+  );
+  assert.match(
+    appearance,
+    /localStorage\.setItem\(APPEARANCE_KEY, next\);\s*\} catch \{/u,
+  );
+});
+
+test('vNext presentation changes preserve the active operational use-case context', async () => {
+  const app = await text('apps/aethergrid-console/web/src/app/App.tsx');
+
+  assert.doesNotMatch(
+    app,
+    /onClick=\{\(\) => \{\s*setActiveUseCase\(null\);\s*setVisualMode\(mode\);\s*\}\}/u,
+  );
+});
