@@ -6,6 +6,7 @@ import {
   summarizeProvider,
   summarizeObservation,
   summarizeScheduledRealtime,
+  summarizeQuantumDiscovery,
   sanitizeAcceptance,
 } from '../scripts/lib/canonical-acceptance.mjs';
 
@@ -187,4 +188,69 @@ test('scheduled realtime acceptance requires records during service hours but pe
   });
   assert.equal(staleAfterHours.sourceFresh, false);
   assert.equal(staleAfterHours.verified, false);
+});
+
+
+test('IBM canonical discovery requires authenticated configured runtime and at least one backend without submitting hardware', () => {
+  const summary = {
+    apiVersion: '2026-04-15',
+    credentialsExposed: false,
+    providers: {
+      ibm: {
+        configured: true,
+        apiKeyPresent: true,
+        serviceCrnPresent: true,
+      },
+    },
+  };
+
+  const accepted = summarizeQuantumDiscovery(
+    {
+      provider: 'ibm-quantum',
+      backends: [
+        { name: 'ibm_test_qpu', simulator: false },
+        { name: 'ibm_test_sim', simulator: true },
+      ],
+    },
+    summary,
+  );
+  assert.equal(accepted.verified, true);
+  assert.equal(accepted.acceptanceState, 'live-authenticated-discovery-verified');
+  assert.equal(accepted.backendCount, 2);
+  assert.equal(accepted.hardwareBackendCount, 1);
+  assert.equal(accepted.simulatorCount, 1);
+  assert.equal(accepted.hardwareSubmitted, false);
+  assert.equal(accepted.hardwareExecuted, false);
+
+  for (const [result, runtime] of [
+    [{ provider: 'ibm-quantum', backends: [] }, summary],
+    [{ provider: 'local-simulator', backends: [{ name: 'local' }] }, summary],
+    [
+      { provider: 'ibm-quantum', backends: [{ name: 'ibm_test_qpu' }] },
+      {
+        ...summary,
+        providers: {
+          ibm: {
+            configured: false,
+            apiKeyPresent: true,
+            serviceCrnPresent: false,
+          },
+        },
+      },
+    ],
+    [
+      { provider: 'ibm-quantum', backends: [{ name: 'ibm_test_qpu' }] },
+      { ...summary, credentialsExposed: true },
+    ],
+  ]) {
+    assert.equal(summarizeQuantumDiscovery(result, runtime).verified, false);
+  }
+});
+
+test('canonical IBM acceptance performs discovery only and contains no hardware submission call', () => {
+  const smoke = readFileSync('scripts/aethergrid-canonical-provider-smoke.mjs', 'utf8');
+  assert.match(smoke, /AETHERGRID_QUANTUM_PROVIDER: 'ibm-quantum'/u);
+  assert.match(smoke, /runtime\.listBackends\(\)/u);
+  assert.match(smoke, /summarizeQuantumDiscovery/u);
+  assert.doesNotMatch(smoke, /submitSampler|submitEstimator|POST \/api\/aethergrid\/quantum\/jobs/u);
 });
