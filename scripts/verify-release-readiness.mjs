@@ -720,45 +720,17 @@ async function main() {
     'ÆTHERGRID quantum runtime must keep IBM Compute Service submission and local fallback',
   );
   assert(
-    /standalone\.html/u.test(exactAethergridPackager) &&
-      /runtime must not use a dashboard reference image/u.test(exactAethergridPackager) &&
-      /attribute vec4 a_position/u.test(exactAethergridPackager) &&
-      !/^\s*'assets\/dashboard-reference\.webp',/mu.test(exactAethergridPackager) &&
-      /path === 'assets\/dashboard-reference\.webp'\) continue/u.test(exactAethergridPackager) &&
+    /legacy\/standalone\.html/u.test(exactAethergridPackager) &&
+      /legacy\/index\.html/u.test(exactAethergridPackager) &&
+      /canonicalWebApp: 'web\/dist\/index\.html'/u.test(exactAethergridPackager) &&
+      /cesium-primary-spatial-renderer/u.test(exactAethergridPackager) &&
+      /legacy-native-webgl-compatibility/u.test(exactAethergridPackager) &&
+      /node_modules\/zod/u.test(exactAethergridPackager) &&
       /START-AETHERGRID\.ps1/u.test(exactAethergridPackager) &&
       /STOP-AETHERGRID\.ps1/u.test(exactAethergridPackager) &&
       /START-AETHERGRID\.cmd/u.test(exactAethergridPackager) &&
-      /agent-config\.mjs/u.test(exactAethergridPackager) &&
-      /ai-runtime\.mjs/u.test(exactAethergridPackager) &&
-      /city-environment-runtime\.mjs/u.test(exactAethergridPackager) &&
-      /city-live-runtime\.mjs/u.test(exactAethergridPackager) &&
-      /data-global-layer="weather"/u.test(exactAethergridPackager) &&
-      /data-global-layer="clouds"/u.test(exactAethergridPackager) &&
-      /data-global-layer="illumination"/u.test(exactAethergridPackager) &&
-      /data-global-layer="landmarks"/u.test(exactAethergridPackager) &&
-      /data-global-layer="water"/u.test(exactAethergridPackager) &&
-      /data-global-layer="green"/u.test(exactAethergridPackager) &&
-      /waterLines/u.test(exactAethergridPackager) &&
-      /greenFaces/u.test(exactAethergridPackager) &&
-      /materialGlassFaces/u.test(exactAethergridPackager) &&
-      /bilinearTerrainElevation/u.test(exactAethergridPackager) &&
-      /terrainSurfaceYAtSource/u.test(exactAethergridPackager) &&
-      /Terrain Fit/u.test(exactAethergridPackager) &&
-      /id="cityIdentity"/u.test(exactAethergridPackager) &&
-      /landmarkCandidates/u.test(exactAethergridPackager) &&
-      /snowParticles/u.test(exactAethergridPackager) &&
-      /fogParticles/u.test(exactAethergridPackager) &&
-      /stormLines/u.test(exactAethergridPackager) &&
-      /value="heat-stress"/u.test(exactAethergridPackager) &&
-      /value="visibility-operations"/u.test(exactAethergridPackager) &&
-      /value="flood-context"/u.test(exactAethergridPackager) &&
-      /value="green-infrastructure"/u.test(exactAethergridPackager) &&
-      /solarPosition/u.test(exactAethergridPackager) &&
-      /data-global-layer="air"/u.test(exactAethergridPackager) &&
-      /data-global-layer="seismic"/u.test(exactAethergridPackager) &&
-      /id="settingTheme"/u.test(exactAethergridPackager) &&
-      /city-live-now/u.test(exactAethergridPackager),
-    'ÆTHERGRID packager must generate standalone WebGL HTML and complete backend/launcher runtime without the reference screenshot',
+      !/^\s*'assets\/dashboard-reference\.webp',/mu.test(exactAethergridPackager),
+    'ÆTHERGRID packager must ship the canonical React/Cesium runtime plus explicitly noncanonical native compatibility',
   );
 
   // ÆTHERGRID v4.0 Provider Architecture Verification
