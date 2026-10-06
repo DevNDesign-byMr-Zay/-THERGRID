@@ -18,14 +18,16 @@ Operators explore global and city views, compare scenarios, inspect source recei
 
 ## Run the application surfaces
 
-Use Node.js 22 and the committed lockfiles. In PowerShell, run the backend in one terminal:
+Use Node.js 22 and the committed lockfiles. In PowerShell, launch the canonical production application from the repository root:
 
 ```powershell
 npm ci --ignore-scripts
 npm run aethergrid-app
 ```
 
-In another terminal, run the React command center:
+Open `http://localhost:8090` (or the configured application port). The launch command installs the locked React workspace, builds `web/dist/` and starts the Node backend, which serves the command center and same-origin APIs. A missing build produces `canonical_web_build_missing`; the server never silently substitutes the legacy interface.
+
+For frontend development, keep the backend running and use a second terminal:
 
 ```powershell
 cd apps/aethergrid-console/web
@@ -33,9 +35,9 @@ npm ci --ignore-scripts
 npm run dev
 ```
 
-Open the Vite URL shown in the terminal (normally `http://localhost:5174`). Its API proxy connects to the backend on port 8090. See the [web workspace README](apps/aethergrid-console/web/README.md) for build and browser-test commands.
+Open the Vite URL (normally `http://localhost:5174`); its development API proxy connects to port 8090. See the [web workspace README](apps/aethergrid-console/web/README.md) for build and browser-test commands.
 
-The React command center is merged and maintained. Canonical runtime/ZIP packaging migration is a separate integration milestone; until that migration lands, `npm run aethergrid-app` serves the legacy native-WebGL console directly and the web workspace runs through Vite. Existing ZIP verification does not establish that the ZIP launches React. `npm start` runs the independent platform health service; `npm run operator-console` runs the earlier evidence console.
+`npm run package:aethergrid-app` builds and ships the same canonical React/Cesium application in `dist/aethergrid-functional-app.zip`; `npm run smoke:aethergrid-app` launches and probes that packaged runtime. Native v3 direct-open compatibility is explicitly packaged under `legacy/`. `npm start` runs the independent platform health service; `npm run operator-console` runs the earlier evidence console.
 
 ## Maintained repository surfaces
 
@@ -70,7 +72,7 @@ The root `.env.example` configures the health service without secrets. The appli
 
 ## Current status and future work
 
-Backend/provider PR #145 and React command-center PR #144 are integrated. Current work is canonical application packaging, final submission evidence and production deployment configuration. The runtime stack, initial schemas, synthetic fixture and initial test/CI foundation are complete. [Roadmap](docs/ROADMAP.md) separates that delivered work from future pilots and actuation research.
+Backend/provider PR #145, React command-center PR #144, repository cleanup #147 and canonical runtime/ZIP migration #148 are integrated. Remaining work is intended safe city-provider hardening, final submission evidence, comprehensive protected canonical live-provider acceptance and production deployment configuration. The runtime stack, initial schemas, synthetic fixture and initial test/CI foundation are complete. [Roadmap](docs/ROADMAP.md) separates that delivered work from future pilots and actuation research.
 
 ## Reproducible verification
 
