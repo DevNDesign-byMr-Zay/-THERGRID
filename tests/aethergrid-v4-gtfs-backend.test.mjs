@@ -183,7 +183,6 @@ test('transitRegistry: requests city feed and reports unconfigured when city not
   assert.equal(resUnknown.receipt.live, false);
 });
 
-
 test('transitRegistry: preserves non-vehicle GTFS-Realtime message provenance', async () => {
   const timestamp = Math.floor(Date.now() / 1000);
   const registry = createTransitRegistry({
