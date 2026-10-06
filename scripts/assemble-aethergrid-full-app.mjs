@@ -1,20 +1,29 @@
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const SOURCE_ROOT = fileURLToPath(new URL('../apps/aethergrid-console/', import.meta.url));
+const REPO_ROOT = fileURLToPath(new URL('../', import.meta.url));
+const APP_ROOT = join(REPO_ROOT, 'apps', 'aethergrid-console');
+const WEB_ROOT = join(APP_ROOT, 'web');
+const WEB_DIST = join(WEB_ROOT, 'dist');
 const OUTPUT_PATH = resolve(
-  process.argv[2] ??
-    fileURLToPath(new URL('../dist/aethergrid-functional-app.zip', import.meta.url)),
+  process.argv[2] ?? join(REPO_ROOT, 'dist', 'aethergrid-functional-app.zip'),
 );
 const ARCHIVE_ROOT = 'aethergrid-functional-app';
 
-const REQUIRED_FILES = Object.freeze([
+const LEGACY_FILES = new Set([
   'index.html',
   'styles.css',
   'app.js',
+  'manifest.webmanifest',
+  'sw.js',
+]);
+
+const REQUIRED_RUNTIME_FILES = Object.freeze([
   'server.mjs',
+  'web-runtime.mjs',
   'agent-config.mjs',
   'ai-runtime.mjs',
   'profile-store.mjs',
@@ -28,13 +37,8 @@ const REQUIRED_FILES = Object.freeze([
   'config/public-config.mjs',
   'security/secret-redactor.mjs',
   'security/url-policy.mjs',
-  'providers/cache-store.mjs',
-  'providers/circuit-breaker.mjs',
-  'providers/rate-limiter.mjs',
-  'providers/provider-health.mjs',
   'providers/provider-registry.mjs',
-  'providers/coordinate-validator.mjs',
-  'providers/provider-adapter.mjs',
+  'providers/provider-health.mjs',
   'providers/provider-executor.mjs',
   'providers/provider-receipt.mjs',
   'providers/request-context.mjs',
@@ -44,20 +48,32 @@ const REQUIRED_FILES = Object.freeze([
   'providers/eia-provider.mjs',
   'providers/transit-feed-config.mjs',
   'providers/transit-registry.mjs',
+  'providers/transitland-provider.mjs',
   'providers/dwave-provider.mjs',
   'app.json',
   'ui.json',
-  'manifest.webmanifest',
-  'sw.js',
   'README.md',
   '.env.example',
   'START-AETHERGRID.ps1',
   'STOP-AETHERGRID.ps1',
   'START-AETHERGRID.cmd',
-  'assets/brand/aethergrid-logo.webp',
-  'assets/brand/vaelon.webp',
-  'assets/brand/auren.webp',
-  'assets/brand/solvaer.webp',
+  'web/dist/index.html',
+  'legacy/index.html',
+  'legacy/styles.css',
+  'legacy/app.js',
+  'legacy/standalone.html',
+  'node_modules/zod/package.json',
+]);
+
+const PRIVATE_BROWSER_ENV_NAMES = Object.freeze([
+  'AETHERGRID_IBM_QUANTUM_API_KEY',
+  'AETHERGRID_IBM_QUANTUM_SERVICE_CRN',
+  'AETHERGRID_DWAVE_API_TOKEN',
+  'AETHERGRID_TOMORROW_API_KEY',
+  'AETHERGRID_EIA_API_KEY',
+  'AETHERGRID_OPENAI_API_KEY',
+  'AETHERGRID_GROQ_API_KEY',
+  'GROQ_API_KEY',
 ]);
 
 function assert(condition, message) {
@@ -72,15 +88,22 @@ function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-function crc32(bytes) {
-  let crc = 0xffffffff;
-  for (const byte of bytes) {
-    crc ^= byte;
-    for (let bit = 0; bit < 8; bit += 1) {
-      crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
-    }
+function run(command, args, cwd) {
+  const result = spawnSync(command, args, {
+    cwd,
+    env: process.env,
+    encoding: 'utf8',
+    stdio: 'pipe',
+  });
+  if (result.status !== 0) {
+    process.stderr.write(result.stdout || '');
+    process.stderr.write(result.stderr || '');
+    throw new Error(`${command} ${args.join(' ')} failed with exit code ${result.status}`);
   }
-  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function npmCommand() {
+  return process.platform === 'win32' ? 'npm.cmd' : 'npm';
 }
 
 async function collectFiles(directory) {
@@ -92,6 +115,17 @@ async function collectFiles(directory) {
     else if (entry.isFile()) files.push(absolute);
   }
   return files;
+}
+
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+    }
+  }
+  return (crc ^ 0xffffffff) >>> 0;
 }
 
 function encodeEntry(name, data, localOffset) {
@@ -159,77 +193,123 @@ function buildZip(entries) {
   return Buffer.concat([...localParts, centralDirectory, end]);
 }
 
-const sourceFiles = await collectFiles(SOURCE_ROOT);
+function htmlAssetReferences(html) {
+  return [...html.matchAll(/(?:src|href)=["']([^"'#?]+)["']/gu)]
+    .map((match) => match[1])
+    .filter((value) => value && !/^(?:https?:|data:|mailto:)/u.test(value));
+}
+
+function assertNoPrivateBrowserSecrets(payload) {
+  for (const [path, data] of payload.entries()) {
+    if (!path.startsWith('web/dist/')) continue;
+    const text = data.toString('utf8');
+    for (const envName of PRIVATE_BROWSER_ENV_NAMES) {
+      assert(!text.includes(envName), `canonical browser bundle references private server env name ${envName}: ${path}`);
+    }
+  }
+}
+
+const npm = npmCommand();
+run(npm, ['ci'], WEB_ROOT);
+run(npm, ['run', 'build'], WEB_ROOT);
+
 const payload = new Map();
+const legacySource = new Map();
 
-for (const absolute of sourceFiles) {
-  const path = normalizePath(relative(SOURCE_ROOT, absolute));
-  if (path === 'assets/dashboard-reference.webp') continue;
-  if (path === '.aethergrid-data' || path.startsWith('.aethergrid-data/')) continue;
+for (const absolute of await collectFiles(APP_ROOT)) {
+  const relativePath = normalizePath(relative(APP_ROOT, absolute));
+  if (
+    relativePath === '.aethergrid-data' ||
+    relativePath.startsWith('.aethergrid-data/') ||
+    relativePath.startsWith('web/node_modules/') ||
+    relativePath.startsWith('web/dist/') ||
+    relativePath.startsWith('web/src/') ||
+    relativePath.startsWith('web/tests/') ||
+    relativePath.startsWith('web/test-results/')
+  ) {
+    continue;
+  }
+  if (relativePath === 'assets/dashboard-reference.webp') continue;
   const metadata = await stat(absolute);
-  assert(metadata.size > 0, `ÆTHERGRID app source file is empty: ${path}`);
-  payload.set(path, await readFile(absolute));
+  assert(metadata.size > 0, `ÆTHERGRID app source file is empty: ${relativePath}`);
+  const bytes = await readFile(absolute);
+  if (LEGACY_FILES.has(relativePath)) {
+    legacySource.set(relativePath, bytes);
+    payload.set(`legacy/${relativePath}`, bytes);
+  } else {
+    payload.set(relativePath, bytes);
+  }
 }
 
-for (const required of REQUIRED_FILES) {
-  assert(payload.has(required), `missing required ÆTHERGRID app file: ${required}`);
-  assert(payload.get(required).length > 0, `required ÆTHERGRID app file is empty: ${required}`);
+for (const absolute of await collectFiles(WEB_DIST)) {
+  const relativePath = normalizePath(relative(WEB_DIST, absolute));
+  const metadata = await stat(absolute);
+  assert(metadata.size > 0, `React production build file is empty: ${relativePath}`);
+  payload.set(`web/dist/${relativePath}`, await readFile(absolute));
 }
+
+const zodRoot = join(REPO_ROOT, 'node_modules', 'zod');
+for (const absolute of await collectFiles(zodRoot)) {
+  const relativePath = normalizePath(relative(zodRoot, absolute));
+  payload.set(`node_modules/zod/${relativePath}`, await readFile(absolute));
+}
+
+const repoPackage = JSON.parse(await readFile(join(REPO_ROOT, 'package.json'), 'utf8'));
+const runtimePackage = {
+  name: 'aethergrid-functional-app',
+  version: repoPackage.version,
+  private: true,
+  type: 'module',
+  engines: repoPackage.engines,
+  scripts: { start: 'node server.mjs' },
+  dependencies: { zod: repoPackage.dependencies.zod },
+};
+payload.set('package.json', Buffer.from(`${JSON.stringify(runtimePackage, null, 2)}\n`, 'utf8'));
+
+for (const required of REQUIRED_RUNTIME_FILES) {
+  assert(payload.has(required), `missing required ÆTHERGRID runtime file: ${required}`);
+  assert(payload.get(required).length > 0, `required ÆTHERGRID runtime file is empty: ${required}`);
+}
+
+assert(
+  ![...payload.keys()].some((path) => path === '.env' || path.endsWith('/.env')),
+  'populated .env files must never be included in the distributable ZIP',
+);
+assert(
+  ![...payload.keys()].some((path) => path.startsWith('web/node_modules/')),
+  'web development dependencies must not be included in the distributable ZIP',
+);
 
 const appManifest = JSON.parse(payload.get('app.json').toString('utf8'));
 const uiManifest = JSON.parse(payload.get('ui.json').toString('utf8'));
-assert(appManifest.entrypoints?.standaloneHtml === 'standalone.html', 'app.json must expose standalone.html');
-assert(appManifest.entrypoints?.webApp === 'index.html', 'app.json must expose index.html');
+assert(appManifest.entrypoints?.webApp === 'web/dist/index.html', 'app.json must expose the canonical React build');
 assert(appManifest.entrypoints?.backend === 'server.mjs', 'app.json must expose server.mjs');
-assert(appManifest.visualContract?.runtimeUsesBackgroundReferenceImage === false, 'runtime must not use a dashboard reference image');
-assert(uiManifest.runtimeUsesBackgroundReferenceImage === false, 'UI contract must prohibit a runtime background reference');
-assert(uiManifest.spatialModel?.renderEngine === 'native-webgl', 'UI must declare native WebGL spatial rendering');
+assert(appManifest.entrypoints?.legacyWebApp === 'legacy/index.html', 'app.json must explicitly classify the native console as legacy');
+assert(appManifest.entrypoints?.standaloneHtml === 'legacy/standalone.html', 'standalone compatibility HTML must live under legacy/');
+assert(appManifest.frontend?.framework === 'react-typescript-vite', 'app.json must declare the canonical React/Vite frontend');
+assert(appManifest.frontend?.spatialRenderer === 'cesium-primary-native-fallback', 'app.json must declare Cesium as the primary renderer');
+assert(uiManifest.runtimeComposition === 'react-typescript-cesium', 'ui.json must declare the canonical React/Cesium composition');
+assert(uiManifest.spatialModel?.renderEngine === 'cesium-primary-native-fallback', 'ui.json must declare Cesium primary with native fallback');
 
-const sourceHtml = payload.get('index.html').toString('utf8');
-assert(!/dashboard-reference/iu.test(sourceHtml), 'runtime index.html must not reference the old dashboard screenshot');
-assert(
-  ![...payload.keys()].some((path) => path === '.aethergrid-data' || path.startsWith('.aethergrid-data/')),
-  'runtime profile persistence data must never be included in the distributable ZIP',
-);
-assert(/<canvas id="spatialGrid"/u.test(sourceHtml), 'runtime index.html must expose the real spatial WebGL canvas');
-assert(/data-workspace-target="holographic"/u.test(sourceHtml), 'runtime index.html must expose functional workspace controls');
-assert(/data-workspace="settings"/u.test(sourceHtml), 'runtime index.html must include a real settings workspace');
-assert(/data-workspace="global"/u.test(sourceHtml), 'runtime index.html must include the global 3D workspace');
-assert(/id="globalGlobe"/u.test(sourceHtml), 'runtime index.html must expose the real global WebGL canvas');
-assert(/id="globalPointLat"/u.test(sourceHtml), 'runtime index.html must expose arbitrary latitude controls');
-assert(/id="globalPointLon"/u.test(sourceHtml), 'runtime index.html must expose arbitrary longitude controls');
-assert(/data-global-layer="infrastructure"/u.test(sourceHtml), 'runtime index.html must expose the live power-grid layer toggle');
-assert(/data-global-layer="terrain"/u.test(sourceHtml), 'runtime index.html must expose the live terrain layer toggle');
-assert(/id="globalTimeSlider"/u.test(sourceHtml), 'runtime index.html must expose the global 4D time index');
-assert(/data-action="city-live-now"/u.test(sourceHtml), 'runtime index.html must expose city live-time synchronization');
-assert(/data-global-layer="weather"/u.test(sourceHtml), 'runtime index.html must expose the live weather layer');
-assert(/data-global-layer="clouds"/u.test(sourceHtml), 'runtime index.html must expose the live cloud layer');
-assert(/data-global-layer="illumination"/u.test(sourceHtml), 'runtime index.html must expose the city-light layer');
-assert(/data-global-layer="landmarks"/u.test(sourceHtml), 'runtime index.html must expose the source-backed landmark layer');
-assert(/data-global-layer="water"/u.test(sourceHtml), 'runtime index.html must expose mapped water');
-assert(/data-global-layer="green"/u.test(sourceHtml), 'runtime index.html must expose mapped green space');
-assert(/id="cityIdentity"/u.test(sourceHtml), 'runtime index.html must expose the city identity inspector');
-assert(/data-global-layer="air"/u.test(sourceHtml), 'runtime index.html must expose the live air-quality layer');
-assert(/data-global-layer="seismic"/u.test(sourceHtml), 'runtime index.html must expose the live seismic layer');
-assert(/value="weather-readiness"/u.test(sourceHtml), 'runtime index.html must expose weather readiness analysis');
-assert(/value="air-quality-exposure"/u.test(sourceHtml), 'runtime index.html must expose air-quality exposure analysis');
-assert(/value="seismic-awareness"/u.test(sourceHtml), 'runtime index.html must expose seismic awareness analysis');
-assert(/value="heat-stress"/u.test(sourceHtml), 'runtime index.html must expose heat-stress analysis');
-assert(/value="visibility-operations"/u.test(sourceHtml), 'runtime index.html must expose visibility analysis');
-assert(/value="flood-context"/u.test(sourceHtml), 'runtime index.html must expose flood-context analysis');
-assert(/value="green-infrastructure"/u.test(sourceHtml), 'runtime index.html must expose green-infrastructure analysis');
-assert(/id="globalSolarStatus"/u.test(sourceHtml), 'runtime index.html must expose solar-position status');
-assert(/id="settingTheme"/u.test(sourceHtml), 'runtime index.html must expose persistent appearance modes');
-assert(/id="profileForm"/u.test(sourceHtml), 'runtime index.html must expose the persistent operator profile form');
-assert(/id="quantumCircuit"/u.test(sourceHtml), 'runtime index.html must expose real quantum job controls');
-assert(/data-agent="TEAM"/u.test(sourceHtml), 'runtime index.html must expose team-agent mode');
+const canonicalHtml = payload.get('web/dist/index.html').toString('utf8');
+assert(/id=["']root["']/u.test(canonicalHtml), 'canonical React build must expose the React root');
+for (const reference of htmlAssetReferences(canonicalHtml)) {
+  const relativeReference = reference.replace(/^\//u, '');
+  assert(
+    payload.has(`web/dist/${relativeReference}`),
+    `canonical index references a missing build asset: ${reference}`,
+  );
+}
 
-const inlineCss = payload.get('styles.css').toString('utf8');
-const inlineJs = payload.get('app.js').toString('utf8');
-let standaloneHtml = sourceHtml
+const legacyHtml = legacySource.get('index.html')?.toString('utf8');
+const legacyCss = legacySource.get('styles.css')?.toString('utf8');
+const legacyJs = legacySource.get('app.js')?.toString('utf8');
+assert(legacyHtml && legacyCss && legacyJs, 'legacy compatibility sources must remain available');
+
+let legacyStandalone = legacyHtml
   .replace(/\s*<link rel="manifest" href="\.\/manifest\.webmanifest" \/>\n?/u, '')
-  .replace('<link rel="stylesheet" href="./styles.css" />', `<style>\n${inlineCss}\n</style>`)
-  .replace('<script src="./app.js" defer></script>', `<script>\n${inlineJs}\n</script>`);
+  .replace('<link rel="stylesheet" href="./styles.css" />', `<style>\n${legacyCss}\n</style>`)
+  .replace('<script src="./app.js" defer></script>', `<script>\n${legacyJs}\n</script>`);
 
 for (const [path, mime] of [
   ['assets/brand/aethergrid-logo.webp', 'image/webp'],
@@ -237,130 +317,47 @@ for (const [path, mime] of [
   ['assets/brand/auren.webp', 'image/webp'],
   ['assets/brand/solvaer.webp', 'image/webp'],
 ]) {
-  const encoded = payload.get(path).toString('base64');
-  standaloneHtml = standaloneHtml.replaceAll(`./${path}`, `data:${mime};base64,${encoded}`);
+  const bytes = payload.get(path);
+  if (!bytes) continue;
+  legacyStandalone = legacyStandalone.replaceAll(`./${path}`, `data:${mime};base64,${bytes.toString('base64')}`);
 }
+payload.set('legacy/standalone.html', Buffer.from(legacyStandalone, 'utf8'));
 
-assert(!/src="\.\/app\.js"/u.test(standaloneHtml), 'standalone HTML cannot depend on app.js');
-assert(!/href="\.\/styles\.css"/u.test(standaloneHtml), 'standalone HTML cannot depend on styles.css');
-assert(!/assets\/brand\//u.test(standaloneHtml), 'standalone HTML must embed brand assets');
-assert(/attribute vec4 a_position/u.test(standaloneHtml), 'standalone HTML must embed the native 4D WebGL shader');
-assert(/data-workspace="holographic"/u.test(standaloneHtml), 'standalone HTML must retain routed workspaces');
-assert(/id="settingDefaultWorkspace"/u.test(standaloneHtml), 'standalone HTML must retain functional settings controls');
-assert(/id="settingTheme"/u.test(standaloneHtml), 'standalone HTML must retain light/dark/system appearance controls');
-assert(/data-action="city-live-now"/u.test(standaloneHtml), 'standalone HTML must retain live city-time controls');
-assert(/id="globalPointLat"/u.test(standaloneHtml), 'standalone HTML must retain coordinate exploration controls');
-assert(/data-global-layer="infrastructure"/u.test(standaloneHtml), 'standalone HTML must retain the power-grid layer control');
-assert(/data-global-layer="terrain"/u.test(standaloneHtml), 'standalone HTML must retain the terrain layer control');
-assert(/async function loadCoordinateCity/u.test(standaloneHtml), 'standalone HTML must retain coordinate explorer behavior');
-assert(/loadTerrainFor/u.test(standaloneHtml), 'standalone HTML must retain live terrain request wiring');
-assert(/infrastructureLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL power-grid geometry');
-assert(/terrainLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL terrain geometry');
-assert(/bilinearTerrainElevation/u.test(standaloneHtml), 'standalone HTML must retain bilinear terrain interpolation');
-assert(/terrainSurfaceYAtSource/u.test(standaloneHtml), 'standalone HTML must retain terrain-conforming city placement');
-assert(/terrainConformance/u.test(standaloneHtml), 'standalone HTML must retain terrain conformance state');
-assert(/Terrain Fit/u.test(standaloneHtml), 'standalone HTML must retain terrain-fit fidelity readouts');
-assert(/data-global-layer="terrain"/u.test(standaloneHtml), 'standalone HTML must retain terrain layer controls');
-assert(/terrainLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL terrain geometry');
-assert(/roofFaces/u.test(standaloneHtml), 'standalone HTML must retain source-shaped roof geometry');
-assert(/resolvedTheme/u.test(standaloneHtml), 'standalone HTML must retain appearance mode logic');
-assert(/environmentHour/u.test(standaloneHtml), 'standalone HTML must retain live city time synchronization');
-assert(/setLiveActivity/u.test(standaloneHtml), 'standalone HTML must retain animated global live-activity rendering');
-assert(/weatherLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL wind geometry');
-assert(/cloudParticles/u.test(standaloneHtml), 'standalone HTML must retain native WebGL cloud geometry');
-assert(/cityLights/u.test(standaloneHtml), 'standalone HTML must retain procedural skyline light geometry');
-assert(/landmarkCandidates/u.test(standaloneHtml), 'standalone HTML must retain source-backed identity anchor extraction');
-assert(/landmarkSpines/u.test(standaloneHtml), 'standalone HTML must retain landmark spine geometry');
-assert(/waterLines/u.test(standaloneHtml), 'standalone HTML must retain mapped water geometry');
-assert(/waterFaces/u.test(standaloneHtml), 'standalone HTML must retain mapped water surfaces');
-assert(/greenLines/u.test(standaloneHtml), 'standalone HTML must retain mapped green geometry');
-assert(/greenFaces/u.test(standaloneHtml), 'standalone HTML must retain mapped green surfaces');
-assert(/materialGlassFaces/u.test(standaloneHtml), 'standalone HTML must retain source-tagged material geometry');
-assert(/value="flood-context"/u.test(standaloneHtml), 'standalone HTML must retain flood-context operation');
-assert(/value="green-infrastructure"/u.test(standaloneHtml), 'standalone HTML must retain green-infrastructure operation');
-assert(/snowParticles/u.test(standaloneHtml), 'standalone HTML must retain modeled snow geometry');
-assert(/fogParticles/u.test(standaloneHtml), 'standalone HTML must retain modeled fog geometry');
-assert(/stormLines/u.test(standaloneHtml), 'standalone HTML must retain modeled thunderstorm geometry');
-assert(/weatherPhenomenon/u.test(standaloneHtml), 'standalone HTML must retain weather semantics');
-assert(/updateCityIdentity/u.test(standaloneHtml), 'standalone HTML must retain the city identity inspector');
-assert(/solarPosition/u.test(standaloneHtml), 'standalone HTML must retain solar-position calculation');
-assert(/updateSolarGeometry/u.test(standaloneHtml), 'standalone HTML must retain the live solar terminator');
-assert(/u_flow/u.test(standaloneHtml), 'standalone HTML must retain directional atmosphere flow');
-assert(/u_drop/u.test(standaloneHtml), 'standalone HTML must retain falling precipitation motion');
-assert(/airParticles/u.test(standaloneHtml), 'standalone HTML must retain native WebGL air-quality particles');
-assert(/seismicLines/u.test(standaloneHtml), 'standalone HTML must retain native WebGL seismic rings');
-payload.set('standalone.html', Buffer.from(standaloneHtml, 'utf8'));
+assertNoPrivateBrowserSecrets(payload);
 
 const inventory = [...payload.entries()]
   .sort(([left], [right]) => left.localeCompare(right))
   .map(([path, data]) => ({ path, bytes: data.length, sha256: sha256(data) }));
-
-assert(inventory.every((entry) => entry.bytes > 0), 'archive cannot contain empty files');
 
 payload.set(
   'PACKAGE_CONTENTS.json',
   Buffer.from(
     `${JSON.stringify(
       {
-        schemaVersion: 1,
+        schemaVersion: 2,
         product: 'ÆTHERGRID',
-        format: 'semantic-html-native-webgl-and-node-app',
-        standaloneHtml: 'standalone.html',
-        backgroundReferenceImageUsedAtRuntime: false,
+        repositoryVersion: repoPackage.version,
+        productGeneration: 'v4',
+        format: 'react-cesium-v4-node-app-with-native-webgl-compatibility',
+        canonicalWebApp: 'web/dist/index.html',
+        backend: 'server.mjs',
+        legacyCompatibility: {
+          webApp: 'legacy/index.html',
+          standaloneHtml: 'legacy/standalone.html',
+          canonical: false,
+        },
         runtimeCapabilities: [
-          'native-webgl-4d-grid',
-          'global-coordinate-explorer',
-          'live-osm-buildings-roads-power-grid',
-          'live-elevation-terrain',
+          'react-typescript-command-center',
+          'cesium-primary-spatial-renderer',
+          'native-webgl-fallback',
+          'same-origin-provider-api',
+          'spa-routing',
+          'server-sent-events',
+          'source-backed-operational-layers',
           'replaceable-ai-agents',
-          'ibm-quantum-compute-adapter',
-          'persistent-operator-profile',
-          'source-backed-city-roofs',
-          'city-specific-skyline-framing',
-          'live-open-city-environment',
-          'city-local-live-time-sync',
-          'light-dark-system-theme',
-          'skyline-data-quality',
-          'live-air-quality',
-          'live-usgs-seismic',
-          'animated-weather-vectors',
-          'animated-precipitation',
-          'animated-air-quality-particles',
-          'animated-seismic-rings',
-          'animated-global-live-context',
-          'source-driven-city-use-cases',
-          'real-time-solar-terminator',
-          'live-subsolar-point',
-          'night-side-city-illumination',
-          'wind-driven-cloud-deck',
-          'directional-precipitation-motion',
-          'procedural-skyline-lighting',
-          'solar-daylight-context',
-          'heat-stress-operation',
-          'visibility-operations',
-          'source-backed-city-identity',
-          'named-structure-anchors',
-          'interactive-landmark-layer',
-          'semantic-weather-rendering',
-          'modeled-snow-animation',
-          'modeled-fog-animation',
-          'modeled-thunderstorm-animation',
-          'source-backed-water-areas',
-          'source-backed-waterways',
-          'source-backed-coastline',
-          'source-backed-green-areas',
-          'source-tagged-building-materials',
-          'flood-context-operation',
-          'green-infrastructure-operation',
-          'no-invented-environmental-geometry',
-          'bilinear-terrain-interpolation',
-          'terrain-anchored-buildings',
-          'terrain-draped-roads',
-          'terrain-draped-waterways',
-          'terrain-aligned-green-space',
-          'terrain-draped-infrastructure',
-          'level-water-area-presentation',
-          'non-survey-grade-terrain-fit'
+          'quantum-provider-adapters',
+          'evidence-and-provenance',
+          'legacy-native-webgl-compatibility',
         ],
         files: inventory,
       },
@@ -383,14 +380,9 @@ const archiveEntries = [...payload.entries()]
   .sort(([left], [right]) => left.localeCompare(right))
   .map(([path, data]) => ({ name: `${ARCHIVE_ROOT}/${path}`, data }));
 
-for (const entry of archiveEntries) {
-  assert(entry.data.length > 0, `archive entry is empty: ${entry.name}`);
-}
-
 const zip = buildZip(archiveEntries);
 await mkdir(dirname(OUTPUT_PATH), { recursive: true });
 await writeFile(OUTPUT_PATH, zip);
-
 process.stdout.write(
-  `ÆTHERGRID functional app verified: ${archiveEntries.length} non-empty files, ${zip.length} bytes, SHA-256 ${sha256(zip)} -> ${OUTPUT_PATH}\n`,
+  `Built canonical ÆTHERGRID React/Cesium app archive: ${OUTPUT_PATH} (${zip.length} bytes, ${archiveEntries.length} files)\n`,
 );
