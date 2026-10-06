@@ -1,10 +1,10 @@
-# ÆTHERGRID v4 web workspace
+# ÆTHERGRID v4 canonical web workspace
 
-This directory is the additive, non-breaking migration lane for the v4 operator experience.
+This directory is the **canonical ÆTHERGRID operator application**. React + TypeScript + Vite own the product shell, CesiumJS is the primary spatial renderer, and the native renderer remains a verified fallback behind the shared spatial contract.
 
-It intentionally does **not** replace `apps/aethergrid-console/index.html` or the verified v3 standalone package yet.
+The production Node server serves this workspace's built `dist/` output at the application root. The old root native-v3 HTML/CSS/JavaScript is compatibility source only and is packaged under `legacy/`, never as a competing primary interface.
 
-## Scope of this branch
+## Canonical scope
 
 - React + TypeScript + Vite application shell
 - CesiumJS production renderer adapter
@@ -49,7 +49,7 @@ NWS active hazards remain LIVE-only. Polygon or MultiPolygon geometry returned b
 From this directory:
 
 ```powershell
-npm install
+npm ci
 npm run dev
 ```
 
@@ -86,7 +86,7 @@ npm test
 Remove-Item Env:AETHERGRID_TEST_BUILT
 ```
 
-`vite preview` is a local build acceptance surface. Hosting the compiled `dist` output with a same-origin `/api` reverse proxy is a separate deployment step; this branch does not replace the maintained v3 server entrypoint.
+`vite preview` remains a local build-acceptance surface. Production uses `../server.mjs`, which serves the compiled `dist` output and the same-origin `/api/aethergrid/*` contracts.
 
 Tested layout sizes: 1536×1024, 1440×900, 1366×768, 1024×768, 768×1024 and 390×844. Screenshots and the JSON test report are written to ignored `test-results/`.
 
@@ -94,7 +94,7 @@ The Connection Center reports backend readiness separately from successful sourc
 
 Cesium's required Workers, Assets, Widgets and ThirdParty directories are copied into the build output. The spatial adapter uses Cesium World Terrain and Cesium OSM Buildings when a configured token is available.
 
-The existing native renderer remains the fallback target. Wiring the full v3 renderer bridge into this shell happens only after the new web workspace can be merged without regressing the verified v3 application/package.
+The typed native renderer remains the fallback target inside the canonical v4 shell. The historical v3 standalone surface is retained separately under `legacy/` for offline compatibility and regression comparison.
 
 
 ## Provider-backed operator integration boundary
