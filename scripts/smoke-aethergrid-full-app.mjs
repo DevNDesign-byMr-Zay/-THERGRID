@@ -138,7 +138,10 @@ try {
   assert(!/<canvas id="spatialGrid"/u.test(html), 'packaged server served the legacy v3 root');
 
   const legacyScript = await fetch(`${baseUrl}/app.js`);
-  assert(legacyScript.status === 404, 'legacy root app.js must not be served by the canonical runtime');
+  assert(
+    legacyScript.status === 404,
+    'legacy root app.js must not be served by the canonical runtime',
+  );
 
   const apiMiss = await fetch(`${baseUrl}/api/aethergrid/not-a-real-route`);
   assert(apiMiss.status === 404, 'unknown API route must remain an API 404');
