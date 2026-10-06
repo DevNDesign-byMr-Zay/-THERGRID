@@ -1,3 +1,4 @@
+import { createQuantumRuntime } from '../apps/aethergrid-console/quantum-runtime.mjs';
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -6,6 +7,7 @@ import {
   summarizeProvider,
   summarizeObservation,
   summarizeScheduledRealtime,
+  summarizeQuantumDiscovery,
   sanitizeAcceptance,
 } from './lib/canonical-acceptance.mjs';
 
@@ -145,22 +147,49 @@ try {
       messageType: result.data?.messageType || null,
     };
   });
-  for (const [name, names] of [
-    ['ibm', ['AETHERGRID_IBM_QUANTUM_API_KEY', 'AETHERGRID_IBM_QUANTUM_SERVICE_CRN']],
-    ['dwave', ['AETHERGRID_DWAVE_API_TOKEN']],
-  ]) {
-    const prerequisites = Object.fromEntries(
-      names.map((key) => [key, Boolean(process.env[key]?.trim())]),
-    );
-    report.providers[name] = {
-      state: Object.values(prerequisites).every(Boolean)
-        ? 'configured-not-hardware-validated'
-        : 'unconfigured',
-      prerequisites,
+  const ibmPrerequisites = {
+    AETHERGRID_IBM_QUANTUM_API_KEY: Boolean(process.env.AETHERGRID_IBM_QUANTUM_API_KEY?.trim()),
+    AETHERGRID_IBM_QUANTUM_SERVICE_CRN: Boolean(
+      process.env.AETHERGRID_IBM_QUANTUM_SERVICE_CRN?.trim(),
+    ),
+  };
+  if (Object.values(ibmPrerequisites).every(Boolean)) {
+    await check('ibm', async () => {
+      const runtime = createQuantumRuntime({
+        env: {
+          ...process.env,
+          AETHERGRID_QUANTUM_PROVIDER: 'ibm-quantum',
+        },
+      });
+      const backends = await runtime.listBackends();
+      return {
+        ...summarizeQuantumDiscovery(backends, runtime.summary()),
+        prerequisites: ibmPrerequisites,
+      };
+    });
+  } else {
+    report.providers.ibm = {
+      state: 'unconfigured',
+      verified: false,
+      prerequisites: ibmPrerequisites,
+      discoveryOnly: true,
       hardwareSubmitted: false,
       hardwareExecuted: false,
     };
   }
+
+  const dwavePrerequisites = {
+    AETHERGRID_DWAVE_API_TOKEN: Boolean(process.env.AETHERGRID_DWAVE_API_TOKEN?.trim()),
+  };
+  report.providers.dwave = {
+    state: dwavePrerequisites.AETHERGRID_DWAVE_API_TOKEN
+      ? 'configured-not-hardware-validated'
+      : 'unconfigured',
+    prerequisites: dwavePrerequisites,
+    discoveryOnly: true,
+    hardwareSubmitted: false,
+    hardwareExecuted: false,
+  };
 } catch {
   report.startup = {
     verified: false,
