@@ -341,6 +341,13 @@ export function createTransitRegistry(options = {}) {
 
     const feed = feeds[cityId];
     const url = feed.feedUrl || feed.gtfsRealtimeUrl;
+    const messageType = feed.messageType || 'vehicle-positions';
+    const dataset =
+      messageType === 'trip-updates'
+        ? 'transit-trip-updates'
+        : messageType === 'alerts'
+          ? 'transit-alerts'
+          : 'transit-vehicles';
 
     const fetcher = async ({ signal } = {}) => {
       if (typeof options.fetchFn === 'function') {
@@ -374,7 +381,7 @@ export function createTransitRegistry(options = {}) {
           {
             url,
             capability: 'transit',
-            dataset: 'transit-vehicles',
+            dataset,
             requestId: params.requestId || context.requestId,
             ttlMs: 15000,
             attribution: `GTFS-RT Feed (${feed.agencyName || feed.agency || cityId})`,
@@ -395,6 +402,7 @@ export function createTransitRegistry(options = {}) {
           cityId,
           agencyName: feed.agencyName || feed.agency || cityId,
           gtfsRealtimeUrl: url,
+          messageType,
           status: 'feed_fetch_failed',
           message: 'Failed to retrieve GTFS-Realtime feed.',
           vehicles: [],
@@ -405,7 +413,7 @@ export function createTransitRegistry(options = {}) {
         receipt: {
           provider: 'gtfs-rt-registry',
           capability: 'transit',
-          dataset: 'transit-vehicles',
+          dataset,
           requestId: params.requestId || context.requestId,
           live: false,
           fallback: true,
@@ -436,6 +444,7 @@ export function createTransitRegistry(options = {}) {
           cityId,
           agencyName: feed.agencyName || feed.agency || cityId,
           gtfsRealtimeUrl: url,
+          messageType,
           status: 'feed_retrieved_undecoded',
           message: 'GTFS-Realtime binary feed retrieved but failed to decode protobuf payload.',
           vehicles: [],
@@ -511,11 +520,13 @@ export function createTransitRegistry(options = {}) {
       cityId,
       agencyName: feed.agencyName || feed.agency || cityId,
       gtfsRealtimeUrl: url,
+      messageType,
       status: 'GTFS-Realtime Live',
       vehicles,
       tripUpdates,
       alerts,
       count: vehicles.length,
+      recordCount: vehicles.length + tripUpdates.length + alerts.length,
       feedHeaderTimestamp,
       retrievedAt: new Date().toISOString(),
       live: true,
@@ -527,7 +538,7 @@ export function createTransitRegistry(options = {}) {
       receipt: {
         provider: 'gtfs-rt-registry',
         capability: 'transit',
-        dataset: 'transit-vehicles',
+        dataset,
         requestId: params.requestId || context.requestId,
         retrievedAt: data.retrievedAt,
         live: true,

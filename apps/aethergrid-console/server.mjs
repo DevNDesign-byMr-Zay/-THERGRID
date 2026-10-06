@@ -1070,16 +1070,30 @@ const server = http.createServer(async (request, response) => {
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/transit/discovery') {
       const city = url.searchParams.get('city') || url.searchParams.get('query') || '';
-      const result = await transitlandProvider.request({ city, query: city }, execCtx);
+      const latitude = url.searchParams.get('lat') ?? url.searchParams.get('latitude');
+      const longitude = url.searchParams.get('lon') ?? url.searchParams.get('longitude');
+      const radius = url.searchParams.get('radius');
+      const limit = url.searchParams.get('limit');
+      const result = await transitlandProvider.request(
+        {
+          city,
+          query: city,
+          ...(latitude !== null ? { lat: latitude } : {}),
+          ...(longitude !== null ? { lon: longitude } : {}),
+          ...(radius !== null ? { radius } : {}),
+          ...(limit !== null ? { limit } : {}),
+        },
+        execCtx,
+      );
       return json(response, 200, providerRegistry.redactor.redactValue(result));
     }
 
-    if (request.method === 'GET' && url.pathname === '/api/aethergrid/transit/vehicles') {
+    if (
+      request.method === 'GET' &&
+      ['/api/aethergrid/transit/vehicles', '/api/aethergrid/transit/realtime'].includes(url.pathname)
+    ) {
       const cityId = url.searchParams.get('cityId') || undefined;
-      const result = await transitRegistry.adapter.request(
-        { cityId },
-        execCtx,
-      );
+      const result = await transitRegistry.adapter.request({ cityId }, execCtx);
       return json(response, 200, providerRegistry.redactor.redactValue(result));
     }
 

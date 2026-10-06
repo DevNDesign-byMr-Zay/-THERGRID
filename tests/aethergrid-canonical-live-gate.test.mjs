@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import {
   summarizeAgent,
   summarizeProvider,
@@ -113,4 +114,20 @@ test('live observations reject NOAA metadata-only and empty Tomorrow data', () =
     ])
       assert.equal(summarizeObservation({ receipt, data: invalid }, kind).verified, false);
   }
+});
+
+test('canonical transit acceptance uses geo feed discovery and documented NYC Ferry trip updates', () => {
+  const smoke = readFileSync('scripts/aethergrid-canonical-provider-smoke.mjs', 'utf8');
+  const feedConfig = JSON.parse(
+    readFileSync('docs/acceptance/aethergrid-command-center/verified-gtfs-feeds.json', 'utf8'),
+  );
+
+  assert.match(smoke, /transit\/discovery\?lat=40\.758&lon=-73\.9855&radius=10000&limit=20/u);
+  assert.match(smoke, /transit\/realtime\?cityId=new-york/u);
+  assert.match(smoke, /transit-trip-updates/u);
+
+  assert.equal(feedConfig.feeds.length, 1);
+  assert.equal(feedConfig.feeds[0].messageType, 'trip-updates');
+  assert.match(feedConfig.feeds[0].url, /\/tripupdate$/u);
+  assert.doesNotMatch(feedConfig.feeds[0].url, /vehicleposition/u);
 });

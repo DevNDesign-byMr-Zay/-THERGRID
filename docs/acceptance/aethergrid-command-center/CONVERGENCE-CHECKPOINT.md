@@ -14,6 +14,17 @@ On Node 22.23.3, the reconciliation tree passes `npm test` (502 tests, zero fail
 
 These checks are **not** the final exact-main submission gate. GitHub gates and final provider evidence must be bound to the final merged submission SHA.
 
+## Exact-main canonical live run and transit recovery
+
+PR #151 merged the protected canonical live gate at exact main `80b30b886445a82b3f3eb171c6fe9a257eb243a4`. Engineering CI and CodeQL passed on that SHA before dispatch. The first retained canonical run verified the React command center, authenticated Cesium terrain/imagery/building tiles, all three Groq specialists plus TEAM, Tomorrow.io current/forecast, EIA NYIS and NOAA BATN6. IBM remained blocked only by the absent service CRN and D-Wave by the absent token; no hardware job was submitted.
+
+That run correctly failed instead of promoting partial evidence because Transitland and NYC Ferry each returned zero accepted records. The recovery work treats those as two contract issues rather than weakening acceptance:
+
+- Transitland discovery now uses the documented `/feeds` catalog with a geographic query around Midtown and returns source feed metadata directly. The prior adapter queried `/agencies` and expected a direct `agency.feeds` shape that is not the current REST response contract.
+- NYC Ferry's current official Developer Tools page advertises real-time **Trip Updates** and **Alerts**, not a vehicle-position feed. The verified runtime binding therefore uses the documented trip-update endpoint and labels its dataset `transit-trip-updates`; the UI still renders vehicle-position overlays only when actual coordinate-bearing vehicle records exist. No positions are inferred from trip updates.
+
+Acceptance continues to reject stale, fallback, empty and metadata-only success.
+
 ## Outstanding prerequisites
 
 1. Confirm all intended safe city-provider hardening is merged. The event for #148 establishes canonical migration, not completion of a separate hardening lane; no open city-hardening PR was found at inspection time.
