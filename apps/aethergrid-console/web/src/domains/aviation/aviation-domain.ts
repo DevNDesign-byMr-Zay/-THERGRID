@@ -1,4 +1,4 @@
-import type { TemporalMode } from '../../hooks/use-temporal-clock';
+import type { TemporalMode } from '../../renderer/spatial-renderer';
 import type {
   OverlayCoordinate,
   SpatialOverlayEdge,
