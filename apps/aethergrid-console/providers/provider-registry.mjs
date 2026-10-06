@@ -194,6 +194,10 @@ export function createProviderRegistry(options = {}) {
 
   function getSafePublicRuntimeMetadata() {
     const healthStatuses = health.getAllStatuses();
+    const ibmApiKeyPresent = Boolean(config.quantum?.ibm?.apiKey && config.quantum.ibm.apiKey.trim().length > 0);
+    const ibmServiceCrnPresent = Boolean(config.quantum?.ibm?.serviceCrn && config.quantum.ibm.serviceCrn.trim().length > 0);
+    const ibmConfigured = ibmApiKeyPresent && ibmServiceCrnPresent;
+    const dwaveConfigured = Boolean(config.providers?.dwave?.token && config.providers.dwave.token.trim().length > 0);
     return Object.freeze({
       spatial: {
         provider: 'native-webgl',
@@ -221,24 +225,50 @@ export function createProviderRegistry(options = {}) {
       },
       quantum: {
         provider: config.quantum.provider,
+        selectedProvider: config.quantum.provider,
+        selectedProviderStatus:
+          config.quantum.provider === 'ibm-quantum'
+            ? (ibmConfigured ? PROVIDER_STATUS.CONFIGURED : (ibmApiKeyPresent ? 'instance_required' : PROVIDER_STATUS.UNCONFIGURED))
+            : config.quantum.provider === 'dwave'
+              ? (dwaveConfigured ? PROVIDER_STATUS.CONFIGURED : PROVIDER_STATUS.UNCONFIGURED)
+              : PROVIDER_STATUS.READY,
+        aggregateStatus: aggregateProviderStatus([
+          healthStatuses['ibm-quantum']?.status,
+          healthStatuses.dwave?.status,
+          config.quantum.provider === 'local-simulator' ? PROVIDER_STATUS.READY : undefined,
+        ].filter(Boolean)),
+        alternateProviderAvailable: dwaveConfigured || ibmConfigured || true,
+        alternateProvider:
+          config.quantum.provider === 'ibm-quantum' && dwaveConfigured
+            ? 'dwave'
+            : config.quantum.provider === 'dwave' && ibmConfigured
+              ? 'ibm-quantum'
+              : 'local-simulator',
         status: aggregateProviderStatus([
           healthStatuses['ibm-quantum']?.status,
           healthStatuses.dwave?.status,
           config.quantum.provider === 'local-simulator' ? PROVIDER_STATUS.READY : undefined,
         ].filter(Boolean)),
-        hardwareEnabled: ibmConfigured || dwaveConfigured,
+        hardwareEnabled:
+          (config.quantum.provider === 'ibm-quantum' && ibmConfigured) ||
+          (config.quantum.provider === 'dwave' && dwaveConfigured),
         providers: {
           ibm: {
+            provider: 'ibm-quantum',
             configured: ibmConfigured,
-            status: healthStatuses['ibm-quantum']?.status || PROVIDER_STATUS.UNCONFIGURED,
+            status: ibmConfigured ? PROVIDER_STATUS.CONFIGURED : (ibmApiKeyPresent ? 'instance_required' : PROVIDER_STATUS.UNCONFIGURED),
+            apiKeyPresent: ibmApiKeyPresent,
+            serviceCrnPresent: ibmServiceCrnPresent,
             hardwareEnabled: ibmConfigured,
           },
           dwave: {
+            provider: 'dwave',
             configured: dwaveConfigured,
-            status: healthStatuses.dwave?.status || PROVIDER_STATUS.UNCONFIGURED,
+            status: dwaveConfigured ? PROVIDER_STATUS.CONFIGURED : PROVIDER_STATUS.UNCONFIGURED,
             hardwareEnabled: dwaveConfigured,
           },
           local: {
+            provider: 'local-simulator',
             configured: true,
             status: PROVIDER_STATUS.READY,
             hardwareEnabled: false,
@@ -247,7 +277,10 @@ export function createProviderRegistry(options = {}) {
       },
       ai: {
         provider: config.ai.provider,
-        status: healthStatuses['local-ai']?.status || PROVIDER_STATUS.UNCONFIGURED,
+        selectedProvider: config.ai.provider,
+        configured: config.ai.provider === 'openai-compatible' ? Boolean(config.ai.openai.apiKey) : true,
+        status: config.ai.provider === 'openai-compatible' ? (Boolean(config.ai.openai.apiKey) ? PROVIDER_STATUS.CONFIGURED : PROVIDER_STATUS.UNCONFIGURED) : PROVIDER_STATUS.READY,
+        fallbackProvider: 'local',
       },
       energy: {
         provider: 'eia',

@@ -88,3 +88,34 @@ At startup ÆTHERGRID:
 A missing registry path or missing registry file degrades to an unconfigured transit provider rather than making the application fail to start. Malformed configured documents fail validation so unsafe or ambiguous feeds are not silently accepted.
 
 The current production contract intentionally permits one enabled feed per city. Multi-feed aggregation remains a separate follow-up so it can be implemented explicitly without changing the established single-feed behavior or inventing cross-agency merge semantics.
+
+---
+
+## Provider Implementation Status Taxonomy
+
+Providers in ÆTHERGRID are explicitly classified across five status tiers:
+
+### 1. IMPLEMENTED / NO CREDENTIAL
+- **Open-Meteo Weather**: Live weather observations, forecasts, air quality, and terrain elevation.
+- **USGS**: USGS Earthquake GeoJSON Feed.
+- **NWS**: National Weather Service active alerts and hazards.
+- **NOAA NWPS**: Hydrology river gauge observations (gauge-specific ID required).
+- **OSM / Overpass**: OpenStreetMap 3D spatial building footprint mesh data.
+
+### 2. IMPLEMENTED / REQUIRES CREDENTIAL
+- **Tomorrow.io**: Weather realtime and forecast (API key required).
+- **EIA**: U.S. Energy Information Administration electricity grid fuel mix (API key required).
+- **Transitland**: Transitland v2 REST API feed/agency discovery catalog (API key required; `apikey` header authentication).
+- **GTFS-Realtime**: Production binary transit feed decoder (`AETHERGRID_GTFS_FEEDS_FILE` required).
+- **Groq / OpenAI-compatible**: AI runtime agent completions (API key required).
+- **D-Wave**: Ocean SAPI Quantum Annealing solver discovery & optimization (API token required).
+- **Cesium**: Cesium Ion 3D tile asset streaming (client Ion token required).
+
+### 3. PARTIALLY CONFIGURED
+- **IBM Quantum**: API key provided without Service CRN yields `instance_required` status. Hardware readiness requires both API key AND Service CRN.
+
+### 4. UNCONFIGURED
+- Optional credential-backed providers when credentials or endpoints are absent. Falling back safely without preventing application startup.
+
+### 5. FUTURE / RESEARCH
+- Qiskit direct worker or specialized Python QPU execution modules.

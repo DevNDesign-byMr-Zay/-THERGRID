@@ -5,6 +5,48 @@ export function createProviderConfig(rawEnv = process.env) {
 
   const effectivePort = env.AETHERGRID_PORT || env.PORT || 8090;
 
+  const providersObj = Object.freeze({
+    cesium: Object.freeze({
+      token: env.AETHERGRID_CESIUM_ION_TOKEN,
+      baseUrl: env.AETHERGRID_CESIUM_BASE_URL,
+    }),
+    tomorrowIo: Object.freeze({
+      apiKey: env.AETHERGRID_TOMORROW_IO_API_KEY,
+      baseUrl: env.AETHERGRID_TOMORROW_IO_URL,
+    }),
+    google3d: Object.freeze({
+      apiKey: env.AETHERGRID_GOOGLE_3D_TILES_API_KEY,
+      baseUrl: env.AETHERGRID_GOOGLE_3D_TILES_URL,
+    }),
+    overture: Object.freeze({
+      apiKey: env.AETHERGRID_OVERTURE_API_KEY,
+      baseUrl: env.AETHERGRID_OVERTURE_MAPS_URL,
+    }),
+    eia: Object.freeze({
+      apiKey: env.AETHERGRID_EIA_API_KEY,
+      baseUrl: env.AETHERGRID_EIA_BASE_URL,
+    }),
+    dwave: Object.freeze({
+      token: env.AETHERGRID_DWAVE_API_TOKEN,
+      solverUrl: env.AETHERGRID_DWAVE_SOLVER_URL,
+      baseUrl: env.AETHERGRID_DWAVE_SOLVER_URL,
+    }),
+    nws: Object.freeze({
+      apiUrl: env.AETHERGRID_NWS_API_URL,
+    }),
+    transit: Object.freeze({
+      provider: env.AETHERGRID_TRANSIT_PROVIDER,
+      apiKey: env.AETHERGRID_TRANSIT_API_KEY,
+      baseUrl: env.AETHERGRID_TRANSIT_BASE_URL,
+      feedsFile: env.AETHERGRID_GTFS_FEEDS_FILE,
+    }),
+    hydrology: Object.freeze({
+      provider: env.AETHERGRID_HYDROLOGY_PROVIDER,
+      apiKey: env.AETHERGRID_HYDROLOGY_API_KEY,
+      baseUrl: env.AETHERGRID_HYDROLOGY_BASE_URL,
+    }),
+  });
+
   return Object.freeze({
     app: Object.freeze({
       port: effectivePort,
@@ -74,45 +116,7 @@ export function createProviderConfig(rawEnv = process.env) {
         backend: env.AETHERGRID_IBM_QUANTUM_BACKEND,
       }),
     }),
-    futureProviders: Object.freeze({
-      cesium: Object.freeze({
-        token: env.AETHERGRID_CESIUM_ION_TOKEN,
-        baseUrl: env.AETHERGRID_CESIUM_BASE_URL,
-      }),
-      tomorrowIo: Object.freeze({
-        apiKey: env.AETHERGRID_TOMORROW_IO_API_KEY,
-        baseUrl: env.AETHERGRID_TOMORROW_IO_URL,
-      }),
-      google3d: Object.freeze({
-        apiKey: env.AETHERGRID_GOOGLE_3D_TILES_API_KEY,
-        baseUrl: env.AETHERGRID_GOOGLE_3D_TILES_URL,
-      }),
-      overture: Object.freeze({
-        apiKey: env.AETHERGRID_OVERTURE_API_KEY,
-        baseUrl: env.AETHERGRID_OVERTURE_MAPS_URL,
-      }),
-      eia: Object.freeze({
-        apiKey: env.AETHERGRID_EIA_API_KEY,
-        baseUrl: env.AETHERGRID_EIA_BASE_URL,
-      }),
-      dwave: Object.freeze({
-        token: env.AETHERGRID_DWAVE_API_TOKEN,
-        solverUrl: env.AETHERGRID_DWAVE_SOLVER_URL,
-      }),
-      nws: Object.freeze({
-        apiUrl: env.AETHERGRID_NWS_API_URL,
-      }),
-      transit: Object.freeze({
-        provider: env.AETHERGRID_TRANSIT_PROVIDER,
-        apiKey: env.AETHERGRID_TRANSIT_API_KEY,
-        baseUrl: env.AETHERGRID_TRANSIT_BASE_URL,
-        feedsFile: env.AETHERGRID_GTFS_FEEDS_FILE,
-      }),
-      hydrology: Object.freeze({
-        provider: env.AETHERGRID_HYDROLOGY_PROVIDER,
-        apiKey: env.AETHERGRID_HYDROLOGY_API_KEY,
-        baseUrl: env.AETHERGRID_HYDROLOGY_BASE_URL,
-      }),
-    }),
+    providers: providersObj,
+    futureProviders: providersObj,
   });
 }
