@@ -89,6 +89,14 @@ export function createProviderRegistry(options = {}) {
     status: config.geo.provider === 'osm-overpass' ? PROVIDER_STATUS.CONFIGURED : PROVIDER_STATUS.FALLBACK,
   });
 
+  const overtureConfigured = Boolean((config.providers?.overture?.apiKey && config.providers.overture.apiKey.trim().length > 0) || (config.providers?.overture?.baseUrl && config.providers.overture.baseUrl.trim().length > 0));
+  health.registerProvider('overture', {
+    name: 'Overture Maps Foundation',
+    capability: 'geo',
+    capabilities: ['geo', 'buildings', 'places'],
+    status: overtureConfigured ? PROVIDER_STATUS.CONFIGURED : PROVIDER_STATUS.UNCONFIGURED,
+  });
+
   health.registerProvider('open-meteo-elevation', {
     name: 'Open-Meteo Elevation (Copernicus DEM GLO-90)',
     capability: 'terrain',
@@ -206,6 +214,11 @@ export function createProviderRegistry(options = {}) {
       geo: {
         provider: config.geo.provider,
         status: healthStatuses['osm-overpass']?.status || PROVIDER_STATUS.UNCONFIGURED,
+      },
+      overture: {
+        provider: 'overture',
+        status: healthStatuses.overture?.status || PROVIDER_STATUS.UNCONFIGURED,
+        configured: overtureConfigured,
       },
       terrain: {
         provider: config.terrain.provider,

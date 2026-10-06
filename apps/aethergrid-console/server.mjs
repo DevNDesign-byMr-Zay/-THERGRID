@@ -7,6 +7,7 @@ import { createNoaaNwpsHydrologyProvider } from './providers/noaa-nwps-provider.
 import { createEiaProvider } from './providers/eia-provider.mjs';
 import { createTransitRegistry } from './providers/transit-registry.mjs';
 import { createTransitlandProvider } from './providers/transitland-provider.mjs';
+import { createOvertureProvider } from './providers/overture-provider.mjs';
 import { loadTransitFeedConfig } from './providers/transit-feed-config.mjs';
 import { createDwaveProvider } from './providers/dwave-provider.mjs';
 import { createProviderRegistry } from './providers/provider-registry.mjs';
@@ -43,6 +44,17 @@ const eiaProvider = createEiaProvider({
 
 const noaaNwpsProvider = createNoaaNwpsHydrologyProvider({
   baseUrl: providerRegistry.config.futureProviders.hydrology.baseUrl,
+});
+
+const overtureProvider = createOvertureProvider({
+  apiKey: providerRegistry.config.providers.overture.apiKey,
+  baseUrl: providerRegistry.config.providers.overture.baseUrl,
+});
+providerRegistry.health.registerProvider('overture', {
+  id: 'overture',
+  name: 'Overture Maps Foundation City Data Provider',
+  capability: 'geo',
+  capabilities: ['geo', 'buildings', 'places'],
 });
 
 const transitlandProvider = createTransitlandProvider({
