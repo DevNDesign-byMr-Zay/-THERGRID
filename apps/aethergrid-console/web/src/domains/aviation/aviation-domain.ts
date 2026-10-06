@@ -68,15 +68,34 @@ function finiteCoordinate(value: number): boolean {
   return Number.isFinite(value);
 }
 
+function sourceAltitudeMeters(aircraft: AviationAircraft): number | null {
+  const altitude =
+    aircraft.geometricAltitudeMeters ?? aircraft.barometricAltitudeMeters;
+  return altitude != null && Number.isFinite(altitude) ? altitude : null;
+}
+
 function aircraftPosition(aircraft: AviationAircraft): OverlayCoordinate {
+  const altitudeMeters = sourceAltitudeMeters(aircraft);
   return {
     latitude: aircraft.latitude,
     longitude: aircraft.longitude,
-    heightMeters:
-      aircraft.geometricAltitudeMeters ??
-      aircraft.barometricAltitudeMeters ??
-      (aircraft.onGround ? 15 : 500)
+    ...(altitudeMeters == null ? {} : { heightMeters: altitudeMeters })
   };
+}
+
+function observedOrStale(aircraft: AviationAircraft): boolean {
+  return (
+    aircraft.truthState === 'observed' ||
+    aircraft.truthState === 'stale'
+  );
+}
+
+function canRenderAircraftModel(aircraft: AviationAircraft): boolean {
+  return (
+    sourceAltitudeMeters(aircraft) != null &&
+    aircraft.trackDegrees != null &&
+    Number.isFinite(aircraft.trackDegrees)
+  );
 }
 
 function trackPoint(aircraft: AviationAircraft): AviationTrackPoint {
@@ -194,6 +213,7 @@ export function aviationOverlay(
   const nodes = state.aircraft
     .filter(
       (aircraft) =>
+        observedOrStale(aircraft) &&
         finiteCoordinate(aircraft.latitude) &&
         finiteCoordinate(aircraft.longitude)
     )
@@ -219,7 +239,8 @@ export function aviationOverlay(
         squawk: aircraft.squawk,
         onGround: aircraft.onGround,
         truthState: aircraft.truthState,
-        observedAt: aircraft.observedAt
+        observedAt: aircraft.observedAt,
+        render3d: canRenderAircraftModel(aircraft)
       }
     }));
 
