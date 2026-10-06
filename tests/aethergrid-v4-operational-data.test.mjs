@@ -45,7 +45,9 @@ test('v4 operational client uses provider receipts and withholds fallback metric
   assert.match(client, /\/api\/aethergrid\/hazards\/alerts/u);
   assert.match(client, /\/api\/aethergrid\/hydrology\/gauges/u);
   assert.match(client, /\/api\/aethergrid\/energy\/context/u);
-  assert.match(client, /\/api\/aethergrid\/transit\/vehicles/u);
+  assert.match(client, /\/api\/aethergrid\/transit\/realtime/u);
+  assert.match(client, /TRIP UPDATES/u);
+  assert.match(client, /service alert/u);
   assert.doesNotMatch(client, /AETHERGRID_[A-Z0-9_]*(?:KEY|TOKEN|SECRET)/u);
 });
 
