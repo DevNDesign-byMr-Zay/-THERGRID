@@ -1875,7 +1875,6 @@ export function App() {
                   type="button"
                   className={mode === visualMode ? 'active' : ''}
                   onClick={() => {
-                    setActiveUseCase(null);
                     setVisualMode(mode);
                   }}
                 >
