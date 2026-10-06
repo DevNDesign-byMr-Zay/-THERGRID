@@ -65,10 +65,7 @@ export function summarizeQuantumDiscovery(result, runtimeSummary = {}) {
     ibm.apiKeyPresent === true &&
     ibm.serviceCrnPresent === true &&
     runtimeSummary.credentialsExposed === false;
-  const verified =
-    configured &&
-    result?.provider === 'ibm-quantum' &&
-    validBackends.length > 0;
+  const verified = configured && result?.provider === 'ibm-quantum' && validBackends.length > 0;
 
   return {
     verified,
