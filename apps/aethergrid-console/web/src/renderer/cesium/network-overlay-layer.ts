@@ -194,13 +194,14 @@ function nodeEntity(
   const position = coordinate(node.position);
   const aircraft =
     node.kind === 'aircraft' && node.properties?.eventType === 'aircraft';
+  const aircraftModel = aircraft && node.properties?.render3d === true;
   const staleAircraft = aircraft && node.properties?.truthState === 'stale';
 
   return new Entity({
     id: node.id,
     name: node.label ?? node.id,
     position,
-    orientation: aircraft
+    orientation: aircraftModel
       ? Transforms.headingPitchRollQuaternion(
           position,
           new HeadingPitchRoll(
@@ -229,7 +230,7 @@ function nodeEntity(
           ? Number.POSITIVE_INFINITY
           : 1_500_000
     }),
-    model: aircraft
+    model: aircraftModel
       ? new ModelGraphics({
           uri: '/models/aethergrid-aircraft.gltf',
           scale: 8,
@@ -363,10 +364,12 @@ function edgeEntity(
         new DistanceDisplayCondition(0, edgeFarDistance(edge))
       ),
       clampToGround:
-        edge.kind === 'route' ||
-        edge.kind === 'waterway' ||
-        edge.kind === 'coastline' ||
-        edge.properties?.eventType === 'nws-alert-boundary'
+        edge.properties?.eventType !== 'aircraft-history' &&
+        edge.properties?.eventType !== 'aviation-relationship' &&
+        (edge.kind === 'route' ||
+          edge.kind === 'waterway' ||
+          edge.kind === 'coastline' ||
+          edge.properties?.eventType === 'nws-alert-boundary')
     }),
     properties: {
       overlayKind: edge.kind,
