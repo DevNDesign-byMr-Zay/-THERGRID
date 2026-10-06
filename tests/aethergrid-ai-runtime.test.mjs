@@ -18,6 +18,15 @@ async function withFakeModelServer(run) {
 
     response.setHeader('content-type', 'application/json');
     if (request.url === '/v1/chat/completions') {
+      if (
+        body.messages.some((message) =>
+          Object.keys(message).some((key) => !['role', 'content'].includes(key)),
+        )
+      ) {
+        response.statusCode = 400;
+        response.end(JSON.stringify({ error: { message: 'unsupported chat message field' } }));
+        return;
+      }
       const content =
         body.model === 'team-model'
           ? 'TEAM MODEL SYNTHESIS: VÆLON, AUREN and SOLVÆR contributions reconciled.'

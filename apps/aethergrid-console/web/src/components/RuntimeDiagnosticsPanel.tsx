@@ -64,7 +64,7 @@ function providerDetail(
   if (capability?.hardwareEnabled) return 'HARDWARE ENABLED';
   switch (state) {
     case 'ready':
-      return 'CONNECTED';
+      return 'READY · NOT LIVE VERIFIED';
     case 'configured':
       return 'CONFIGURED';
     case 'degraded':
@@ -128,7 +128,7 @@ export function RuntimeDiagnosticsPanel() {
     runtime?.terrain?.credentialsExposed ||
     runtime?.quantum?.credentialsExposed;
 
-  const connectedCount = providerRows.filter(
+  const configuredCount = providerRows.filter(
     (item) => item.state === 'ready' || item.state === 'configured'
   ).length;
   const attentionCount = providerRows.filter(
@@ -140,7 +140,7 @@ export function RuntimeDiagnosticsPanel() {
       <div className="runtime-head">
         <span>
           <small>CONNECTION CENTER</small>
-          <strong>LIVE PROVIDER RUNTIME</strong>
+          <strong>PROVIDER READINESS</strong>
         </span>
         <button
           type="button"
@@ -154,8 +154,8 @@ export function RuntimeDiagnosticsPanel() {
 
       <div className="provider-connection-summary">
         <span>
-          <small>READY</small>
-          <strong>{connectedCount}</strong>
+          <small>READY / CONFIGURED</small>
+          <strong>{configuredCount}</strong>
         </span>
         <span>
           <small>ATTENTION</small>
@@ -186,8 +186,18 @@ export function RuntimeDiagnosticsPanel() {
       </div>
 
       <p className="provider-connection-note">
-        Status comes from the server-side provider registry. Credentials remain server-side and
+        Configuration and readiness do not prove a successful live request. Status comes from the server-side provider registry. Credentials remain server-side and
         are never rendered here.
+      </p>
+
+      <p className="provider-connection-note">
+        IBM: {providers?.quantum?.providers?.ibm?.configured ? 'CONFIGURED · NOT LIVE VERIFIED' : 'UNCONFIGURED · VERIFIED INSTANCE REQUIRED'}.
+        {' '}D-Wave: {providers?.quantum?.providers?.dwave?.configured ? 'CONFIGURED · NOT LIVE VERIFIED' : 'UNCONFIGURED'}.
+        {' '}Local quantum: SIMULATION.
+      </p>
+      <p className="provider-connection-note">
+        Last successful request, latency, cache age and circuit state: UNKNOWN.
+        The readiness endpoint does not supply these measurements. Source receipts in OPS show the results of actual data requests.
       </p>
 
       {error ? <div className="agent-error">{error}</div> : null}

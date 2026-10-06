@@ -53,7 +53,7 @@ async function callOpenAiCompatible(agent, messages, signal) {
     },
     body: JSON.stringify({
       model: agent.model,
-      messages,
+      messages: messages.map(({ role, content }) => ({ role, content })),
       temperature: 0.2,
     }),
     signal,

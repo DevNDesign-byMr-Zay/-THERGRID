@@ -61,6 +61,37 @@ The Vite development server runs on `127.0.0.1:5174` and proxies `/api` to the e
 npm run build
 ```
 
+## Command-center acceptance
+
+The product navigation exposes GRID, GLOBAL, HOLOGRAPHIC, QUANTUM, AI and EVIDENCE, with SCENARIOS and SETTINGS as secondary destinations. The left rail selects one navigation workspace; the right rail selects one intelligence workspace or inspector. Mobile and tablet use keyboard-contained drawers with Escape dismissal and focus restoration. The page stays within the viewport; long histories and inspector content use bounded internal scrolling.
+
+Canonical product and agent artwork is bundled from `../assets/brand`. `dashboard-reference.webp` is not a runtime background. At the activation baseline that reference cannot be decoded; a replacement is needed for exact visual comparison.
+
+Run the real backend-connected browser suite:
+
+```powershell
+npm ci
+npx playwright install chromium
+npm test
+```
+
+The suite starts the existing Node backend and Vite proxy. The backend loads `../.env.secrets` when present, which remains ignored by Git. Tests never submit hardware jobs. A managed environment with an existing Chromium binary may set `AETHERGRID_TEST_CHROMIUM` to its absolute path; software rendering in that configuration verifies layout and fallback behavior, not GPU performance or Cesium ion activation.
+
+To check the compiled build against the same backend in PowerShell:
+
+```powershell
+npm run build
+$env:AETHERGRID_TEST_BUILT = "1"
+npm test
+Remove-Item Env:AETHERGRID_TEST_BUILT
+```
+
+`vite preview` is a local build acceptance surface. Hosting the compiled `dist` output with a same-origin `/api` reverse proxy is a separate deployment step; this branch does not replace the maintained v3 server entrypoint.
+
+Tested layout sizes: 1536×1024, 1440×900, 1366×768, 1024×768, 768×1024 and 390×844. Screenshots and the JSON test report are written to ignored `test-results/`.
+
+The Connection Center reports backend readiness separately from successful source requests. `CONFIGURED` and `READY` do not establish live-provider validation. Agent replies preserve provider/model provenance and TEAM specialist contributions. Source timestamps, forecast/scenario labels and hardware-submission confirmation remain in their existing runtime contracts.
+
 Cesium's required Workers, Assets, Widgets and ThirdParty directories are copied into the build output. The spatial adapter uses Cesium World Terrain and Cesium OSM Buildings when a configured token is available.
 
 The existing native renderer remains the fallback target. Wiring the full v3 renderer bridge into this shell happens only after the new web workspace can be merged without regressing the verified v3 application/package.

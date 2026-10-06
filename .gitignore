@@ -31,3 +31,5 @@ secrets.env
 **/secrets.env
 .aethergrid-secrets/
 apps/aethergrid-console/.aethergrid-secrets/
+
+/test-results/

@@ -54,6 +54,7 @@ interface ProviderReceiptLike {
 }
 
 function finite(value: unknown): number | null {
+  if (value == null || value === '') return null;
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : null;
 }
@@ -169,9 +170,11 @@ async function weatherSource(
   if (!result.ok) return unavailable('weather', `Weather endpoint unavailable (HTTP ${result.status}).`);
 
   const data = object(result.payload.data ?? result.payload);
-  const temperature = finite(data.temperatureC ?? data.temperature);
-  const humidity = finite(data.humidityPercent ?? data.humidity);
-  const wind = finite(data.windSpeedKmh ?? data.windSpeedKph);
+  const current = object(data.current ?? data);
+  const temperature = finite(current.temperatureCelsius ?? current.temperatureC ?? current.temperature);
+  const humidity = finite(current.humidityPercent ?? current.relativeHumidityPercent ?? current.humidity);
+  const windMps = finite(current.windSpeedMps);
+  const wind = finite(current.windSpeedKmh ?? current.windSpeedKph) ?? (windMps == null ? null : windMps * 3.6);
   const metrics = [
     temperature == null ? null : { label: 'TEMP', value: `${temperature.toFixed(1)}°C` },
     humidity == null ? null : { label: 'HUMIDITY', value: `${humidity.toFixed(0)}%` },
@@ -216,7 +219,8 @@ export async function loadHydrologyGauge(
   if (!result.ok) return unavailable('hydrology', `Hydrology endpoint unavailable (HTTP ${result.status}).`);
   const data = object(result.payload.data ?? result.payload);
   const stage = finite(data.observedStageFeet);
-  const flow = finite(data.observedFlowCfs);
+  const rawFlow = finite(data.observedFlowCfs);
+  const flow = rawFlow === -999 ? null : rawFlow;
   const forecastStage = finite(data.forecastStageFeet);
   const minorFloodStage = finite(data.minorFloodStageFeet);
   const returnedGaugeId = text(data.gaugeId);

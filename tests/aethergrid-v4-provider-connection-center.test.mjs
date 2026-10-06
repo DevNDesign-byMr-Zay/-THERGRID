@@ -17,7 +17,7 @@ test('v4 provider connection center consumes only safe runtime metadata', async 
   assert.match(client, /\/api\/aethergrid\/runtime\/providers/u);
   assert.match(client, /loadPublicProviderRuntime/u);
   assert.match(panel, /CONNECTION CENTER/u);
-  assert.match(panel, /LIVE PROVIDER RUNTIME/u);
+  assert.match(panel, /PROVIDER READINESS/u);
   assert.match(panel, /loadPublicProviderRuntime/u);
   assert.match(panel, /credentials remain server-side/i);
   assert.doesNotMatch(panel, /apiKey|authorization|bearer|tokenValue/u);

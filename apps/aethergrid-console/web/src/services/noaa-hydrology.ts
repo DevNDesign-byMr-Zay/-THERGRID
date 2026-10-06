@@ -55,6 +55,7 @@ function text(value: unknown): string | null {
 }
 
 function finite(value: unknown): number | null {
+  if (value == null || value === '') return null;
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : null;
 }
@@ -80,7 +81,7 @@ function floodBand(
     | 'majorFloodStageFeet'
   >
 ): string {
-  if (stage == null) return 'unknown';
+  if (stage == null || [gauge.actionStageFeet, gauge.minorFloodStageFeet, gauge.moderateFloodStageFeet, gauge.majorFloodStageFeet].every((value) => value == null)) return 'unknown';
   if (gauge.majorFloodStageFeet != null && stage >= gauge.majorFloodStageFeet) {
     return 'major';
   }
@@ -133,7 +134,7 @@ export async function loadNoaaHydrologyContext(
     latitude: finite(data.latitude),
     longitude: finite(data.longitude),
     observedStageFeet: finite(data.observedStageFeet),
-    observedFlowCfs: finite(data.observedFlowCfs),
+    observedFlowCfs: finite(data.observedFlowCfs) === -999 ? null : finite(data.observedFlowCfs),
     observedAt: text(data.observedAt),
     actionStageFeet: finite(data.actionStageFeet),
     minorFloodStageFeet: finite(data.minorFloodStageFeet),
