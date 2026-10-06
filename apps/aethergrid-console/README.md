@@ -1,32 +1,36 @@
 # ÆTHERGRID Operator Console
 
-This directory contains the maintained ÆTHERGRID front end and Node backend.
+This directory contains the maintained ÆTHERGRID Node backend and its **canonical React + TypeScript + Cesium command center**.
 
-## Runtime architecture
+## Canonical runtime architecture
 
-The live interface is no longer a screenshot with hotspots. The application is composed from real HTML controls, semantic panels, SVG/canvas charts, canonical brand assets, and a native WebGL spatial renderer.
+The primary browser application lives in `web/` and is built by Vite into `web/dist/`. The Node server in `server.mjs` serves that production build at `/`, preserves the same-origin `/api/aethergrid/*` provider contracts and server-sent events, and uses SPA fallback only for non-API browser routes.
 
-The main spatial surface represents **four dimensions as x/y/z space plus time**. Each WebGL vertex carries a temporal phase as its fourth attribute, and the operator can orbit the camera, zoom, toggle wireframe layers, and scrub the time dimension. When the Node backend is running, the renderer loads its nodes, transmission routes, structures, region and scenario context from `GET /api/aethergrid/spatial`.
+CesiumJS is the primary geographic renderer. The typed native-WebGL adapter remains the renderer fallback inside the v4 application. The older root `index.html`, `styles.css`, and `app.js` are **legacy compatibility source only**; the full-app ZIP places them under `legacy/` and they are never served as the canonical root.
 
-The old dashboard reference remains a design reference only and is excluded from the distributable runtime ZIP. It is not used as a background image.
+Provider credentials remain server-side. The browser receives only the bounded public configuration contract, including a restricted public-client Cesium token when configured. IBM Quantum, D-Wave, AI, Tomorrow.io, EIA and other private credentials are not compiled into the Vite bundle.
 
-## Full app
+The approved command-center screenshot is a design/acceptance reference only and is excluded from the runtime package.
 
-Run:
+## Production launch
+
+From the repository root:
 
 ```bash
-node server.mjs
+npm run aethergrid-app
 ```
 
-Then open:
+That command performs the locked React workspace install/build and then starts the Node server at the configured port (default `http://127.0.0.1:8090`).
 
-```text
-http://127.0.0.1:8090
+For a previously built workspace, the direct server command is:
+
+```bash
+node apps/aethergrid-console/server.mjs
 ```
 
-The backend provides state, live telemetry, server-sent events, the 4D spatial graph, region switching, review-mode switching, scenarios, bounded optimization, AI collaboration, evidence, exports, reset and health APIs. Physical grid actuation and infrastructure dispatch remain disabled.
+If `web/dist/index.html` is absent, the production server fails visibly with `canonical_web_build_missing` rather than silently serving the old v3 interface.
 
-## Standalone HTML
+## Full application ZIP
 
 Run:
 
@@ -34,7 +38,11 @@ Run:
 npm run package:aethergrid-app
 ```
 
-The generated archive contains `standalone.html`. That file inlines the CSS, JavaScript and canonical logo assets so it can be opened directly with `file://` while retaining the real WebGL grid and local simulation fallback.
+The packager performs a locked v4 web build and produces `dist/aethergrid-functional-app.zip`. The archive contains the canonical `web/dist/` application, Node backend/provider modules, the required Zod runtime dependency, launchers, manifests, integrity inventory, and the native v3 compatibility surface under `legacy/`.
+
+`legacy/standalone.html` remains available for direct-open native-WebGL/offline compatibility. It is explicitly noncanonical and does not replace the React/Cesium command center.
+
+Physical grid actuation and infrastructure dispatch remain disabled; optimization and agent output remain advisory and evidence-bound.
 
 ## Interactive surfaces
 

@@ -2,18 +2,19 @@
   "schemaVersion": 2,
   "id": "aethergrid.operator-console",
   "name": "ÆTHERGRID Operator Console",
-  "version": "3.0.0",
-  "format": "html+pwa+node-app",
+  "version": "4.0.0-alpha.1",
+  "format": "react+typescript+vite+cesium+node-app",
   "entrypoints": {
-    "standaloneHtml": "standalone.html",
-    "webApp": "index.html",
+    "webApp": "web/dist/index.html",
     "backend": "server.mjs",
-    "manifest": "manifest.webmanifest"
+    "standaloneHtml": "legacy/standalone.html",
+    "legacyWebApp": "legacy/index.html",
+    "manifest": "legacy/manifest.webmanifest"
   },
   "visualContract": {
     "designReferenceOnly": true,
     "runtimeUsesBackgroundReferenceImage": false,
-    "runtimeComposition": "semantic-dom-native-webgl-canvas",
+    "runtimeComposition": "react-typescript-cesium-command-center",
     "referenceViewport": [
       1536,
       1024
@@ -30,7 +31,10 @@
     "environmentalGeometryFallbackInvented": false,
     "surveyGradeElevation": false,
     "waterAreasWarpedToTerrain": false,
-    "unnamedTallLandmarkRequiresSourceBackedHeight": true
+    "unnamedTallLandmarkRequiresSourceBackedHeight": true,
+    "primaryRenderer": "cesium",
+    "fallbackRenderer": "native-webgl",
+    "legacyNativeSurfaceCanonical": false
   },
   "backend": {
     "runtime": "node>=22",
@@ -86,10 +90,12 @@
   },
   "standalone": {
     "selfContainedGeneratedAtPackageTime": true,
-    "sourceHtml": "index.html",
-    "outputHtml": "standalone.html",
+    "sourceHtml": "legacy/index.html",
+    "outputHtml": "legacy/standalone.html",
     "externalRuntimeDependencies": false,
-    "opensViaFileProtocol": true
+    "opensViaFileProtocol": true,
+    "canonical": false,
+    "compatibilityOnly": true
   },
   "capabilities": {
     "semanticDomPanels": true,
@@ -208,7 +214,13 @@
     "terrainDrapedWaterways": true,
     "terrainAlignedGreenSpace": true,
     "terrainDrapedInfrastructure": true,
-    "levelWaterAreaPresentation": true
+    "levelWaterAreaPresentation": true,
+    "canonicalReactCesiumFrontend": true,
+    "cesiumPrimarySpatialRenderer": true,
+    "nativeWebGlCompatibilityFallback": true,
+    "deterministicViteProductionBuild": true,
+    "sameOriginProviderApi": true,
+    "spaRouting": true
   },
   "aiRuntime": {
     "providers": [
@@ -484,5 +496,30 @@
     ],
     "seismicFeed": "M2.5+ past day GeoJSON",
     "browserSecrets": false
+  },
+  "frontend": {
+    "canonical": true,
+    "sourceDirectory": "web",
+    "buildDirectory": "web/dist",
+    "framework": "react-typescript-vite",
+    "spatialRenderer": "cesium-primary-native-fallback",
+    "developmentCommand": "npm --prefix web run dev",
+    "productionBuildCommand": "npm --prefix web ci && npm --prefix web run build",
+    "sameOriginApiPrefix": "/api/aethergrid",
+    "privateProviderSecretsInBrowser": false
+  },
+  "legacyCompatibility": {
+    "canonical": false,
+    "sourceFiles": [
+      "index.html",
+      "styles.css",
+      "app.js"
+    ],
+    "packagedDirectory": "legacy",
+    "purpose": [
+      "native-renderer fallback reference",
+      "offline standalone compatibility",
+      "regression comparison"
+    ]
   }
 }

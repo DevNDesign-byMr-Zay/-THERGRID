@@ -12,8 +12,7 @@ import { createDwaveProvider } from './providers/dwave-provider.mjs';
 import { createProviderRegistry } from './providers/provider-registry.mjs';
 import http from 'node:http';
 import { createHash } from 'node:crypto';
-import { readFile, stat } from 'node:fs/promises';
-import { extname, join, normalize } from 'node:path';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { createAgentRuntime } from './ai-runtime.mjs';
@@ -23,6 +22,7 @@ import { createGeoRuntime } from './geo-runtime.mjs';
 import { createProfileStore } from './profile-store.mjs';
 import { createQuantumRuntime } from './quantum-runtime.mjs';
 import { createTerrainRuntime } from './terrain-runtime.mjs';
+import { createCanonicalWebRuntime } from './web-runtime.mjs';
 
 const providerRegistry = createProviderRegistry({ env: process.env });
 
@@ -83,6 +83,7 @@ providerRegistry.health.updateStatus(
 );
 
 const root = fileURLToPath(new URL('./', import.meta.url));
+const canonicalWebRuntime = createCanonicalWebRuntime({ appRoot: root });
 const port = Number(providerRegistry.config.app.port);
 
 function createPipelineFetch(providerId) {
@@ -2002,32 +2003,11 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
       return json(response, 405, { error: 'method_not_allowed' });
     }
 
-    const requested = url.pathname === '/' ? '/index.html' : url.pathname;
-    const safe = normalize(requested)
-      .replace(/^(\.\.[/\\])+/, '')
-      .replace(/^[/\\]+/, '');
-    const filePath = join(root, safe);
-
-    if (
-      !filePath.startsWith(root) ||
-      safe === '.aethergrid-data' ||
-      safe.startsWith('.aethergrid-data/') ||
-      safe.startsWith('.aethergrid-data\\')
-    ) {
-      return json(response, 403, { error: 'forbidden' });
+    if (url.pathname.startsWith('/api/')) {
+      return json(response, 404, { error: 'not_found' });
     }
 
-    const info = await stat(filePath);
-    if (!info.isFile()) return json(response, 404, { error: 'not_found' });
-
-    const data = await readFile(filePath);
-    response.writeHead(200, {
-      'content-type': mime[extname(filePath).toLowerCase()] || 'application/octet-stream',
-      'cache-control': 'no-cache',
-      'x-content-type-options': 'nosniff',
-    });
-    if (request.method === 'HEAD') return response.end();
-    response.end(data);
+    return canonicalWebRuntime.serve(request, response, url);
   } catch (error) {
     if (error?.code === 'ENOENT') return json(response, 404, { error: 'not_found' });
     const status = Number(error?.status || 500);
