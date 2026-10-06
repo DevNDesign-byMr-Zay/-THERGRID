@@ -103,7 +103,12 @@ try {
   ]) {
     assert(extracted.includes(required), `packaged smoke artifact missing ${required}`);
   }
-  assert(!extracted.some((entry) => /\/(?:\.env)$/u.test(entry)), 'package must not contain .env');
+  assert(
+    !extracted.some(
+      (entry) => /\/\.env(?:\..*)?$/u.test(entry) && !entry.endsWith('/.env.example'),
+    ),
+    'package must not contain populated .env or .env.* files',
+  );
 
   const port = await reservePort();
   child = spawn(process.execPath, ['server.mjs'], {
