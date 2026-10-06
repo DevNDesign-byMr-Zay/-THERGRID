@@ -300,17 +300,34 @@ export async function loadEnergyContextForRegion(
 
 async function transitSource(cityId: string, signal?: AbortSignal): Promise<OperationalSourceSnapshot> {
   const query = new URLSearchParams({ cityId });
-  const result = await fetchJson(`/api/aethergrid/transit/vehicles?${query.toString()}`, signal);
+  const result = await fetchJson(`/api/aethergrid/transit/realtime?${query.toString()}`, signal);
   if (!result.ok) return unavailable('transit', `Transit endpoint unavailable (HTTP ${result.status}).`);
   const data = object(result.payload.data ?? result.payload);
   const vehicles = Array.isArray(data.vehicles) ? data.vehicles : [];
+  const tripUpdates = Array.isArray(data.tripUpdates) ? data.tripUpdates : [];
+  const alerts = Array.isArray(data.alerts) ? data.alerts : [];
   const receipt = receiptFrom(result.payload);
   const status = text(data.status);
+  const messageType = text(data.messageType);
   const configured =
     receipt.live === true ||
     data.live === true ||
     status === 'GTFS-Realtime Live';
   const feedTimestamp = finite(data.feedHeaderTimestamp);
+  const realtimeCount = vehicles.length + tripUpdates.length + alerts.length;
+  const summary = configured
+    ? messageType === 'trip-updates'
+      ? `${tripUpdates.length} decoded trip update${tripUpdates.length === 1 ? '' : 's'}`
+      : messageType === 'alerts'
+        ? `${alerts.length} decoded service alert${alerts.length === 1 ? '' : 's'}`
+        : `${vehicles.length} decoded vehicle position${vehicles.length === 1 ? '' : 's'}`
+    : text(data.message) ?? 'Transit provider is not configured';
+  const metrics = [
+    vehicles.length ? { label: 'VEHICLES', value: String(vehicles.length) } : null,
+    tripUpdates.length ? { label: 'TRIP UPDATES', value: String(tripUpdates.length) } : null,
+    alerts.length ? { label: 'ALERTS', value: String(alerts.length) } : null,
+    realtimeCount === 0 ? { label: 'RECORDS', value: '0' } : null
+  ].filter((item): item is { label: string; value: string } => Boolean(item));
   return normalizeCommon(
     'transit',
     {
@@ -320,10 +337,8 @@ async function transitSource(cityId: string, signal?: AbortSignal): Promise<Oper
           ? null
           : new Date(feedTimestamp * 1000).toISOString()
     },
-    configured
-      ? `${vehicles.length} decoded vehicle position${vehicles.length === 1 ? '' : 's'}`
-      : text(data.message) ?? 'Transit provider is not configured',
-    [{ label: 'VEHICLES', value: String(vehicles.length) }]
+    summary,
+    metrics
   );
 }
 
