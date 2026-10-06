@@ -9,9 +9,7 @@ async function text(path) {
 }
 
 test('vNext domain registry accounts for the universal command-center domain catalog', async () => {
-  const registry = await text(
-    'apps/aethergrid-console/web/src/domains/domain-registry.ts',
-  );
+  const registry = await text('apps/aethergrid-console/web/src/domains/domain-registry.ts');
 
   for (const domain of [
     'aviation',
