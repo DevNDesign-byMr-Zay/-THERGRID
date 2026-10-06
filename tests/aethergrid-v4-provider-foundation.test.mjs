@@ -83,7 +83,16 @@ function encodeSubMessageField(fieldNumber, subMsgBytes) {
   return [...encodeTag(fieldNumber, 2), ...encodeVarint(subMsgBytes.length), ...subMsgBytes];
 }
 
-function createGtfsVehiclePositionProtobuf({ vehicleId, tripId, routeId, lat, lon, timestamp }) {
+function createGtfsVehiclePositionProtobuf({
+  vehicleId,
+  tripId,
+  routeId,
+  lat,
+  lon,
+  timestamp,
+  currentStatus = 2,
+  stopId = 'STOP-1',
+}) {
   const tripBytes = [
     ...(tripId ? encodeStringField(1, tripId) : []),
     ...(routeId ? encodeStringField(5, routeId) : []),
@@ -97,6 +106,9 @@ function createGtfsVehiclePositionProtobuf({ vehicleId, tripId, routeId, lat, lo
   const vehicleMsgBytes = [
     ...(tripBytes.length ? encodeSubMessageField(1, tripBytes) : []),
     ...(posBytes.length ? encodeSubMessageField(2, posBytes) : []),
+    ...encodeVarintField(4, currentStatus),
+    ...encodeVarintField(5, timestamp || Math.floor(Date.now() / 1000)),
+    ...encodeStringField(7, stopId),
     ...(vDescBytes.length ? encodeSubMessageField(8, vDescBytes) : []),
   ];
 
@@ -719,6 +731,9 @@ describe('ÆTHERGRID v4.0 Provider Runtime Execution Layer & Verification', () =
       assert.equal(decodedRes.data.vehicles[0].vehicleId, 'TRAIN-101');
       assert.equal(decodedRes.data.vehicles[0].routeId, 'YAMANOTE');
       assert.equal(Math.round(decodedRes.data.vehicles[0].latitude), 36);
+      assert.equal(decodedRes.data.vehicles[0].currentStatus, undefined);
+      assert.equal(decodedRes.data.vehicles[0].stopId, 'STOP-1');
+      assert.equal(typeof decodedRes.data.vehicles[0].timestamp, 'number');
       assert.equal(decodedRes.receipt.live, true);
 
       // Test TripUpdate protobuf decoding
@@ -735,6 +750,8 @@ describe('ÆTHERGRID v4.0 Provider Runtime Execution Layer & Verification', () =
       assert.equal(tuRes.data.tripUpdates.length, 1);
       assert.equal(tuRes.data.tripUpdates[0].tripId, 'TRIP-777');
       assert.equal(tuRes.data.tripUpdates[0].delay, 120);
+      assert.equal(tuRes.data.tripUpdates[0].stopTimeUpdate.length, 1);
+      assert.equal(tuRes.data.tripUpdates[0].stopTimeUpdate[0].stopId, 'STOP-10');
 
       // Test Alert protobuf decoding
       const alertBytes = createGtfsAlertProtobuf({
