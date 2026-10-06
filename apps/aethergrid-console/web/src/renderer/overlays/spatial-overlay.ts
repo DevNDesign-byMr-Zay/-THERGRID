@@ -8,7 +8,8 @@ export type OverlayNodeKind =
   | 'city'
   | 'asset'
   | 'event'
-  | 'analysis-point';
+  | 'analysis-point'
+  | 'aircraft';
 
 export type OverlayEdgeKind =
   | 'transmission'
