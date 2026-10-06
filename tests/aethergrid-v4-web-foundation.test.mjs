@@ -19,10 +19,7 @@ test('v4 web workspace is canonical while preserving provider secret boundaries'
   assert.equal(packageData.dependencies.cesium, '1.145.0');
   assert.equal(packageData.dependencies.react, '19.3.0');
   assert.match(readme, /canonical ÆTHERGRID operator application/iu);
-  assert.match(
-    readme,
-    /production Node server serves this workspace's built `dist\/` output/iu,
-  );
+  assert.match(readme, /production Node server serves this workspace's built `dist\/` output/iu);
   assert.match(readme, /compatibility source only/iu);
   assert.match(readme, /GET \/api\/aethergrid\/config\/public/u);
   assert.doesNotMatch(packageJson, /IBM_QUANTUM_API_KEY|OPENAI_API_KEY|TOMORROW_API_KEY/u);
