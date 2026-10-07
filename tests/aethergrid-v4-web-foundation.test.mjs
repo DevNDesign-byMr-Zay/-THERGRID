@@ -305,7 +305,9 @@ test('v4 Cesium city identity includes mapped roads water coastline and green ar
   assert.match(contract, /OverlayAreaKind = 'water' \| 'green'/u);
   assert.match(service, /cityMeshToSemanticOverlays/u);
   assert.match(service, /layerId: 'buildings'/u);
+  assert.match(service, /layerId: 'illumination'/u);
   assert.match(service, /presentationType: 'source-backed-building'/u);
+  assert.match(service, /\?spatial=1/u);
   assert.match(service, /layerId: 'roads'/u);
   assert.match(service, /layerId: 'water'/u);
   assert.match(service, /layerId: 'green'/u);
