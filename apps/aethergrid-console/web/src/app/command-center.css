@@ -474,3 +474,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     transition: none;
   }
 }
+
+
+.immersive-spatial .scene-caption em {
+  display: block;
+  margin-top: 5px;
+  color: rgba(126, 232, 255, 0.76);
+  font: 600 9px ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-style: normal;
+  letter-spacing: 0.08em;
+}
