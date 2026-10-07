@@ -217,7 +217,7 @@ function cityMeshToBuildingOverlay(
         id: building.id,
         kind: 'building',
         positions: (building.footprint ?? []).map((point) =>
-          localMetersToCoordinate(mesh.city, point, minHeightM)
+          localMetersToCoordinate(mesh.city, point, 0)
         ),
         label: building.name || building.buildingType || building.id,
         intensity: Math.min(1, Math.max(0.16, heightM / 320)),
