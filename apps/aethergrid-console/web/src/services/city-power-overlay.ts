@@ -17,6 +17,17 @@ interface CityBuilding {
   id: string;
   name?: string;
   heightM?: number | null;
+  heightSource?: string | null;
+  minHeightM?: number | null;
+  levels?: number | null;
+  buildingType?: string | null;
+  buildingPart?: boolean;
+  buildingMaterial?: string | null;
+  buildingColor?: string | null;
+  roofShape?: string | null;
+  roofHeightM?: number | null;
+  roofMaterial?: string | null;
+  roofColor?: string | null;
   footprint?: readonly (readonly [number, number])[];
 }
 
@@ -186,6 +197,62 @@ function pathToEdges(
   return edges;
 }
 
+function cityMeshToBuildingOverlay(
+  mesh: CityMeshResponse
+): SpatialOverlaySnapshot {
+  const source = sourceFields(mesh);
+  const areas: SpatialOverlayArea[] = (mesh.buildings ?? [])
+    .filter((building) => (building.footprint?.length ?? 0) >= 3)
+    .map((building) => {
+      const minHeightM = Math.max(0, Number(building.minHeightM ?? 0));
+      const heightM = Math.max(
+        minHeightM + 3.2,
+        Number(building.heightM ?? minHeightM + 12)
+      );
+      const heightSource = String(building.heightSource ?? 'inferred');
+      const sourceBacked =
+        heightSource !== 'inferred' && heightSource !== 'synthetic-fallback';
+
+      return {
+        id: building.id,
+        kind: 'building',
+        positions: (building.footprint ?? []).map((point) =>
+          localMetersToCoordinate(mesh.city, point, minHeightM)
+        ),
+        label: building.name || building.buildingType || building.id,
+        intensity: Math.min(1, Math.max(0.16, heightM / 320)),
+        properties: {
+          sourceFeatureId: building.id,
+          sourceDataset: 'osm-overpass',
+          cityId: mesh.city.id,
+          presentationType: 'source-backed-building',
+          sourceBacked,
+          heightM,
+          minHeightM,
+          heightSource,
+          levels: building.levels ?? null,
+          buildingType: building.buildingType ?? '',
+          buildingPart: building.buildingPart === true,
+          buildingMaterial: building.buildingMaterial ?? '',
+          buildingColor: building.buildingColor ?? '',
+          roofShape: building.roofShape ?? '',
+          roofHeightM: building.roofHeightM ?? 0,
+          roofMaterial: building.roofMaterial ?? '',
+          roofColor: building.roofColor ?? ''
+        }
+      };
+    });
+
+  return {
+    id: `buildings:${mesh.city.id}:${source.eventTime}`,
+    layerId: 'buildings',
+    ...source,
+    nodes: [],
+    edges: [],
+    areas
+  };
+}
+
 export function cityMeshToSemanticOverlays(
   mesh: CityMeshResponse
 ): readonly SpatialOverlaySnapshot[] {
@@ -261,6 +328,7 @@ export function cityMeshToSemanticOverlays(
     }));
 
   return [
+    cityMeshToBuildingOverlay(mesh),
     {
       id: `roads:${mesh.city.id}:${source.eventTime}`,
       layerId: 'roads',
