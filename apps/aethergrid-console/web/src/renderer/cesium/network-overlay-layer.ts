@@ -460,8 +460,8 @@ function areaEntity(
     Number(area.properties?.heightM ?? minHeightM + 12)
   );
   const sourceBacked = area.properties?.sourceBacked === true;
-  const buildingFill = buildingAreaColor(area, sourceBacked ? 0.74 : 0.36);
-  const buildingOutline = buildingAreaColor(area, sourceBacked ? 0.96 : 0.62);
+  const buildingFill = buildingAreaColor(area, sourceBacked ? 0.84 : 0.46);
+  const buildingOutline = buildingAreaColor(area, sourceBacked ? 0.22 : 0.14);
 
   return new Entity({
     id: area.id,
