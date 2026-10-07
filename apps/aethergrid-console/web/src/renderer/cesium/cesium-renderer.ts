@@ -276,6 +276,10 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     overlay.apply(snapshot);
     if (this.#time) overlay.setTime(this.#time);
     overlay.setVisible(this.#layerVisible(snapshot.layerId, true));
+    if (snapshot.layerId === 'buildings' && this.#buildings) {
+      this.#buildings.show = false;
+    }
+    viewer.scene.requestRender();
   }
 
   clearOverlay(layerId: string): void {
@@ -283,6 +287,10 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     if (!overlay) return;
     overlay.destroy();
     this.#overlays.delete(layerId);
+    if (layerId === 'buildings' && this.#buildings) {
+      this.#buildings.show = this.#buildingsShouldShow();
+      this.#viewer?.scene.requestRender();
+    }
   }
 
   applyAtmosphere(snapshot: AtmosphericOverlaySnapshot): void {
@@ -427,14 +435,11 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       journeyPhase: this.#journeyPhase,
       detailLevel: this.#detailLevel,
       performanceTier: this.#performanceTier,
-      buildingMode:
-        this.#buildings && this.#overlays.has('buildings')
-          ? 'hybrid'
-          : this.#buildings
-            ? 'cesium-osm'
-            : this.#overlays.has('buildings')
-              ? 'source-extruded'
-              : 'none',
+      buildingMode: this.#overlays.has('buildings')
+        ? 'source-extruded'
+        : this.#buildings
+          ? 'cesium-osm'
+          : 'none',
       solar: this.#solar,
       reason: this.#reason
     };
@@ -513,6 +518,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #buildingsShouldShow(): boolean {
     return (
       this.#appliedVisualMode !== 'reality' &&
+      !this.#overlays.has('buildings') &&
       this.#layerVisible('buildings', true) &&
       (this.#detailLevel === 'city' || this.#detailLevel === 'district')
     );
