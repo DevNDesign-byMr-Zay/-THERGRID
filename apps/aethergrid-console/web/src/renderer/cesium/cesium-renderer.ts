@@ -7,8 +7,10 @@ import {
   Cesium3DTileFeature,
   Cesium3DTileset,
   Color,
+  EllipsoidTerrainProvider,
   Entity,
   Ion,
+  OpenStreetMapImageryProvider,
   Math as CesiumMath,
   Terrain,
   Viewer,
@@ -93,13 +95,9 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
   async initialize(config: SpatialRendererConfig = {}): Promise<void> {
     if (!this.#container) throw new Error('Cesium renderer must be mounted before initialization');
-    if (!config.cesiumIonToken) {
-      this.#degraded = true;
-      this.#reason = 'Cesium ion token is not configured';
-      throw new Error(this.#reason);
-    }
 
-    Ion.defaultAccessToken = config.cesiumIonToken;
+    const ionEnabled = Boolean(config.cesiumIonToken);
+    if (config.cesiumIonToken) Ion.defaultAccessToken = config.cesiumIonToken;
 
     this.#viewer = new Viewer(this.#container, {
       animation: false,
@@ -113,14 +111,38 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       selectionIndicator: true,
       shadows: true,
       timeline: false,
-      terrain: Terrain.fromWorldTerrain({
-        requestVertexNormals: true,
-        requestWaterMask: true
-      })
+      baseLayer: ionEnabled ? undefined : false,
+      ...(ionEnabled
+        ? {
+            terrain: Terrain.fromWorldTerrain({
+              requestVertexNormals: true,
+              requestWaterMask: true
+            })
+          }
+        : {
+            terrainProvider: new EllipsoidTerrainProvider()
+          })
     });
 
+    if (!ionEnabled) {
+      try {
+        this.#viewer.imageryLayers.addImageryProvider(
+          new OpenStreetMapImageryProvider({
+            url: 'https://tile.openstreetmap.org/'
+          })
+        );
+      } catch {
+        // The Cesium ellipsoid + source-backed overlays remain usable if imagery is unavailable.
+      }
+    }
+
+    this.#viewer.scene.globe.baseColor =
+      Color.fromCssColorString('#06111c');
     this.#viewer.scene.globe.enableLighting = true;
-    this.#viewer.scene.globe.depthTestAgainstTerrain = true;
+    this.#viewer.scene.globe.depthTestAgainstTerrain = ionEnabled;
+    if (this.#viewer.scene.skyAtmosphere) {
+      this.#viewer.scene.skyAtmosphere.show = true;
+    }
     this.#grid = new GeodeticGridLayer(this.#viewer.scene);
     this.#cameraJourney = new CameraJourneyController(this.#viewer.camera);
     this.#visualController = new VisualModeController(this.#viewer, {
@@ -130,22 +152,27 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#airQuality = new AirQualityLayer(this.#viewer);
     this.#solarLighting = new SolarLightingController(this.#viewer);
 
-    try {
-      this.#buildings = await createOsmBuildingsAsync({
-        enableShowOutline: true,
-        showOutline: true
-      });
-      this.#viewer.scene.primitives.add(this.#buildings);
-      this.#visualController.setBuildings(this.#buildings);
-      this.#applyDetailForPhase(this.#journeyPhase === 'idle' ? 'district' : this.#journeyPhase);
-    } catch (error) {
-      this.#degraded = true;
-      this.#reason =
-        error instanceof Error ? `OSM Buildings unavailable: ${error.message}` : 'OSM Buildings unavailable';
+    if (ionEnabled) {
+      try {
+        this.#buildings = await createOsmBuildingsAsync({
+          enableShowOutline: true,
+          showOutline: true
+        });
+        this.#viewer.scene.primitives.add(this.#buildings);
+        this.#visualController.setBuildings(this.#buildings);
+        this.#applyDetailForPhase(this.#journeyPhase === 'idle' ? 'district' : this.#journeyPhase);
+      } catch (error) {
+        this.#degraded = true;
+        this.#reason =
+          error instanceof Error ? `OSM Buildings unavailable: ${error.message}` : 'OSM Buildings unavailable';
+        this.#visualController.setBuildings(null);
+      }
+    } else {
+      this.#buildings = null;
       this.#visualController.setBuildings(null);
     }
 
-    if (config.realityEnabled) {
+    if (config.realityEnabled && ionEnabled) {
       try {
         this.#realityTiles = await createGooglePhotorealistic3DTileset();
         this.#realityTiles.show = false;
