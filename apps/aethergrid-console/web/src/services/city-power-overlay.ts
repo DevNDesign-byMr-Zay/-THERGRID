@@ -534,7 +534,7 @@ function cityMeshToIlluminationOverlay(
 
   return {
     id: `urban-illumination:${mesh.city.id}:${source.eventTime}`,
-    layerId: 'buildings',
+    layerId: 'illumination',
     ...source,
     nodes,
     edges: []
@@ -633,7 +633,7 @@ export async function loadCityPowerOverlay(
   signal?: AbortSignal
 ): Promise<SpatialOverlaySnapshot> {
   const mesh = await cityMeshRequest(
-    `/api/aethergrid/geospatial/city/${encodeURIComponent(cityId)}`,
+    `/api/aethergrid/geospatial/city/${encodeURIComponent(cityId)}?spatial=1`,
     'city power overlay request',
     signal
   );
@@ -651,7 +651,8 @@ export async function loadCoordinatePowerOverlay(
     lat: String(latitude),
     lon: String(longitude),
     name,
-    radiusM: '1200'
+    radiusM: '1200',
+    spatial: '1'
   });
   const mesh = await cityMeshRequest(
     `/api/aethergrid/geospatial/point?${query.toString()}`,
@@ -667,7 +668,7 @@ export async function loadCitySpatialBundle(
   signal?: AbortSignal
 ): Promise<CitySpatialBundle> {
   const mesh = await cityMeshRequest(
-    `/api/aethergrid/geospatial/city/${encodeURIComponent(cityId)}`,
+    `/api/aethergrid/geospatial/city/${encodeURIComponent(cityId)}?spatial=1`,
     'city spatial bundle request',
     signal
   );
