@@ -27,22 +27,6 @@ test('credential-free globe and real city mesh stay visible', async ({ page }) =
 
   await expect(stage).toHaveAttribute('data-spatial-scope', 'city');
 
-  const meshResponse = await page.request.get(
-    '/api/aethergrid/geospatial/city/new-york?force=1'
-  );
-  const meshPayload = await meshResponse.json();
-  console.log(
-    'AETHERGRID_CITY_MESH_DIAGNOSTIC',
-    JSON.stringify({
-      status: meshResponse.status(),
-      source: meshPayload?.source ?? null,
-      buildingCount: Array.isArray(meshPayload?.buildings)
-        ? meshPayload.buildings.length
-        : 0,
-      skyline: meshPayload?.skylineProfile ?? null
-    })
-  );
-
   await expect
     .poll(
       async () => Number(
@@ -61,7 +45,7 @@ test('credential-free globe and real city mesh stay visible', async ({ page }) =
   );
   await expect(page.locator('.scene-caption')).toContainText('MAPPED BUILDINGS');
   await expect(shell).toHaveAttribute('data-renderer', 'cesium');
-  await page.waitForTimeout(8_000);
+  await page.waitForTimeout(2_000);
   await page.screenshot({
     path: 'test-results/credential-free-new-york-3d.png',
     fullPage: true
