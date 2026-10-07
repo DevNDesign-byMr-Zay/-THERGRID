@@ -492,8 +492,8 @@ function areaEntity(
       perPositionHeight: !building,
       height: building ? new ConstantProperty(minHeightM) : undefined,
       extrudedHeight: building ? new ConstantProperty(heightM) : undefined,
-      closeTop: building ? new ConstantProperty(true) : undefined,
-      closeBottom: building ? new ConstantProperty(true) : undefined
+      closeTop: building ? true : undefined,
+      closeBottom: building ? true : undefined
     }),
     properties: {
       overlayKind: area.kind,
