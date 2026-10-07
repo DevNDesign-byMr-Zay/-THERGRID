@@ -53,7 +53,10 @@ test('v4 spatial renderer has Cesium primary and native fallback contracts', asy
   assert.match(contract, /'reality'/u);
   assert.match(cesiumRenderer, /Terrain\.fromWorldTerrain/u);
   assert.match(cesiumRenderer, /createOsmBuildingsAsync/u);
-  assert.match(cesiumRenderer, /depthTestAgainstTerrain = true/u);
+  assert.match(cesiumRenderer, /depthTestAgainstTerrain = ionEnabled/u);
+  assert.match(cesiumRenderer, /OpenStreetMapImageryProvider/u);
+  assert.match(cesiumRenderer, /EllipsoidTerrainProvider/u);
+  assert.doesNotMatch(cesiumRenderer, /Cesium ion token is not configured/u);
   assert.match(cesiumRenderer, /GeodeticGridLayer/u);
   assert.match(geodeticGrid, /Cartesian3\.fromDegrees/u);
   assert.match(geodeticGrid, /setTime\(isoTime/u);
@@ -106,9 +109,6 @@ test('v4 operator shell keeps the spatial viewport dominant and responsive', asy
   assert.match(shell, /height: 100dvh/u);
   assert.match(viewport, /new CesiumSpatialRenderer\(\)/u);
   assert.match(viewport, /new NativeWebglSpatialRenderer\(\)/u);
-  assert.match(cesium, /OpenStreetMapImageryProvider/u);
-  assert.match(cesium, /EllipsoidTerrainProvider/u);
-  assert.doesNotMatch(cesium, /Cesium ion token is not configured/u);
   assert.match(viewport, /loadPublicRuntimeConfig/u);
   assert.match(styles, /grid-template-columns: 220px minmax\(0, 1fr\) 250px/u);
   assert.match(styles, /prefers-reduced-motion/u);
