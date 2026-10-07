@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: github-release
@@ -25,6 +26,32 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
+      - name: Require successful exact-SHA canonical live acceptance
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { data } = await github.rest.actions.listWorkflowRunsForRepo({
+              ...context.repo,
+              head_sha: context.sha,
+              per_page: 100
+            });
+            const canonical = data.workflow_runs
+              .filter(run =>
+                run.name === 'aethergrid/canonical-live' &&
+                run.path === '.github/workflows/aethergrid-canonical-live.yml' &&
+                run.head_branch === 'main' &&
+                run.head_sha === context.sha &&
+                run.event === 'workflow_dispatch' &&
+                run.status === 'completed' &&
+                run.conclusion === 'success'
+              )
+              .sort((a, b) => b.id - a.id)[0];
+            if (!canonical) {
+              core.setFailed(`No successful exact-main aethergrid/canonical-live run exists for ${context.sha}`);
+              return;
+            }
+            core.info(`Using canonical-live run #${canonical.run_number} (${canonical.id}) for ${context.sha}`);
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -79,9 +106,10 @@ jobs:
           set -euo pipefail
           node scripts/create-release-manifest.mjs "${{ steps.release_tag.outputs.tag }}" "$GITHUB_SHA" release-manifest.json
           npm run package:aethergrid
+          npm run package:aethergrid-app
           npm sbom --sbom-format=cyclonedx > sbom.cdx.json
           printf '%s\n' "$GITHUB_SHA" > release-commit.txt
-          sha256sum sbom.cdx.json release-commit.txt release-manifest.json dist/aethergrid-operator-console.zip > release-artifacts.sha256
+          sha256sum sbom.cdx.json release-commit.txt release-manifest.json dist/aethergrid-functional-app.zip dist/aethergrid-operator-console.zip > release-artifacts.sha256
 
       - name: Verify release evidence checksums
         run: sha256sum --check release-artifacts.sha256
@@ -97,6 +125,7 @@ jobs:
             release-commit.txt
             release-manifest.json
             release-artifacts.sha256
+            dist/aethergrid-functional-app.zip
             dist/aethergrid-operator-console.zip
 
 
@@ -105,7 +134,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${{ steps.release_tag.outputs.tag }}" \
-            sbom.cdx.json release-commit.txt release-artifacts.sha256 release-manifest.json dist/aethergrid-operator-console.zip \
+            sbom.cdx.json release-commit.txt release-artifacts.sha256 release-manifest.json dist/aethergrid-functional-app.zip \
             --target "$GITHUB_SHA" \
             --title "${{ steps.release_tag.outputs.tag }}" \
             --generate-notes

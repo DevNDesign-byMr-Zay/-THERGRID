@@ -14,6 +14,7 @@ for (const [width, height] of resolutions) {
     await page.setViewportSize({ width, height });
     await page.goto('/');
     await expect(page.getByRole('img', { name: 'ÆTHERGRID', exact: true })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Product modes' }).getByRole('button', { name: 'GLOBAL', exact: true })).toHaveAttribute('aria-pressed', 'true');
     for (const name of ['GRID', 'GLOBAL', 'HOLOGRAPHIC', 'QUANTUM', 'AI', 'EVIDENCE']) {
       await expect(page.getByRole('navigation', { name: 'Product modes' }).getByRole('button', { name, exact: true })).toBeVisible();
     }
