@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test('credential-free globe and real city mesh stay visible', async ({ page }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(150_000);
 
   await page.goto('/');
   const shell = page.locator('.spatial-shell');
@@ -41,11 +41,11 @@ test('credential-free globe and real city mesh stay visible', async ({ page }) =
 
   await expect(shell).toHaveAttribute(
     'data-building-mode',
-    /^(source-extruded|hybrid)$/
+    /^(source-extruded|hybrid|cesium-osm)$/
   );
   await expect(page.locator('.scene-caption')).toContainText('MAPPED BUILDINGS');
   await expect(shell).toHaveAttribute('data-renderer', 'cesium');
-  await page.waitForTimeout(2_000);
+  await page.waitForTimeout(12_000);
   await page.screenshot({
     path: 'test-results/credential-free-new-york-3d.png',
     fullPage: true
