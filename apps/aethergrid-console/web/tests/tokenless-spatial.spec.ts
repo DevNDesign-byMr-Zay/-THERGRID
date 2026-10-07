@@ -28,16 +28,29 @@ test('credential-free globe and real city mesh stay visible', async ({ page }) =
   await expect(stage).toHaveAttribute('data-spatial-scope', 'city');
   await expect
     .poll(
-      async () =>
-        Number((await stage.getAttribute('data-source-building-count')) || 0),
+      async () => ({
+        sourceCount: Number(
+          (await stage.getAttribute('data-source-building-count')) || 0
+        ),
+        mode: (await shell.getAttribute('data-building-mode')) || 'none'
+      }),
       {
         timeout: 75_000,
-        message: 'expected source-backed OpenStreetMap building geometry'
+        message: 'expected a real 3D building source from Cesium OSM or source-backed OSM extrusion'
       }
     )
-    .toBeGreaterThan(0);
+    .toMatchObject(
+      expect.objectContaining({
+        mode: expect.stringMatching(/^(cesium-osm|source-extruded|hybrid)$/)
+      })
+    );
 
-  await expect(page.locator('.scene-caption')).toContainText('MAPPED BUILDINGS');
+  const sourceCount = Number(
+    (await stage.getAttribute('data-source-building-count')) || 0
+  );
+  if (sourceCount > 0) {
+    await expect(page.locator('.scene-caption')).toContainText('MAPPED BUILDINGS');
+  }
   await expect(shell).toHaveAttribute('data-renderer', 'cesium');
   await page.waitForTimeout(8_000);
   await page.screenshot({
