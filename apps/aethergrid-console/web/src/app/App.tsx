@@ -1104,6 +1104,13 @@ export function App() {
     [scope, illuminationOverlay, citySolar.phase]
   );
 
+  const sourceBuildingCount = useMemo(
+    () =>
+      semanticOverlays.find((snapshot) => snapshot.layerId === 'buildings')
+        ?.areas?.length ?? 0,
+    [semanticOverlays]
+  );
+
   const windOverlay = useMemo(
     () =>
       scope === 'city' &&
@@ -1966,7 +1973,12 @@ export function App() {
           </div>
         </aside>
 
-        <section className="world-stage" inert={navigationDrawer.compact && (navOpen || intelOpen)}>
+        <section
+          className="world-stage"
+          data-spatial-scope={scope}
+          data-source-building-count={sourceBuildingCount}
+          inert={navigationDrawer.compact && (navOpen || intelOpen)}
+        >
           <div className="stage-toolbar">
             <div>
               <span className="eyebrow">ACTIVE FRAME</span>
@@ -2301,6 +2313,13 @@ export function App() {
                 ? 'SELECT TWO GEOGRAPHIC POINTS TO MEASURE'
                 : 'CLICK OR TAP A 3D FEATURE TO INSPECT'}
             </small>
+            <em>
+              {scope === 'world'
+                ? 'LIVE AQI · USGS SEISMIC · SOLAR 4D'
+                : cityIdentity
+                  ? `${sourceBuildingCount.toLocaleString()} MAPPED BUILDINGS · ${cityIdentity.sourceBackedHeightCoveragePercent.toFixed(1)}% SOURCE HEIGHTS`
+                  : 'SOURCE-BACKED CITY GEOMETRY LOADING'}
+            </em>
           </div>
         </section>
 
