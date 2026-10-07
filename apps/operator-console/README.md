@@ -1,6 +1,8 @@
-# ÆTHERGRID Operator Console Package
+# ÆTHERGRID Legacy Evidence Console
 
-This directory is the maintained ÆTHERGRID user-interface source packaged from the THERGRID application service.
+This directory contains the earlier static/evidence console. It is retained for regression, audit and historical package review, but it is **not the canonical ÆTHERGRID product UI**.
+
+The canonical application lives at `apps/aethergrid-console/web/`, uses React + TypeScript + Cesium, opens on the 3D GLOBAL world, and is distributed as `dist/aethergrid-functional-app.zip`.
 
 ## Included UI formats
 
@@ -27,17 +29,19 @@ Then open:
 http://127.0.0.1:8090
 ```
 
-## Build the complete ZIP
+## Build the legacy evidence ZIP
 
 ```bash
 npm run package:aethergrid
 ```
 
-The output is:
+The support artifact is:
 
 ```text
 dist/aethergrid-operator-console.zip
 ```
+
+For the actual product build, use `npm run package:aethergrid-app` and distribute `dist/aethergrid-functional-app.zip`.
 
 The packaging task fails if any required UI file is missing or empty. It also verifies the HTML shell, parses both source JSON files, embeds populated runtime snapshots, records file sizes and SHA-256 digests, and produces a deterministic ZIP without relying on an external ZIP utility.
 
