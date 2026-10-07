@@ -37,7 +37,7 @@ jobs:
         run: npm run build
 
       - name: Install root runtime dependencies for canonical preview
-        working-directory: ../../..
+        working-directory: ${{ github.workspace }}
         run: npm ci --ignore-scripts
 
       - name: Install maintained Chromium
