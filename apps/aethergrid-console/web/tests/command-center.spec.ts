@@ -63,10 +63,13 @@ test('exclusive workspaces and source truth survive mode changes', async ({ page
   await expect(page.locator('.intel-ai')).not.toBeVisible();
   await expect(page.locator('.entity-dossier')).not.toBeVisible();
   await page.getByRole('button', { name: 'SETTINGS', exact: true }).click();
-  await expect(page.getByText('APPEARANCE', { exact: true }).first()).toBeVisible();
-  await expect(page.getByText('Connection Center', { exact: false }).first()).not.toBeVisible();
-  await page.getByRole('button', { name: 'DEVELOPER / DIAGNOSTICS', exact: true }).click();
-  await expect(page.getByText('Connection Center', { exact: false }).first()).toBeVisible();
+  const settings = page.locator('.settings-panel:visible');
+  await expect(settings).toHaveCount(1);
+  await expect(settings.getByText('APPEARANCE', { exact: true }).first()).toBeVisible();
+  await expect(settings.getByText('Connection Center and provider readiness', { exact: true })).not.toBeVisible();
+  await settings.getByRole('button', { name: 'DEVELOPER / DIAGNOSTICS', exact: true }).click();
+  await expect(settings.getByText('Connection Center and provider readiness', { exact: true })).toBeVisible();
+  await expect(settings.locator('.provider-connection-center')).toBeVisible();
 });
 
 test('spatial handoff exits the active secondary inspector', async ({ page }) => {
