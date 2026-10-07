@@ -466,7 +466,14 @@ function areaEntity(
   );
   const sourceBacked = area.properties?.sourceBacked === true;
   const buildingFill = buildingAreaColor(area, sourceBacked ? 0.94 : 0.58);
+  const buildingRoof = buildingAreaColor(area, sourceBacked ? 1 : 0.7);
   const buildingOutline = buildingAreaColor(area, sourceBacked ? 0.48 : 0.24);
+  const buildingMinimumHeights = building
+    ? positions.map(() => minHeightM)
+    : undefined;
+  const buildingMaximumHeights = building
+    ? positions.map(() => heightM)
+    : undefined;
 
   return new Entity({
     id: area.id,
@@ -475,7 +482,7 @@ function areaEntity(
       hierarchy: new ConstantProperty(new PolygonHierarchy(positions)),
       material: new ColorMaterialProperty(
         building
-          ? buildingFill
+          ? buildingRoof
           : water
             ? Color.fromCssColorString('#2eb9e8').withAlpha(0.22)
             : Color.fromCssColorString('#59d99a').withAlpha(0.18)
@@ -490,11 +497,21 @@ function areaEntity(
         new DistanceDisplayCondition(0, areaFarDistance(area))
       ),
       perPositionHeight: !building,
-      height: building ? new ConstantProperty(minHeightM) : undefined,
-      extrudedHeight: building ? new ConstantProperty(heightM) : undefined,
-      closeTop: building ? true : undefined,
-      closeBottom: building ? true : undefined
+      height: building ? new ConstantProperty(heightM) : undefined
     }),
+    wall: building
+      ? new WallGraphics({
+          positions: new ConstantProperty(positions),
+          minimumHeights: new ConstantProperty(buildingMinimumHeights),
+          maximumHeights: new ConstantProperty(buildingMaximumHeights),
+          material: new ColorMaterialProperty(buildingFill),
+          outline: true,
+          outlineColor: buildingOutline,
+          distanceDisplayCondition: new ConstantProperty(
+            new DistanceDisplayCondition(0, areaFarDistance(area))
+          )
+        })
+      : undefined,
     properties: {
       overlayKind: area.kind,
       sourceName: area.label ?? area.id,
