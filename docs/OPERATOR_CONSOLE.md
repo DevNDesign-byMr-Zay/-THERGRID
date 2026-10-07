@@ -38,9 +38,13 @@ auditable recommendation
 
 No step grants physical actuation authority.
 
-## Console information architecture
+## Canonical product vs. legacy evidence console
 
-The first maintained UI lives at `apps/operator-console/` and exposes five operator surfaces:
+The **canonical user-facing ÆTHERGRID application** lives at `apps/aethergrid-console/web/` and is the React + TypeScript + Cesium spatial product. It opens on the GLOBAL 3D world, descends into live city scenes, and presents navigation, intelligence, AI, quantum, scenarios and evidence as overlays/drawers around the spatial renderer.
+
+The earlier `apps/operator-console/` surface remains only as a legacy/static evidence console for regression, archive inspection and historical review. It must not be presented as the primary product or release download.
+
+The legacy evidence console exposes five historical operator surfaces:
 
 ### GRID
 
@@ -89,20 +93,16 @@ The UI keeps the authority boundary visible:
 
 ## Runtime
 
-Run the console from a locked fresh clone:
+Run the **canonical spatial application** from a locked fresh clone:
 
 ```bash
 npm ci --ignore-scripts
-npm run operator-console
+npm run aethergrid-app
 ```
 
-The default local URL is:
+Open `http://127.0.0.1:8090`. This builds and serves the React/Cesium application together with its same-origin backend APIs.
 
-```text
-http://127.0.0.1:8090
-```
-
-Override the port with `AETHERGRID_CONSOLE_PORT`.
+The legacy evidence console can still be launched explicitly with `npm run operator-console` for historical/static review, but it is not the canonical product surface.
 
 The console serves two read-only endpoints:
 
@@ -127,23 +127,31 @@ The endpoints are built from maintained application modules rather than disconne
 
 All non-GET requests are rejected by the console server.
 
-## Complete distributable UI package
+## Distributable packages
 
-ÆTHERGRID is maintained in both human-readable HTML and machine-readable JSON form:
+The canonical product package is built with:
+
+```bash
+npm run package:aethergrid-app
+```
+
+and produces `dist/aethergrid-functional-app.zip`. That archive contains the Node backend, the production React/Cesium build and the runtime assets required for the actual globe/city experience.
+
+The older static/evidence package is still reproducible for audit purposes:
 
 - `apps/operator-console/index.html` is the complete HTML shell;
 - `apps/operator-console/app.json` is the application/package manifest;
 - `apps/operator-console/ui.json` describes the five visible UI surfaces, brand assets, model identities, navigation, and authority boundary;
 - `apps/operator-console/README.md` documents the package and review flow.
 
-Run `npm run package:aethergrid` to build `dist/aethergrid-operator-console.zip`. The packaging task refuses missing or zero-byte required files and embeds populated `capabilities.json` and `operator-state.json` snapshots generated from the maintained contracts. It also writes `PACKAGE_CONTENTS.json` and `SHA256SUMS.txt` into the archive so reviewers can confirm file presence, byte sizes, and content hashes.
+Run `npm run package:aethergrid` to build the non-canonical support artifact `dist/aethergrid-operator-console.zip`. The packaging task refuses missing or zero-byte required files and embeds populated `capabilities.json` and `operator-state.json` snapshots generated from the maintained contracts. It also writes `PACKAGE_CONTENTS.json` and `SHA256SUMS.txt` into the archive so reviewers can confirm file presence, byte sizes, and content hashes.
 
 The packaged `app.js` first attempts the live read-only API. When the archive is served independently from a static server, it falls back to those populated JSON snapshots so the interface remains fully reviewable instead of degrading into empty placeholders.
 
 
-## Modern reference dashboard
+## Legacy reference dashboard
 
-The maintained HTML now follows the approved command-center reference: a branded top mode rail, left system navigation, New York Metro digital-twin field, always-visible VÆLON/AUREN/SOLVÆR collaboration rail, real-time metric cards, quantum optimization, scenario comparison, holographic previews, evidence history, and export/report surfaces.
+The static evidence HTML follows the earlier approved command-center reference: a branded top mode rail, left system navigation, New York Metro digital-twin field, always-visible VÆLON/AUREN/SOLVÆR collaboration rail, real-time metric cards, quantum optimization, scenario comparison, holographic previews, evidence history, and export/report surfaces.
 
 All browser dependencies used by `index.html` are relative (`./styles.css`, `./app.js`, and `./assets/...`). Opening the extracted `index.html` directly therefore renders the complete styled demonstration UI instead of the browser's unstyled fallback. When served through `npm run operator-console`, the same interface can enhance demonstration values from the maintained read-only runtime contracts.
 
