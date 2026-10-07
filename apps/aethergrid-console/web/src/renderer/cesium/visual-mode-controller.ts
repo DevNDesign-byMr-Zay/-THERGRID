@@ -95,8 +95,8 @@ export class VisualModeController {
       return {
         requested: mode,
         applied: mode,
-        degraded: true,
-        reason: '3D building tiles are unavailable'
+        degraded: false,
+        reason: null
       };
     }
 
