@@ -245,6 +245,7 @@ const INITIAL_LAYERS: readonly LayerState[] = [
   { id: 'world', visible: true },
   { id: 'terrain', visible: true },
   { id: 'buildings', visible: true },
+  { id: 'illumination', visible: true },
   { id: 'roads', visible: true },
   { id: 'water', visible: true },
   { id: 'green', visible: true },
