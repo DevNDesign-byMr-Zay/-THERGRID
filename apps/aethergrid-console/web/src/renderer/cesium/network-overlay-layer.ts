@@ -162,7 +162,40 @@ function edgeFarDistance(edge: SpatialOverlayEdge): number {
 }
 
 function areaFarDistance(area: SpatialOverlayArea): number {
+  if (area.kind === 'building') return 90_000;
   return area.kind === 'water' ? 100_000 : 80_000;
+}
+
+function buildingAreaColor(area: SpatialOverlayArea, alpha = 0.76): Color {
+  const rawColor = String(area.properties?.buildingColor ?? '').trim();
+  const normalizedColor =
+    rawColor && !rawColor.startsWith('#') && /^[0-9a-f]{6}$/iu.test(rawColor)
+      ? `#${rawColor}`
+      : rawColor;
+  if (normalizedColor) {
+    const parsed = Color.fromCssColorString(normalizedColor);
+    if (parsed) return parsed.withAlpha(alpha);
+  }
+
+  const material = String(area.properties?.buildingMaterial ?? '').toLowerCase();
+  const sourceBacked = area.properties?.sourceBacked === true;
+  const base =
+    material.includes('glass')
+      ? '#6baec4'
+      : material.includes('brick')
+        ? '#8f665b'
+        : material.includes('metal') || material.includes('steel')
+          ? '#657887'
+          : material.includes('stone')
+            ? '#85847d'
+            : material.includes('concrete')
+              ? '#6f7880'
+              : material.includes('wood')
+                ? '#846e5e'
+                : sourceBacked
+                  ? '#637b8a'
+                  : '#536370';
+  return Color.fromCssColorString(base).withAlpha(alpha);
 }
 
 function provenanceProperties(
@@ -419,24 +452,39 @@ function areaEntity(
 ): Entity {
   const positions = area.positions.map((position) => coordinate(position));
   const water = area.kind === 'water';
+  const building = area.kind === 'building';
+  const minHeightM = Math.max(0, Number(area.properties?.minHeightM ?? 0));
+  const heightM = Math.max(
+    minHeightM + 3.2,
+    Number(area.properties?.heightM ?? minHeightM + 12)
+  );
+  const buildingFill = buildingAreaColor(area, 0.72);
+  const buildingOutline = buildingAreaColor(area, 0.94);
+
   return new Entity({
     id: area.id,
     name: area.label ?? area.id,
     polygon: new PolygonGraphics({
       hierarchy: new ConstantProperty(new PolygonHierarchy(positions)),
       material: new ColorMaterialProperty(
-        water
-          ? Color.fromCssColorString('#2eb9e8').withAlpha(0.22)
-          : Color.fromCssColorString('#59d99a').withAlpha(0.18)
+        building
+          ? buildingFill
+          : water
+            ? Color.fromCssColorString('#2eb9e8').withAlpha(0.22)
+            : Color.fromCssColorString('#59d99a').withAlpha(0.18)
       ),
       outline: true,
-      outlineColor: water
-        ? Color.fromCssColorString('#70ddff').withAlpha(0.45)
-        : Color.fromCssColorString('#83e8b7').withAlpha(0.34),
+      outlineColor: building
+        ? buildingOutline
+        : water
+          ? Color.fromCssColorString('#70ddff').withAlpha(0.45)
+          : Color.fromCssColorString('#83e8b7').withAlpha(0.34),
       distanceDisplayCondition: new ConstantProperty(
         new DistanceDisplayCondition(0, areaFarDistance(area))
       ),
-      perPositionHeight: true
+      perPositionHeight: !building,
+      height: building ? new ConstantProperty(minHeightM) : undefined,
+      extrudedHeight: building ? new ConstantProperty(heightM) : undefined
     }),
     properties: {
       overlayKind: area.kind,
@@ -568,6 +616,26 @@ export class NetworkOverlayLayer {
             0.48 + intensity * 0.22 + pulse * 0.2
           )
         );
+      } else if (
+        time.mode === 'live' &&
+        (node.kind === 'city' ||
+          (node.kind === 'event' && node.properties?.eventType === 'earthquake'))
+      ) {
+        const pulse =
+          0.5 +
+          0.5 *
+            Math.sin(
+              temporalPhase * (node.kind === 'city' ? 0.85 : 1.7) +
+                node.id.length * 0.41
+            );
+        const magnitudeBoost =
+          node.kind === 'event'
+            ? Math.max(0, Number(node.properties?.magnitude ?? node.value ?? 0)) * 0.07
+            : 0;
+        point.pixelSize = new ConstantProperty(
+          baseSize * (0.92 + pulse * 0.34 + magnitudeBoost)
+        );
+        point.color = new ConstantProperty(nodeColor(node).withAlpha(0.68 + pulse * 0.3));
       } else if (scenario && powerNode) {
         const pulse = 0.5 + 0.5 * Math.sin(temporalPhase * 0.32 + intensity * 5.1);
         const stressBoost = Math.max(0, scenario.stressFactor - 1);
