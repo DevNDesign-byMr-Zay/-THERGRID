@@ -14,6 +14,7 @@ for (const [width, height] of resolutions) {
     await page.setViewportSize({ width, height });
     await page.goto('/');
     await expect(page.getByRole('img', { name: 'ÆTHERGRID', exact: true })).toBeVisible();
+    await expect(page.locator('.aethergrid-app')).toHaveAttribute('data-experience', 'spatial-first');
     await expect(page.getByRole('navigation', { name: 'Product modes' }).getByRole('button', { name: 'GLOBAL', exact: true })).toHaveAttribute('aria-pressed', 'true');
     for (const name of ['GRID', 'GLOBAL', 'HOLOGRAPHIC', 'QUANTUM', 'AI', 'EVIDENCE']) {
       await expect(page.getByRole('navigation', { name: 'Product modes' }).getByRole('button', { name, exact: true })).toBeVisible();
@@ -35,8 +36,12 @@ for (const [width, height] of resolutions) {
     expect(bounds.stage.height).toBeGreaterThan(height * 0.5);
     for (const rail of bounds.rails) expect(rail.overflow).toBe('hidden');
     if (width === 1536) {
-      const overflow = await page.locator('.navigation-content, .intelligence-content').evaluateAll((surfaces) => surfaces.map((surface) => surface.scrollHeight - surface.clientHeight));
-      expect(overflow.every((value) => value <= 1)).toBeTruthy();
+      await expect(page.locator('.left-rail')).not.toBeVisible();
+      await expect(page.locator('.intel-rail')).not.toBeVisible();
+      await page.getByRole('button', { name: 'Navigation and layers' }).click();
+      await expect(page.locator('.left-rail')).toBeVisible();
+      await page.getByRole('button', { name: 'Close navigation drawer' }).click();
+      await expect(page.locator('.left-rail')).not.toBeVisible();
     }
     await page.getByRole('navigation', { name: 'Product modes' }).getByRole('button', { name: 'AI', exact: true }).click();
     for (const name of ['AUREN', 'VÆLON', 'SOLVÆR']) {
