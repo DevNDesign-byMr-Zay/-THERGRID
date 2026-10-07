@@ -700,10 +700,17 @@ export function createGeoRuntime({
     };
   }
 
-  async function requestOverpass(query, { timeoutMs = 18_000 } = {}) {
+  async function requestOverpass(
+    query,
+    { timeoutMs = 18_000, maxAttempts = endpoints.length } = {},
+  ) {
     let lastError = null;
+    const candidates = endpoints.slice(
+      0,
+      Math.max(1, Math.min(endpoints.length, Number(maxAttempts) || 1)),
+    );
 
-    for (const candidate of endpoints) {
+    for (const candidate of candidates) {
       try {
         const apiUrl = validateEndpoint(candidate);
         const response = await fetchImpl(apiUrl, {
@@ -754,26 +761,33 @@ export function createGeoRuntime({
     }
 
     try {
+      const buildingRadiusM = Math.min(
+        city.radiusM,
+        Math.max(450, Number(env.AETHERGRID_GEO_BUILDING_RADIUS_M || 900)),
+      );
+      const contextRadiusM = Math.min(city.radiusM, 1200);
       const buildingQuery =
-        `[out:json][timeout:16];(` +
-        `nwr["building"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `nwr["building:part"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `);out tags geom center;`;
+        `[out:json][timeout:10];(` +
+        `way["building"](around:${buildingRadiusM},${city.lat},${city.lon});` +
+        `relation["building"](around:${buildingRadiusM},${city.lat},${city.lon});` +
+        `way["building:part"](around:${buildingRadiusM},${city.lat},${city.lon});` +
+        `relation["building:part"](around:${buildingRadiusM},${city.lat},${city.lon});` +
+        `);out tags geom center qt;`;
       const contextQuery =
-        `[out:json][timeout:12];(` +
-        `way["highway"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `nwr["natural"="water"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `way["natural"="coastline"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `way["waterway"~"^(river|canal|stream|tidal_channel)$"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `nwr["leisure"~"^(park|garden|nature_reserve)$"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `nwr["landuse"~"^(grass|recreation_ground|meadow)$"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `nwr["natural"~"^(wood|grassland)$"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `way["power"~"^(line|minor_line|cable)$"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `nwr["power"~"^(substation|plant|generator|transformer)$"](around:${city.radiusM},${city.lat},${city.lon});` +
+        `[out:json][timeout:8];(` +
+        `way["highway"](around:${contextRadiusM},${city.lat},${city.lon});` +
+        `nwr["natural"="water"](around:${contextRadiusM},${city.lat},${city.lon});` +
+        `way["natural"="coastline"](around:${contextRadiusM},${city.lat},${city.lon});` +
+        `way["waterway"~"^(river|canal|stream|tidal_channel)$"](around:${contextRadiusM},${city.lat},${city.lon});` +
+        `nwr["leisure"~"^(park|garden|nature_reserve)$"](around:${contextRadiusM},${city.lat},${city.lon});` +
+        `nwr["landuse"~"^(grass|recreation_ground|meadow)$"](around:${contextRadiusM},${city.lat},${city.lon});` +
+        `nwr["natural"~"^(wood|grassland)$"](around:${contextRadiusM},${city.lat},${city.lon});` +
+        `way["power"~"^(line|minor_line|cable)$"](around:${contextRadiusM},${city.lat},${city.lon});` +
+        `nwr["power"~"^(substation|plant|generator|transformer)$"](around:${contextRadiusM},${city.lat},${city.lon});` +
         `);out tags geom center;`;
 
       const buildingResult = await requestOverpass(buildingQuery, {
-        timeoutMs: 18_000,
+        timeoutMs: 12_000,
       });
       const buildings = parseOverpassBuildings(buildingResult.payload, city);
       if (buildings.length < 5) {
@@ -781,7 +795,8 @@ export function createGeoRuntime({
       }
 
       const contextResult = await requestOverpass(contextQuery, {
-        timeoutMs: 14_000,
+        timeoutMs: 8_000,
+        maxAttempts: 1,
       }).catch(() => null);
       const contextPayload = contextResult?.payload ?? { elements: [] };
       const roads = parseOverpassRoads(contextPayload, city);
