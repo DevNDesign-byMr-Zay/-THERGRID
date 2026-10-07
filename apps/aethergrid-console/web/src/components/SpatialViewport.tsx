@@ -221,6 +221,7 @@ export function SpatialViewport({
     }
     for (const snapshot of overlays) manager.applyOverlay(snapshot);
     overlayIdsRef.current = nextIds;
+    setStatus(manager.status());
   }, [overlays, status.ready]);
 
   useEffect(() => {
