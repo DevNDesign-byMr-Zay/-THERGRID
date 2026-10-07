@@ -115,7 +115,7 @@ Deliver:
 
 ## Batch 18 — v4 spatial operator foundation
 
-Status: IMPLEMENTED ON DRAFT BRANCH
+Status: IMPLEMENTED / PROMOTED TO CANONICAL APPLICATION
 
 Deliver:
 - typed React/Cesium operator shell under `apps/aethergrid-console/web/` while preserving the maintained Node backend;

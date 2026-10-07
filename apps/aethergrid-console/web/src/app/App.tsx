@@ -1762,7 +1762,7 @@ export function App() {
   };
 
   return (
-    <main className="aethergrid-app">
+    <main className="aethergrid-app immersive-spatial" data-experience="spatial-first">
       <header className="topbar">
         <div className="brand-lockup">
           <img className="brand-logo" src={BRAND.product} alt="ÆTHERGRID" />

@@ -140,3 +140,337 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 @media (prefers-reduced-motion: reduce) {
   .left-rail, .intel-rail { transition: none; }
 }
+
+
+/* Spatial-first product shell.
+   The 3D world is the application; operator controls float above it and open as drawers. */
+.immersive-spatial {
+  position: relative;
+  display: block;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  background: #02050a;
+}
+
+.immersive-spatial .operator-layout {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.immersive-spatial .world-stage {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
+  min-height: 0;
+}
+
+.immersive-spatial .topbar {
+  position: fixed;
+  z-index: 45;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  grid-template-columns: minmax(190px, 260px) minmax(220px, 520px) auto;
+  padding: 8px 16px;
+  border: 0;
+  background: linear-gradient(180deg, rgba(2, 5, 10, 0.88), rgba(2, 5, 10, 0.42) 70%, transparent);
+  backdrop-filter: blur(14px);
+  pointer-events: none;
+}
+
+.immersive-spatial .topbar > * {
+  pointer-events: auto;
+}
+
+.immersive-spatial .brand-logo {
+  width: 76px;
+  height: 48px;
+}
+
+.immersive-spatial .global-search {
+  background: rgba(4, 9, 16, 0.68);
+  border-color: rgba(112, 231, 255, 0.18);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.24);
+}
+
+.immersive-spatial .navigation-toggle,
+.immersive-spatial .intel-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 38px;
+  border: 1px solid rgba(112, 231, 255, 0.2);
+  border-radius: 10px;
+  color: var(--cyan);
+  background: rgba(4, 9, 16, 0.68);
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+}
+
+.immersive-spatial .product-navigation {
+  position: fixed;
+  z-index: 44;
+  top: 78px;
+  left: 50%;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  transform: translateX(-50%);
+  display: flex;
+  gap: 3px;
+  padding: 5px;
+  border: 1px solid rgba(112, 231, 255, 0.14);
+  border-radius: 14px;
+  background: rgba(4, 9, 16, 0.62);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(16px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.immersive-spatial .product-navigation::-webkit-scrollbar {
+  display: none;
+}
+
+.immersive-spatial .product-navigation button {
+  min-height: 34px;
+  padding: 7px 12px;
+  white-space: nowrap;
+  border-radius: 9px;
+  background: transparent;
+}
+
+.immersive-spatial .product-navigation button.active {
+  background: color-mix(in srgb, var(--cyan) 12%, rgba(4, 9, 16, 0.82));
+  box-shadow: inset 0 0 18px rgba(112, 231, 255, 0.08);
+}
+
+.immersive-spatial .left-rail,
+.immersive-spatial .intel-rail {
+  position: fixed;
+  z-index: 60;
+  top: 78px;
+  bottom: 96px;
+  width: min(420px, calc(100vw - 24px));
+  display: flex;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  border: 1px solid rgba(112, 231, 255, 0.14);
+  border-radius: 14px;
+  background: rgba(5, 10, 18, 0.88);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(22px);
+  transition: transform 220ms ease, opacity 180ms ease, visibility 180ms ease;
+}
+
+.immersive-spatial .left-rail {
+  left: 12px;
+  transform: translateX(calc(-100% - 24px));
+}
+
+.immersive-spatial .intel-rail {
+  right: 12px;
+  transform: translateX(calc(100% + 24px));
+}
+
+.immersive-spatial .left-rail.open,
+.immersive-spatial .intel-rail.open {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.immersive-spatial .drawer-heading,
+.immersive-spatial .intel-mobile-head {
+  position: static;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0 0 8px;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: .12em;
+}
+
+.immersive-spatial .drawer-heading button,
+.immersive-spatial .intel-mobile-head button {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--cyan);
+  background: rgba(255,255,255,.02);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.immersive-spatial .stage-toolbar {
+  top: 132px;
+  left: 16px;
+  right: 16px;
+}
+
+.immersive-spatial .stage-toolbar > div:first-child {
+  padding: 8px 10px;
+  border: 1px solid rgba(112, 231, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(4, 9, 16, 0.52);
+  backdrop-filter: blur(10px);
+}
+
+.immersive-spatial .stage-controls {
+  max-width: min(760px, calc(100vw - 180px));
+  padding: 4px;
+  border: 1px solid rgba(112, 231, 255, 0.12);
+  border-radius: 11px;
+  background: rgba(4, 9, 16, 0.52);
+  backdrop-filter: blur(10px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.immersive-spatial .stage-controls::-webkit-scrollbar {
+  display: none;
+}
+
+.immersive-spatial .temporal-rail {
+  position: fixed;
+  z-index: 46;
+  left: 50%;
+  bottom: 14px;
+  width: min(1120px, calc(100vw - 28px));
+  min-height: 62px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(112, 231, 255, 0.14);
+  border-radius: 16px;
+  background: rgba(4, 9, 16, 0.72);
+  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(18px);
+}
+
+.immersive-spatial .scene-caption {
+  bottom: 94px;
+}
+
+.immersive-spatial .viewport-status {
+  bottom: 94px;
+}
+
+.immersive-spatial .source-badge {
+  bottom: 174px;
+}
+
+@media (max-width: 1100px) {
+  .immersive-spatial .topbar {
+    grid-template-columns: minmax(170px, 220px) minmax(140px, 1fr) auto;
+  }
+
+  .immersive-spatial .left-rail,
+  .immersive-spatial .intel-rail {
+    top: 76px;
+    bottom: 88px;
+  }
+
+  .immersive-spatial .stage-controls {
+    max-width: calc(100vw - 120px);
+  }
+}
+
+@media (max-width: 760px) {
+  .immersive-spatial .topbar {
+    height: 104px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: 50px 38px;
+    gap: 4px;
+    padding: 6px 10px;
+  }
+
+  .immersive-spatial .brand-logo {
+    width: 68px;
+    height: 46px;
+  }
+
+  .immersive-spatial .global-search {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .immersive-spatial .product-navigation {
+    top: 112px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: none;
+    transform: none;
+    justify-content: flex-start;
+  }
+
+  .immersive-spatial .product-navigation button {
+    flex: 0 0 auto;
+    min-width: 76px;
+  }
+
+  .immersive-spatial .left-rail,
+  .immersive-spatial .intel-rail {
+    top: 160px;
+    bottom: 92px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: none;
+    transform: translateY(110%);
+  }
+
+  .immersive-spatial .left-rail.open,
+  .immersive-spatial .intel-rail.open {
+    transform: translateY(0);
+  }
+
+  .immersive-spatial .stage-toolbar {
+    top: 166px;
+    left: 8px;
+    right: 8px;
+  }
+
+  .immersive-spatial .stage-toolbar > div:first-child {
+    display: none;
+  }
+
+  .immersive-spatial .stage-controls {
+    width: 100%;
+    max-width: none;
+  }
+
+  .immersive-spatial .temporal-rail {
+    bottom: 8px;
+    width: calc(100vw - 16px);
+    border-radius: 12px;
+  }
+
+  .immersive-spatial .viewport-status {
+    bottom: 112px;
+  }
+
+  .immersive-spatial .source-badge {
+    bottom: 154px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .immersive-spatial .left-rail,
+  .immersive-spatial .intel-rail {
+    transition: none;
+  }
+}

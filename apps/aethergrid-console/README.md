@@ -237,9 +237,9 @@ Terrain fitting behavior:
 The GLOBAL stats, CITY IDENTITY panel and provenance surface label this as **DEM DRAPED** when live elevation is available and **FLAT FALLBACK** otherwise.
 
 This is visualization-grade terrain fitting. The default live source is Open-Meteo Elevation backed by Copernicus DEM GLO-90; it is not survey, engineering, cadastral or LiDAR-grade vertical positioning. The app does not infer foundation engineering, road grade compliance, water level, drainage or clearance authority from the DEM.
-## v4 spatial operator web foundation
+## Canonical v4 spatial application
 
-The draft v4 migration surface lives under `apps/aethergrid-console/web/`. It is a typed React/Cesium operator application that preserves the existing Node backend and source/provenance contracts while introducing a renderer-neutral spatial layer. It does **not** replace the maintained packaged v3 surface until the v4 branch passes the release gates and is explicitly promoted.
+The canonical ÆTHERGRID product surface lives under `apps/aethergrid-console/web/`. It is the typed React/Cesium application served by the maintained Node backend, packaged as `dist/aethergrid-functional-app.zip`, and promoted as the primary user-facing experience. The earlier native v3 surface remains only under `legacy/` for direct-open compatibility and historical review.
 Implemented v4 behavior includes:
 - Cesium as the primary geographic renderer with continuous WGS84 globe → region → city → district camera travel;
 - a real source-backed native WebGL fallback that consumes the same normalized overlays, 4D time, layer state, selection state and scenario context when Cesium cannot initialize;

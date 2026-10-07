@@ -999,17 +999,17 @@ test('v4 documentation and promotion gates describe only implemented spatial cap
     text('apps/aethergrid-console/web/src/time/temporal-clock.ts'),
   ]);
 
-  assert.match(readme, /v4 spatial operator web foundation/u);
-  assert.match(readme, /does \*\*not\*\* replace the maintained packaged v3 surface/u);
+  assert.match(readme, /Canonical v4 spatial application/u);
+  assert.match(readme, /promoted as the primary user-facing experience/u);
   assert.match(readme, /real source-backed native WebGL fallback/u);
   assert.match(readme, /weather may render in FORECAST/u);
   assert.match(readme, /PRESENTATION|presentation-only/u);
 
   assert.match(plan, /Batch 18 — v4 spatial operator foundation/u);
-  assert.match(plan, /Status: IMPLEMENTED ON DRAFT BRANCH/u);
-  assert.match(plan, /v4 remains draft until the maintained package path is explicitly promoted/u);
+  assert.match(plan, /Status: IMPLEMENTED \/ PROMOTED TO CANONICAL APPLICATION/u);
+  assert.match(readme, /dist\/aethergrid-functional-app\.zip/u);
 
-  assert.match(changelog, /draft v4 typed React\/Cesium spatial operator surface/u);
+  assert.match(changelog, /promoted the v4 typed React\/Cesium spatial operator surface/u);
   assert.match(viewport, /new NativeWebglSpatialRenderer\(\)/u);
   assert.match(nativeRenderer, /implements SpatialRenderer/u);
   assert.match(clock, /#liveTimer/u);
