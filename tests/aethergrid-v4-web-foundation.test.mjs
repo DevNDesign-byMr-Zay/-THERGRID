@@ -106,6 +106,9 @@ test('v4 operator shell keeps the spatial viewport dominant and responsive', asy
   assert.match(shell, /height: 100dvh/u);
   assert.match(viewport, /new CesiumSpatialRenderer\(\)/u);
   assert.match(viewport, /new NativeWebglSpatialRenderer\(\)/u);
+  assert.match(cesium, /OpenStreetMapImageryProvider/u);
+  assert.match(cesium, /EllipsoidTerrainProvider/u);
+  assert.doesNotMatch(cesium, /Cesium ion token is not configured/u);
   assert.match(viewport, /loadPublicRuntimeConfig/u);
   assert.match(styles, /grid-template-columns: 220px minmax\(0, 1fr\) 250px/u);
   assert.match(styles, /prefers-reduced-motion/u);
@@ -301,6 +304,8 @@ test('v4 Cesium city identity includes mapped roads water coastline and green ar
 
   assert.match(contract, /OverlayAreaKind = 'water' \| 'green'/u);
   assert.match(service, /cityMeshToSemanticOverlays/u);
+  assert.match(service, /layerId: 'buildings'/u);
+  assert.match(service, /presentationType: 'source-backed-building'/u);
   assert.match(service, /layerId: 'roads'/u);
   assert.match(service, /layerId: 'water'/u);
   assert.match(service, /layerId: 'green'/u);
@@ -308,6 +313,8 @@ test('v4 Cesium city identity includes mapped roads water coastline and green ar
   assert.match(service, /loadCoordinateSpatialBundle/u);
   assert.match(layer, /PolygonGraphics/u);
   assert.match(layer, /PolygonHierarchy/u);
+  assert.match(layer, /extrudedHeight/u);
+  assert.match(layer, /buildingAreaColor/u);
   assert.match(layer, /edge\.kind === 'coastline'/u);
   assert.match(layer, /edge\.kind === 'waterway'/u);
   assert.match(app, /id: 'roads', visible: true/u);
