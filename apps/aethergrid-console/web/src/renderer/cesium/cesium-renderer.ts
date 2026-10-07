@@ -152,22 +152,18 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#airQuality = new AirQualityLayer(this.#viewer);
     this.#solarLighting = new SolarLightingController(this.#viewer);
 
-    if (ionEnabled) {
-      try {
-        this.#buildings = await createOsmBuildingsAsync({
-          enableShowOutline: true,
-          showOutline: true
-        });
-        this.#viewer.scene.primitives.add(this.#buildings);
-        this.#visualController.setBuildings(this.#buildings);
-        this.#applyDetailForPhase(this.#journeyPhase === 'idle' ? 'district' : this.#journeyPhase);
-      } catch (error) {
-        this.#degraded = true;
-        this.#reason =
-          error instanceof Error ? `OSM Buildings unavailable: ${error.message}` : 'OSM Buildings unavailable';
-        this.#visualController.setBuildings(null);
-      }
-    } else {
+    try {
+      this.#buildings = await createOsmBuildingsAsync({
+        enableShowOutline: true,
+        showOutline: true
+      });
+      this.#viewer.scene.primitives.add(this.#buildings);
+      this.#visualController.setBuildings(this.#buildings);
+      this.#applyDetailForPhase(this.#journeyPhase === 'idle' ? 'district' : this.#journeyPhase);
+    } catch {
+      // A configured ion token gives production access. Without one Cesium may use
+      // its bundled evaluation token; if that cannot serve OSM Buildings, the
+      // source-backed Overpass extrusion layer remains the city geometry path.
       this.#buildings = null;
       this.#visualController.setBuildings(null);
     }
@@ -431,6 +427,14 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       journeyPhase: this.#journeyPhase,
       detailLevel: this.#detailLevel,
       performanceTier: this.#performanceTier,
+      buildingMode:
+        this.#buildings && this.#overlays.has('buildings')
+          ? 'hybrid'
+          : this.#buildings
+            ? 'cesium-osm'
+            : this.#overlays.has('buildings')
+              ? 'source-extruded'
+              : 'none',
       solar: this.#solar,
       reason: this.#reason
     };
