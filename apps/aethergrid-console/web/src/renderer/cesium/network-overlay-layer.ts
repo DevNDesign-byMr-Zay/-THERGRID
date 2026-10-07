@@ -18,7 +18,8 @@ import {
   PolylineGraphics,
   Transforms,
   VerticalOrigin,
-  Viewer
+  Viewer,
+  WallGraphics
 } from 'cesium';
 
 import type { SpatialScenarioVisual, TemporalInstant } from '../spatial-renderer';
