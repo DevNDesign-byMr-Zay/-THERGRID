@@ -8,7 +8,6 @@ import {
   DistanceDisplayCondition,
   Entity,
   HeadingPitchRoll,
-  HeightReference,
   HorizontalOrigin,
   LabelGraphics,
   Math as CesiumMath,
@@ -493,10 +492,8 @@ function areaEntity(
       perPositionHeight: !building,
       height: building ? new ConstantProperty(minHeightM) : undefined,
       extrudedHeight: building ? new ConstantProperty(heightM) : undefined,
-      heightReference: building ? new ConstantProperty(HeightReference.RELATIVE_TO_GROUND) : undefined,
-      extrudedHeightReference: building
-        ? new ConstantProperty(HeightReference.RELATIVE_TO_GROUND)
-        : undefined
+      closeTop: building ? new ConstantProperty(true) : undefined,
+      closeBottom: building ? new ConstantProperty(true) : undefined
     }),
     properties: {
       overlayKind: area.kind,
