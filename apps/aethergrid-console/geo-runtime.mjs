@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 
 const DEFAULT_OVERPASS_ENDPOINTS = Object.freeze([
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.nchc.org.tw/api/interpreter',
   'https://overpass.private.coffee/api/interpreter',
   'https://overpass-api.de/api/interpreter',
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
@@ -909,7 +911,7 @@ export function createGeoRuntime({
     try {
       const buildingRadiusM = Math.min(
         city.radiusM,
-        Math.max(450, Number(env.AETHERGRID_GEO_BUILDING_RADIUS_M || 900)),
+        Math.max(350, Number(env.AETHERGRID_GEO_BUILDING_RADIUS_M || 520)),
       );
       const contextRadiusM = Math.min(city.radiusM, 1200);
       const buildingQuery =
@@ -940,7 +942,8 @@ export function createGeoRuntime({
 
       try {
         const buildingResult = await requestOverpass(buildingQuery, {
-          timeoutMs: 12_000,
+          timeoutMs: 20_000,
+          maxAttempts: endpoints.length,
         });
         buildings = parseOverpassBuildings(buildingResult.payload, city);
         if (buildings.length < 5) {
@@ -951,7 +954,7 @@ export function createGeoRuntime({
           buildingResult.payload?.osm3s?.timestamp_osm_base || null;
       } catch {
         const osmMap = await requestOsmMapBuildings(city, {
-          radiusM: Math.min(buildingRadiusM, 360),
+          radiusM: Math.min(buildingRadiusM, 220),
         });
         buildings = osmMap.buildings;
         buildingProvider = 'OpenStreetMap Map API';
