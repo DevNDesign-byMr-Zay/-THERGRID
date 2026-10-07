@@ -67,6 +67,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #container: HTMLElement | null = null;
   #viewer: Viewer | null = null;
   #buildings: Cesium3DTileset | null = null;
+  #ionEnabled = false;
   #realityTiles: Cesium3DTileset | null = null;
   #grid: GeodeticGridLayer | null = null;
   #cameraJourney: CameraJourneyController | null = null;
@@ -97,6 +98,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     if (!this.#container) throw new Error('Cesium renderer must be mounted before initialization');
 
     const ionEnabled = Boolean(config.cesiumIonToken);
+    this.#ionEnabled = ionEnabled;
     if (config.cesiumIonToken) Ion.defaultAccessToken = config.cesiumIonToken;
 
     this.#viewer = new Viewer(this.#container, {
@@ -279,8 +281,18 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     }
     overlay.apply(snapshot);
     if (this.#time) overlay.setTime(this.#time);
-    overlay.setVisible(this.#layerVisible(snapshot.layerId, true));
-    if (snapshot.layerId === 'buildings' && this.#buildings) {
+    const sourceBuildingsSuppressed =
+      snapshot.layerId === 'buildings' && this.#ionEnabled && this.#buildings != null;
+    overlay.setVisible(
+      sourceBuildingsSuppressed
+        ? false
+        : this.#layerVisible(snapshot.layerId, true)
+    );
+    if (
+      snapshot.layerId === 'buildings' &&
+      this.#buildings &&
+      !this.#ionEnabled
+    ) {
       this.#buildings.show = false;
     }
     viewer.scene.requestRender();
@@ -439,11 +451,16 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       journeyPhase: this.#journeyPhase,
       detailLevel: this.#detailLevel,
       performanceTier: this.#performanceTier,
-      buildingMode: this.#overlays.has('buildings')
-        ? 'source-extruded'
-        : this.#buildings
-          ? 'cesium-osm'
-          : 'none',
+      buildingMode:
+        this.#ionEnabled && this.#buildings
+          ? this.#overlays.has('buildings')
+            ? 'hybrid'
+            : 'cesium-osm'
+          : this.#overlays.has('buildings')
+            ? 'source-extruded'
+            : this.#buildings
+              ? 'cesium-osm'
+              : 'none',
       solar: this.#solar,
       reason: this.#reason
     };
@@ -522,7 +539,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #buildingsShouldShow(): boolean {
     return (
       this.#appliedVisualMode !== 'reality' &&
-      !this.#overlays.has('buildings') &&
+      (this.#ionEnabled || !this.#overlays.has('buildings')) &&
       this.#layerVisible('buildings', true) &&
       (this.#detailLevel === 'city' || this.#detailLevel === 'district')
     );
@@ -552,7 +569,13 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#weather?.setVisible(this.#layerVisible('weather', true));
     this.#airQuality?.setVisible(this.#layerVisible('air', true));
     for (const [layerId, overlay] of this.#overlays) {
-      overlay.setVisible(this.#layerVisible(layerId, true));
+      const sourceBuildingsSuppressed =
+        layerId === 'buildings' && this.#ionEnabled && this.#buildings != null;
+      overlay.setVisible(
+        sourceBuildingsSuppressed
+          ? false
+          : this.#layerVisible(layerId, true)
+      );
     }
     this.#viewer.scene.requestRender();
   }
