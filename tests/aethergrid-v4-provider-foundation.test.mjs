@@ -260,6 +260,11 @@ describe('ÆTHERGRID v4.0 Provider Runtime Execution Layer & Verification', () =
       assert.equal(policy.isAllowedUrl('https://api.open-meteo.com/v1/forecast'), true);
       assert.equal(policy.isAllowedUrl('https://sapi.qpu.dwavesys.com/v2/solvers/remote/'), true);
       assert.equal(policy.isAllowedUrl('http://127.0.0.1:11434/api/generate'), true);
+      assert.equal(policy.isAllowedUrl('https://overpass.kumi.systems/api/interpreter'), true);
+      assert.equal(policy.isAllowedUrl('https://overpass.nchc.org.tw/api/interpreter'), true);
+      assert.equal(policy.isAllowedUrl('https://overpass.private.coffee/api/interpreter'), true);
+      assert.equal(policy.isAllowedUrl('https://maps.mail.ru/osm/tools/overpass/api/interpreter'), true);
+      assert.equal(policy.isAllowedUrl('https://api.openstreetmap.org/api/0.6/map?bbox=0,0,1,1'), true);
     });
 
     it('blocks lookalike domain prefix-spoofing attacks', () => {
