@@ -640,8 +640,10 @@ async function main() {
   assert(
     /OpenStreetMap Overpass/u.test(aethergridGeoRuntime) &&
       /© OpenStreetMap contributors/u.test(aethergridGeoRuntime) &&
-      /nwr\["building"\]/u.test(aethergridGeoRuntime) &&
-      /nwr\["building:part"\]/u.test(aethergridGeoRuntime) &&
+      /way\["building"\]/u.test(aethergridGeoRuntime) &&
+      /relation\["building"\]/u.test(aethergridGeoRuntime) &&
+      /way\["building:part"\]/u.test(aethergridGeoRuntime) &&
+      /relation\["building:part"\]/u.test(aethergridGeoRuntime) &&
       /heightProfile/u.test(aethergridGeoRuntime) &&
       /numericRoofHeight/u.test(aethergridGeoRuntime) &&
       /buildingGeometries/u.test(aethergridGeoRuntime) &&
