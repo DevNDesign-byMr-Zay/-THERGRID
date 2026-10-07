@@ -48,6 +48,7 @@ test('operator profile persists sanitized local identity data without secrets', 
 
 test('live geospatial runtime converts and caches Overpass city geometry', async () => {
   let calls = 0;
+  const queries = [];
   const geometry = [
     { lat: 40.7548, lon: -73.9841 },
     { lat: 40.7548, lon: -73.9839 },
@@ -60,12 +61,7 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
     assert.equal(String(url), 'https://example.test/overpass');
     assert.equal(options.method, 'POST');
     assert.match(String(options.headers['user-agent']), /AETHERGRID/u);
-    assert.match(options.body.get('data'), /nwr\["building:part"\]/u);
-    assert.match(options.body.get('data'), /nwr\["building"\]/u);
-    assert.match(options.body.get('data'), /nwr\["natural"="water"\]/u);
-    assert.match(options.body.get('data'), /way\["natural"="coastline"\]/u);
-    assert.match(options.body.get('data'), /way\["waterway"/u);
-    assert.match(options.body.get('data'), /nwr\["leisure"/u);
+    queries.push(options.body.get('data'));
     return new Response(
       JSON.stringify({
         osm3s: { timestamp_osm_base: '2026-09-30T06:30:00Z' },
@@ -240,6 +236,7 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
   assert.ok(first.powerAssets[0].position.every(Number.isFinite));
   assert.equal(first.source.attribution, '© OpenStreetMap contributors');
   assert.equal(first.source.upstreamTimestamp, '2026-09-30T06:30:00Z');
+  assert.equal(first.source.endpoint, 'https://example.test');
   assert.equal(first.skylineProfile.maxHeightM, 828);
   assert.ok(first.skylineProfile.sourceBackedHeightCoveragePercent > 0);
   assert.equal(first.skylineProfile.namedStructureCount, 2);
@@ -264,7 +261,13 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
 
   const second = await runtime.cityMesh('new-york');
   assert.equal(second, first);
-  assert.equal(calls, 1);
+  assert.equal(calls, 2);
+  assert.ok(queries.some((query) => /nwr\["building:part"\]/u.test(query)));
+  assert.ok(queries.some((query) => /nwr\["building"\]/u.test(query)));
+  assert.ok(queries.some((query) => /nwr\["natural"="water"\]/u.test(query)));
+  assert.ok(queries.some((query) => /way\["natural"="coastline"\]/u.test(query)));
+  assert.ok(queries.some((query) => /way\["waterway"/u.test(query)));
+  assert.ok(queries.some((query) => /nwr\["leisure"/u.test(query)));
 });
 
 test('geospatial provider failure degrades explicitly to local fallback geometry', async () => {
