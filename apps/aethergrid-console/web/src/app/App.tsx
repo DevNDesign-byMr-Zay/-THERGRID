@@ -173,7 +173,7 @@ const CITY_TARGETS: readonly CityTarget[] = [
     district: 'Midtown Manhattan',
     latitude: 40.7549,
     longitude: -73.984,
-    rangeMeters: 1_650,
+    rangeMeters: 2_650,
     pitchDegrees: -32
   },
   {
@@ -182,7 +182,7 @@ const CITY_TARGETS: readonly CityTarget[] = [
     district: 'City / South Bank',
     latitude: 51.5136,
     longitude: -0.0917,
-    rangeMeters: 1_850,
+    rangeMeters: 2_750,
     pitchDegrees: -33
   },
   {
@@ -191,7 +191,7 @@ const CITY_TARGETS: readonly CityTarget[] = [
     district: 'Shinjuku',
     latitude: 35.6896,
     longitude: 139.6917,
-    rangeMeters: 1_750,
+    rangeMeters: 2_650,
     pitchDegrees: -31
   },
   {
@@ -200,7 +200,7 @@ const CITY_TARGETS: readonly CityTarget[] = [
     district: 'Downtown',
     latitude: 25.1972,
     longitude: 55.2744,
-    rangeMeters: 1_900,
+    rangeMeters: 2_850,
     pitchDegrees: -30
   },
   {
@@ -209,7 +209,7 @@ const CITY_TARGETS: readonly CityTarget[] = [
     district: 'Marina Bay / Downtown Core',
     latitude: 1.2838,
     longitude: 103.8515,
-    rangeMeters: 1_700,
+    rangeMeters: 2_600,
     pitchDegrees: -31
   },
   {
@@ -218,7 +218,7 @@ const CITY_TARGETS: readonly CityTarget[] = [
     district: 'Paulista / Bela Vista',
     latitude: -23.5614,
     longitude: -46.6559,
-    rangeMeters: 1_850,
+    rangeMeters: 2_750,
     pitchDegrees: -32
   },
   {
@@ -227,7 +227,7 @@ const CITY_TARGETS: readonly CityTarget[] = [
     district: 'Victoria Island / Eko Atlantic',
     latitude: 6.4281,
     longitude: 3.4219,
-    rangeMeters: 1_850,
+    rangeMeters: 2_750,
     pitchDegrees: -31
   },
   {
@@ -236,7 +236,7 @@ const CITY_TARGETS: readonly CityTarget[] = [
     district: 'CBD / Circular Quay',
     latitude: -33.8651,
     longitude: 151.2099,
-    rangeMeters: 1_750,
+    rangeMeters: 2_650,
     pitchDegrees: -31
   }
 ];
