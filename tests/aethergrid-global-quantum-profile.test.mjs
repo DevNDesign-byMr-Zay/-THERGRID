@@ -262,8 +262,8 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
   const second = await runtime.cityMesh('new-york');
   assert.equal(second, first);
   assert.equal(calls, 2);
-  assert.ok(queries.some((query) => /nwr\["building:part"\]/u.test(query)));
-  assert.ok(queries.some((query) => /nwr\["building"\]/u.test(query)));
+  assert.ok(queries.some((query) => /way\["building:part"\]/u.test(query)));
+  assert.ok(queries.some((query) => /way\["building"\]/u.test(query)));
   assert.ok(queries.some((query) => /nwr\["natural"="water"\]/u.test(query)));
   assert.ok(queries.some((query) => /way\["natural"="coastline"\]/u.test(query)));
   assert.ok(queries.some((query) => /way\["waterway"/u.test(query)));
