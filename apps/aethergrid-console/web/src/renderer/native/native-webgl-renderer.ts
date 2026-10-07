@@ -129,6 +129,8 @@ function layerColor(layerId: string, kind = ''): Rgba {
   if (layerId === 'roads') return rgba('#9aa9b7', 0.58);
   if (layerId === 'water') return rgba('#38bde8', 0.72);
   if (layerId === 'green') return rgba('#64d99b', 0.64);
+  if (layerId === 'buildings') return rgba('#6d8998', 0.68);
+  if (layerId === 'illumination') return rgba('#ffd37d', 0.72);
   if (layerId === 'hazards') return rgba('#ff704f', 0.92);
   if (layerId === 'hydrology' || kind === 'sensor') return rgba('#62c7e9', 0.94);
   if (layerId === 'transit' || kind === 'transit') return rgba('#70e7ff', 0.94);
