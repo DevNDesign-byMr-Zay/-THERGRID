@@ -1230,6 +1230,10 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
       const baseMesh = await geoRuntime.cityMesh(cityId, {
         force: url.searchParams.get('force') === '1',
       });
+      if (url.searchParams.get('spatial') === '1') {
+        activeCityMesh = baseMesh;
+        return json(response, 200, baseMesh);
+      }
       const [terrain, environment, liveContext] = await Promise.all([
         terrainRuntime.sample({
           lat: baseMesh.city.lat,
@@ -1320,6 +1324,10 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
           force: url.searchParams.get('force') === '1',
         },
       );
+      if (url.searchParams.get('spatial') === '1') {
+        activeCityMesh = baseMesh;
+        return json(response, 200, baseMesh);
+      }
       const [terrain, environment, liveContext] = await Promise.all([
         terrainRuntime.sample({
           lat: baseMesh.city.lat,
