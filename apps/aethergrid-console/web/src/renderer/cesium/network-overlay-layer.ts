@@ -230,6 +230,8 @@ function nodeEntity(
     node.kind === 'aircraft' && node.properties?.eventType === 'aircraft';
   const aircraftModel = aircraft && node.properties?.render3d === true;
   const staleAircraft = aircraft && node.properties?.truthState === 'stale';
+  const urbanLight =
+    node.properties?.presentationType === 'urban-illumination';
 
   return new Entity({
     id: node.id,
@@ -246,14 +248,18 @@ function nodeEntity(
         )
       : undefined,
     point: new PointGraphics({
-      pixelSize: aircraft ? 4 + intensity * 3 : 5 + intensity * 7,
+      pixelSize: aircraft
+        ? 4 + intensity * 3
+        : urbanLight
+          ? 1.2 + intensity * 1.8
+          : 5 + intensity * 7,
       color: aircraft
         ? Color.fromCssColorString(
             staleAircraft ? '#8193a1' : '#70e7ff'
           ).withAlpha(staleAircraft ? 0.58 : 0.92)
         : nodeColor(node),
       outlineColor: new ConstantProperty(Color.WHITE.withAlpha(0.35)),
-      outlineWidth: aircraft ? 0.8 : 1.25,
+      outlineWidth: urbanLight ? 0 : aircraft ? 0.8 : 1.25,
       distanceDisplayCondition: new ConstantProperty(
         aircraft
           ? new DistanceDisplayCondition(850_000, nodeFarDistance(node))
@@ -460,8 +466,8 @@ function areaEntity(
     Number(area.properties?.heightM ?? minHeightM + 12)
   );
   const sourceBacked = area.properties?.sourceBacked === true;
-  const buildingFill = buildingAreaColor(area, sourceBacked ? 0.84 : 0.46);
-  const buildingOutline = buildingAreaColor(area, sourceBacked ? 0.22 : 0.14);
+  const buildingFill = buildingAreaColor(area, sourceBacked ? 0.94 : 0.58);
+  const buildingOutline = buildingAreaColor(area, sourceBacked ? 0.48 : 0.24);
 
   return new Entity({
     id: area.id,
@@ -596,9 +602,11 @@ export class NetworkOverlayLayer {
       if (!point) continue;
 
       const intensity = overlayIntensity(node.intensity);
-      const baseSize = 5 + intensity * 7;
       const urbanLight =
         node.properties?.presentationType === 'urban-illumination';
+      const baseSize = urbanLight
+        ? 1.2 + intensity * 1.8
+        : 5 + intensity * 7;
       const powerNode =
         !urbanLight &&
         (node.kind === 'generation' ||
@@ -615,11 +623,11 @@ export class NetworkOverlayLayer {
                 intensity * 4.2
             );
         point.pixelSize = new ConstantProperty(
-          baseSize * (0.88 + pulse * 0.2)
+          baseSize * (0.9 + pulse * 0.34)
         );
         point.color = new ConstantProperty(
           Color.fromCssColorString('#ffd37d').withAlpha(
-            0.48 + intensity * 0.22 + pulse * 0.2
+            0.22 + intensity * 0.18 + pulse * 0.18
           )
         );
       } else if (
