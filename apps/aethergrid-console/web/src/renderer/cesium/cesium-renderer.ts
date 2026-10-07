@@ -126,11 +126,15 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
     if (!ionEnabled) {
       try {
-        this.#viewer.imageryLayers.addImageryProvider(
+        const osmLayer = this.#viewer.imageryLayers.addImageryProvider(
           new OpenStreetMapImageryProvider({
             url: 'https://tile.openstreetmap.org/'
           })
         );
+        osmLayer.brightness = 0.44;
+        osmLayer.contrast = 1.26;
+        osmLayer.saturation = 0.46;
+        osmLayer.gamma = 0.86;
       } catch {
         // The Cesium ellipsoid + source-backed overlays remain usable if imagery is unavailable.
       }
