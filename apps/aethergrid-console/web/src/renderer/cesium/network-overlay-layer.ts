@@ -8,6 +8,7 @@ import {
   DistanceDisplayCondition,
   Entity,
   HeadingPitchRoll,
+  HeightReference,
   HorizontalOrigin,
   LabelGraphics,
   Math as CesiumMath,
@@ -458,8 +459,9 @@ function areaEntity(
     minHeightM + 3.2,
     Number(area.properties?.heightM ?? minHeightM + 12)
   );
-  const buildingFill = buildingAreaColor(area, 0.72);
-  const buildingOutline = buildingAreaColor(area, 0.94);
+  const sourceBacked = area.properties?.sourceBacked === true;
+  const buildingFill = buildingAreaColor(area, sourceBacked ? 0.74 : 0.36);
+  const buildingOutline = buildingAreaColor(area, sourceBacked ? 0.96 : 0.62);
 
   return new Entity({
     id: area.id,
@@ -484,7 +486,11 @@ function areaEntity(
       ),
       perPositionHeight: !building,
       height: building ? new ConstantProperty(minHeightM) : undefined,
-      extrudedHeight: building ? new ConstantProperty(heightM) : undefined
+      extrudedHeight: building ? new ConstantProperty(heightM) : undefined,
+      heightReference: building ? new ConstantProperty(HeightReference.RELATIVE_TO_GROUND) : undefined,
+      extrudedHeightReference: building
+        ? new ConstantProperty(HeightReference.RELATIVE_TO_GROUND)
+        : undefined
     }),
     properties: {
       overlayKind: area.kind,
