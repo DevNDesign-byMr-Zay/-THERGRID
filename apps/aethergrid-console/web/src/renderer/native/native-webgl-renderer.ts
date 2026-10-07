@@ -483,6 +483,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
       journeyPhase: this.#journeyPhase,
       detailLevel: this.#detailLevel,
       performanceTier: this.#performanceTier,
+      buildingMode: this.#overlays.has('buildings') ? 'source-extruded' : 'none',
       solar,
       reason: this.#reason
     };
