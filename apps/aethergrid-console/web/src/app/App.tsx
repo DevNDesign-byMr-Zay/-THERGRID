@@ -274,7 +274,7 @@ export function App() {
   const { clock, state: temporal } = useTemporalClock();
   const appearance = useAppearance();
   const [city, setCity] = useState<CityTarget>(CITY_TARGETS[0]);
-  const [scope, setScope] = useState<'world' | 'city'>('city');
+  const [scope, setScope] = useState<'world' | 'city'>('world');
   const [visualMode, setVisualMode] = useState<VisualMode>('solid');
   const [activeUseCase, setActiveUseCase] = useState<UseCaseId | null>(null);
   const [layers, setLayers] = useState<readonly LayerState[]>(INITIAL_LAYERS);
@@ -309,7 +309,7 @@ export function App() {
   const [navOpen, setNavOpen] = useState(false);
   const [navigationTab, setNavigationTab] = useState('world');
   const [inspector, setInspector] = useState('overview');
-  const [productMode, setProductMode] = useState('GRID');
+  const [productMode, setProductMode] = useState('GLOBAL');
   const [activeDomain, setActiveDomain] = useState<DomainId>('energy');
   const navigationDrawer = useCommandDrawer(navOpen, () => setNavOpen(false));
   const intelligenceDrawer = useCommandDrawer(intelOpen, () => setIntelOpen(false));
