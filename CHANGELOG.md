@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased — 0.2.0
+## Unreleased — 0.2.1
+
+### Release coordination
+
+- Prepared a new `v0.2.1` release candidate because `v0.2.0` was published October 7, 2026, before the latest spatial-first/Cesium and tokenless city fixes. Existing release tags are not reused.
+- Repaired the collapsed-intelligence inspector test and compact drawer keyboard focus in PR #160; protected exact-main live acceptance and hardware verification remain independently gated.
 
 ### Changed
 
