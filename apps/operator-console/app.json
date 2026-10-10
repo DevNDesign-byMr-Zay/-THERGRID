@@ -3,7 +3,7 @@
   "id": "aethergrid.operator-console",
   "name": "ÆTHERGRID Operator Console",
   "product": "ÆTHERGRID",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "repositoryPackage": "thergrid",
   "description": "Modern animated ÆTHERGRID operator-intelligence dashboard for digital-twin, holographic, quantum-inspired, AI collaboration, scenario, metrics, and evidence review.",
   "entrypoints": {
