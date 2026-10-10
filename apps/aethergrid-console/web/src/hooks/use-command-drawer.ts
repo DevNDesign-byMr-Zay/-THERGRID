@@ -19,13 +19,21 @@ export function useCommandDrawer(open: boolean, onClose: () => void) {
     const controls = () => Array.from(root.querySelectorAll<HTMLElement>(
       'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]'
     )).filter((element) => element.getClientRects().length > 0);
-    // Focus synchronously after React commits the open dialog and clears inert.
-    // An animation-frame-only focus leaves a race against heavy WebGL frames.
-    const focusFirst = () => (controls()[0] ?? root).focus({ preventScroll: true });
-    focusFirst();
-    const focusFrame = requestAnimationFrame(() => {
-      if (!root.contains(document.activeElement)) focusFirst();
-    });
+    // CSS transitions can keep an opening drawer non-focusable after React commits.
+    // Retry only until the dialog becomes visible and genuinely owns keyboard focus.
+    const focusFirst = () => {
+      if (root.inert || getComputedStyle(root).visibility !== 'visible') return false;
+      if (root.contains(document.activeElement)) return true;
+      (controls()[0] ?? root).focus({ preventScroll: true });
+      return root.contains(document.activeElement);
+    };
+    let focusFrame = 0;
+    let focusAttempts = 0;
+    const ensureInitialFocus = () => {
+      if (focusFirst() || focusAttempts++ >= 120) return;
+      focusFrame = requestAnimationFrame(ensureInitialFocus);
+    };
+    ensureInitialFocus();
     const keydown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -50,7 +58,7 @@ export function useCommandDrawer(open: boolean, onClose: () => void) {
     document.addEventListener('focusin', containFocus);
     document.addEventListener('keydown', keydown);
     return () => {
-      cancelAnimationFrame(focusFrame);
+      if (focusFrame) cancelAnimationFrame(focusFrame);
       document.removeEventListener('focusin', containFocus);
       document.removeEventListener('keydown', keydown);
       if (previous?.isConnected && !root.contains(previous)) previous.focus({ preventScroll: true });
