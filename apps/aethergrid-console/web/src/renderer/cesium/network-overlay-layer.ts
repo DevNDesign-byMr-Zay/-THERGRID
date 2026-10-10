@@ -3,20 +3,25 @@ import {
   Cartesian3,
   BoxGraphics,
   Color,
+  ColorGeometryInstanceAttribute,
   ColorMaterialProperty,
   ConstantProperty,
   CustomDataSource,
   DistanceDisplayCondition,
   Entity,
+  GeometryInstance,
   HeadingPitchRoll,
   HorizontalOrigin,
   LabelGraphics,
   Math as CesiumMath,
   ModelGraphics,
+  PerInstanceColorAppearance,
   PointGraphics,
+  PolygonGeometry,
   PolygonGraphics,
   PolygonHierarchy,
   PolylineGraphics,
+  Primitive,
   Transforms,
   VerticalOrigin,
   Viewer,
@@ -574,6 +579,7 @@ export class NetworkOverlayLayer {
   #edgeEntities = new Map<string, Entity>();
   #scenarioGhostEntities = new Map<string, Entity>();
   #areaEntities = new Map<string, Entity>();
+  #buildingPrimitive: Primitive | null = null;
   #selectedSourceFeatureId: string | null = null;
   #time: TemporalInstant | null = null;
   #visible = true;
@@ -585,6 +591,7 @@ export class NetworkOverlayLayer {
 
   apply(snapshot: SpatialOverlaySnapshot): void {
     this.#snapshot = snapshot;
+    this.#clearBuildingPrimitive();
     this.#source.entities.removeAll();
     this.#nodeEntities.clear();
     this.#edgeEntities.clear();
@@ -592,6 +599,10 @@ export class NetworkOverlayLayer {
     this.#areaEntities.clear();
 
     const provenance = provenanceProperties(snapshot);
+
+    if (snapshot.layerId === 'buildings') {
+      this.#applyBuildingPrimitive(snapshot, provenance);
+    }
 
     for (const node of snapshot.nodes) {
       const entity = this.#source.entities.add(nodeEntity(node, provenance));
@@ -612,7 +623,7 @@ export class NetworkOverlayLayer {
       }
     }
     for (const area of snapshot.areas ?? []) {
-      if (area.positions.length < 3) continue;
+      if (area.positions.length < 3 || area.kind === 'building') continue;
       const entity = this.#source.entities.add(areaEntity(area, provenance));
       this.#areaEntities.set(area.id, entity);
     }
@@ -624,6 +635,7 @@ export class NetworkOverlayLayer {
   setVisible(visible: boolean): void {
     this.#visible = visible;
     this.#source.show = visible;
+    if (this.#buildingPrimitive) this.#buildingPrimitive.show = visible;
     this.#viewer.scene.requestRender();
   }
 
@@ -778,6 +790,84 @@ export class NetworkOverlayLayer {
     if (this.#visible) this.#viewer.scene.requestRender();
   }
 
+  #applyBuildingPrimitive(
+    snapshot: SpatialOverlaySnapshot,
+    provenance: Readonly<Record<string, unknown>>
+  ): void {
+    const instances = (snapshot.areas ?? [])
+      .filter((area) => area.kind === 'building' && area.positions.length >= 3)
+      .map((area) => {
+        const minHeightM = Math.max(0, Number(area.properties?.minHeightM ?? 0));
+        const heightM = Math.max(
+          minHeightM + 3.2,
+          Number(area.properties?.heightM ?? minHeightM + 12)
+        );
+        const hierarchy = new PolygonHierarchy(
+          area.positions.map((position) =>
+            Cartesian3.fromDegrees(position.longitude, position.latitude)
+          )
+        );
+        const sourceFeatureId =
+          typeof area.properties?.sourceFeatureId === 'string'
+            ? area.properties.sourceFeatureId
+            : area.id;
+        const id = {
+          aethergridSourceBuilding: true,
+          id: area.id,
+          sourceFeatureId,
+          label: area.label ?? area.id,
+          latitude: Number(area.properties?.centroidLatitude ?? Number.NaN),
+          longitude: Number(area.properties?.centroidLongitude ?? Number.NaN),
+          heightM,
+          properties: {
+            ...provenance,
+            ...area.properties,
+            overlayKind: area.kind,
+            sourceName: area.label ?? area.id
+          }
+        };
+
+        return new GeometryInstance({
+          id,
+          geometry: new PolygonGeometry({
+            polygonHierarchy: hierarchy,
+            height: minHeightM,
+            extrudedHeight: heightM,
+            closeTop: true,
+            closeBottom: true,
+            vertexFormat: PerInstanceColorAppearance.VERTEX_FORMAT
+          }),
+          attributes: {
+            color: ColorGeometryInstanceAttribute.fromColor(
+              buildingAreaColor(area, 1)
+            )
+          }
+        });
+      });
+
+    if (!instances.length) return;
+
+    const primitive = new Primitive({
+      geometryInstances: instances,
+      appearance: new PerInstanceColorAppearance({
+        closed: true,
+        translucent: false,
+        flat: false
+      }),
+      asynchronous: false
+    });
+    primitive.show = this.#visible;
+    this.#viewer.scene.primitives.add(primitive);
+    this.#buildingPrimitive = primitive;
+    this.#viewer.scene.requestRender();
+  }
+
+  #clearBuildingPrimitive(): void {
+    if (!this.#buildingPrimitive) return;
+    this.#viewer.scene.primitives.remove(this.#buildingPrimitive);
+    this.#buildingPrimitive = null;
+  }
+
   #sourceFeatureId(
     id: string,
     properties: Readonly<Record<string, unknown>> | undefined
@@ -848,6 +938,7 @@ export class NetworkOverlayLayer {
   }
 
   destroy(): void {
+    this.#clearBuildingPrimitive();
     this.#source.entities.removeAll();
     this.#viewer.dataSources.remove(this.#source, true);
     this.#snapshot = null;
