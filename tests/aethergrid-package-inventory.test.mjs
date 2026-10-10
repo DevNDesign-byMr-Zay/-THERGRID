@@ -9,7 +9,8 @@ import { verifyAethergridPackageInventory } from '../scripts/lib/aethergrid-pack
 const prefix = 'aethergrid-functional-app/';
 const contents = {
   'server.mjs': 'export const server = "real";\n'.repeat(500),
-  'web/dist/index.html': '<div id="root"></div><script type="module" src="/assets/app.js"></script>',
+  'web/dist/index.html':
+    '<div id="root"></div><script type="module" src="/assets/app.js"></script>',
   'web/dist/assets/app.js': 'export const app = "real";\n'.repeat(5000),
   'web/dist/assets/app.css': 'body { color: #fff; }\n'.repeat(90),
   'web/dist/cesium/Workers/worker.js': 'self.onmessage = () => {}',
