@@ -6,7 +6,9 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-const script = fileURLToPath(new URL('../scripts/write-canonical-failure-evidence.mjs', import.meta.url));
+const script = fileURLToPath(
+  new URL('../scripts/write-canonical-failure-evidence.mjs', import.meta.url),
+);
 
 test('failed browser acceptance leaves truthful, sanitized evidence rather than an empty artifact', async (t) => {
   const cwd = await mkdtemp(join(tmpdir(), 'aethergrid-canonical-failure-'));
@@ -39,7 +41,10 @@ test('failed browser acceptance leaves truthful, sanitized evidence rather than 
   assert.equal(report.hardwareSubmitted, false);
   assert.equal(report.hardwareExecuted, false);
   assert.doesNotMatch(reportText, /example-should-never-appear-in-artifacts/u);
-  assert.equal(await readFile(join(cwd, 'canonical-evidence', 'providers.json'), 'utf8'), '{"verified":false}\n');
+  assert.equal(
+    await readFile(join(cwd, 'canonical-evidence', 'providers.json'), 'utf8'),
+    '{"verified":false}\n',
+  );
 });
 
 test('failed acceptance cannot claim evidence under an invalid submission commit', async (t) => {
