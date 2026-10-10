@@ -317,9 +317,14 @@ test('v4 Cesium city identity includes mapped roads water coastline and green ar
   assert.match(layer, /PolygonHierarchy/u);
   assert.match(layer, /WallGraphics/u);
   assert.match(layer, /BoxGraphics/u);
+  assert.match(layer, /PolygonGeometry/u);
+  assert.match(layer, /GeometryInstance/u);
+  assert.match(layer, /PerInstanceColorAppearance/u);
+  assert.match(layer, /ColorGeometryInstanceAttribute/u);
   assert.match(layer, /minimumHeights/u);
   assert.match(layer, /maximumHeights/u);
   assert.match(layer, /buildingAreaColor/u);
+  assert.match(renderer, /openstreetmap-source-extrusion/u);
   assert.match(service, /footprintEnvelope/u);
   assert.match(service, /bboxWidthM/u);
   assert.match(service, /bboxDepthM/u);
