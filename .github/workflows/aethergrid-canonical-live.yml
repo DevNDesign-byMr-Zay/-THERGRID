@@ -59,11 +59,13 @@ jobs:
         working-directory: apps/aethergrid-console/web
         run: npx playwright install --with-deps chromium
       - name: Canonical browser and responsive acceptance without credentials
+        id: browser_acceptance
         working-directory: apps/aethergrid-console/web
         env:
           AETHERGRID_TEST_CANONICAL: '1'
         run: npm test -- --workers=1
       - name: Credentialed canonical API and Cesium acceptance
+        id: credentialed_acceptance
         env:
           AETHERGRID_AI_PROVIDER: openai-compatible
           AETHERGRID_AI_MODEL: openai/gpt-oss-20b
@@ -92,6 +94,12 @@ jobs:
           node scripts/sanitize-canonical-artifacts.mjs
           sanitation_status=$?
           test "$provider_status" = 0 && test "$cesium_status" = 0 && test "$sanitation_status" = 0
+      - name: Preserve truthful failure diagnostic when acceptance stops early
+        if: failure()
+        env:
+          AETHERGRID_BROWSER_OUTCOME: ${{ steps.browser_acceptance.outcome }}
+          AETHERGRID_PROVIDER_OUTCOME: ${{ steps.credentialed_acceptance.outcome }}
+        run: node scripts/write-canonical-failure-evidence.mjs
       - name: Retain only sanitized acceptance evidence
         if: always()
         uses: actions/upload-artifact@v7

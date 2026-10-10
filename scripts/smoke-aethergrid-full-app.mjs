@@ -4,6 +4,7 @@ import net from 'node:net';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { verifyAethergridPackageInventory } from './lib/aethergrid-package-integrity.mjs';
 
 const repoRoot = fileURLToPath(new URL('../', import.meta.url));
 const archivePath = join(repoRoot, 'dist', 'aethergrid-functional-app.zip');
@@ -92,6 +93,7 @@ let stderr = '';
 try {
   const extracted = await extractStoredZip(archivePath, tempRoot);
   const appRoot = join(tempRoot, 'aethergrid-functional-app');
+  const verifiedPackage = await verifyAethergridPackageInventory(appRoot, extracted);
 
   for (const required of [
     'aethergrid-functional-app/server.mjs',
@@ -147,7 +149,7 @@ try {
   assert(apiMiss.status === 404, 'unknown API route must remain an API 404');
 
   process.stdout.write(
-    `ÆTHERGRID packaged runtime smoke passed on canonical React/Cesium archive (${extracted.length} files)\n`,
+    `ÆTHERGRID packaged runtime smoke passed on canonical React/Cesium archive (${extracted.length} files, ${verifiedPackage.verifiedFiles} SHA-256 checked)\n`,
   );
 } catch (error) {
   if (stdout) process.stderr.write(`--- packaged server stdout ---\n${stdout}\n`);

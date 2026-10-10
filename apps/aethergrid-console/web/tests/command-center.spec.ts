@@ -172,6 +172,25 @@ test('compact drawers contain focus and switch exclusively', async ({ page }) =>
   await trigger.click();
   const drawer = page.getByRole('dialog', { name: 'Navigation and layers' });
   await expect(drawer).toBeVisible();
+  // Record the actual accessibility failure before asserting the expected focus.
+  const focusDiagnostic = await page.evaluate(() => {
+    const root = document.querySelector<HTMLElement>('#aethergrid-navigation');
+    const close = root?.querySelector<HTMLElement>('[aria-label="Close navigation drawer"]');
+    const active = document.activeElement;
+    return {
+      active: active?.outerHTML.slice(0, 240) || null,
+      dialogRole: root?.getAttribute('role'),
+      inert: root?.inert,
+      open: root?.classList.contains('open'),
+      visibility: root ? getComputedStyle(root).visibility : null,
+      closeVisibility: close ? getComputedStyle(close).visibility : null,
+      closeRectCount: close?.getClientRects().length ?? null,
+      closeDisabled: close?.hasAttribute('disabled'),
+      focusInside: Boolean(root?.contains(active)),
+      compact: matchMedia('(max-width: 1100px)').matches
+    };
+  });
+  console.log('AETHERGRID_DRAWER_FOCUS_DIAGNOSTIC', JSON.stringify(focusDiagnostic));
   await expect(page.getByRole('button', { name: 'Close navigation drawer' })).toBeFocused();
   await page.keyboard.press('Shift+Tab');
   expect(await drawer.evaluate((root) => root.contains(document.activeElement))).toBeTruthy();
