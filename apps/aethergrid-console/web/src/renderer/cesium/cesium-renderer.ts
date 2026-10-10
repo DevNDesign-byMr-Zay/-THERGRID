@@ -406,6 +406,30 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       };
     }
 
+    const primitiveFeature = picked?.id;
+    if (
+      primitiveFeature &&
+      typeof primitiveFeature === 'object' &&
+      primitiveFeature.aethergridSourceBuilding === true
+    ) {
+      const latitude = Number(primitiveFeature.latitude);
+      const longitude = Number(primitiveFeature.longitude);
+      const heightMeters = Number(primitiveFeature.heightM);
+      return {
+        id: String(primitiveFeature.id ?? primitiveFeature.sourceFeatureId ?? 'source-building'),
+        kind: 'building',
+        source: 'openstreetmap-source-extrusion',
+        latitude: Number.isFinite(latitude) ? latitude : undefined,
+        longitude: Number.isFinite(longitude) ? longitude : undefined,
+        heightMeters: Number.isFinite(heightMeters) ? heightMeters : undefined,
+        properties:
+          primitiveFeature.properties &&
+          typeof primitiveFeature.properties === 'object'
+            ? primitiveFeature.properties
+            : {}
+      };
+    }
+
     const entity = picked?.id;
     if (entity instanceof Entity) {
       this.#clearSelection();
