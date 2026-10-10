@@ -81,6 +81,10 @@ test('exclusive workspaces and source truth survive mode changes', async ({ page
 test('spatial handoff exits the active secondary inspector', async ({ page }) => {
   await page.setViewportSize({ width: 1536, height: 1024 });
   await page.goto('/');
+  // The spatial-first layout intentionally starts with Intelligence collapsed.
+  // Open the operator drawer before using its secondary inspector.
+  await page.getByRole('button', { name: 'INTEL', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Inspector view' })).toBeVisible();
   await page.getByRole('combobox', { name: 'Inspector view' }).selectOption('events');
   await expect(page.locator('.temporal-event-navigator')).toBeVisible();
   await page.getByRole('group', { name: 'Spatial interaction' }).getByRole('button', { name: 'MEASURE', exact: true }).click();
