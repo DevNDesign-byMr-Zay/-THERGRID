@@ -15,7 +15,7 @@ This roadmap separates delivered application work from future integration and de
 ## Remaining integration and release work
 
 1. Confirm intended safe city-provider hardening is integrated before selecting the final submission SHA.
-2. Retain the reconciled 0.2.0 repository candidate and independent product-generation versions; see [VERSIONING.md](VERSIONING.md).
+2. Prepare the `0.2.1` repository release candidate (the earlier `v0.2.0` tag exists) while retaining independent product-generation versions; see [VERSIONING.md](VERSIONING.md).
 3. Validate every maintained gate on the exact final main SHA after all intended hardening and reconciliation changes are merged.
 4. Run protected canonical live-provider acceptance with installed Actions secrets; retain sanitized evidence, including explicit unavailable hardware states.
 5. Select production hosting and configure its server-side environment, persistence and operating controls.
