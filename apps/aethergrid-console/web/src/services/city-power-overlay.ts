@@ -197,6 +197,66 @@ function pathToEdges(
   return edges;
 }
 
+interface FootprintEnvelope {
+  center: readonly [number, number];
+  widthM: number;
+  depthM: number;
+  headingDegrees: number;
+}
+
+function footprintEnvelope(
+  footprint: readonly (readonly [number, number])[]
+): FootprintEnvelope | null {
+  const points =
+    footprint.length > 2 &&
+    footprint[0][0] === footprint.at(-1)?.[0] &&
+    footprint[0][1] === footprint.at(-1)?.[1]
+      ? footprint.slice(0, -1)
+      : footprint;
+  if (points.length < 3) return null;
+
+  let heading = 0;
+  let longest = 0;
+  for (let index = 0; index < points.length; index += 1) {
+    const current = points[index];
+    const next = points[(index + 1) % points.length];
+    const dx = next[0] - current[0];
+    const dz = next[1] - current[1];
+    const length = Math.hypot(dx, dz);
+    if (length > longest) {
+      longest = length;
+      heading = Math.atan2(dx, dz);
+    }
+  }
+
+  const cos = Math.cos(-heading);
+  const sin = Math.sin(-heading);
+  const rotated = points.map(([x, z]) => [
+    x * cos - z * sin,
+    x * sin + z * cos
+  ] as const);
+  const xs = rotated.map(([x]) => x);
+  const zs = rotated.map(([, z]) => z);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minZ = Math.min(...zs);
+  const maxZ = Math.max(...zs);
+  const centerRotatedX = (minX + maxX) / 2;
+  const centerRotatedZ = (minZ + maxZ) / 2;
+  const inverseCos = Math.cos(heading);
+  const inverseSin = Math.sin(heading);
+
+  return {
+    center: [
+      centerRotatedX * inverseCos - centerRotatedZ * inverseSin,
+      centerRotatedX * inverseSin + centerRotatedZ * inverseCos
+    ],
+    widthM: Math.max(4, maxX - minX),
+    depthM: Math.max(4, maxZ - minZ),
+    headingDegrees: (heading * 180) / Math.PI
+  };
+}
+
 function cityMeshToBuildingOverlay(
   mesh: CityMeshResponse
 ): SpatialOverlaySnapshot {
@@ -212,6 +272,10 @@ function cityMeshToBuildingOverlay(
       const heightSource = String(building.heightSource ?? 'inferred');
       const sourceBacked =
         heightSource !== 'inferred' && heightSource !== 'synthetic-fallback';
+      const envelope = footprintEnvelope(building.footprint ?? []);
+      const envelopeCenter = envelope
+        ? localMetersToCoordinate(mesh.city, envelope.center, 0)
+        : null;
 
       return {
         id: building.id,
@@ -238,7 +302,12 @@ function cityMeshToBuildingOverlay(
           roofShape: building.roofShape ?? '',
           roofHeightM: building.roofHeightM ?? 0,
           roofMaterial: building.roofMaterial ?? '',
-          roofColor: building.roofColor ?? ''
+          roofColor: building.roofColor ?? '',
+          centroidLatitude: envelopeCenter?.latitude ?? null,
+          centroidLongitude: envelopeCenter?.longitude ?? null,
+          bboxWidthM: envelope?.widthM ?? null,
+          bboxDepthM: envelope?.depthM ?? null,
+          headingDegrees: envelope?.headingDegrees ?? 0
         }
       };
     });
