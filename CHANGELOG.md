@@ -10,7 +10,7 @@
 ### Changed
 
 - Promoted React/TypeScript/Cesium to the canonical Node-served and full-ZIP application through #148, preserving same-origin provider APIs and explicit native v3 compatibility.
-- Reconciled root package/lockfile to the unreleased 0.2.0 delivery milestone; canonical application generation remains 4.0.0-alpha.1 and the earlier evidence console tracks repository delivery at 0.2.0.
+- Kept root package/lockfile and earlier evidence-console manifest aligned to the 0.2.1 release candidate; canonical application generation remains 4.0.0-alpha.1.
 - Updated startup and roadmap status to the merged production build/package contract; final-main and canonical live-provider evidence remain required before publication.
 
 - Reconciled the repository introduction and scope with the maintained Node.js backend, React/TypeScript/Cesium frontend, provider/agent/quantum runtimes and advisory evidence boundary.
