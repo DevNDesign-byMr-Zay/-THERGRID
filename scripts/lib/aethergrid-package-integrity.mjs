@@ -21,7 +21,10 @@ export async function verifyAethergridPackageInventory(root, entryNames) {
   assert.equal(manifest.schemaVersion, 2, 'canonical package inventory schema must be v2');
   assert.equal(manifest.canonicalWebApp, 'web/dist/index.html');
   assert.equal(manifest.backend, 'server.mjs');
-  assert.ok(Array.isArray(manifest.files) && manifest.files.length > 0, 'missing package inventory');
+  assert.ok(
+    Array.isArray(manifest.files) && manifest.files.length > 0,
+    'missing package inventory',
+  );
 
   const expected = new Map();
   for (const item of manifest.files) {
@@ -43,7 +46,11 @@ export async function verifyAethergridPackageInventory(root, entryNames) {
   });
   const complete = [...expected.keys(), 'PACKAGE_CONTENTS.json', 'SHA256SUMS.txt'];
   assert.equal(actual.length, new Set(actual).size, 'duplicate archive entries are forbidden');
-  assert.deepEqual(actual.slice().sort(), complete.sort(), 'archive and manifest inventories differ');
+  assert.deepEqual(
+    actual.slice().sort(),
+    complete.sort(),
+    'archive and manifest inventories differ',
+  );
 
   let verifiedBytes = 0;
   for (const [path, item] of expected) {
@@ -81,5 +88,10 @@ export async function verifyAethergridPackageInventory(root, entryNames) {
   assert.ok(cesiumWorkers > 0, 'canonical frontend has no Cesium Workers');
   assert.ok(expected.get('server.mjs')?.bytes >= 10_000, 'packaged backend appears incomplete');
 
-  return Object.freeze({ verifiedFiles: expected.size, verifiedBytes, javascriptAssets, cesiumWorkers });
+  return Object.freeze({
+    verifiedFiles: expected.size,
+    verifiedBytes,
+    javascriptAssets,
+    cesiumWorkers,
+  });
 }
