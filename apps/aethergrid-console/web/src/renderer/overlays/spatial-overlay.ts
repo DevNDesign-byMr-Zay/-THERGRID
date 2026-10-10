@@ -22,7 +22,7 @@ export type OverlayEdgeKind =
   | 'impact'
   | 'analysis-line';
 
-export type OverlayAreaKind = 'water' | 'green';
+export type OverlayAreaKind = 'water' | 'green' | 'building';
 
 export interface OverlayCoordinate {
   latitude: number;

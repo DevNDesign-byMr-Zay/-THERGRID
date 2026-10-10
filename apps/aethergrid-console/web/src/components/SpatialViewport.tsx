@@ -221,6 +221,7 @@ export function SpatialViewport({
     }
     for (const snapshot of overlays) manager.applyOverlay(snapshot);
     overlayIdsRef.current = nextIds;
+    setStatus(manager.status());
   }, [overlays, status.ready]);
 
   useEffect(() => {
@@ -331,6 +332,7 @@ export function SpatialViewport({
       data-solar-phase={status.solar?.phase ?? 'unknown'}
       data-interaction-mode={interactionMode}
       data-performance-tier={performance.resolved}
+      data-building-mode={status.buildingMode ?? 'none'}
     >
       <div className="spatial-canvas" ref={hostRef} aria-label="ÆTHERGRID 4D spatial viewport" />
       <div className="spatial-grid-overlay" aria-hidden="true" />
@@ -356,7 +358,7 @@ export function SpatialViewport({
           {status.ready
             ? status.degraded
               ? 'DEGRADED'
-              : `${status.detailLevel?.toUpperCase() ?? 'STREAM'} · STREAMING`
+              : `${status.detailLevel?.toUpperCase() ?? 'STREAM'} · ${(status.buildingMode ?? 'none').toUpperCase().replace('-', ' ')}`
             : 'INITIALIZING'}
         </small>
         <details className="renderer-tools">

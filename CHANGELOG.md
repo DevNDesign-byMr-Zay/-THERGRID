@@ -17,6 +17,7 @@
 - Added scheduled dependency-freshness evidence without automatic dependency mutation.
 
 ### Added
+- Added credential-free Cesium startup with a real WGS84 globe, OpenStreetMap imagery, source-backed OpenStreetMap building-footprint extrusions and live world-node animation; Cesium Ion now augments the scene instead of being required for the scene to exist.
 - Added LIVE-only NWS active-hazard visualization with severity-coded point-context markers and provider-returned Polygon/MultiPolygon boundary geometry; alerts without geometry remain point-context only and never receive fabricated affected-area fills.
 - Added per-city/coordinate operator bindings for NOAA NWPS gauge IDs and EIA balancing-region codes, enabling source-backed live hydrology and energy reads without location-based identifier guessing or browser-stored provider credentials.
 - Added provider-backed 4D weather forecast sampling for the typed operator surface, including nearest-sample cursor alignment, out-of-range refusal, stale/fallback provenance, forecast scene labeling, and Cesium forecast atmosphere rendering without relabeling it as a live observation.

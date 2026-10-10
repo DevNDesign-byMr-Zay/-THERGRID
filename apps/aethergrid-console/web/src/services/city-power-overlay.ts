@@ -17,6 +17,17 @@ interface CityBuilding {
   id: string;
   name?: string;
   heightM?: number | null;
+  heightSource?: string | null;
+  minHeightM?: number | null;
+  levels?: number | null;
+  buildingType?: string | null;
+  buildingPart?: boolean;
+  buildingMaterial?: string | null;
+  buildingColor?: string | null;
+  roofShape?: string | null;
+  roofHeightM?: number | null;
+  roofMaterial?: string | null;
+  roofColor?: string | null;
   footprint?: readonly (readonly [number, number])[];
 }
 
@@ -186,6 +197,131 @@ function pathToEdges(
   return edges;
 }
 
+interface FootprintEnvelope {
+  center: readonly [number, number];
+  widthM: number;
+  depthM: number;
+  headingDegrees: number;
+}
+
+function footprintEnvelope(
+  footprint: readonly (readonly [number, number])[]
+): FootprintEnvelope | null {
+  const points =
+    footprint.length > 2 &&
+    footprint[0][0] === footprint.at(-1)?.[0] &&
+    footprint[0][1] === footprint.at(-1)?.[1]
+      ? footprint.slice(0, -1)
+      : footprint;
+  if (points.length < 3) return null;
+
+  let heading = 0;
+  let longest = 0;
+  for (let index = 0; index < points.length; index += 1) {
+    const current = points[index];
+    const next = points[(index + 1) % points.length];
+    const dx = next[0] - current[0];
+    const dz = next[1] - current[1];
+    const length = Math.hypot(dx, dz);
+    if (length > longest) {
+      longest = length;
+      heading = Math.atan2(dx, dz);
+    }
+  }
+
+  const cos = Math.cos(-heading);
+  const sin = Math.sin(-heading);
+  const rotated = points.map(([x, z]) => [
+    x * cos - z * sin,
+    x * sin + z * cos
+  ] as const);
+  const xs = rotated.map(([x]) => x);
+  const zs = rotated.map(([, z]) => z);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minZ = Math.min(...zs);
+  const maxZ = Math.max(...zs);
+  const centerRotatedX = (minX + maxX) / 2;
+  const centerRotatedZ = (minZ + maxZ) / 2;
+  const inverseCos = Math.cos(heading);
+  const inverseSin = Math.sin(heading);
+
+  return {
+    center: [
+      centerRotatedX * inverseCos - centerRotatedZ * inverseSin,
+      centerRotatedX * inverseSin + centerRotatedZ * inverseCos
+    ],
+    widthM: Math.max(4, maxX - minX),
+    depthM: Math.max(4, maxZ - minZ),
+    headingDegrees: (heading * 180) / Math.PI
+  };
+}
+
+function cityMeshToBuildingOverlay(
+  mesh: CityMeshResponse
+): SpatialOverlaySnapshot {
+  const source = sourceFields(mesh);
+  const areas: SpatialOverlayArea[] = (mesh.buildings ?? [])
+    .filter((building) => (building.footprint?.length ?? 0) >= 3)
+    .map((building) => {
+      const minHeightM = Math.max(0, Number(building.minHeightM ?? 0));
+      const heightM = Math.max(
+        minHeightM + 3.2,
+        Number(building.heightM ?? minHeightM + 12)
+      );
+      const heightSource = String(building.heightSource ?? 'inferred');
+      const sourceBacked =
+        heightSource !== 'inferred' && heightSource !== 'synthetic-fallback';
+      const envelope = footprintEnvelope(building.footprint ?? []);
+      const envelopeCenter = envelope
+        ? localMetersToCoordinate(mesh.city, envelope.center, 0)
+        : null;
+
+      return {
+        id: building.id,
+        kind: 'building',
+        positions: (building.footprint ?? []).map((point) =>
+          localMetersToCoordinate(mesh.city, point, 0)
+        ),
+        label: building.name || building.buildingType || building.id,
+        intensity: Math.min(1, Math.max(0.16, heightM / 320)),
+        properties: {
+          sourceFeatureId: building.id,
+          sourceDataset: 'osm-overpass',
+          cityId: mesh.city.id,
+          presentationType: 'source-backed-building',
+          sourceBacked,
+          heightM,
+          minHeightM,
+          heightSource,
+          levels: building.levels ?? null,
+          buildingType: building.buildingType ?? '',
+          buildingPart: building.buildingPart === true,
+          buildingMaterial: building.buildingMaterial ?? '',
+          buildingColor: building.buildingColor ?? '',
+          roofShape: building.roofShape ?? '',
+          roofHeightM: building.roofHeightM ?? 0,
+          roofMaterial: building.roofMaterial ?? '',
+          roofColor: building.roofColor ?? '',
+          centroidLatitude: envelopeCenter?.latitude ?? null,
+          centroidLongitude: envelopeCenter?.longitude ?? null,
+          bboxWidthM: envelope?.widthM ?? null,
+          bboxDepthM: envelope?.depthM ?? null,
+          headingDegrees: envelope?.headingDegrees ?? 0
+        }
+      };
+    });
+
+  return {
+    id: `buildings:${mesh.city.id}:${source.eventTime}`,
+    layerId: 'buildings',
+    ...source,
+    nodes: [],
+    edges: [],
+    areas
+  };
+}
+
 export function cityMeshToSemanticOverlays(
   mesh: CityMeshResponse
 ): readonly SpatialOverlaySnapshot[] {
@@ -261,6 +397,7 @@ export function cityMeshToSemanticOverlays(
     }));
 
   return [
+    cityMeshToBuildingOverlay(mesh),
     {
       id: `roads:${mesh.city.id}:${source.eventTime}`,
       layerId: 'roads',
@@ -466,7 +603,7 @@ function cityMeshToIlluminationOverlay(
 
   return {
     id: `urban-illumination:${mesh.city.id}:${source.eventTime}`,
-    layerId: 'buildings',
+    layerId: 'illumination',
     ...source,
     nodes,
     edges: []
@@ -565,7 +702,7 @@ export async function loadCityPowerOverlay(
   signal?: AbortSignal
 ): Promise<SpatialOverlaySnapshot> {
   const mesh = await cityMeshRequest(
-    `/api/aethergrid/geospatial/city/${encodeURIComponent(cityId)}`,
+    `/api/aethergrid/geospatial/city/${encodeURIComponent(cityId)}?spatial=1`,
     'city power overlay request',
     signal
   );
@@ -583,7 +720,8 @@ export async function loadCoordinatePowerOverlay(
     lat: String(latitude),
     lon: String(longitude),
     name,
-    radiusM: '1200'
+    radiusM: '1200',
+    spatial: '1'
   });
   const mesh = await cityMeshRequest(
     `/api/aethergrid/geospatial/point?${query.toString()}`,
@@ -599,7 +737,7 @@ export async function loadCitySpatialBundle(
   signal?: AbortSignal
 ): Promise<CitySpatialBundle> {
   const mesh = await cityMeshRequest(
-    `/api/aethergrid/geospatial/city/${encodeURIComponent(cityId)}`,
+    `/api/aethergrid/geospatial/city/${encodeURIComponent(cityId)}?spatial=1`,
     'city spatial bundle request',
     signal
   );

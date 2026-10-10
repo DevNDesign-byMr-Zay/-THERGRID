@@ -1,5 +1,14 @@
 import { createHash } from 'node:crypto';
 
+const DEFAULT_OVERPASS_ENDPOINTS = Object.freeze([
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.nchc.org.tw/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+  'https://overpass-api.de/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+]);
+const DEFAULT_OSM_MAP_ENDPOINT = 'https://api.openstreetmap.org/api/0.6/map';
+
 const CITY_PRESETS = Object.freeze([
   {
     id: 'new-york',
@@ -450,6 +459,109 @@ function skylineProfile(city, buildings, source = {}) {
   };
 }
 
+function decodeXml(value = '') {
+  return String(value)
+    .replace(/&quot;/gu, '"')
+    .replace(/&apos;/gu, "'")
+    .replace(/&lt;/gu, '<')
+    .replace(/&gt;/gu, '>')
+    .replace(/&amp;/gu, '&')
+    .replace(/&#(\d+);/gu, (_match, code) =>
+      String.fromCodePoint(Number(code) || 0),
+    );
+}
+
+function xmlAttributes(fragment = '') {
+  const attributes = {};
+  for (const match of String(fragment).matchAll(/([:\w-]+)="([^"]*)"/gu)) {
+    attributes[match[1]] = decodeXml(match[2]);
+  }
+  return attributes;
+}
+
+function parseOsmApiBuildings(xml, city) {
+  const nodes = new Map();
+  let upstreamTimestamp = null;
+
+  for (const match of String(xml).matchAll(/<node\b([^>]*)\/?\s*>/gu)) {
+    const attrs = xmlAttributes(match[1]);
+    const id = String(attrs.id || '');
+    const lat = Number(attrs.lat);
+    const lon = Number(attrs.lon);
+    if (id && Number.isFinite(lat) && Number.isFinite(lon)) {
+      nodes.set(id, { lat, lon });
+    }
+    if (
+      attrs.timestamp &&
+      (!upstreamTimestamp || String(attrs.timestamp) > upstreamTimestamp)
+    ) {
+      upstreamTimestamp = String(attrs.timestamp);
+    }
+  }
+
+  const buildings = [];
+  for (const match of String(xml).matchAll(/<way\b([^>]*)>([\s\S]*?)<\/way>/gu)) {
+    const attrs = xmlAttributes(match[1]);
+    const body = match[2];
+    const tags = {};
+    for (const tagMatch of body.matchAll(/<tag\b([^>]*)\/?\s*>/gu)) {
+      const tag = xmlAttributes(tagMatch[1]);
+      if (tag.k) tags[tag.k] = tag.v ?? '';
+    }
+    if (!(tags.building || tags['building:part'])) continue;
+
+    const footprint = [];
+    for (const ndMatch of body.matchAll(/<nd\b([^>]*)\/?\s*>/gu)) {
+      const nd = xmlAttributes(ndMatch[1]);
+      const point = nodes.get(String(nd.ref || ''));
+      if (!point) continue;
+      footprint.push(projectPoint(point.lat, point.lon, city));
+    }
+    if (footprint.length < 3) continue;
+    const first = footprint[0];
+    const last = footprint.at(-1);
+    if (Math.hypot(first[0] - last[0], first[1] - last[1]) > 0.01) {
+      footprint.push([...first]);
+    }
+
+    const id = `osm-api-way-${String(attrs.id || buildings.length + 1)}`;
+    const height = heightProfile(tags, id);
+    buildings.push({
+      id,
+      osmId: Number(attrs.id) || attrs.id || null,
+      osmType: 'way',
+      name: String(tags.name || ''),
+      heightM: height.heightM,
+      heightSource: height.source,
+      minHeightM: numericMinHeight(tags),
+      levels: Number(tags['building:levels']) || null,
+      buildingType: String(tags.building || tags['building:part'] || 'yes'),
+      buildingPart: Boolean(tags['building:part']),
+      buildingMaterial: String(tags['building:material'] || ''),
+      buildingColor: String(tags['building:colour'] || ''),
+      roofShape: String(tags['roof:shape'] || ''),
+      roofHeightM: numericRoofHeight(tags),
+      roofLevels: Number(tags['roof:levels']) || null,
+      roofMaterial: String(tags['roof:material'] || ''),
+      roofColor: String(tags['roof:colour'] || ''),
+      startDate: String(tags.start_date || ''),
+      footprint,
+    });
+
+    if (
+      attrs.timestamp &&
+      (!upstreamTimestamp || String(attrs.timestamp) > upstreamTimestamp)
+    ) {
+      upstreamTimestamp = String(attrs.timestamp);
+    }
+  }
+
+  return {
+    buildings: representativeBuildings(buildings, 900),
+    upstreamTimestamp,
+  };
+}
+
 function parseOverpassBuildings(payload, city) {
   const buildings = [];
   const seen = new Set();
@@ -641,12 +753,25 @@ export function createGeoRuntime({
   now = () => Date.now(),
 } = {}) {
   const provider = String(env.AETHERGRID_GEO_PROVIDER || 'osm-overpass').toLowerCase();
-  const endpoint = String(
-    env.AETHERGRID_OVERPASS_URL || 'https://overpass-api.de/api/interpreter',
+  const explicitEndpoint = String(env.AETHERGRID_OVERPASS_URL || '').trim();
+  const configuredEndpointList = String(env.AETHERGRID_OVERPASS_URLS || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const endpoints = Object.freeze(
+    explicitEndpoint
+      ? [explicitEndpoint]
+      : configuredEndpointList.length
+        ? configuredEndpointList
+        : [...DEFAULT_OVERPASS_ENDPOINTS],
   );
+  const endpoint = endpoints[0];
   const userAgent = String(
     env.AETHERGRID_GEO_USER_AGENT ||
       'AETHERGRID/2.3 (operator-console; contact configured by deployment owner)',
+  );
+  const osmMapEndpoint = String(
+    env.AETHERGRID_OSM_MAP_URL || DEFAULT_OSM_MAP_ENDPOINT,
   );
   const cacheTtlMs = Math.max(
     60_000,
@@ -659,6 +784,12 @@ export function createGeoRuntime({
       provider,
       liveProviderConfigured: provider === 'osm-overpass',
       endpoint: provider === 'osm-overpass' ? new URL(endpoint).origin : null,
+      endpoints:
+        provider === 'osm-overpass'
+          ? endpoints.map((value) => new URL(value).origin)
+          : [],
+      osmMapEndpoint:
+        provider === 'osm-overpass' ? new URL(osmMapEndpoint).origin : null,
       cacheTtlMs,
       attribution: '© OpenStreetMap contributors',
       cities: CITY_PRESETS,
@@ -677,6 +808,79 @@ export function createGeoRuntime({
       ],
       skylineFields: ['height', 'est_height', 'building:levels', 'min_height', 'building:min_level', 'roof:shape', 'roof:height', 'roof:levels', 'building:material', 'building:colour', 'roof:material', 'roof:colour'],
       upstreamFreshness: 'OpenStreetMap replication-backed upstream state when queried',
+    };
+  }
+
+  async function requestOverpass(
+    query,
+    { timeoutMs = 18_000, maxAttempts = endpoints.length } = {},
+  ) {
+    let lastError = null;
+    const candidates = endpoints.slice(
+      0,
+      Math.max(1, Math.min(endpoints.length, Number(maxAttempts) || 1)),
+    );
+
+    for (const candidate of candidates) {
+      try {
+        const apiUrl = validateEndpoint(candidate);
+        const response = await fetchImpl(apiUrl, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/x-www-form-urlencoded;charset=UTF-8',
+            'user-agent': userAgent,
+            accept: 'application/json',
+          },
+          body: new URLSearchParams({ data: query }),
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+        if (!response.ok) throw new Error(`Overpass HTTP ${response.status}`);
+        return {
+          payload: await response.json(),
+          endpoint: apiUrl.toString(),
+        };
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError || new Error('No Overpass endpoint was available');
+  }
+
+  async function requestOsmMapBuildings(city, { radiusM = 320 } = {}) {
+    const boundedRadiusM = Math.max(180, Math.min(450, Number(radiusM) || 320));
+    const latDelta = boundedRadiusM / 111_320;
+    const lonScale =
+      111_320 * Math.max(0.18, Math.cos((city.lat * Math.PI) / 180));
+    const lonDelta = boundedRadiusM / lonScale;
+    const url = validateEndpoint(osmMapEndpoint);
+    url.searchParams.set(
+      'bbox',
+      [
+        city.lon - lonDelta,
+        city.lat - latDelta,
+        city.lon + lonDelta,
+        city.lat + latDelta,
+      ]
+        .map((value) => Number(value).toFixed(6))
+        .join(','),
+    );
+
+    const response = await fetchImpl(url, {
+      headers: {
+        accept: 'application/xml,text/xml;q=0.9,*/*;q=0.1',
+        'user-agent': userAgent,
+      },
+      signal: AbortSignal.timeout(18_000),
+    });
+    if (!response.ok) throw new Error(`OpenStreetMap map API HTTP ${response.status}`);
+    const parsed = parseOsmApiBuildings(await response.text(), city);
+    if (parsed.buildings.length < 5) {
+      throw new Error('OpenStreetMap map API returned too few building footprints');
+    }
+    return {
+      ...parsed,
+      endpoint: url.origin,
     };
   }
 
@@ -705,47 +909,81 @@ export function createGeoRuntime({
     }
 
     try {
-      const apiUrl = validateEndpoint(endpoint);
-      const query =
-        `[out:json][timeout:25];(` +
-        `nwr["building"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `nwr["building:part"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `way["highway"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `nwr["natural"="water"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `way["natural"="coastline"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `way["waterway"~"^(river|canal|stream|tidal_channel)$"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `nwr["leisure"~"^(park|garden|nature_reserve)$"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `nwr["landuse"~"^(grass|recreation_ground|meadow)$"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `nwr["natural"~"^(wood|grassland)$"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `way["power"~"^(line|minor_line|cable)$"](around:${city.radiusM},${city.lat},${city.lon});` +
-        `nwr["power"~"^(substation|plant|generator|transformer)$"](around:${city.radiusM},${city.lat},${city.lon});` +
+      const buildingRadiusM = Math.min(
+        city.radiusM,
+        Math.max(350, Number(env.AETHERGRID_GEO_BUILDING_RADIUS_M || 520)),
+      );
+      const contextRadiusM = Math.min(city.radiusM, 1200);
+      const buildingQuery =
+        `[out:json][timeout:10];(` +
+        `way["building"](around:${buildingRadiusM},${city.lat},${city.lon});` +
+        `relation["building"](around:${buildingRadiusM},${city.lat},${city.lon});` +
+        `way["building:part"](around:${buildingRadiusM},${city.lat},${city.lon});` +
+        `relation["building:part"](around:${buildingRadiusM},${city.lat},${city.lon});` +
+        `);out tags geom center qt;`;
+      const contextQuery =
+        `[out:json][timeout:8];(` +
+        `way["highway"](around:${contextRadiusM},${city.lat},${city.lon});` +
+        `nwr["natural"="water"](around:${contextRadiusM},${city.lat},${city.lon});` +
+        `way["natural"="coastline"](around:${contextRadiusM},${city.lat},${city.lon});` +
+        `way["waterway"~"^(river|canal|stream|tidal_channel)$"](around:${contextRadiusM},${city.lat},${city.lon});` +
+        `nwr["leisure"~"^(park|garden|nature_reserve)$"](around:${contextRadiusM},${city.lat},${city.lon});` +
+        `nwr["landuse"~"^(grass|recreation_ground|meadow)$"](around:${contextRadiusM},${city.lat},${city.lon});` +
+        `nwr["natural"~"^(wood|grassland)$"](around:${contextRadiusM},${city.lat},${city.lon});` +
+        `way["power"~"^(line|minor_line|cable)$"](around:${contextRadiusM},${city.lat},${city.lon});` +
+        `nwr["power"~"^(substation|plant|generator|transformer)$"](around:${contextRadiusM},${city.lat},${city.lon});` +
         `);out tags geom center;`;
-      const response = await fetchImpl(apiUrl, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/x-www-form-urlencoded;charset=UTF-8',
-          'user-agent': userAgent,
-          accept: 'application/json',
-        },
-        body: new URLSearchParams({ data: query }),
-        signal: AbortSignal.timeout(30_000),
-      });
-      if (!response.ok) throw new Error(`Overpass HTTP ${response.status}`);
-      const payload = await response.json();
-      const buildings = parseOverpassBuildings(payload, city);
-      const roads = parseOverpassRoads(payload, city);
-      const water = parseOverpassWater(payload, city);
-      const greenAreas = parseOverpassGreen(payload, city);
-      const power = parseOverpassPower(payload, city);
-      if (buildings.length < 5) {
-        throw new Error('Overpass returned too few building footprints');
+
+      let buildings = [];
+      let buildingProvider = 'OpenStreetMap Overpass';
+      let buildingEndpoint = null;
+      let buildingTimestamp = null;
+      let usedOsmMapFallback = false;
+
+      try {
+        const buildingResult = await requestOverpass(buildingQuery, {
+          timeoutMs: 20_000,
+          maxAttempts: endpoints.length,
+        });
+        buildings = parseOverpassBuildings(buildingResult.payload, city);
+        if (buildings.length < 5) {
+          throw new Error('Overpass returned too few building footprints');
+        }
+        buildingEndpoint = new URL(buildingResult.endpoint).origin;
+        buildingTimestamp =
+          buildingResult.payload?.osm3s?.timestamp_osm_base || null;
+      } catch {
+        const osmMap = await requestOsmMapBuildings(city, {
+          radiusM: Math.min(buildingRadiusM, 220),
+        });
+        buildings = osmMap.buildings;
+        buildingProvider = 'OpenStreetMap Map API';
+        buildingEndpoint = osmMap.endpoint;
+        buildingTimestamp = osmMap.upstreamTimestamp;
+        usedOsmMapFallback = true;
       }
+
+      const contextResult = await requestOverpass(contextQuery, {
+        timeoutMs: 8_000,
+        maxAttempts: 1,
+      }).catch(() => null);
+      const contextPayload = contextResult?.payload ?? { elements: [] };
+      const roads = parseOverpassRoads(contextPayload, city);
+      const water = parseOverpassWater(contextPayload, city);
+      const greenAreas = parseOverpassGreen(contextPayload, city);
+      const power = parseOverpassPower(contextPayload, city);
+
       const source = {
-        provider: 'OpenStreetMap Overpass',
+        provider: buildingProvider,
         live: true,
+        partial: contextResult == null || usedOsmMapFallback,
         attribution: '© OpenStreetMap contributors',
         fetchedAt: new Date().toISOString(),
-        upstreamTimestamp: payload?.osm3s?.timestamp_osm_base || null,
+        upstreamTimestamp:
+          contextResult?.payload?.osm3s?.timestamp_osm_base ||
+          buildingTimestamp ||
+          null,
+        endpoint: buildingEndpoint,
         freshnessModel: 'OpenStreetMap upstream database at request time',
       };
       const value = {

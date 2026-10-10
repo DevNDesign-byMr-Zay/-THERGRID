@@ -121,6 +121,12 @@ export interface SpatialSolarStatus {
   localSolarHour: number;
 }
 
+export type SpatialBuildingMode =
+  | 'none'
+  | 'source-extruded'
+  | 'cesium-osm'
+  | 'hybrid';
+
 export interface SpatialRendererStatus {
   engine: SpatialEngine;
   ready: boolean;
@@ -130,6 +136,7 @@ export interface SpatialRendererStatus {
   journeyPhase?: SpatialJourneyPhase;
   detailLevel?: SpatialDetailLevel;
   performanceTier?: SpatialPerformanceTier;
+  buildingMode?: SpatialBuildingMode;
   solar?: SpatialSolarStatus | null;
   reason?: string | null;
 }

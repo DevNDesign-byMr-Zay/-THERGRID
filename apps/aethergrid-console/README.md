@@ -6,7 +6,7 @@ This directory contains the maintained ÆTHERGRID Node backend and its **canonic
 
 The primary browser application lives in `web/` and is built by Vite into `web/dist/`. The Node server in `server.mjs` serves that production build at `/`, preserves the same-origin `/api/aethergrid/*` provider contracts and server-sent events, and uses SPA fallback only for non-API browser routes.
 
-CesiumJS is the primary geographic renderer. The typed native-WebGL adapter remains the renderer fallback inside the v4 application. The older root `index.html`, `styles.css`, and `app.js` are **legacy compatibility source only**; the full-app ZIP places them under `legacy/` and they are never served as the canonical root.
+CesiumJS is the primary geographic renderer. It now boots in a **credential-free open mode** with a real WGS84 globe, OpenStreetMap raster context and source-backed OSM building extrusions even when no Cesium Ion token is installed. When a Cesium Ion token is configured, World Terrain and Cesium OSM Buildings augment that same scene. The typed native-WebGL adapter remains the last renderer fallback inside the v4 application. The older root `index.html`, `styles.css`, and `app.js` are **legacy compatibility source only**; the full-app ZIP places them under `legacy/` and they are never served as the canonical root.
 
 Provider credentials remain server-side. The browser receives only the bounded public configuration contract, including a restricted public-client Cesium token when configured. IBM Quantum, D-Wave, AI, Tomorrow.io, EIA and other private credentials are not compiled into the Vite bundle.
 

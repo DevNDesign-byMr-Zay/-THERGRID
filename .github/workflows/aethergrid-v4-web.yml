@@ -36,6 +36,29 @@ jobs:
       - name: Build v4 spatial application
         run: npm run build
 
+      - name: Install root runtime dependencies for canonical preview
+        working-directory: ${{ github.workspace }}
+        run: npm ci --ignore-scripts
+
+      - name: Install maintained Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify credential-free globe and 3D city mesh
+        env:
+          AETHERGRID_TEST_CANONICAL: "1"
+        run: npx playwright test tests/tokenless-spatial.spec.ts --workers=1 --reporter=line
+
+      - name: Retain credential-free spatial screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: aethergrid-spatial-preview-${{ github.sha }}
+          path: |
+            apps/aethergrid-console/web/test-results/credential-free-global.png
+            apps/aethergrid-console/web/test-results/credential-free-new-york-3d.png
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Retain v4 spatial application bundle
         uses: actions/upload-artifact@v7
         with:

@@ -53,7 +53,10 @@ test('v4 spatial renderer has Cesium primary and native fallback contracts', asy
   assert.match(contract, /'reality'/u);
   assert.match(cesiumRenderer, /Terrain\.fromWorldTerrain/u);
   assert.match(cesiumRenderer, /createOsmBuildingsAsync/u);
-  assert.match(cesiumRenderer, /depthTestAgainstTerrain = true/u);
+  assert.match(cesiumRenderer, /depthTestAgainstTerrain = ionEnabled/u);
+  assert.match(cesiumRenderer, /OpenStreetMapImageryProvider/u);
+  assert.match(cesiumRenderer, /EllipsoidTerrainProvider/u);
+  assert.doesNotMatch(cesiumRenderer, /Cesium ion token is not configured/u);
   assert.match(cesiumRenderer, /GeodeticGridLayer/u);
   assert.match(geodeticGrid, /Cartesian3\.fromDegrees/u);
   assert.match(geodeticGrid, /setTime\(isoTime/u);
@@ -292,15 +295,20 @@ test('v4 city-live context renders source-backed AQI and seismic events only in 
 });
 
 test('v4 Cesium city identity includes mapped roads water coastline and green areas', async () => {
-  const [contract, service, layer, app] = await Promise.all([
+  const [contract, service, layer, renderer, app] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/overlays/spatial-overlay.ts'),
     text('apps/aethergrid-console/web/src/services/city-power-overlay.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
   ]);
 
   assert.match(contract, /OverlayAreaKind = 'water' \| 'green'/u);
   assert.match(service, /cityMeshToSemanticOverlays/u);
+  assert.match(service, /layerId: 'buildings'/u);
+  assert.match(service, /layerId: 'illumination'/u);
+  assert.match(service, /presentationType: 'source-backed-building'/u);
+  assert.match(service, /\?spatial=1/u);
   assert.match(service, /layerId: 'roads'/u);
   assert.match(service, /layerId: 'water'/u);
   assert.match(service, /layerId: 'green'/u);
@@ -308,6 +316,19 @@ test('v4 Cesium city identity includes mapped roads water coastline and green ar
   assert.match(service, /loadCoordinateSpatialBundle/u);
   assert.match(layer, /PolygonGraphics/u);
   assert.match(layer, /PolygonHierarchy/u);
+  assert.match(layer, /WallGraphics/u);
+  assert.match(layer, /BoxGraphics/u);
+  assert.match(layer, /PolygonGeometry/u);
+  assert.match(layer, /GeometryInstance/u);
+  assert.match(layer, /PerInstanceColorAppearance/u);
+  assert.match(layer, /ColorGeometryInstanceAttribute/u);
+  assert.match(layer, /minimumHeights/u);
+  assert.match(layer, /maximumHeights/u);
+  assert.match(layer, /buildingAreaColor/u);
+  assert.match(renderer, /openstreetmap-source-extrusion/u);
+  assert.match(service, /footprintEnvelope/u);
+  assert.match(service, /bboxWidthM/u);
+  assert.match(service, /bboxDepthM/u);
   assert.match(layer, /edge\.kind === 'coastline'/u);
   assert.match(layer, /edge\.kind === 'waterway'/u);
   assert.match(app, /id: 'roads', visible: true/u);

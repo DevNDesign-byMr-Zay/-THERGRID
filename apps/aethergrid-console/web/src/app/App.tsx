@@ -173,8 +173,10 @@ const CITY_TARGETS: readonly CityTarget[] = [
     district: 'Midtown Manhattan',
     latitude: 40.7549,
     longitude: -73.984,
-    rangeMeters: 4_800,
-    pitchDegrees: -34
+    heightMeters: 90,
+    rangeMeters: 980,
+    headingDegrees: 32,
+    pitchDegrees: -17
   },
   {
     id: 'london',
@@ -182,8 +184,10 @@ const CITY_TARGETS: readonly CityTarget[] = [
     district: 'City / South Bank',
     latitude: 51.5136,
     longitude: -0.0917,
-    rangeMeters: 4_600,
-    pitchDegrees: -35
+    heightMeters: 70,
+    rangeMeters: 1_050,
+    headingDegrees: -24,
+    pitchDegrees: -18
   },
   {
     id: 'tokyo',
@@ -191,8 +195,10 @@ const CITY_TARGETS: readonly CityTarget[] = [
     district: 'Shinjuku',
     latitude: 35.6896,
     longitude: 139.6917,
-    rangeMeters: 4_800,
-    pitchDegrees: -34
+    heightMeters: 75,
+    rangeMeters: 1_050,
+    headingDegrees: 40,
+    pitchDegrees: -17
   },
   {
     id: 'dubai',
@@ -200,8 +206,10 @@ const CITY_TARGETS: readonly CityTarget[] = [
     district: 'Downtown',
     latitude: 25.1972,
     longitude: 55.2744,
-    rangeMeters: 5_000,
-    pitchDegrees: -32
+    heightMeters: 105,
+    rangeMeters: 1_250,
+    headingDegrees: -18,
+    pitchDegrees: -15
   },
   {
     id: 'singapore',
@@ -209,8 +217,10 @@ const CITY_TARGETS: readonly CityTarget[] = [
     district: 'Marina Bay / Downtown Core',
     latitude: 1.2838,
     longitude: 103.8515,
-    rangeMeters: 4_600,
-    pitchDegrees: -34
+    heightMeters: 70,
+    rangeMeters: 1_050,
+    headingDegrees: 18,
+    pitchDegrees: -17
   },
   {
     id: 'sao-paulo',
@@ -218,8 +228,10 @@ const CITY_TARGETS: readonly CityTarget[] = [
     district: 'Paulista / Bela Vista',
     latitude: -23.5614,
     longitude: -46.6559,
-    rangeMeters: 4_800,
-    pitchDegrees: -35
+    heightMeters: 65,
+    rangeMeters: 1_050,
+    headingDegrees: 58,
+    pitchDegrees: -18
   },
   {
     id: 'lagos',
@@ -227,8 +239,10 @@ const CITY_TARGETS: readonly CityTarget[] = [
     district: 'Victoria Island / Eko Atlantic',
     latitude: 6.4281,
     longitude: 3.4219,
-    rangeMeters: 4_800,
-    pitchDegrees: -34
+    heightMeters: 55,
+    rangeMeters: 1_100,
+    headingDegrees: -35,
+    pitchDegrees: -18
   },
   {
     id: 'sydney',
@@ -236,8 +250,10 @@ const CITY_TARGETS: readonly CityTarget[] = [
     district: 'CBD / Circular Quay',
     latitude: -33.8651,
     longitude: 151.2099,
-    rangeMeters: 4_700,
-    pitchDegrees: -34
+    heightMeters: 70,
+    rangeMeters: 1_050,
+    headingDegrees: 22,
+    pitchDegrees: -17
   }
 ];
 
@@ -245,6 +261,7 @@ const INITIAL_LAYERS: readonly LayerState[] = [
   { id: 'world', visible: true },
   { id: 'terrain', visible: true },
   { id: 'buildings', visible: true },
+  { id: 'illumination', visible: true },
   { id: 'roads', visible: true },
   { id: 'water', visible: true },
   { id: 'green', visible: true },
@@ -1101,6 +1118,13 @@ export function App() {
         ? illuminationOverlay
         : null,
     [scope, illuminationOverlay, citySolar.phase]
+  );
+
+  const sourceBuildingCount = useMemo(
+    () =>
+      semanticOverlays.find((snapshot) => snapshot.layerId === 'buildings')
+        ?.areas?.length ?? 0,
+    [semanticOverlays]
   );
 
   const windOverlay = useMemo(
@@ -1965,7 +1989,12 @@ export function App() {
           </div>
         </aside>
 
-        <section className="world-stage" inert={navigationDrawer.compact && (navOpen || intelOpen)}>
+        <section
+          className="world-stage"
+          data-spatial-scope={scope}
+          data-source-building-count={sourceBuildingCount}
+          inert={navigationDrawer.compact && (navOpen || intelOpen)}
+        >
           <div className="stage-toolbar">
             <div>
               <span className="eyebrow">ACTIVE FRAME</span>
@@ -2300,6 +2329,13 @@ export function App() {
                 ? 'SELECT TWO GEOGRAPHIC POINTS TO MEASURE'
                 : 'CLICK OR TAP A 3D FEATURE TO INSPECT'}
             </small>
+            <em>
+              {scope === 'world'
+                ? 'LIVE AQI · USGS SEISMIC · SOLAR 4D'
+                : cityIdentity
+                  ? `${sourceBuildingCount.toLocaleString()} MAPPED BUILDINGS · ${cityIdentity.sourceBackedHeightCoveragePercent.toFixed(1)}% SOURCE HEIGHTS`
+                  : 'SOURCE-BACKED CITY GEOMETRY LOADING'}
+            </em>
           </div>
         </section>
 

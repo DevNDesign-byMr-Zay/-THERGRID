@@ -7,8 +7,10 @@ import {
   Cesium3DTileFeature,
   Cesium3DTileset,
   Color,
+  EllipsoidTerrainProvider,
   Entity,
   Ion,
+  OpenStreetMapImageryProvider,
   Math as CesiumMath,
   Terrain,
   Viewer,
@@ -65,6 +67,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #container: HTMLElement | null = null;
   #viewer: Viewer | null = null;
   #buildings: Cesium3DTileset | null = null;
+  #ionEnabled = false;
   #realityTiles: Cesium3DTileset | null = null;
   #grid: GeodeticGridLayer | null = null;
   #cameraJourney: CameraJourneyController | null = null;
@@ -93,13 +96,10 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
   async initialize(config: SpatialRendererConfig = {}): Promise<void> {
     if (!this.#container) throw new Error('Cesium renderer must be mounted before initialization');
-    if (!config.cesiumIonToken) {
-      this.#degraded = true;
-      this.#reason = 'Cesium ion token is not configured';
-      throw new Error(this.#reason);
-    }
 
-    Ion.defaultAccessToken = config.cesiumIonToken;
+    const ionEnabled = Boolean(config.cesiumIonToken);
+    this.#ionEnabled = ionEnabled;
+    if (config.cesiumIonToken) Ion.defaultAccessToken = config.cesiumIonToken;
 
     this.#viewer = new Viewer(this.#container, {
       animation: false,
@@ -113,14 +113,42 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       selectionIndicator: true,
       shadows: true,
       timeline: false,
-      terrain: Terrain.fromWorldTerrain({
-        requestVertexNormals: true,
-        requestWaterMask: true
-      })
+      baseLayer: ionEnabled ? undefined : false,
+      ...(ionEnabled
+        ? {
+            terrain: Terrain.fromWorldTerrain({
+              requestVertexNormals: true,
+              requestWaterMask: true
+            })
+          }
+        : {
+            terrainProvider: new EllipsoidTerrainProvider()
+          })
     });
 
+    if (!ionEnabled) {
+      try {
+        const osmLayer = this.#viewer.imageryLayers.addImageryProvider(
+          new OpenStreetMapImageryProvider({
+            url: 'https://tile.openstreetmap.org/'
+          })
+        );
+        osmLayer.brightness = 0.44;
+        osmLayer.contrast = 1.26;
+        osmLayer.saturation = 0.46;
+        osmLayer.gamma = 0.86;
+      } catch {
+        // The Cesium ellipsoid + source-backed overlays remain usable if imagery is unavailable.
+      }
+    }
+
+    this.#viewer.scene.globe.baseColor =
+      Color.fromCssColorString('#06111c');
     this.#viewer.scene.globe.enableLighting = true;
-    this.#viewer.scene.globe.depthTestAgainstTerrain = true;
+    this.#viewer.scene.globe.depthTestAgainstTerrain = ionEnabled;
+    if (this.#viewer.scene.skyAtmosphere) {
+      this.#viewer.scene.skyAtmosphere.show = true;
+    }
     this.#grid = new GeodeticGridLayer(this.#viewer.scene);
     this.#cameraJourney = new CameraJourneyController(this.#viewer.camera);
     this.#visualController = new VisualModeController(this.#viewer, {
@@ -130,22 +158,27 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#airQuality = new AirQualityLayer(this.#viewer);
     this.#solarLighting = new SolarLightingController(this.#viewer);
 
-    try {
-      this.#buildings = await createOsmBuildingsAsync({
-        enableShowOutline: true,
-        showOutline: true
-      });
-      this.#viewer.scene.primitives.add(this.#buildings);
-      this.#visualController.setBuildings(this.#buildings);
-      this.#applyDetailForPhase(this.#journeyPhase === 'idle' ? 'district' : this.#journeyPhase);
-    } catch (error) {
-      this.#degraded = true;
-      this.#reason =
-        error instanceof Error ? `OSM Buildings unavailable: ${error.message}` : 'OSM Buildings unavailable';
+    if (ionEnabled) {
+      try {
+        this.#buildings = await createOsmBuildingsAsync({
+          enableShowOutline: true,
+          showOutline: true
+        });
+        this.#viewer.scene.primitives.add(this.#buildings);
+        this.#visualController.setBuildings(this.#buildings);
+        this.#applyDetailForPhase(
+          this.#journeyPhase === 'idle' ? 'district' : this.#journeyPhase
+        );
+      } catch {
+        this.#buildings = null;
+        this.#visualController.setBuildings(null);
+      }
+    } else {
+      this.#buildings = null;
       this.#visualController.setBuildings(null);
     }
 
-    if (config.realityEnabled) {
+    if (config.realityEnabled && ionEnabled) {
       try {
         this.#realityTiles = await createGooglePhotorealistic3DTileset();
         this.#realityTiles.show = false;
@@ -252,7 +285,19 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     }
     overlay.apply(snapshot);
     if (this.#time) overlay.setTime(this.#time);
-    overlay.setVisible(this.#layerVisible(snapshot.layerId, true));
+    const sourceBuildingsSuppressed =
+      snapshot.layerId === 'buildings' &&
+      this.#ionEnabled &&
+      this.#buildings != null;
+    overlay.setVisible(
+      sourceBuildingsSuppressed
+        ? false
+        : this.#layerVisible(snapshot.layerId, true)
+    );
+    if (snapshot.layerId === 'buildings' && this.#buildings) {
+      this.#buildings.show = this.#buildingsShouldShow();
+    }
+    viewer.scene.requestRender();
   }
 
   clearOverlay(layerId: string): void {
@@ -260,6 +305,10 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     if (!overlay) return;
     overlay.destroy();
     this.#overlays.delete(layerId);
+    if (layerId === 'buildings' && this.#buildings) {
+      this.#buildings.show = this.#buildingsShouldShow();
+      this.#viewer?.scene.requestRender();
+    }
   }
 
   applyAtmosphere(snapshot: AtmosphericOverlaySnapshot): void {
@@ -357,6 +406,30 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       };
     }
 
+    const primitiveFeature = picked?.id;
+    if (
+      primitiveFeature &&
+      typeof primitiveFeature === 'object' &&
+      primitiveFeature.aethergridSourceBuilding === true
+    ) {
+      const latitude = Number(primitiveFeature.latitude);
+      const longitude = Number(primitiveFeature.longitude);
+      const heightMeters = Number(primitiveFeature.heightM);
+      return {
+        id: String(primitiveFeature.id ?? primitiveFeature.sourceFeatureId ?? 'source-building'),
+        kind: 'building',
+        source: 'openstreetmap-source-extrusion',
+        latitude: Number.isFinite(latitude) ? latitude : undefined,
+        longitude: Number.isFinite(longitude) ? longitude : undefined,
+        heightMeters: Number.isFinite(heightMeters) ? heightMeters : undefined,
+        properties:
+          primitiveFeature.properties &&
+          typeof primitiveFeature.properties === 'object'
+            ? primitiveFeature.properties
+            : {}
+      };
+    }
+
     const entity = picked?.id;
     if (entity instanceof Entity) {
       this.#clearSelection();
@@ -404,6 +477,12 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       journeyPhase: this.#journeyPhase,
       detailLevel: this.#detailLevel,
       performanceTier: this.#performanceTier,
+      buildingMode:
+        this.#ionEnabled && this.#buildings
+          ? 'cesium-osm'
+          : this.#overlays.has('buildings')
+            ? 'source-extruded'
+            : 'none',
       solar: this.#solar,
       reason: this.#reason
     };
@@ -511,7 +590,15 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#weather?.setVisible(this.#layerVisible('weather', true));
     this.#airQuality?.setVisible(this.#layerVisible('air', true));
     for (const [layerId, overlay] of this.#overlays) {
-      overlay.setVisible(this.#layerVisible(layerId, true));
+      const sourceBuildingsSuppressed =
+        layerId === 'buildings' &&
+        this.#ionEnabled &&
+        this.#buildings != null;
+      overlay.setVisible(
+        sourceBuildingsSuppressed
+          ? false
+          : this.#layerVisible(layerId, true)
+      );
     }
     this.#viewer.scene.requestRender();
   }
