@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 /** Responsive dialog semantics, keyboard containment and focus restoration. */
 export function useCommandDrawer(open: boolean, onClose: () => void) {
@@ -12,14 +12,20 @@ export function useCommandDrawer(open: boolean, onClose: () => void) {
     media.addEventListener('change', update);
     return () => media.removeEventListener('change', update);
   }, []);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open || !compact || !ref.current) return;
     const previous = document.activeElement as HTMLElement | null;
     const root = ref.current;
     const controls = () => Array.from(root.querySelectorAll<HTMLElement>(
       'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]'
     )).filter((element) => element.getClientRects().length > 0);
-    const focusFrame = requestAnimationFrame(() => (controls()[0] ?? root).focus());
+    // Focus synchronously after React commits the open dialog and clears inert.
+    // An animation-frame-only focus leaves a race against heavy WebGL frames.
+    const focusFirst = () => (controls()[0] ?? root).focus({ preventScroll: true });
+    focusFirst();
+    const focusFrame = requestAnimationFrame(() => {
+      if (!root.contains(document.activeElement)) focusFirst();
+    });
     const keydown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -47,7 +53,7 @@ export function useCommandDrawer(open: boolean, onClose: () => void) {
       cancelAnimationFrame(focusFrame);
       document.removeEventListener('focusin', containFocus);
       document.removeEventListener('keydown', keydown);
-      if (previous?.isConnected) previous.focus();
+      if (previous?.isConnected && !root.contains(previous)) previous.focus({ preventScroll: true });
     };
   }, [open, compact]);
   return { ref, compact };
