@@ -1,6 +1,7 @@
 import {
   Cartesian2,
   Cartesian3,
+  BoxGraphics,
   Color,
   ColorMaterialProperty,
   ConstantProperty,
@@ -475,10 +476,53 @@ function areaEntity(
   const buildingMaximumHeights = building
     ? positions.map(() => heightM)
     : undefined;
+  const centroidLatitude = Number(area.properties?.centroidLatitude);
+  const centroidLongitude = Number(area.properties?.centroidLongitude);
+  const boxWidthM = Math.max(4, Number(area.properties?.bboxWidthM ?? 4));
+  const boxDepthM = Math.max(4, Number(area.properties?.bboxDepthM ?? 4));
+  const headingDegrees = Number(area.properties?.headingDegrees ?? 0);
+  const buildingPosition =
+    building &&
+    Number.isFinite(centroidLatitude) &&
+    Number.isFinite(centroidLongitude)
+      ? Cartesian3.fromDegrees(
+          centroidLongitude,
+          centroidLatitude,
+          minHeightM + (heightM - minHeightM) / 2
+        )
+      : undefined;
+  const buildingOrientation = buildingPosition
+    ? Transforms.headingPitchRollQuaternion(
+        buildingPosition,
+        new HeadingPitchRoll(CesiumMath.toRadians(headingDegrees), 0, 0)
+      )
+    : undefined;
 
   return new Entity({
     id: area.id,
     name: area.label ?? area.id,
+    position: buildingPosition,
+    orientation: buildingOrientation,
+    box:
+      building && buildingPosition
+        ? new BoxGraphics({
+            dimensions: new ConstantProperty(
+              new Cartesian3(
+                boxWidthM,
+                boxDepthM,
+                Math.max(3.2, heightM - minHeightM)
+              )
+            ),
+            material: new ColorMaterialProperty(
+              buildingAreaColor(area, sourceBacked ? 0.38 : 0.2)
+            ),
+            outline: true,
+            outlineColor: buildingOutline.withAlpha(sourceBacked ? 0.62 : 0.32),
+            distanceDisplayCondition: new ConstantProperty(
+              new DistanceDisplayCondition(0, areaFarDistance(area))
+            )
+          })
+        : undefined,
     polygon: new PolygonGraphics({
       hierarchy: new ConstantProperty(new PolygonHierarchy(positions)),
       material: new ColorMaterialProperty(
