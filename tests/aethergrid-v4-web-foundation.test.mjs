@@ -295,10 +295,11 @@ test('v4 city-live context renders source-backed AQI and seismic events only in 
 });
 
 test('v4 Cesium city identity includes mapped roads water coastline and green areas', async () => {
-  const [contract, service, layer, app] = await Promise.all([
+  const [contract, service, layer, renderer, app] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/overlays/spatial-overlay.ts'),
     text('apps/aethergrid-console/web/src/services/city-power-overlay.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
   ]);
 
