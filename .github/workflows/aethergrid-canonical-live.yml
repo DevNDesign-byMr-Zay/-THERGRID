@@ -1,6 +1,10 @@
 name: aethergrid/canonical-live
 
 on:
+  workflow_run:
+    workflows: ['security/codeql']
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       submission_sha:
@@ -18,14 +22,21 @@ concurrency:
 
 jobs:
   canonical-live:
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: aethergrid-live-verification
     env:
-      SUBMISSION_SHA: ${{ inputs.submission_sha }}
+      SUBMISSION_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.submission_sha || github.event.workflow_run.head_sha }}
     steps:
-      - name: Checkout exact dispatch commit
+      - name: Checkout exact candidate main commit
         uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
