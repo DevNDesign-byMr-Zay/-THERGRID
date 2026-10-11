@@ -1,6 +1,10 @@
 name: aethergrid/canonical-live
 
 on:
+  workflow_run:
+    workflows: ['security/codeql']
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       submission_sha:
@@ -18,14 +22,21 @@ concurrency:
 
 jobs:
   canonical-live:
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: aethergrid-live-verification
     env:
-      SUBMISSION_SHA: ${{ inputs.submission_sha }}
+      SUBMISSION_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.submission_sha || github.event.workflow_run.head_sha }}
     steps:
-      - name: Checkout exact dispatch commit
+      - name: Checkout exact candidate main commit
         uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
@@ -41,10 +52,30 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            const { data } = await github.rest.actions.listWorkflowRunsForRepo({ ...context.repo, head_sha: process.env.SUBMISSION_SHA, per_page: 100 });
-            for (const [name, path] of [['engineering/ci', '.github/workflows/ci.yml'], ['security/codeql', '.github/workflows/codeql.yml']]) {
-              const run = data.workflow_runs.filter(r => r.name === name && r.path === path && r.head_branch === 'main' && r.head_sha === process.env.SUBMISSION_SHA && r.event === 'push').sort((a,b) => b.id-a.id)[0];
-              if (!run || run.status !== 'completed' || run.conclusion !== 'success') core.setFailed(`${name} is not successful on this exact main SHA`);
+            const required = [['engineering/ci', '.github/workflows/ci.yml'], ['security/codeql', '.github/workflows/codeql.yml']];
+            // CodeQL may finish before Engineering CI. Wait for the same SHA, never for another commit.
+            for (let attempt = 0; attempt < 40; attempt += 1) {
+              const { data } = await github.rest.actions.listWorkflowRunsForRepo({
+                ...context.repo, head_sha: process.env.SUBMISSION_SHA, per_page: 100
+              });
+              const pending = [];
+              for (const [name, path] of required) {
+                const run = data.workflow_runs
+                  .filter(r => r.name === name && r.path === path && r.head_branch === 'main' && r.head_sha === process.env.SUBMISSION_SHA && r.event === 'push')
+                  .sort((a, b) => b.id - a.id)[0];
+                if (run?.status === 'completed' && run.conclusion !== 'success') {
+                  core.setFailed(`${name} failed on this exact main SHA`);
+                  return;
+                }
+                if (!run || run.status !== 'completed') pending.push(name);
+              }
+              if (pending.length === 0) return;
+              if (attempt === 39) {
+                core.setFailed(`Timed out waiting for exact-main checks: ${pending.join(', ')}`);
+                return;
+              }
+              core.info(`Waiting for exact-main checks: ${pending.join(', ')}`);
+              await new Promise(resolve => setTimeout(resolve, 15_000));
             }
       - name: Node 22
         uses: actions/setup-node@v7
