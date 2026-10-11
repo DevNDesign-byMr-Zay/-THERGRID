@@ -82,11 +82,58 @@ html, body, #root { width: 100%; height: 100%; min-height: 0; overflow: hidden; 
 .world-stage { min-width: 0; min-height: 0; }
 .intel-mobile-head { flex: 0 0 auto; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+/* Operator surfaces use the chosen UI theme; the world keeps physical lighting. */
+.profile-dialog {
+  color: var(--text-primary);
+  background: var(--panel-strong);
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.profile-dialog :is(header small, footer span, label > span) {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.profile-dialog :is(input, textarea) {
+  color: var(--text-primary);
+  background: var(--control-surface);
+  border-color: var(--line-strong);
+  font-size: 14px;
+}
+.profile-dialog header button, .profile-dialog footer button {
+  color: var(--text-primary);
+  font-size: 14px;
+  min-height: 44px;
+  min-width: 44px;
+}
+.profile-dialog footer { flex-wrap: wrap; }
+.source-badge[data-source-state='stale'],
+.source-badge[data-source-state='fallback'] { border-color: #c79442; }
+.source-badge[data-source-state='simulated'] { border-color: var(--violet); }
+.source-badge[data-source-state='mapped'] { border-color: var(--blue); }
+:root[data-theme='light'] .immersive-spatial :is(.topbar, .product-navigation, .global-search, .navigation-toggle, .intel-toggle, .stage-controls, .temporal-rail, .left-rail, .intel-rail) {
+  background: var(--panel-strong);
+  color: var(--text-primary);
+  border-color: var(--line-strong);
+}
+:root[data-theme='light'] .immersive-spatial :is(.viewport-status, .source-badge) {
+  background: var(--panel-strong);
+  color: var(--text-primary);
+}
+:root[data-theme='light'] .immersive-spatial :is(.viewport-status, .source-badge) :is(small, em) {
+  color: var(--text-muted);
+}
 :root[data-theme='light'] .product-navigation, :root[data-theme='light'] .topbar { background: #edf4fb; }
 :root[data-theme='light'] .agent-identities button { background: #f6f2ff; }
 :root[data-theme='light'] .global-search input { color: #152434; }
 
 @media (max-width: 1100px) {
+  .aethergrid-app.immersive-spatial :is(.drawer-heading button, .intel-mobile-head button, .navigation-toggle, .intel-toggle, .appearance-button, .profile-trigger) {
+    min-width: 44px;
+    min-height: 44px;
+  }
   .operator-layout { grid-template-columns: minmax(0, 1fr); }
   .navigation-toggle { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 38px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
   .left-rail, .intel-rail { position: fixed; z-index: 30; top: 112px; bottom: 78px; width: min(420px, 94vw); display: flex; background: var(--panel-strong); visibility: hidden; pointer-events: none; transition: transform 220ms ease; }

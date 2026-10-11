@@ -65,7 +65,8 @@ async function avatarDataUrl(file: File): Promise<string> {
   }
 }
 
-export function ProfileMenu() {
+export function ProfileMenu({ onBeforeOpen }: { onBeforeOpen?(): void }) {
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const [profile, setProfile] = useState<OperatorProfile>(DEFAULT_PROFILE);
   const [draft, setDraft] = useState<OperatorProfile>(DEFAULT_PROFILE);
@@ -87,6 +88,7 @@ export function ProfileMenu() {
   }, []);
 
   const open = () => {
+    onBeforeOpen?.();
     setDraft(profile);
     setError(null);
     dialogRef.current?.showModal();
@@ -113,7 +115,7 @@ export function ProfileMenu() {
 
   return (
     <>
-      <button className="profile-trigger" type="button" onClick={open} aria-label="Operator profile">
+      <button className="profile-trigger" ref={triggerRef} type="button" onClick={open} aria-label="Operator profile">
         {profile.avatarDataUrl ? (
           <img src={profile.avatarDataUrl} alt="" />
         ) : (
@@ -125,7 +127,7 @@ export function ProfileMenu() {
         </em>
       </button>
 
-      <dialog className="profile-dialog" ref={dialogRef}>
+      <dialog className="profile-dialog" ref={dialogRef} onClose={() => triggerRef.current?.focus()} aria-label="Operator profile">
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -234,7 +236,7 @@ export function ProfileMenu() {
           {error ? <div className="agent-error">{error}</div> : null}
 
           <footer>
-            <span>LOCAL PROFILE · NO PROVIDER SECRETS</span>
+            <span>LOCAL PROFILE · NO PROVIDER SECRETS · AUTHENTICATION UNAVAILABLE</span>
             <button type="submit" disabled={saving}>
               {saving ? 'SAVING…' : 'SAVE PROFILE'}
             </button>

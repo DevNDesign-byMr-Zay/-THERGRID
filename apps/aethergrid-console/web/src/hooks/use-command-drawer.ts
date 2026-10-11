@@ -13,7 +13,7 @@ export function useCommandDrawer(open: boolean, onClose: () => void) {
     return () => media.removeEventListener('change', update);
   }, []);
   useLayoutEffect(() => {
-    if (!open || !compact || !ref.current) return;
+    if (!open || !ref.current) return;
     const previous = document.activeElement as HTMLElement | null;
     const root = ref.current;
     const controls = () => Array.from(root.querySelectorAll<HTMLElement>(
@@ -35,11 +35,12 @@ export function useCommandDrawer(open: boolean, onClose: () => void) {
     };
     ensureInitialFocus();
     const keydown = (event: KeyboardEvent) => {
+      if (document.querySelector('dialog[open]')) return;
       if (event.key === 'Escape') {
         event.preventDefault();
         closeRef.current();
       }
-      if (event.key !== 'Tab') return;
+      if (event.key !== 'Tab' || !compact) return;
       const items = controls();
       const first = items[0];
       const last = items.at(-1);
@@ -53,6 +54,7 @@ export function useCommandDrawer(open: boolean, onClose: () => void) {
       }
     };
     const containFocus = (event: FocusEvent) => {
+      if (!compact || document.querySelector('dialog[open]')) return;
       if (!root.contains(event.target as Node)) (controls()[0] ?? root).focus();
     };
     document.addEventListener('focusin', containFocus);

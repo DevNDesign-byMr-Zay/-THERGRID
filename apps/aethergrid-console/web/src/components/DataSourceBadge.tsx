@@ -1,6 +1,7 @@
 import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
+import type { SourcePresentationState } from '../services/source-presentation';
 
-export type DataSourceState = 'live' | 'fallback' | 'unavailable' | 'loading';
+export type DataSourceState = SourcePresentationState;
 
 interface DataSourceBadgeProps {
   label: string;

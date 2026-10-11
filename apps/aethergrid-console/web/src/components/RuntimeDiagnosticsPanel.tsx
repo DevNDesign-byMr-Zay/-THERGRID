@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useProviderReadiness } from '../hooks/use-provider-readiness';
 
 import {
-  loadPublicProviderRuntime,
-  loadRuntimeDiagnostics,
   type PublicProviderCapability,
   type PublicProviderRuntime,
-  type RuntimeDiagnostics
 } from '../services/runtime-client';
 
 type ProviderState =
@@ -14,7 +12,8 @@ type ProviderState =
   | 'degraded'
   | 'fallback'
   | 'unavailable'
-  | 'unconfigured';
+  | 'unconfigured'
+  | 'unknown';
 
 interface ProviderRow {
   id: keyof PublicProviderRuntime;
@@ -53,7 +52,7 @@ function normalizeState(status: string | undefined): ProviderState {
     case 'unconfigured':
       return status;
     default:
-      return 'unconfigured';
+      return 'unknown';
   }
 }
 
@@ -73,6 +72,8 @@ function providerDetail(
       return 'FALLBACK';
     case 'unavailable':
       return 'UNAVAILABLE';
+    case 'unknown':
+      return 'UNKNOWN';
     default:
       return 'NEEDS CONFIG';
   }
@@ -94,31 +95,7 @@ function rows(providers: PublicProviderRuntime | null): ProviderRow[] {
 }
 
 export function RuntimeDiagnosticsPanel() {
-  const [runtime, setRuntime] = useState<RuntimeDiagnostics | null>(null);
-  const [providers, setProviders] = useState<PublicProviderRuntime | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const refresh = () => {
-    const controller = new AbortController();
-    setLoading(true);
-    setError(null);
-    void Promise.all([
-      loadRuntimeDiagnostics(controller.signal),
-      loadPublicProviderRuntime(controller.signal)
-    ])
-      .then(([runtimeResult, providerResult]) => {
-        setRuntime(runtimeResult);
-        setProviders(providerResult);
-      })
-      .catch((loadError) =>
-        setError(loadError instanceof Error ? loadError.message : String(loadError))
-      )
-      .finally(() => setLoading(false));
-    return () => controller.abort();
-  };
-
-  useEffect(() => refresh(), []);
+  const { runtime, providers, loading, error, checkedAt, refresh } = useProviderReadiness();
 
   const providerRows = useMemo(() => rows(providers), [providers]);
   const exposedSecret =
@@ -136,7 +113,7 @@ export function RuntimeDiagnosticsPanel() {
   ).length;
 
   return (
-    <section className="runtime-panel provider-connection-center">
+    <section className="runtime-panel provider-connection-center" aria-busy={loading} data-registry-state={error ? (providers ? 'stale' : 'unavailable') : loading ? 'loading' : 'checked'}>
       <div className="runtime-head">
         <span>
           <small>CONNECTION CENTER</small>
@@ -151,6 +128,11 @@ export function RuntimeDiagnosticsPanel() {
           {loading ? '…' : '↻'}
         </button>
       </div>
+
+      <p className="provider-connection-note" role="status">
+        REGISTRY CHECKED: {checkedAt ? new Date(checkedAt).toLocaleString() : 'NOT YET'}
+        {error && providers ? ' · STALE REGISTRY · PREVIOUS CONFIGURATION ONLY' : ''}
+      </p>
 
       <div className="provider-connection-summary">
         <span>
@@ -192,7 +174,7 @@ export function RuntimeDiagnosticsPanel() {
 
       <p className="provider-connection-note">
         IBM: {providers?.quantum?.providers?.ibm?.configured ? 'CONFIGURED · NOT LIVE VERIFIED' : 'UNCONFIGURED · VERIFIED INSTANCE REQUIRED'}.
-        {' '}D-Wave: {providers?.quantum?.providers?.dwave?.configured ? 'CONFIGURED · NOT LIVE VERIFIED' : 'UNCONFIGURED'}.
+        {' '}D-Wave: ON HOLD · NON-EXECUTABLE.
         {' '}Local quantum: SIMULATION.
       </p>
       <p className="provider-connection-note">
@@ -200,7 +182,7 @@ export function RuntimeDiagnosticsPanel() {
         The readiness endpoint does not supply these measurements. Source receipts in OPS show the results of actual data requests.
       </p>
 
-      {error ? <div className="agent-error">{error}</div> : null}
+      {error ? <div className="agent-error" role="alert">{error}</div> : null}
     </section>
   );
 }

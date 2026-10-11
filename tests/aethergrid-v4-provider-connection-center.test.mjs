@@ -9,18 +9,21 @@ async function text(path) {
 }
 
 test('v4 provider connection center consumes only safe runtime metadata', async () => {
-  const [client, panel] = await Promise.all([
+  const [client, panel, readiness] = await Promise.all([
     text('apps/aethergrid-console/web/src/services/runtime-client.ts'),
     text('apps/aethergrid-console/web/src/components/RuntimeDiagnosticsPanel.tsx'),
+    text('apps/aethergrid-console/web/src/hooks/use-provider-readiness.ts'),
   ]);
 
   assert.match(client, /\/api\/aethergrid\/runtime\/providers/u);
   assert.match(client, /loadPublicProviderRuntime/u);
   assert.match(panel, /CONNECTION CENTER/u);
   assert.match(panel, /PROVIDER READINESS/u);
-  assert.match(panel, /loadPublicProviderRuntime/u);
+  assert.match(panel, /useProviderReadiness/u);
+  assert.match(readiness, /loadPublicProviderRuntime/u);
   assert.match(panel, /credentials remain server-side/i);
   assert.doesNotMatch(panel, /apiKey|authorization|bearer|tokenValue/u);
+  assert.doesNotMatch(readiness, /apiKey|authorization|bearer|tokenValue/u);
 });
 
 test('v4 provider connection center exposes the merged provider capability set', async () => {
