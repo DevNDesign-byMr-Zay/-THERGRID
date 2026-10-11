@@ -256,3 +256,19 @@ test('canonical IBM acceptance performs discovery only and contains no hardware 
     /submitSampler|submitEstimator|POST \/api\/aethergrid\/quantum\/jobs/u,
   );
 });
+
+
+test('canonical acceptance starts after clean main CodeQL and retains exact-SHA verification', () => {
+  const workflow = readFileSync('.github/workflows/aethergrid-canonical-live.yml', 'utf8');
+  assert.match(workflow, /workflow_run:\s*\n\s*workflows: \['security\/codeql'\]/u);
+  assert.match(workflow, /types: \[completed\]/u);
+  assert.match(workflow, /branches: \[main\]/u);
+  assert.match(workflow, /github\.event\.workflow_run\.event == 'push'/u);
+  assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/u);
+  assert.match(workflow, /SUBMISSION_SHA:.*github\.event\.workflow_run\.head_sha/u);
+  assert.match(workflow, /test "\$SUBMISSION_SHA" = "\$GITHUB_SHA"/u);
+  assert.match(workflow, /test "\$\(git ls-remote origin refs\/heads\/main \| cut -f1\)" = "\$SUBMISSION_SHA"/u);
+  assert.match(workflow, /environment: aethergrid-live-verification/u);
+  assert.match(workflow, /\['engineering\/ci', '\.github\/workflows\/ci\.yml'\]/u);
+  assert.match(workflow, /\['security\/codeql', '\.github\/workflows\/codeql\.yml'\]/u);
+});
