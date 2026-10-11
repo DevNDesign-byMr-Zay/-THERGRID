@@ -24,10 +24,14 @@ test('late unmounted registry response cannot replace a newer mount', async ({ p
     const original = window.fetch.bind(window);
     let calls = 0;
     (window as any).releaseRegistry = null;
+    (window as any).deferRegistry = false;
     window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
       if (String(input).endsWith('/api/aethergrid/runtime/providers')) {
-        calls += 1;
         const reply = (provider: string) => new Response(JSON.stringify({ weather: { provider, status: 'ready' } }), { headers: { 'Content-Type': 'application/json' } });
+        // The hidden system panel also checks readiness at startup. Arm the
+        // delayed request only after opening Settings, not by global call order.
+        if (!(window as any).deferRegistry) return Promise.resolve(reply('startup-registry'));
+        calls += 1;
         if (calls === 1) return new Promise<Response>((resolve) => {
           (window as any).releaseRegistry = () => resolve(reply('obsolete-registry-A'));
         });
@@ -39,6 +43,7 @@ test('late unmounted registry response cannot replace a newer mount', async ({ p
   await page.route('**/api/aethergrid/runtime', (route) => route.fulfill({ json: {} }));
   await page.goto('/');
   await page.getByRole('button', { name: 'SETTINGS', exact: true }).click();
+  await page.evaluate(() => { (window as any).deferRegistry = true; });
   await page.getByRole('button', { name: 'DEVELOPER / DIAGNOSTICS', exact: true }).click();
   await expect.poll(() => page.evaluate(() => Boolean((window as any).releaseRegistry))).toBe(true);
   await expect(page.getByRole('button', { name: 'Refresh provider connections' })).toBeDisabled();

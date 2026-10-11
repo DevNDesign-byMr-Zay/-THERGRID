@@ -26,6 +26,18 @@ test('closed desktop drawers cannot receive keyboard focus', async ({ page }) =>
   await expect(page.getByRole('button', { name: 'Navigation and layers' })).toBeFocused();
 });
 
+test('desktop drawer close buttons are not occluded by product navigation', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Navigation and layers' }).click();
+  await page.getByRole('button', { name: 'Close navigation drawer' }).click();
+  await expect(page.locator('#aethergrid-navigation')).not.toBeVisible();
+  await page.getByRole('button', { name: 'INTEL', exact: true }).click();
+  await page.getByRole('button', { name: 'Close intelligence drawer' }).click();
+  await expect(page.locator('#aethergrid-intelligence-rail')).not.toBeVisible();
+});
+
  test('profile returns to its own trigger after closing an active drawer', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');

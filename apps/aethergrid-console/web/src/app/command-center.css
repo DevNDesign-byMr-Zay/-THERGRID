@@ -201,9 +201,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 
 .immersive-spatial .operator-layout {
-  position: fixed;
+  /* Do not trap drawer z-index below the separate product navigation. */
+  position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: auto;
   display: block;
   min-width: 0;
   overflow: hidden;

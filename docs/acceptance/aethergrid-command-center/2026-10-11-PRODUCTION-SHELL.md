@@ -17,6 +17,8 @@ Browser: Chromium 153.0.8010.0, Linux, ANGLE/SwiftShader software GPU. Software 
 
 ## Published checks
 
+Follow-up: Engineering CI and CodeQL also succeeded at `c5d87e6`, but browser CI found that the registry-race fixture could intercept the hidden System panel's startup request. The fixture now arms its delayed request after Settings opens: three repeated runs passed. A separate desktop pointer test exposed drawer stacking below product navigation; the layout no longer traps the drawer's z-index. The rebuilt compiled shell/readiness suite passed all six cases serially after this fix. The next published head requires fresh exact-head checks.
+
 At initial source head `4eb468b`: Engineering CI run 38122242671 and CodeQL run 38122242643 succeeded. Browser CI run 38122242668 was still running when this evidence document was written. Follow the PR checks for final exact-head status; prior-head successes must not be substituted for a changed head.
 
 ## Actual compiled-app captures
