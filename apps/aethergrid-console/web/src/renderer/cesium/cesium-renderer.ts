@@ -86,6 +86,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #degraded = false;
   #busy = false;
   #journeyPhase: SpatialJourneyPhase = 'idle';
+  #journeyGeneration = 0;
   #detailLevel: SpatialDetailLevel = 'district';
   #solar: SpatialSolarStatus | null = null;
   #reason: string | null = null;
@@ -206,6 +207,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#requireViewer();
     if (!this.#cameraJourney) throw new Error('Cesium camera journey is not initialized');
 
+    const generation = ++this.#journeyGeneration;
     this.#busy = true;
     this.#solar = this.#solarLighting?.setTarget(target) ?? this.#solar;
     if (this.#solar) this.#visualController?.setSolarPhase(this.#solar.phase);
@@ -215,10 +217,12 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
         this.#applyDetailForPhase(phase);
       });
     } finally {
-      this.#busy = false;
-      this.#journeyPhase = 'idle';
-      if (target.journey === 'global') this.#applyDetailForPhase('global');
-      else this.#applyDetailForPhase('district');
+      if (generation === this.#journeyGeneration) {
+        this.#busy = false;
+        this.#journeyPhase = 'idle';
+        if (target.journey === 'global') this.#applyDetailForPhase('global');
+        else this.#applyDetailForPhase('district');
+      }
     }
   }
 
@@ -489,6 +493,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   }
 
   destroy(): void {
+    this.#journeyGeneration += 1;
     this.#clearSelection();
     this.#cameraJourney?.cancel();
     this.#cameraJourney = null;

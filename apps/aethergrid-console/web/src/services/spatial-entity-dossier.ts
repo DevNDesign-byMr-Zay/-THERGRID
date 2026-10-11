@@ -11,6 +11,7 @@ import type { SpatialObservation } from './spatial-comparison';
 
 export type EntitySourceState =
   | 'live'
+  | 'mapped'
   | 'stale'
   | 'fallback'
   | 'recorded'
@@ -104,6 +105,7 @@ export interface SpatialEntityDossierInput {
 }
 
 const SENSITIVE_KEY = /(api.?key|token|secret|password|credential|authorization|service.?crn)/iu;
+const PROVENANCE_KEYS = new Set(['sourceFeatureId', 'sourceProvider', 'sourceDataset', 'sourceTime', 'fetchedAt', 'attribution', 'heightCategory', 'heightSource', 'heightM', 'minHeightM', 'roofRefinement', 'geometryLimitation', 'roofShape', 'roofHeightM', 'roofColor', 'roofMaterial', 'buildingColor', 'buildingMaterial']);
 
 function propertyString(
   properties: Readonly<Record<string, unknown>> | undefined,
@@ -137,6 +139,7 @@ function publicScalarProperties(
       }
       return [];
     })
+    .sort(([a], [b]) => Number(PROVENANCE_KEYS.has(b)) - Number(PROVENANCE_KEYS.has(a)))
     .slice(0, 24);
 
   return Object.freeze(Object.fromEntries(safeEntries));
@@ -147,6 +150,7 @@ function selectionSourceState(
 ): EntitySourceState {
   if (selection.properties?.stale === true) return 'stale';
   if (selection.properties?.fallback === true) return 'fallback';
+  if (selection.kind === 'building' && selection.properties?.sourceDataset === 'osm-overpass') return 'mapped';
   if (selection.properties?.live === true) return 'live';
   if (
     selection.source ||
@@ -210,7 +214,7 @@ export function buildSpatialEntityDossier(
       sourceTime: input.cityIdentity.upstreamTimestamp,
       fetchedAt: null,
       attribution: input.cityIdentity.sourceProvider,
-      state: contextSourceState(input.cityIdentity.live)
+      state: input.cityIdentity.live ? 'mapped' : contextSourceState(input.cityIdentity.live)
     });
   }
 

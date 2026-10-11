@@ -1,3 +1,5 @@
+import { projectLocal, unprojectGround } from './local-projection';
+import { buildingEdges } from '../overlays/building-geometry';
 import {
   weatherPhenomenon,
   type AirQualityOverlaySnapshot,
@@ -185,6 +187,8 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
   #degraded = false;
   #reason: string | null = null;
   #busy = false;
+  #journeyGeneration = 0;
+  #finishJourney: (() => void) | null = null;
   #journeyPhase: SpatialJourneyPhase = 'idle';
   #detailLevel: SpatialDetailLevel = 'world';
   #target: SpatialTarget = { ...INITIAL_TARGET };
@@ -241,13 +245,28 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
   }
 
   async flyTo(target: SpatialTarget): Promise<void> {
+    this.#finishJourney?.();
+    this.#finishJourney = null;
+    if (this.#animationFrame != null) cancelAnimationFrame(this.#animationFrame);
+    this.#animationFrame = null;
+    const generation = ++this.#journeyGeneration;
     const start = { ...this.#target };
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      this.#target = { ...target };
+      this.#busy = false;
+      this.#journeyPhase = 'idle';
+      this.#detailLevel = target.journey === 'global' ? 'world' : 'district';
+      this.#render();
+      return;
+    }
     const duration = target.journey === 'global' ? 500 : target.journey === 'direct' ? 320 : 760;
     const startedAt = performance.now();
     this.#busy = true;
 
     await new Promise<void>((resolve) => {
+      this.#finishJourney = resolve;
       const tick = (now: number) => {
+        if (generation !== this.#journeyGeneration) { resolve(); return; }
         const raw = clamp((now - startedAt) / duration, 0, 1);
         const eased = raw < 0.5 ? 2 * raw * raw : 1 - Math.pow(-2 * raw + 2, 2) / 2;
         const rangeStart = start.rangeMeters ?? 11_800_000;
@@ -284,6 +303,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
           this.#animationFrame = requestAnimationFrame(tick);
         } else {
           this.#animationFrame = null;
+          this.#finishJourney = null;
           this.#target = { ...target };
           this.#busy = false;
           this.#journeyPhase = 'idle';
@@ -391,8 +411,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     }
 
     const scale = Math.max(1_500, range * 0.92);
-    const eastMeters = x * scale;
-    const northMeters = y * scale;
+    const [eastMeters, northMeters] = unprojectGround(x * scale, y * scale, this.#target.headingDegrees ?? 0, this.#target.pitchDegrees ?? -55);
     const metersPerLongitude =
       111_320 *
       Math.max(
@@ -485,11 +504,14 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
       performanceTier: this.#performanceTier,
       buildingMode: this.#overlays.has('buildings') ? 'source-extruded' : 'none',
       solar,
-      reason: this.#reason
+      reason: `${this.#reason ?? 'Native renderer'} · Building massing is a wireframe fallback; facade materials and terrain detail are unavailable.`
     };
   }
 
   destroy(): void {
+    this.#journeyGeneration += 1;
+    this.#finishJourney?.();
+    this.#finishJourney = null;
     if (this.#animationFrame != null) cancelAnimationFrame(this.#animationFrame);
     this.#animationFrame = null;
     this.#overlays.clear();
@@ -578,7 +600,8 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
       metersPerLon;
     const dy = (position.latitude - this.#target.latitude) * 110_540;
     const scale = Math.max(1_500, range * 0.92);
-    return [clamp(dx / scale, -1.2, 1.2), clamp(dy / scale, -1.2, 1.2)];
+    const [right, vertical] = projectLocal(dx, dy, position.heightMeters ?? 0, this.#target.headingDegrees ?? 0, this.#target.pitchDegrees ?? -55);
+    return [clamp(right / scale, -1.2, 1.2), clamp(vertical / scale, -1.2, 1.2)];
   }
 
   #render(): void {
@@ -990,8 +1013,12 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
         const areaColor = selected
           ? rgba('#ffffff', 0.96)
           : this.#visualColor(layerColor(snapshot.layerId, area.kind));
-        for (let index = 1; index < area.positions.length; index += 1) {
-          addLine(area.positions[index - 1], area.positions[index], areaColor);
+        if (area.kind === 'building') {
+          for (const [from, to] of buildingEdges(area)) addLine(from, to, areaColor);
+        } else {
+          for (let index = 1; index < area.positions.length; index += 1) {
+            addLine(area.positions[index - 1], area.positions[index], areaColor);
+          }
         }
       }
 
@@ -1294,6 +1321,13 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
           ? '#ffffff'
           : css(this.#visualColor(layerColor(snapshot.layerId, area.kind)));
         context.lineWidth = selected ? 2.5 : 1;
+        if (area.kind === 'building') {
+          for (const [from, to] of buildingEdges(area)) {
+            const a = toScreen(from), b = toScreen(to);
+            context.beginPath(); context.moveTo(a[0], a[1]); context.lineTo(b[0], b[1]); context.stroke();
+          }
+          continue;
+        }
         context.beginPath();
         area.positions.forEach((position, index) => {
           const point = toScreen(position);

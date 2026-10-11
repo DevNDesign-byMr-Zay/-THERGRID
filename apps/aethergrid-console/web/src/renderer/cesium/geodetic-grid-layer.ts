@@ -84,7 +84,8 @@ export class GeodeticGridLayer {
   destroy(): void {
     if (!this.#collection.isDestroyed()) {
       this.#scene.primitives.remove(this.#collection);
-      this.#collection.destroy();
+      // PrimitiveCollection normally owns destruction; non-owning collections do not.
+      if (!this.#collection.isDestroyed()) this.#collection.destroy();
     }
     this.#lines = [];
   }

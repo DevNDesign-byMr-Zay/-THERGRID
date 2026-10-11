@@ -28,6 +28,8 @@ import {
   WallGraphics
 } from 'cesium';
 
+import { buildingGeometry } from '../overlays/building-geometry';
+
 import type { SpatialScenarioVisual, TemporalInstant } from '../spatial-renderer';
 
 import {
@@ -796,14 +798,13 @@ export class NetworkOverlayLayer {
   ): void {
     const instances = (snapshot.areas ?? [])
       .filter((area) => area.kind === 'building' && area.positions.length >= 3)
-      .map((area) => {
-        const minHeightM = Math.max(0, Number(area.properties?.minHeightM ?? 0));
-        const heightM = Math.max(
-          minHeightM + 3.2,
-          Number(area.properties?.heightM ?? minHeightM + 12)
-        );
+      .flatMap((area) => {
+        const massing = buildingGeometry(area);
+        if (!massing) return [];
+        const minHeightM = massing.baseM;
+        const heightM = massing.topM;
         const hierarchy = new PolygonHierarchy(
-          area.positions.map((position) =>
+          massing.ring.map((position) =>
             Cartesian3.fromDegrees(position.longitude, position.latitude)
           )
         );
@@ -823,17 +824,20 @@ export class NetworkOverlayLayer {
             ...provenance,
             ...area.properties,
             overlayKind: area.kind,
+            heightCategory: massing.heightCategory,
+            roofRefinement: massing.roofFaces.length ? 'source-tagged-pyramidal' : 'simple-massing',
+            geometryLimitation: massing.limitation,
             sourceName: area.label ?? area.id
           }
         };
 
-        return new GeometryInstance({
+        const body = new GeometryInstance({
           id,
           geometry: new PolygonGeometry({
             polygonHierarchy: hierarchy,
             height: minHeightM,
-            extrudedHeight: heightM,
-            closeTop: true,
+            extrudedHeight: massing.wallTopM,
+            closeTop: !massing.roofFaces.length,
             closeBottom: true,
             vertexFormat: PerInstanceColorAppearance.VERTEX_FORMAT
           }),
@@ -843,6 +847,19 @@ export class NetworkOverlayLayer {
             )
           }
         });
+        const roofArea = { ...area, properties: { ...area.properties,
+          buildingColor: area.properties?.roofColor,
+          buildingMaterial: area.properties?.roofMaterial } };
+        const roofs = massing.roofFaces.map((face) => new GeometryInstance({
+          id,
+          geometry: new PolygonGeometry({
+            polygonHierarchy: new PolygonHierarchy(face.map((p) => Cartesian3.fromDegrees(p.longitude, p.latitude, p.heightMeters))),
+            perPositionHeight: true,
+            vertexFormat: PerInstanceColorAppearance.VERTEX_FORMAT
+          }),
+          attributes: { color: ColorGeometryInstanceAttribute.fromColor(buildingAreaColor(roofArea, 1)) }
+        }));
+        return [body, ...roofs];
       });
 
     if (!instances.length) return;
