@@ -57,8 +57,13 @@ test('light drawers and actions remain usable at 200 percent text size', async (
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript(() => localStorage.setItem('aethergrid.operator.appearance.v4', 'light'));
   await page.goto('/');
-  await page.addStyleTag({ content: 'html { text-size-adjust: 200% !important; -webkit-text-size-adjust: 200% !important; }' });
+  const enlargeText = () => page.evaluate(() => {
+    const elements = [...document.querySelectorAll<HTMLElement>('button, input, textarea, select, p, strong, small, span, label, em, h1, h2, h3')];
+    const sizes = elements.map((element) => parseFloat(getComputedStyle(element).fontSize));
+    elements.forEach((element, index) => element.style.setProperty('font-size', `${sizes[index] * 2}px`, 'important'));
+  });
   await page.getByRole('button', { name: 'SETTINGS', exact: true }).click();
+  await enlargeText();
   const rail = page.locator('#aethergrid-intelligence-rail');
   const surface = await rail.evaluate((element) => getComputedStyle(element).backgroundColor);
   expect(surface).toBe('rgba(239, 245, 250, 0.97)');
@@ -73,6 +78,8 @@ test('light drawers and actions remain usable at 200 percent text size', async (
   await expect(message).toBeInViewport();
   await page.getByRole('button', { name: 'Close intelligence drawer' }).click();
   await page.getByRole('button', { name: 'Navigation and layers' }).click();
+  await expect(page.locator('#aethergrid-navigation')).toBeVisible();
+  await expect(page.locator('#aethergrid-navigation')).toHaveCSS('opacity', '1');
   await expect(page.locator('#aethergrid-navigation')).toHaveCSS('background-color', surface);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.screenshot({ path: 'test-results/production-light-navigation-enlarged.png' });
