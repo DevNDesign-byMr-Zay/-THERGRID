@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { flushSync } from 'react-dom';
 import { BRAND } from '../components/brand';
 import { useCommandDrawer } from '../hooks/use-command-drawer';
@@ -41,6 +41,8 @@ import {
 } from '../domains/aviation/aviation-domain';
 import { useOperatorShortcuts } from '../hooks/use-operator-shortcuts';
 import { useTemporalClock } from '../hooks/use-temporal-clock';
+import { forecastFrameInstants } from '../time/forecast-frames';
+import { frameTemporalInstant } from '../time/frame-temporal-instant';
 import {
   weatherPhenomenon,
   type AtmosphericOverlaySnapshot
@@ -291,6 +293,7 @@ const VISUAL_MODES: readonly VisualMode[] = [
 
 export function App() {
   const { clock, state: temporal } = useTemporalClock();
+  const [temporalRailHeight, setTemporalRailHeight] = useState(140);
   const appearance = useAppearance();
   const [city, setCity] = useState<CityTarget>(CITY_TARGETS[0]);
   const [scope, setScope] = useState<'world' | 'city'>('world');
@@ -355,6 +358,7 @@ export function App() {
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
   const [forecastSeries, setForecastSeries] =
     useState<AtmosphericForecastSeries | null>(null);
+  const [forecastRevision, setForecastRevision] = useState(0);
   const [forecastError, setForecastError] = useState<string | null>(null);
   const [liveContext, setLiveContext] = useState<CityLiveSnapshot | null>(null);
   const [hazardContext, setHazardContext] = useState<NwsHazardContext | null>(null);
@@ -393,33 +397,30 @@ export function App() {
     [city.latitude, city.longitude]
   );
 
-  const temporalInstant = useMemo(
-    () => ({
-      iso: temporal.cursorIso,
-      mode: temporal.mode,
-      sourceTime: temporal.liveIso,
-      scenarioId: temporal.scenarioId,
-      scenarioVisual
-    }),
-    [temporal, scenarioVisual]
-  );
-
   const forecastAtmosphere = useMemo(
     () =>
       temporal.mode === 'forecast' && forecastSeries
         ? selectCityEnvironmentForecast(
             forecastSeries,
-            temporal.cursorIso,
-            atmosphere?.utcOffsetSeconds ?? 0
+            temporal.cursorIso
           )
         : null,
     [
       temporal.mode,
       temporal.cursorIso,
-      forecastSeries,
-      atmosphere?.utcOffsetSeconds
+      forecastSeries
     ]
   );
+
+  const temporalInstant = useMemo(
+    () => frameTemporalInstant(temporal, scenarioVisual, forecastAtmosphere),
+    [temporal, scenarioVisual, forecastAtmosphere]
+  );
+
+  const forecastFrames = useMemo(() => forecastFrameInstants(forecastSeries), [forecastSeries]);
+  useEffect(() => {
+    clock.setPlaybackSamples(temporal.mode === 'forecast' ? forecastFrames : null);
+  }, [clock, temporal.mode, forecastFrames]);
 
   const activeAtmosphere =
     temporal.mode === 'live'
@@ -434,6 +435,12 @@ export function App() {
       : temporal.mode === 'forecast'
         ? forecastError
         : null;
+  const weatherSourceState = temporal.mode === 'historical' || temporal.mode === 'scenario'
+    ? 'unavailable'
+    : activeAtmosphereError ? 'unavailable'
+    : temporal.mode === 'forecast'
+      ? forecastAtmosphere?.stale ? 'stale' : forecastAtmosphere ? 'forecast' : forecastSeries ? 'unavailable' : 'loading'
+      : sourcePresentationState({ loading: !atmosphere, stale: atmosphere?.stale, simulated: atmosphere?.fallback, live: atmosphere?.live });
 
   const measurement = useMemo<SpatialMeasurement | null>(
     () =>
@@ -852,7 +859,7 @@ export function App() {
       });
 
     return () => controller.abort();
-  }, [city.id, city.latitude, city.longitude, temporal.mode]);
+  }, [city.id, city.latitude, city.longitude, temporal.mode, forecastRevision]);
 
   useEffect(() => {
     if (!pendingSessionRestore) return;
@@ -1788,7 +1795,8 @@ export function App() {
   };
 
   return (
-    <main className="aethergrid-app immersive-spatial" data-experience="spatial-first">
+    <main className="aethergrid-app immersive-spatial" data-experience="spatial-first"
+      style={{ '--temporal-rail-height': `${temporalRailHeight}px` } as CSSProperties}>
       <header className="topbar">
         <div className="brand-lockup">
           <img className="brand-logo" src={BRAND.product} alt="ÆTHERGRID" />
@@ -1842,10 +1850,10 @@ export function App() {
             <strong>{appearance.mode.toUpperCase()}</strong>
           </button>
           <ProfileMenu onBeforeOpen={() => flushSync(() => { setNavOpen(false); setIntelOpen(false); })} />
-          <div className="live-cluster">
-            <span className="status-dot live" />
+          <div className="live-cluster" data-cursor={temporal.cursorIso} title={`${temporal.cursorIso} · UTC`}>
+            <span className={temporal.mode === 'live' ? 'status-dot live' : 'status-dot'} />
             <span>{temporal.mode.toUpperCase()} FRAME</span>
-            <strong>{new Date(temporal.liveIso).toLocaleTimeString()}</strong>
+            <strong>{new Date(temporal.cursorIso).toLocaleTimeString(undefined, { timeZone: 'UTC' })} UTC</strong>
           </div>
         </div>
       </header>
@@ -2461,23 +2469,7 @@ export function App() {
 
           <section
             className="weather-card intel-context-panel"
-            data-source-state={
-              activeAtmosphereError
-                ? 'unavailable'
-                : temporal.mode === 'forecast'
-                  ? forecastAtmosphere?.stale
-                    ? 'stale'
-                    : forecastAtmosphere
-                      ? 'forecast'
-                      : forecastSeries
-                        ? 'unavailable'
-                        : 'loading'
-                  : atmosphere?.live
-                    ? 'live'
-                    : atmosphere
-                      ? 'fallback'
-                      : 'loading'
-            }
+            data-source-state={weatherSourceState}
           >
             <div className="weather-card-head">
               <span>
@@ -2492,13 +2484,7 @@ export function App() {
                       : `${temporal.mode.toUpperCase()} · DATA PENDING`}
                 </strong>
               </span>
-              <span
-                className={
-                  activeAtmosphere && activeAtmosphere.fallback !== true
-                    ? 'status-dot live'
-                    : 'status-dot'
-                }
-              />
+              <em data-source-state={weatherSourceState}>{weatherSourceState.toUpperCase()}</em>
             </div>
             <div className="weather-metrics">
               <span>
@@ -2811,6 +2797,10 @@ export function App() {
         clock={clock}
         state={temporal}
         events={temporalEvents}
+        forecastSeries={forecastSeries}
+        forecastError={forecastError}
+        onHeightChange={setTemporalRailHeight}
+        onRetryForecast={() => setForecastRevision((revision) => revision + 1)}
         onScenarioEvent={restoreScenarioFromTemporalEvent}
       />
     </main>

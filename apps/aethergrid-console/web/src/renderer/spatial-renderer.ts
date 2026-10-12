@@ -44,6 +44,8 @@ export interface TemporalInstant {
   iso: string;
   mode: TemporalMode;
   sourceTime?: string | null;
+  liveReferenceIso?: string | null;
+  range?: { start: string; end: string } | null;
   scenarioId?: string | null;
   scenarioVisual?: SpatialScenarioVisual | null;
 }

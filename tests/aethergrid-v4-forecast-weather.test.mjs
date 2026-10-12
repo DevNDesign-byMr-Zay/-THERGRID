@@ -8,7 +8,7 @@ async function text(path) {
   return readFile(new URL(path, ROOT), 'utf8');
 }
 
-test('v4 forecast weather uses the backend provider route and bounded nearest-sample selection', async () => {
+test('v4 forecast weather uses the backend provider route and exact-sample selection', async () => {
   const service = await text('apps/aethergrid-console/web/src/services/city-environment.ts');
 
   assert.match(service, /loadCityEnvironmentForecast/u);
@@ -16,7 +16,7 @@ test('v4 forecast weather uses the backend provider route and bounded nearest-sa
   assert.match(service, /selectCityEnvironmentForecast/u);
   assert.match(service, /bestDistance/u);
   assert.match(service, /bestDistance > maxDistanceMs/u);
-  assert.match(service, /90 \* 60 \* 1000/u);
+  assert.match(service, /maxDistanceMs = 0/u);
   assert.match(service, /receipt\.stale/u);
   assert.match(service, /receipt\.fallback/u);
   assert.match(service, /sourceBacked/u);

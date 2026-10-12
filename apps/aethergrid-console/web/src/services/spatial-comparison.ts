@@ -112,6 +112,7 @@ export function captureSpatialObservation(
     },
     temporal: {
       ...input.temporal,
+      range: input.temporal.range ? { ...input.temporal.range } : null,
       scenarioVisual: input.temporal.scenarioVisual
         ? { ...input.temporal.scenarioVisual }
         : null

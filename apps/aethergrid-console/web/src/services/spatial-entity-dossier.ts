@@ -12,6 +12,7 @@ import type { SpatialObservation } from './spatial-comparison';
 export type EntitySourceState =
   | 'live'
   | 'mapped'
+  | 'forecast'
   | 'stale'
   | 'fallback'
   | 'recorded'
@@ -218,23 +219,25 @@ export function buildSpatialEntityDossier(
     });
   }
 
-  if (input.atmosphere) {
+  if (input.atmosphere && (input.temporal.mode === 'live' || input.temporal.mode === 'forecast')) {
     contextSources.push({
       role: 'weather',
       provider: null,
-      dataset: 'city-environment',
+      dataset: input.temporal.mode === 'forecast' ? 'weather-forecast' : 'city-environment',
       sourceTime: input.atmosphere.sourceTime,
       fetchedAt: input.atmosphere.fetchedAt,
       attribution: input.atmosphere.attribution,
-      state: input.atmosphere.live
-        ? 'live'
-        : input.atmosphere.fallback
-          ? 'fallback'
-          : 'recorded'
+      state: input.atmosphere.fallback
+        ? 'fallback'
+        : input.atmosphere.stale
+          ? 'stale'
+          : input.temporal.mode === 'forecast'
+            ? 'forecast'
+            : input.atmosphere.live ? 'live' : 'recorded'
     });
   }
 
-  if (input.liveContext) {
+  if (input.liveContext && input.temporal.mode === 'live') {
     contextSources.push(
       {
         role: 'air-quality',
@@ -346,7 +349,9 @@ export function buildSpatialEntityDossier(
       : 'No operator measurement is attached to this dossier.',
     input.temporal.mode === 'live'
       ? 'Current-only context may change after this dossier is generated unless the operator freezes a snapshot.'
-      : 'Current-only weather, air-quality and seismic context is intentionally omitted outside LIVE mode.'
+      : input.temporal.mode === 'forecast'
+        ? 'Weather is a forecast for the selected valid time; current-only air-quality and seismic context is omitted.'
+        : 'Current-only weather, air-quality and seismic context is intentionally omitted outside LIVE mode.'
   ];
 
   return Object.freeze({

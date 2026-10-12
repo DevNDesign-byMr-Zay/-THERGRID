@@ -27,6 +27,7 @@ export interface TemporalState {
   liveIso: string;
   playing: boolean;
   playbackRate: number;
+  playbackRange?: TimeRange | null;
   scenarioId: string | null;
 }
 
