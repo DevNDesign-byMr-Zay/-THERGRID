@@ -809,10 +809,10 @@ test('IBM Quantum adapter submits jobs while keeping credentials private', async
   const jobs = await runtime.listJobs();
   assert.equal(jobs.jobs[0].id, 'job-123');
   assert.equal(jobs.jobs[0].programId, 'sampler');
-  assert.equal(jobs.jobs[0].status, 'Queued');
+  assert.equal(jobs.jobs[0].status, 'QUEUED');
 
   const detail = await runtime.job('job-123');
-  assert.equal(detail.status, 'Completed');
+  assert.equal(detail.status, 'COMPLETED');
   assert.equal(detail.hardwareExecuted, true);
 
   const results = await runtime.jobResults('job-123');
@@ -855,4 +855,138 @@ test('local quantum estimator provides a bounded analytic fallback with explicit
   assert.equal(result.hardwareExecuted, false);
   assert.equal(result.approximation, 'bounded-local-analytic-demo');
   assert.match(result.receipt, /^[a-f0-9]{64}$/u);
+});
+
+test('IBM Quantum adapter supports job cancellation and handles error states', async () => {
+  const requests = [];
+  const fetchImpl = async (url, options = {}) => {
+    const href = String(url);
+    requests.push({ href, options });
+    if (href === 'https://iam.example.test/token') {
+      return new Response(JSON.stringify({ access_token: 'test-bearer', expires_in: 3600 }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    if (
+      href === 'https://quantum.example.test/api/v1/jobs/job-cancel-999/cancel' &&
+      options.method === 'POST'
+    ) {
+      return new Response(JSON.stringify({ id: 'job-cancel-999', status: 'Cancelled' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    if (href === 'https://quantum.example.test/api/v1/jobs/job-failed-111') {
+      return new Response(
+        JSON.stringify({
+          id: 'job-failed-111',
+          status: 'Failed',
+          state: { status: 'Failed', reason: 'QPU reset' },
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      );
+    }
+    return new Response(JSON.stringify({ error: 'not found' }), { status: 404 });
+  };
+
+  const runtime = createQuantumRuntime({
+    env: {
+      AETHERGRID_QUANTUM_PROVIDER: 'ibm-quantum',
+      AETHERGRID_IBM_QUANTUM_BASE_URL: 'https://quantum.example.test/api/v1/',
+      AETHERGRID_IBM_IAM_URL: 'https://iam.example.test/token',
+      AETHERGRID_IBM_QUANTUM_API_KEY: 'test-api-key',
+      AETHERGRID_IBM_QUANTUM_SERVICE_CRN: 'crn:test:quantum',
+    },
+    fetchImpl,
+  });
+
+  const cancelled = await runtime.cancelJob('job-cancel-999');
+  assert.equal(cancelled.jobId, 'job-cancel-999');
+  assert.equal(cancelled.cancelled, true);
+  assert.equal(cancelled.status, 'CANCELLED');
+
+  const failedDetail = await runtime.job('job-failed-111');
+  assert.equal(failedDetail.status, 'FAILED');
+  assert.equal(failedDetail.hardwareExecuted, false);
+});
+
+test('quantum experiment runner enforces security, quota bounds, operator approval, and evidence integrity', async () => {
+  const secretKey = 'super-secret-ibm-key-12345';
+  const serviceCrn = 'crn:v1:bluemix:public:quantum-computing:us-east:a/1234::';
+
+  let providerCalled = false;
+  const fetchImpl = async (url) => {
+    providerCalled = true;
+    const href = String(url);
+    if (href === 'https://iam.example.test/token') {
+      return new Response(
+        JSON.stringify({ access_token: 'secret-bearer-token-999', expires_in: 3600 }),
+        { status: 200 },
+      );
+    }
+    if (href === 'https://quantum.example.test/api/v1/jobs') {
+      return new Response(JSON.stringify({ id: 'job-quota-test', status: 'Queued' }), {
+        status: 200,
+      });
+    }
+    return new Response(JSON.stringify({}), { status: 200 });
+  };
+
+  const runtime = createQuantumRuntime({
+    env: {
+      AETHERGRID_QUANTUM_PROVIDER: 'ibm-quantum',
+      AETHERGRID_IBM_QUANTUM_BASE_URL: 'https://quantum.example.test/api/v1/',
+      AETHERGRID_IBM_IAM_URL: 'https://iam.example.test/token',
+      AETHERGRID_IBM_QUANTUM_API_KEY: secretKey,
+      AETHERGRID_IBM_QUANTUM_SERVICE_CRN: serviceCrn,
+      AETHERGRID_IBM_QUANTUM_BACKEND: 'ibm_test_qpu',
+    },
+    fetchImpl,
+  });
+
+  // 1. Quota bounds: > 10 qubits
+  await assert.rejects(
+    runtime.runExperiment({ qubits: 12, operatorApproved: true }),
+    /exceeds maximum problem size/u,
+  );
+  assert.equal(providerCalled, false, 'Provider must not be called when quota check fails');
+
+  // 2. Quota bounds: > 10000 shots
+  await assert.rejects(
+    runtime.runExperiment({ shots: 20000, operatorApproved: true }),
+    /exceeds maximum shots/u,
+  );
+  assert.equal(providerCalled, false, 'Provider must not be called when shot limit is exceeded');
+
+  // 3. Operator approval check
+  await assert.rejects(
+    runtime.runExperiment({ operatorApproved: false }),
+    /Explicit operator approval is required/u,
+  );
+  assert.equal(providerCalled, false, 'Provider must not be called without operator approval');
+
+  // 4. Valid experiment execution
+  const result = await runtime.runExperiment({
+    problemType: 'microgrid_qubo',
+    backend: 'ibm_test_qpu',
+    shots: 1024,
+    qubits: 2,
+    operatorApproved: true,
+  });
+
+  assert.equal(providerCalled, true);
+  assert.equal(result.problemType, 'microgrid_qubo');
+  assert.equal(result.classicalBaseline.problem, 'microgrid_balance_2var');
+  assert.equal(result.hardwareSubmitted, true);
+  assert.equal(result.hardwareExecuted, false);
+  assert.match(result.receipt, /^[a-f0-9]{64}$/u);
+
+  // 5. Secret hygiene check: no secrets in result or receipt payload
+  const dumped = JSON.stringify(result);
+  assert.doesNotMatch(dumped, new RegExp(secretKey, 'u'));
+  assert.doesNotMatch(dumped, /secret-bearer-token/u);
 });
