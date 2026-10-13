@@ -81,9 +81,17 @@ export class WeatherAtmosphereLayer {
   #precipitation: ParticleSystem | null = null;
   #visible = true;
   #baselineFog: FogBaseline;
+  #motionPreference: MediaQueryList | null = null;
+  #onMotionChange = () => {
+    this.#rebuildPrecipitation();
+    this.#applyTemporalVisibility();
+  };
 
   constructor(viewer: Viewer) {
     this.#viewer = viewer;
+    this.#motionPreference = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+    this.#motionPreference?.addEventListener('change', this.#onMotionChange);
     this.#clouds = new CloudCollection({
       noiseDetail: 16
     });
@@ -115,6 +123,7 @@ export class WeatherAtmosphereLayer {
     this.#applyTemporalVisibility();
     if (
       !this.#snapshot?.current ||
+      this.#motionPreference?.matches ||
       !this.#visible ||
       (time.mode !== 'live' && time.mode !== 'forecast')
     ) return;
@@ -136,6 +145,7 @@ export class WeatherAtmosphereLayer {
   }
 
   destroy(): void {
+    this.#motionPreference?.removeEventListener('change', this.#onMotionChange);
     this.#restoreFog();
     this.#removePrecipitation();
     if (!this.#clouds.isDestroyed()) {
@@ -199,6 +209,7 @@ export class WeatherAtmosphereLayer {
 
   #rebuildPrecipitation(): void {
     this.#removePrecipitation();
+    if (this.#motionPreference?.matches) return;
     const snapshot = this.#snapshot;
     const current = snapshot?.current;
     if (!snapshot || !current) return;

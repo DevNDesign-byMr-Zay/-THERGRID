@@ -592,3 +592,19 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .temporal-rail .temporal-data-status { grid-column: 1 / -1; }
   .temporal-rail .time-readout { grid-column: 1 / -1; display: flex; gap: 8px; }
 }
+.agent-task-history article { padding: 12px 0; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+.agent-task-history code, .agent-runtime code { overflow-wrap: anywhere; }
+.agent-request-context, .agent-provenance { font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.agent-investigation-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.temporal-scene-receipt { grid-column: 1 / -1; min-width: 0; }
+.temporal-rail :is(.forecast-scene-badge, .scenario-scene-badge, .illumination-scene-badge) { position: static; transform: none; justify-items: start; width: auto; margin: 0; }
+.temporal-rail :is(.forecast-scene-badge, .scenario-scene-badge, .illumination-scene-badge) :is(span, strong, small) { font-size: 10px; line-height: 1.5; color: var(--text); overflow-wrap: anywhere; }
+
+@media (max-height: 500px) {
+  .immersive-spatial .left-rail,
+  .immersive-spatial .intel-rail { bottom: 8px; }
+  .immersive-spatial .left-rail > .rail-section { display: none; }
+  .immersive-spatial .left-rail .navigation-tabs { flex: 0 0 auto; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .immersive-spatial .drawer-heading,
+  .immersive-spatial .intel-mobile-head { flex: 0 0 auto; }
+}

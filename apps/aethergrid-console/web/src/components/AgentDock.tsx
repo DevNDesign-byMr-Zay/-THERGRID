@@ -5,9 +5,9 @@ import {
   runAgent,
   type AgentHistoryItem,
   type AgentId,
-  type AgentResponse,
   type AgentSpatialContext
 } from '../services/agent-client';
+import { agentResponseState, appendAgentRun, createAgentRunRecord, type AgentRunRecord } from '../services/agent-run-history';
 
 const AGENTS: readonly AgentId[] = ['TEAM', 'AUREN', 'VÆLON', 'SOLVÆR'];
 
@@ -20,9 +20,11 @@ export interface AgentHandoffRequest {
 interface AgentDockProps {
   context: AgentSpatialContext;
   handoff?: AgentHandoffRequest | null;
+  onEvidence?(id: string): void;
+  onComparison?(): void;
 }
 
-export function AgentDock({ context, handoff = null }: AgentDockProps) {
+export function AgentDock({ context, handoff = null, onEvidence, onComparison }: AgentDockProps) {
   const [agent, setAgent] = useState<AgentId>('TEAM');
   const [draft, setDraft] = useState('');
   const [histories, setHistories] = useState<Record<AgentId, AgentHistoryItem[]>>({
@@ -31,7 +33,9 @@ export function AgentDock({ context, handoff = null }: AgentDockProps) {
     'VÆLON': [],
     'SOLVÆR': []
   });
-  const [lastRun, setLastRun] = useState<AgentResponse | null>(null);
+  const [runs, setRuns] = useState<Record<AgentId, AgentRunRecord[]>>({ TEAM: [], AUREN: [], 'VÆLON': [], 'SOLVÆR': [] });
+  const lastRecord = runs[agent].at(-1);
+  const lastRun = lastRecord?.response ?? null;
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
@@ -44,7 +48,6 @@ export function AgentDock({ context, handoff = null }: AgentDockProps) {
     setRunning(false);
     setAgent(handoff.agent);
     setDraft(handoff.prompt);
-    setLastRun(null);
     setError(null);
     globalThis.setTimeout(() => textareaRef.current?.focus(), 0);
   }, [handoff?.id]);
@@ -59,6 +62,8 @@ export function AgentDock({ context, handoff = null }: AgentDockProps) {
     if (!message || running) return;
 
     const before = histories[agent];
+    const startedAt = new Date().toISOString();
+    const requestedContext = structuredClone(context);
     const withUser = [...before, { role: 'user' as const, content: message }].slice(-16);
     setHistories((current) => ({ ...current, [agent]: withUser }));
     setDraft('');
@@ -71,7 +76,9 @@ export function AgentDock({ context, handoff = null }: AgentDockProps) {
 
     try {
       const result = await runAgent(agent, message, context, before, controller.signal);
-      setLastRun(result);
+      if (controller.signal.aborted || controllerRef.current !== controller) return;
+      const record = createAgentRunRecord(agent, message, requestedContext, result, startedAt, new Date().toISOString());
+      setRuns(current => ({ ...current, [agent]: appendAgentRun(current[agent], record) }));
       setHistories((current) => ({
         ...current,
         [agent]: [
@@ -103,7 +110,7 @@ export function AgentDock({ context, handoff = null }: AgentDockProps) {
       <div className="agent-identities" aria-label="Specialist identities">
         {(['AUREN', 'VÆLON', 'SOLVÆR'] as const).map((id) => (
           <button type="button" key={id} aria-pressed={agent === id} disabled={running}
-            onClick={() => { setAgent(id); setLastRun(null); setError(null); }}>
+            onClick={() => { setAgent(id); setError(null); }}>
             <img src={BRAND[id]} alt={`${id} mark`} />
             <strong>{id}</strong>
           </button>
@@ -111,7 +118,7 @@ export function AgentDock({ context, handoff = null }: AgentDockProps) {
       </div>
       <p className="agent-role">{AGENT_ROLES[agent]}</p>
       <span className="agent-run-state" role="status">
-        {running ? 'RUNNING' : lastRun ? (lastRun.runtime.fallbackUsed ? 'LOCAL FALLBACK' : 'PROVIDER RESPONSE') : 'READY TO REQUEST · PROVIDER NOT YET VERIFIED'}
+        {running ? 'RUNNING' : lastRun ? agentResponseState(lastRun) : 'READY TO REQUEST · PROVIDER NOT YET VERIFIED'}
       </span>
 
       <div className="agent-tabs" role="group" aria-label="ÆTHERGRID agents">
@@ -124,7 +131,6 @@ export function AgentDock({ context, handoff = null }: AgentDockProps) {
             aria-pressed={agent === id}
             onClick={() => {
               setAgent(id);
-              setLastRun(null);
               setError(null);
             }}
           >
@@ -132,6 +138,8 @@ export function AgentDock({ context, handoff = null }: AgentDockProps) {
           </button>
         ))}
       </div>
+      <p className="agent-request-context">Request context · {context.region} · {context.temporalMode.toUpperCase()} · {context.temporalCursor}
+        {context.selectedEntity?.id ? ` · Entity ${String(context.selectedEntity.id)}` : ' · No selected entity'}</p>
 
       <div className="agent-thread" aria-live="polite">
         {visibleHistory.length ? (
@@ -151,14 +159,28 @@ export function AgentDock({ context, handoff = null }: AgentDockProps) {
       {lastRun ? (
         <div className="agent-runtime">
           <span>{lastRun.runtime.provider}</span>
-          <span>{lastRun.runtime.model || 'fallback'}</span>
+          <span>{lastRun.runtime.model || 'MODEL NOT PROVIDED'}</span>
           <span>{lastRun.runtime.latencyMs} ms</span>
-          <span className={lastRun.runtime.fallbackUsed ? 'fallback' : 'verified'}>
-            {lastRun.runtime.fallbackUsed ? 'FALLBACK' : 'PROVIDER'}
+          <span className={lastRun.runtime.fallbackUsed ? 'fallback' : agentResponseState(lastRun) === 'PROVIDER RESPONSE' ? 'verified' : 'unknown'}>
+            {agentResponseState(lastRun)}
           </span>
-          <code>{lastRun.receipt ? lastRun.receipt.slice(0, 12) : 'NO RECEIPT'}</code>
+          <code>{lastRun.receipt || 'NO RECEIPT'}</code>
         </div>
       ) : null}
+      {lastRecord ? <>
+        <p className="agent-provenance">Backend request · {lastRecord.endpoint} · Completed {lastRecord.completedAt}. Execution receipts identify a request; they do not verify its factual claims. Tool-call provenance and citations are unavailable in the published API.</p>
+        <details className="agent-task-history"><summary>Task history · {agent} · {runs[agent].length} retained</summary>
+          {runs[agent].slice().reverse().map(record => <article key={record.id}>
+            <strong>{record.prompt}</strong><small>{record.context.region} · {record.context.temporalMode.toUpperCase()} · {record.context.temporalCursor} · {record.context.selectedEntityId ?? 'No selected entity'}</small>
+            <small>{record.startedAt} → {record.completedAt} · {agentResponseState(record.response)} · {record.response.runtime.provider} · {record.response.runtime.model ?? 'MODEL NOT PROVIDED'}</small>
+            <p>{record.response.reply}</p><code>{record.response.receipt || 'NO RECEIPT'}</code>
+          </article>)}
+        </details>
+        <div className="agent-investigation-actions">
+          {onComparison ? <button type="button" onClick={onComparison}>COMPARE SCENARIOS</button> : null}
+          {lastRun?.evidence?.id && onEvidence ? <button type="button" onClick={() => onEvidence(lastRun.evidence!.id!)}>REVIEW EVIDENCE</button> : null}
+        </div>
+      </> : null}
 
       {error ? <div className="agent-error">{error}</div> : null}
 
@@ -168,7 +190,7 @@ export function AgentDock({ context, handoff = null }: AgentDockProps) {
           {lastRun.contributions.map((contribution) => (
             <article key={contribution.agent}>
               <strong>{contribution.agent}</strong>
-              <small>{contribution.runtime.provider} · {contribution.runtime.model ?? 'local'} · {contribution.runtime.fallbackUsed ? 'FALLBACK' : 'PROVIDER'}</small>
+              <small>{contribution.runtime.provider} · {contribution.runtime.model ?? 'MODEL NOT PROVIDED'} · {contribution.runtime.fallbackUsed ? 'FALLBACK' : contribution.runtime.provider !== 'unknown' && contribution.runtime.model ? 'PROVIDER RESPONSE' : 'UNVERIFIED RESPONSE'}</small>
               <p>{contribution.reply}</p>
               <code>{contribution.receipt || 'NO RECEIPT'}</code>
             </article>
@@ -199,6 +221,7 @@ export function AgentDock({ context, handoff = null }: AgentDockProps) {
           {running ? 'ANALYZING…' : 'SEND'}
         </button>
       </form>
+      {running ? <button type="button" onClick={() => { controllerRef.current?.abort(); controllerRef.current = null; setRunning(false); setError('Stopped waiting locally. The backend may still finish this request; no server cancellation endpoint is available.'); }}>STOP WAITING</button> : null}
     </section>
   );
 }

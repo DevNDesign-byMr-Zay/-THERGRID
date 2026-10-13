@@ -176,9 +176,13 @@ export interface DwaveSubmissionInput {
   confirmSubmission: true;
 }
 
+export const DWAVE_ON_HOLD = true;
+const dwaveHeld = () => Promise.reject(new Error('D-Wave is on hold and non-executable.'));
+
 export function loadDwaveSolvers(
   signal?: AbortSignal
 ): Promise<DwaveEnvelope<DwaveDiscovery>> {
+  if (DWAVE_ON_HOLD) return dwaveHeld();
   return jsonRequest('/api/aethergrid/quantum/dwave/solvers', { signal });
 }
 
@@ -186,6 +190,7 @@ export function loadDwaveJob(
   id: string,
   signal?: AbortSignal
 ): Promise<DwaveEnvelope<DwaveJobState>> {
+  if (DWAVE_ON_HOLD) return dwaveHeld();
   const query = new URLSearchParams({ id });
   return jsonRequest(`/api/aethergrid/quantum/dwave/jobs?${query.toString()}`, {
     signal
@@ -196,6 +201,7 @@ export function loadDwaveResult(
   id: string,
   signal?: AbortSignal
 ): Promise<DwaveEnvelope<DwaveJobState>> {
+  if (DWAVE_ON_HOLD) return dwaveHeld();
   return jsonRequest(
     `/api/aethergrid/quantum/dwave/jobs/${encodeURIComponent(id)}/result`,
     { signal }
@@ -206,6 +212,7 @@ export function submitDwaveJob(
   input: DwaveSubmissionInput,
   signal?: AbortSignal
 ): Promise<DwaveEnvelope<DwaveJobState>> {
+  if (DWAVE_ON_HOLD) return dwaveHeld();
   return jsonRequest('/api/aethergrid/quantum/dwave/jobs', {
     method: 'POST',
     signal,

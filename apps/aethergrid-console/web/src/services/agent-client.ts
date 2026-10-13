@@ -83,6 +83,7 @@ export async function runAgent(
   const payload = (await response.json().catch(() => ({}))) as Partial<AgentResponse> & {
     error?: string;
   };
+  if (signal?.aborted) throw new DOMException('Specialist request aborted', 'AbortError');
 
   if (!response.ok) {
     throw new Error(payload.error || `agent request failed with HTTP ${response.status}`);
@@ -105,9 +106,17 @@ export async function runAgent(
       advisoryOnly: true
     },
     contributions: Array.isArray(payload.contributions)
-      ? payload.contributions
+      ? payload.contributions.filter((item) => item && typeof item.agent === 'string' && typeof item.reply === 'string').map((item) => ({
+        agent: item.agent, reply: item.reply, receipt: typeof item.receipt === 'string' ? item.receipt : '',
+        runtime: { agent: item.agent, provider: typeof item.runtime?.provider === 'string' ? item.runtime.provider : 'unknown',
+          model: typeof item.runtime?.model === 'string' ? item.runtime.model : null,
+          fallbackUsed: item.runtime?.fallbackUsed === true, advisoryOnly: true,
+          latencyMs: Number.isFinite(item.runtime?.latencyMs) ? item.runtime.latencyMs : 0 }
+      }))
       : undefined,
     advisoryOnly: true,
-    evidence: payload.evidence
+    evidence: payload.evidence && typeof payload.evidence === 'object'
+      ? Object.fromEntries(Object.entries(payload.evidence).filter(([key,value]) => ['id','receipt','title','type','status'].includes(key) && typeof value === 'string'))
+      : undefined
   };
 }

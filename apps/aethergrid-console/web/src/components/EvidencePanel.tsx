@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   downloadEvidencePackage,
@@ -9,15 +9,17 @@ import {
 } from '../services/evidence-client';
 
 interface EvidencePanelProps {
-  onSelectEvidence?(record: EvidenceRecord): void;
+  onSelectEvidence?(record: EvidenceRecord | null): void;
+  requestedEvidence?: {id: string; generation: number} | null;
 }
 
-export function EvidencePanel({ onSelectEvidence }: EvidencePanelProps) {
+export function EvidencePanel({ onSelectEvidence, requestedEvidence }: EvidencePanelProps) {
   const [records, setRecords] = useState<EvidenceRecord[]>([]);
   const [selected, setSelected] = useState<EvidenceRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const lookupGeneration = useRef(0);
 
   const refresh = () => {
     setLoading(true);
@@ -34,18 +36,27 @@ export function EvidencePanel({ onSelectEvidence }: EvidencePanelProps) {
     refresh();
   }, []);
 
-  const inspect = (record: EvidenceRecord) => {
-    const lookup = record.receipt || record.id;
+  const inspect = useCallback((lookup: string) => {
+    const generation = ++lookupGeneration.current;
+    setSelected(null);
+    onSelectEvidence?.(null);
     setError(null);
     void loadEvidenceRecord(lookup)
       .then((record) => {
+        if (generation !== lookupGeneration.current) return;
         setSelected(record);
         onSelectEvidence?.(record);
       })
-      .catch((loadError) =>
-        setError(loadError instanceof Error ? loadError.message : String(loadError))
-      );
-  };
+      .catch((loadError) => {
+        if (generation !== lookupGeneration.current) return;
+        setError(loadError instanceof Error ? loadError.message : String(loadError));
+      });
+  }, [onSelectEvidence]);
+
+  useEffect(() => {
+    if (requestedEvidence) inspect(requestedEvidence.id);
+    return () => { lookupGeneration.current += 1; };
+  }, [requestedEvidence, inspect]);
 
   const exportPackage = async () => {
     if (exporting) return;
@@ -78,7 +89,7 @@ export function EvidencePanel({ onSelectEvidence }: EvidencePanelProps) {
         {loading ? <p>Loading evidence…</p> : null}
         {!loading && !records.length ? <p>No evidence records yet.</p> : null}
         {records.map((record) => (
-          <button type="button" key={record.id} onClick={() => inspect(record)}>
+          <button type="button" key={record.id} onClick={() => inspect(record.receipt || record.id)}>
             <span>
               <small>{record.type}</small>
               <strong>{record.title}</strong>

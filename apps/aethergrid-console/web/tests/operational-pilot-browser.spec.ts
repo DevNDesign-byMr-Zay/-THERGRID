@@ -1,0 +1,30 @@
+import {expect,test} from '@playwright/test';
+
+test('New York pilot binds named NOAA and EIA scopes with explicit quality limitations',async({page})=>{
+  test.setTimeout(90000);
+  await page.setViewportSize({width:1366,height:768});
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.route('**/*',route=>['127.0.0.1','localhost'].includes(new URL(route.request().url()).hostname)?route.continue():route.abort('internetdisconnected'));
+  await page.route('**/api/aethergrid/**',route=>['/api/aethergrid/config/public','/api/aethergrid/profile'].includes(new URL(route.request().url()).pathname)?route.continue():route.fulfill({status:503,json:{error:'Offline operational contract'}}));
+  await page.route('**/api/aethergrid/hydrology/gauges?**',route=>route.fulfill({json:{data:{gaugeId:'BATN6',gaugeName:'The Battery (OFFLINE CONTRACT)',observedStageFeet:3.2,observedAt:'2026-10-13T03:00:00Z'},receipt:{live:true,fallback:false,provider:'noaa-nwps',sourceTime:'2026-10-13T03:00:00Z',retrievedAt:'2026-10-13T03:01:00Z'}}}));
+  await page.route('**/api/aethergrid/energy/context?**',route=>route.fulfill({json:{data:{region:'NYIS',fuelMix:[{period:'2026-10-13T03:00:00Z',fueltype:'NG',fueltypeDescription:'Natural gas',value:4200,sourceUnits:'megawatthours'}]},receipt:{live:true,fallback:false,provider:'eia',sourceTime:'2026-10-13T03:00:00Z',retrievedAt:'2026-10-13T03:01:00Z'}}}));
+  await page.goto('/');
+  await page.getByRole('button',{name:'Navigation and layers'}).click();
+  await page.getByRole('navigation',{name:'City targets'}).getByRole('button',{name:/NEW YORK/}).click();
+  await page.getByRole('button',{name:'Close navigation drawer'}).click();
+  await page.getByRole('button',{name:'INTEL',exact:true}).click();
+  await page.getByRole('navigation',{name:'Intelligence workspace'}).getByRole('button',{name:'OPS',exact:true}).click();
+  await expect(page.getByRole('button',{name:'BIND NEW YORK PILOT'})).toHaveCount(1);
+  await page.getByRole('button',{name:'BIND NEW YORK PILOT'}).click();
+  const cards=page.locator('.provider-card');
+  await expect(cards.filter({hasText:'EIA'})).toContainText('4,200');
+  await expect(cards.filter({hasText:'NOAA'})).toContainText('3.20 ft');
+  await expect(cards.filter({hasText:'EIA'})).toContainText('not verified building flow');
+  await expect(cards.filter({hasText:'NOAA'})).toContainText('BATN6');
+  await expect(page.locator('.operational-data-panel')).not.toContainText('verified LIVE');
+  await expect(page.getByText('Provider quality flags: not supplied by the published API.').first()).toBeVisible();
+  await cards.filter({hasText:'NOAA'}).scrollIntoViewIfNeeded();
+  await page.screenshot({path:'test-results/operational-noaa-gauge.png'});
+  await cards.filter({hasText:'EIA'}).scrollIntoViewIfNeeded();
+  await page.screenshot({path:'test-results/operational-new-york-pilot.png'});
+});

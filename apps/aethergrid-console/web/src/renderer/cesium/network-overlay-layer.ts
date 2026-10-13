@@ -697,7 +697,8 @@ export class NetworkOverlayLayer {
     const scenario =
       time.mode === 'scenario' ? time.scenarioVisual ?? null : null;
     const timestamp = Date.parse(time.iso);
-    const temporalPhase = Number.isFinite(timestamp)
+    const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const temporalPhase = !reducedMotion && Number.isFinite(timestamp)
       ? timestamp / 1000
       : 0;
 

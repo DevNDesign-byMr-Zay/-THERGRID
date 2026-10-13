@@ -219,11 +219,11 @@ export function OperationalDataPanel({
     [temporalMode, weatherCurrent]
   );
 
-  const applyBindings = () => {
+  const applySelectedBindings = (gaugeId: string, energyRegion: string) => {
     try {
       const next = saveOperationalSourceBindings(bindingScopeId, {
-        gaugeId: gaugeDraft,
-        energyRegion: energyRegionDraft
+        gaugeId,
+        energyRegion
       });
       setBindings(next);
       setGaugeDraft(next.gaugeId ?? '');
@@ -233,6 +233,7 @@ export function OperationalDataPanel({
       setBindingError(error instanceof Error ? error.message : String(error));
     }
   };
+  const applyBindings = () => applySelectedBindings(gaugeDraft, energyRegionDraft);
 
   const clearBindings = () => {
     const next = clearOperationalSourceBindings(bindingScopeId);
@@ -254,7 +255,7 @@ export function OperationalDataPanel({
 
       <p>
         {temporalMode === 'live'
-          ? `${liveCount} source${liveCount === 1 ? '' : 's'} currently verified LIVE. Missing providers stay missing.`
+          ? `${liveCount} source${liveCount === 1 ? '' : 's'} report LIVE receipts. Missing providers stay missing.`
           : temporalMode === 'forecast'
             ? `${forecastCount} provider-backed weather forecast sample${forecastCount === 1 ? '' : 's'} aligned to the selected 4D cursor. Current-only telemetry remains hidden.`
             : 'Only provider-backed samples valid for the selected 4D cursor may appear here; current-only telemetry is not replayed.'}
@@ -301,6 +302,7 @@ export function OperationalDataPanel({
           </label>
         </div>
         <div className="source-binding-actions">
+          {cityId === 'new-york' ? <button type="button" onClick={() => applySelectedBindings('BATN6', 'NYIS')}>BIND NEW YORK PILOT</button> : null}
           <button type="button" onClick={applyBindings}>
             APPLY BINDINGS
           </button>
@@ -308,6 +310,7 @@ export function OperationalDataPanel({
             CLEAR
           </button>
         </div>
+        {cityId === 'new-york' ? <p>New York pilot: NOAA BATN6 at The Battery and EIA NYIS regional fuel mix. This explicit binding does not infer sources from proximity. <a href="https://water.noaa.gov/gauges/batn6" target="_blank" rel="noreferrer">NOAA station</a> · <a href="https://www.eia.gov/electricity/gridmonitor/dashboard/electric_overview/balancing_authority/NYIS" target="_blank" rel="noreferrer">EIA region</a></p> : null}
         {bindingError ? <p className="source-binding-error">{bindingError}</p> : null}
         <small>
           {bindings.updatedAt
@@ -358,6 +361,9 @@ export function OperationalDataPanel({
               ) : null}
 
               <p>{source?.summary ?? capability.note}</p>
+              {capability.id === 'energy' ? <p>Regional fuel-type observations; not verified building flow or building consumption. Mapped power assets are separate static topology.</p> : null}
+              {capability.id === 'hydrology' ? <p>Station-specific reading · {bindings.gaugeId ?? 'NO GAUGE BOUND'}. Measurement datum metadata is unavailable in the published API.</p> : null}
+              <small>Provider quality flags: not supplied by the published API.</small>
               <small>
                 {source?.provider ?? 'PROVIDER PENDING'}
                 {source?.dataset ? ` · ${source.dataset}` : ''}

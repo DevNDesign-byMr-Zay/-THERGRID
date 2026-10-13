@@ -365,7 +365,7 @@ test('v4 spatial AI dock calls real agent endpoints with scene context and recei
   assert.match(client, /history: history\.slice\(-12\)/u);
   assert.match(dock, /ADVISORY ONLY/u);
   assert.match(dock, /lastRun\.runtime\.provider/u);
-  assert.match(dock, /lastRun\.receipt\.slice/u);
+  assert.match(dock, /lastRun\.receipt \|\| 'NO RECEIPT'/u);
   assert.match(app, /temporalCursor: temporal\.cursorIso/u);
   assert.match(app, /selectedEntity/u);
   assert.match(app, /cityIdentity/u);

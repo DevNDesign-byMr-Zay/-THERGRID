@@ -83,6 +83,16 @@ jobs:
           AETHERGRID_TEST_CANONICAL: "1"
         run: npx playwright test tests/spatial-tools-browser.spec.ts --output=test-results/spatial-tools --workers=1 --reporter=line
 
+      - name: Verify specialist receipts, D-Wave hold and reduced-motion contracts
+        env:
+          AETHERGRID_TEST_CANONICAL: "1"
+        run: npx playwright test tests/specialist-integration.spec.ts tests/quantum-hold.spec.ts tests/weather-motion.spec.ts --output=test-results/specialist-contracts --workers=1 --reporter=line
+
+      - name: Verify compiled specialists, operational pilot and responsive disclosures
+        env:
+          AETHERGRID_TEST_CANONICAL: "1"
+        run: npx playwright test tests/specialist-browser.spec.ts tests/operational-pilot-browser.spec.ts tests/quantum-hold-browser.spec.ts tests/final-visual-browser.spec.ts --output=test-results/specialist-acceptance --workers=1 --reporter=line
+
       - name: Retain credential-free spatial screenshots
         if: always()
         uses: actions/upload-artifact@v7
@@ -99,6 +109,12 @@ jobs:
             apps/aethergrid-console/web/test-results/timeline-*.png
             apps/aethergrid-console/web/test-results/spatial-tools/
             apps/aethergrid-console/web/test-results/spatial-*.png
+            apps/aethergrid-console/web/test-results/specialist-acceptance/
+            apps/aethergrid-console/web/test-results/specialist-*.png
+            apps/aethergrid-console/web/test-results/operational-*.png
+            apps/aethergrid-console/web/test-results/dwave-held-*.png
+            apps/aethergrid-console/web/test-results/final-forecast-*.png
+            apps/aethergrid-console/web/test-results/final-night-disclosure-*.png
           if-no-files-found: warn
           retention-days: 14
 
