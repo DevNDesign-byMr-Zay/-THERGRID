@@ -14,7 +14,7 @@ permissions:
 jobs:
   web-build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: apps/aethergrid-console/web

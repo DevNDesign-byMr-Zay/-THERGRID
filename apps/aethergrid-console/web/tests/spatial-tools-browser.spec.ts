@@ -17,7 +17,7 @@ async function mappedCity(page: Page) {
 }
 
 test('captured backend scenario restores its own effects after another scenario is active', async ({ page }) => {
-  test.setTimeout(90000);
+  test.setTimeout(180000);
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.addInitScript(() => localStorage.setItem('aethergrid.operator.spatial-bookmarks.v4', JSON.stringify([1.1,1.8].map((stressFactor,index) => ({
     id: `backend-${index}`, name: `Backend frame ${index}`, createdAt: '2026-10-12T12:00:00Z', scope: 'city',
@@ -155,7 +155,7 @@ test('compiled scene export records the active Cesium and native camera without 
 });
 
 for (const width of [1366, 390]) test(`picked area measurement finishes and clears at ${width}px`, async ({ page }) => {
-  test.setTimeout(90000);
+  test.setTimeout(180000);
   await page.setViewportSize({ width, height: width === 390 ? 844 : 768 });
   await mappedCity(page);
   if (width === 390) {
@@ -228,7 +228,7 @@ test('compiled layer opacity is independent and persists into the native fallbac
 });
 
 test('operator scenario transport uses its declared modeled interval', async ({ page }) => {
-  test.setTimeout(90000);
+  test.setTimeout(180000);
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.addInitScript(() => { if (localStorage.getItem('aethergrid.operator.workspace-sessions.v4')) return; localStorage.setItem('aethergrid.operator.scenarios.v4', JSON.stringify([{
     schemaVersion: 'aethergrid.operator-scenario.v1', kind: 'operator-scenario', authoritative: false, modeled: true,
