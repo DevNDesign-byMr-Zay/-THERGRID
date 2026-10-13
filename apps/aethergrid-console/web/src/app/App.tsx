@@ -45,6 +45,7 @@ import { useOperatorShortcuts } from '../hooks/use-operator-shortcuts';
 import { useTemporalClock } from '../hooks/use-temporal-clock';
 import { forecastFrameInstants } from '../time/forecast-frames';
 import { frameTemporalInstant } from '../time/frame-temporal-instant';
+import { spatialRenderFrame, spatialRenderFrameKey } from '../time/render-frame';
 import {
   weatherPhenomenon,
   type AtmosphericOverlaySnapshot
@@ -427,6 +428,8 @@ export function App() {
   );
 
   const forecastFrames = useMemo(() => forecastFrameInstants(forecastSeries), [forecastSeries]);
+  const renderFrameKey = spatialRenderFrameKey(temporalInstant);
+  const renderInstant = useMemo(() => spatialRenderFrame(temporalInstant), [renderFrameKey]);
   useEffect(() => {
     if (temporal.mode === 'scenario') {
       if (activeOperatorScenario?.id === temporal.scenarioId && activeOperatorScenario.endIso) {
@@ -472,8 +475,8 @@ export function App() {
     [measurement, measurementFrame, areaMeasurement]
   );
   const incidentOverlay = useMemo(
-    () => spatialIncidentsToOverlay(spatialIncidents, temporalInstant),
-    [spatialIncidents, temporalInstant]
+    () => spatialIncidentsToOverlay(spatialIncidents, renderInstant),
+    [spatialIncidents, renderInstant]
   );
   const worksetGeometry = useMemo(
     () => buildSpatialWorksetGeometry(spatialWorkset),
@@ -481,20 +484,20 @@ export function App() {
   );
 
   const worksetGeometryOverlay = useMemo(
-    () => spatialWorksetGeometryToOverlay(worksetGeometry, temporalInstant),
-    [worksetGeometry, temporalInstant]
+    () => spatialWorksetGeometryToOverlay(worksetGeometry, renderInstant),
+    [worksetGeometry, renderInstant]
   );
 
   const operatorScenarioOverlay = useMemo(
     () =>
-      activeOperatorScenario && temporalInstant.mode === 'scenario' && activeOperatorScenario.id === temporalInstant.scenarioId
+      activeOperatorScenario && renderInstant.mode === 'scenario' && activeOperatorScenario.id === renderInstant.scenarioId
         ? operatorScenarioToOverlay(
             activeOperatorScenario,
             worksetGeometry,
-            temporalInstant
+            renderInstant
           )
         : null,
-    [activeOperatorScenario, worksetGeometry, temporalInstant]
+    [activeOperatorScenario, worksetGeometry, renderInstant]
   );
 
   const spatialComparison = useMemo(

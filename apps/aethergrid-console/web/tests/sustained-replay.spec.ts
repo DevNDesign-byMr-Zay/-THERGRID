@@ -50,9 +50,11 @@ test('15-minute compiled modeled replay retains a working Cesium scene',async({p
   await rail.getByRole('combobox',{name:'Replay speed'}).selectOption('1');
   await rail.getByRole('button',{name:'Play modeled scenario'}).click();
   const playbackStarted=Date.now(),samples=[];
+  await mkdir(test.info().outputDir,{recursive:true});
   while(Date.now()-playbackStarted<900_000){
     await page.waitForTimeout(Math.min(30_000,900_000-(Date.now()-playbackStarted)));
     samples.push(await sample());
+    await writeFile(path.join(test.info().outputDir,'sustained-replay-progress.json'),JSON.stringify({completed:false,browser:browser.version(),elapsedPlaybackMs:Date.now()-playbackStarted,baseline,samples,errors},null,2));
     expect(samples.at(-1)!.contextLosses).toBe(0);
     await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer','cesium');
     await expect(page.locator('.cesium-widget-errorPanel')).toHaveCount(0);
@@ -60,7 +62,7 @@ test('15-minute compiled modeled replay retains a working Cesium scene',async({p
   }
   await rail.getByRole('button',{name:'Pause modeled scenario'}).click();
   const final=await sample();
-  const report={browser:browser.version(),fixture:true,softwareGpu:true,elapsedPlaybackMs:Date.now()-playbackStarted,baseline,samples,final,errors,
+  const report={completed:true,browser:browser.version(),fixture:true,softwareGpu:true,elapsedPlaybackMs:Date.now()-playbackStarted,baseline,samples,final,errors,
     limitations:['rAF intervals measure browser scheduling, not GPU frame rate.','Software-rendered Chromium does not certify physical desktop/mobile GPUs.','Credentialed 3D-tile/terrain loading is unavailable; actual offline source footprint geometry is tested.','Renderer-private primitive counters are unavailable; canvas/DOM and JS heap counters are reported.']};
   await mkdir(test.info().outputDir,{recursive:true});await writeFile(path.join(test.info().outputDir,'sustained-replay.json'),JSON.stringify(report,null,2));
   await page.screenshot({path:path.join(test.info().outputDir,'sustained-replay.png')});
