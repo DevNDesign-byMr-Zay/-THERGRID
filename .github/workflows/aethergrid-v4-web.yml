@@ -130,3 +130,48 @@ jobs:
           path: apps/aethergrid-console/web/dist/
           if-no-files-found: error
           retention-days: 14
+
+  sustained-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: apps/aethergrid-console/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install isolated web dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Type-check and build the spatial application
+        run: npm run typecheck && npm run build
+
+      - name: Install root runtime dependencies for canonical preview
+        working-directory: ${{ github.workspace }}
+        run: npm ci --ignore-scripts
+
+      - name: Install maintained Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify actual fifteen-minute modeled replay
+        env:
+          AETHERGRID_TEST_CANONICAL: "1"
+          AETHERGRID_LONG_ACCEPTANCE: "1"
+        run: |
+          export AETHERGRID_TEST_CHROMIUM="$(node --input-type=module -e 'import { chromium } from "@playwright/test"; process.stdout.write(chromium.executablePath());')"
+          npx playwright test tests/sustained-replay.spec.ts --output=test-results/sustained-replay --workers=1 --reporter=line
+
+      - name: Retain replay measurements and actual scene screenshot
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: aethergrid-sustained-replay-${{ github.sha }}
+          path: apps/aethergrid-console/web/test-results/sustained-replay/
+          if-no-files-found: warn
+          retention-days: 14
