@@ -67,6 +67,7 @@ export function SpatialViewport({
   targetRef.current = target;
   useImperativeHandle(ref, () => ({ cameraSnapshot: () => managerRef.current?.cameraSnapshot() ?? null }), []);
   const overlayIdsRef = useRef<Set<string>>(new Set());
+  const overlaySnapshotsRef = useRef(new Map<string, SpatialOverlaySnapshot>());
   const journeyGenerationRef = useRef(0);
   const lastJourneyKeyRef = useRef<string | null>(null);
   const interactionModeRef = useRef<SpatialInteractionMode>(interactionMode);
@@ -86,6 +87,8 @@ export function SpatialViewport({
       new NativeWebglSpatialRenderer()
     );
     managerRef.current = manager;
+    overlaySnapshotsRef.current.clear();
+    overlayIdsRef.current.clear();
     manager.mount(host);
 
     void (async () => {
@@ -100,7 +103,10 @@ export function SpatialViewport({
       manager.setLayers(layers);
       manager.setVisualMode(visualMode);
       manager.setTime(time);
-      for (const snapshot of overlays) manager.applyOverlay(snapshot);
+      for (const snapshot of overlays) {
+        manager.applyOverlay(snapshot);
+        overlaySnapshotsRef.current.set(snapshot.layerId, snapshot);
+      }
       if (atmosphere) manager.applyAtmosphere(atmosphere);
       if (airQuality) manager.applyAirQuality(airQuality);
       overlayIdsRef.current = new Set(overlays.map((snapshot) => snapshot.layerId));
@@ -224,9 +230,12 @@ export function SpatialViewport({
 
     const nextIds = new Set(overlays.map((snapshot) => snapshot.layerId));
     for (const layerId of overlayIdsRef.current) {
-      if (!nextIds.has(layerId)) manager.clearOverlay(layerId);
+      if (!nextIds.has(layerId)) { manager.clearOverlay(layerId); overlaySnapshotsRef.current.delete(layerId); }
     }
-    for (const snapshot of overlays) manager.applyOverlay(snapshot);
+    for (const snapshot of overlays) {
+      if (overlaySnapshotsRef.current.get(snapshot.layerId) !== snapshot) manager.applyOverlay(snapshot);
+      overlaySnapshotsRef.current.set(snapshot.layerId, snapshot);
+    }
     overlayIdsRef.current = nextIds;
     setStatus(manager.status());
   }, [overlays, status.ready]);

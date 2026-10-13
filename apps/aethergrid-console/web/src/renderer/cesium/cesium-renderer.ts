@@ -10,6 +10,7 @@ import {
   EllipsoidTerrainProvider,
   Entity,
   Ion,
+  JulianDate,
   OpenStreetMapImageryProvider,
   Math as CesiumMath,
   Terrain,
@@ -17,6 +18,7 @@ import {
   createGooglePhotorealistic3DTileset,
   createOsmBuildingsAsync
 } from 'cesium';
+import { spatialRenderFrameKey } from '../../time/render-frame';
 
 import type { SpatialOverlaySnapshot } from '../overlays/spatial-overlay';
 
@@ -91,6 +93,20 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #selectedTile: { feature: Cesium3DTileFeature; color: Color } | null = null;
   #layers = new Map<string, LayerState>();
   #time: TemporalInstant | null = null;
+  #renderFrameKey: string | null = null;
+  #motionQuery: MediaQueryList | null = null;
+  #initialClockAnimation = false;
+  #onCameraInput = (event: Event) => {
+    if (this.#motionQuery?.matches !== true || (event.type === 'pointermove' && !(event as PointerEvent).buttons)) return;
+    this.#viewer?.scene.requestRender();
+  };
+  #onMotionChange = () => {
+    if (!this.#viewer) return;
+    this.#viewer.scene.requestRenderMode = this.#motionQuery?.matches === true;
+    this.#viewer.clock.shouldAnimate = this.#motionQuery?.matches ? false : this.#initialClockAnimation;
+    this.#renderFrameKey = null;
+    this.#viewer.scene.requestRender();
+  };
   #ready = false;
   #degraded = false;
   #busy = false;
@@ -111,7 +127,10 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#ionEnabled = ionEnabled;
     if (config.cesiumIonToken) Ion.defaultAccessToken = config.cesiumIonToken;
 
+    this.#motionQuery = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
     this.#viewer = new Viewer(this.#container, {
+      requestRenderMode: this.#motionQuery?.matches === true,
+      maximumRenderTimeChange: Number.POSITIVE_INFINITY,
       animation: false,
       baseLayerPicker: false,
       fullscreenButton: false,
@@ -136,6 +155,10 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
           })
     });
 
+    this.#initialClockAnimation = this.#viewer.clock.shouldAnimate;
+    this.#motionQuery?.addEventListener('change', this.#onMotionChange);
+    for (const type of ['wheel', 'pointerdown', 'pointermove', 'pointerup']) this.#viewer.canvas.addEventListener(type, this.#onCameraInput, {passive: true});
+    this.#onMotionChange();
     if (!ionEnabled) {
       try {
         const osmLayer = this.#viewer.imageryLayers.addImageryProvider(
@@ -240,7 +263,11 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
   setTime(time: TemporalInstant): void {
     const viewer = this.#requireViewer();
+    const key = spatialRenderFrameKey(time);
+    const unchanged = this.#motionQuery?.matches === true && this.#renderFrameKey === key;
     this.#time = { ...time };
+    this.#renderFrameKey = key;
+    if (unchanged) { viewer.clock.currentTime = JulianDate.fromIso8601(time.iso); return; }
     this.#solar = this.#solarLighting?.setTime(time) ?? this.#solar;
     if (this.#solar) this.#visualController?.setSolarPhase(this.#solar.phase);
     this.#grid?.setTime(time.iso);
@@ -468,6 +495,10 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   }
 
   destroy(): void {
+    for (const type of ['wheel', 'pointerdown', 'pointermove', 'pointerup']) this.#viewer?.canvas.removeEventListener(type, this.#onCameraInput);
+    this.#motionQuery?.removeEventListener('change', this.#onMotionChange);
+    this.#motionQuery = null;
+    this.#renderFrameKey = null;
     this.#journeyGeneration += 1;
     this.#clearSelection();
     this.#cameraJourney?.cancel();

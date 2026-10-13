@@ -76,7 +76,12 @@ jobs:
       - name: Verify spatial presentations, modeled replay, area and scene contracts
         env:
           AETHERGRID_TEST_CANONICAL: "1"
-        run: npx playwright test tests/spatial-presentations.spec.ts tests/modeled-replay.spec.ts tests/spatial-area.spec.ts tests/spatial-scene.spec.ts tests/surface-picking.spec.ts tests/native-selection.spec.ts tests/renderer-transition.spec.ts --output=test-results/spatial-contracts --workers=1 --reporter=line
+        run: npx playwright test tests/spatial-presentations.spec.ts tests/modeled-replay.spec.ts tests/spatial-area.spec.ts tests/spatial-scene.spec.ts tests/surface-picking.spec.ts tests/native-selection.spec.ts tests/renderer-transition.spec.ts tests/render-frame.spec.ts --output=test-results/spatial-contracts --workers=1 --reporter=line
+
+      - name: Verify idle GPU rendering and camera input under reduced motion
+        env:
+          AETHERGRID_TEST_CANONICAL: "1"
+        run: npx playwright test tests/renderer-demand-browser.spec.ts --output=test-results/renderer-demand --workers=1 --reporter=line
 
       - name: Verify compiled spatial tools and source comparisons
         env:
