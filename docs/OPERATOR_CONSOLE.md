@@ -148,7 +148,6 @@ Run `npm run package:aethergrid` to build the non-canonical support artifact `di
 
 The packaged `app.js` first attempts the live read-only API. When the archive is served independently from a static server, it falls back to those populated JSON snapshots so the interface remains fully reviewable instead of degrading into empty placeholders.
 
-
 ## Legacy reference dashboard
 
 The static evidence HTML follows the earlier approved command-center reference: a branded top mode rail, left system navigation, New York Metro digital-twin field, always-visible VÆLON/AUREN/SOLVÆR collaboration rail, real-time metric cards, quantum optimization, scenario comparison, holographic previews, evidence history, and export/report surfaces.

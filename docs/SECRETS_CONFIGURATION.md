@@ -17,16 +17,16 @@ Use encrypted GitHub Actions or deployment secrets for credential values. Keep n
 
 Recommended secret names:
 
-| Integration | ÆTHERGRID secret/config |
-| --- | --- |
-| Cesium ion | `AETHERGRID_CESIUM_ION_TOKEN` |
-| Tomorrow.io | `AETHERGRID_TOMORROW_IO_API_KEY` |
-| U.S. EIA | `AETHERGRID_EIA_API_KEY` |
-| Transitland | `AETHERGRID_TRANSIT_API_KEY` |
-| IBM Quantum | `AETHERGRID_IBM_QUANTUM_API_KEY` |
-| IBM Quantum instance | `AETHERGRID_IBM_QUANTUM_SERVICE_CRN` |
-| D-Wave | `AETHERGRID_DWAVE_API_TOKEN` |
-| OpenAI-compatible AI key | `AETHERGRID_OPENAI_API_KEY` |
+| Integration              | ÆTHERGRID secret/config              |
+| ------------------------ | ------------------------------------ |
+| Cesium ion               | `AETHERGRID_CESIUM_ION_TOKEN`        |
+| Tomorrow.io              | `AETHERGRID_TOMORROW_IO_API_KEY`     |
+| U.S. EIA                 | `AETHERGRID_EIA_API_KEY`             |
+| Transitland              | `AETHERGRID_TRANSIT_API_KEY`         |
+| IBM Quantum              | `AETHERGRID_IBM_QUANTUM_API_KEY`     |
+| IBM Quantum instance     | `AETHERGRID_IBM_QUANTUM_SERVICE_CRN` |
+| D-Wave                   | `AETHERGRID_DWAVE_API_TOKEN`         |
+| OpenAI-compatible AI key | `AETHERGRID_OPENAI_API_KEY`          |
 
 ## Groq
 

@@ -11,6 +11,7 @@ The initial platform must remain useful with synthetic data and deterministic lo
 ### Data and telemetry layer
 
 Responsibilities:
+
 - asset registry and topology
 - telemetry ingestion and timestamp normalization
 - units and schema validation
@@ -22,6 +23,7 @@ Output: a normalized `GridSnapshot` contract.
 ### Digital twin layer
 
 Responsibilities:
+
 - derive current state from `GridSnapshot`
 - represent generation, storage, load, transmission/distribution edges, and constraints
 - replay historical/synthetic scenarios
@@ -32,6 +34,7 @@ Output: a deterministic `TwinState`.
 ### Forecast and optimization layer
 
 Responsibilities:
+
 - renewable generation forecasts
 - load forecasts
 - battery/storage scheduling
@@ -46,6 +49,7 @@ Every proposal must include assumptions, constraints, objective values, algorith
 ### Simulation gateway
 
 Responsibilities:
+
 - run candidate proposals against classical simulation backends
 - expose a provider-neutral adapter for quantum or quantum-inspired experiments
 - record backend, solver, version, seed, inputs, outputs, duration, and objective values
@@ -56,6 +60,7 @@ Output: `SimulationResult` plus comparison metrics.
 ### Audit and safety plane
 
 Responsibilities:
+
 - stable decision receipts
 - provenance and version tracking
 - policy evaluation
@@ -68,6 +73,7 @@ No future actuator should accept an `OperatingProposal` directly. It should acce
 ### Spatial / holographic presentation layer
 
 Responsibilities:
+
 - convert `TwinState`, alerts, proposals, and simulations into a renderer-neutral scene contract
 - negotiate presentation against declared device capabilities
 - support 2D, 3D, AR/VR, and future holographic clients without changing core twin logic
@@ -90,11 +96,13 @@ ROARY-family models must stay downstream of authoritative grid/twin state. Model
 The current ÆTHERGRID operator application implements a provider-neutral runtime in `apps/aethergrid-console/agent-config.mjs` and `apps/aethergrid-console/ai-runtime.mjs`. VÆLON, AUREN, SOLVÆR, and the TEAM synthesizer each resolve provider/model identity from configuration rather than from UI code.
 
 Maintained providers:
+
 - deterministic `local` fallback;
 - `openai-compatible` HTTP chat-completions adapter;
 - local/network `ollama` chat adapter.
 
 The routing contract records:
+
 - agent capability/role;
 - provider and model identity;
 - input context;
@@ -133,6 +141,7 @@ Use versioned schemas and reject unknown required fields or malformed units at s
 ## 5. First vertical slice
 
 Build one synthetic microgrid with:
+
 - solar generation
 - wind generation
 - battery storage
