@@ -881,7 +881,7 @@ test('v4 renderer switching is reversible and preserves safe fallback diagnostic
   assert.match(viewport, /CESIUM/u);
   assert.match(viewport, /NATIVE/u);
   assert.match(viewport, /await manager\.use\(engine\)/u);
-  assert.match(viewport, /await manager\.flyTo\(target\)/u);
+  assert.match(viewport, /await manager\.flyTo\(targetRef\.current\)/u);
 });
 
 test('v4 temporal modes keep current-only feeds live-only while allowing source-backed forecast weather', async () => {

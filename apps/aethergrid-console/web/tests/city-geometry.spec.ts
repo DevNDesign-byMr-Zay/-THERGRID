@@ -88,6 +88,7 @@ test('geodetic teardown respects both Cesium primitive ownership policies', asyn
 });
 
 test('compiled renderer switch activates the native wireframe fallback', async ({ page }) => {
+  page.on('pageerror', error => console.error(`Renderer switch page error: ${error.message}`));
   test.setTimeout(90_000);
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.emulateMedia({ reducedMotion: 'reduce' });

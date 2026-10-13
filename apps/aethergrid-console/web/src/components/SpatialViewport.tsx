@@ -63,6 +63,8 @@ export function SpatialViewport({
 }: SpatialViewportProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const managerRef = useRef<RendererManager | null>(null);
+  const targetRef = useRef(target);
+  targetRef.current = target;
   useImperativeHandle(ref, () => ({ cameraSnapshot: () => managerRef.current?.cameraSnapshot() ?? null }), []);
   const overlayIdsRef = useRef<Set<string>>(new Set());
   const journeyGenerationRef = useRef(0);
@@ -298,7 +300,8 @@ export function SpatialViewport({
     try {
       const next = await manager.use(engine);
       setStatus(next);
-      await manager.flyTo(target);
+      lastJourneyKeyRef.current = null;
+      await manager.flyTo(targetRef.current);
       setStatus(manager.status());
     } catch (error) {
       setStatus({
@@ -379,7 +382,7 @@ export function SpatialViewport({
               type="button"
               key={engine}
               className={status.engine === engine ? 'active' : ''}
-              disabled={switchingEngine}
+              disabled={switchingEngine || !status.ready}
               onClick={() =>
                 void switchEngine(
                   engine as SpatialRendererStatus['engine']
