@@ -113,6 +113,12 @@ export function EntityDossierPanel({
               </dd>
             </div>
           </dl>
+          {active.entity.kind === 'building' ? <dl className="entity-dossier-grid" aria-label="Mapped building structure">
+            <div><dt>HEIGHT BASIS</dt><dd>{String(active.entity.properties.heightCategory ?? 'UNAVAILABLE')}</dd></div>
+            <div><dt>ROOF REFINEMENT</dt><dd>{String(active.entity.properties.roofRefinement ?? 'UNAVAILABLE')}</dd></div>
+            <div><dt>GEOMETRY LIMITATION</dt><dd>{String(active.entity.properties.geometryLimitation ?? 'Mapped attributes are not surveyed geometry.')}</dd></div>
+            <div><dt>FETCHED</dt><dd>{timeLabel(active.entitySource.fetchedAt)}</dd></div>
+          </dl> : null}
 
           <div className="entity-dossier-sources">
             <strong>CONTEXT SOURCES</strong>

@@ -25,7 +25,9 @@ import { SpatialWorksetGeometryPanel } from '../components/SpatialWorksetGeometr
 import { SpatialWorksetPanel } from '../components/SpatialWorksetPanel';
 import { RuntimeDiagnosticsPanel } from '../components/RuntimeDiagnosticsPanel';
 import { SettingsPanel } from '../components/SettingsPanel';
-import { SpatialViewport } from '../components/SpatialViewport';
+import { SpatialViewport, type SpatialViewportHandle } from '../components/SpatialViewport';
+import { downloadSpatialScene, overlaySceneReceipts } from '../services/spatial-scene';
+import { measureSpatialArea, spatialAreaToOverlay, type SpatialAreaMeasurement } from '../services/spatial-area';
 import { TemporalEventNavigator } from '../components/TemporalEventNavigator';
 import { TemporalRail } from '../components/TemporalRail';
 import { ViewBookmarksPanel } from '../components/ViewBookmarksPanel';
@@ -113,6 +115,7 @@ import {
 import {
   captureSpatialObservation,
   compareSpatialObservations,
+  comparisonFrameBookmark,
   type SpatialObservation
 } from '../services/spatial-comparison';
 import {
@@ -285,6 +288,8 @@ const INITIAL_LAYERS: readonly LayerState[] = [
 
 const VISUAL_MODES: readonly VisualMode[] = [
   'solid',
+  'wireframe',
+  'grid',
   'xray',
   'holographic',
   'operations',
@@ -292,6 +297,7 @@ const VISUAL_MODES: readonly VisualMode[] = [
 ];
 
 export function App() {
+  const viewportRef = useRef<SpatialViewportHandle>(null);
   const { clock, state: temporal } = useTemporalClock();
   const [temporalRailHeight, setTemporalRailHeight] = useState(140);
   const appearance = useAppearance();
@@ -305,6 +311,8 @@ export function App() {
     useState<SpatialInteractionMode>('inspect');
   const [measurementPoints, setMeasurementPoints] =
     useState<readonly SpatialSurfacePoint[]>([]);
+  const [areaMeasurement, setAreaMeasurement] = useState<SpatialAreaMeasurement | null>(null);
+  const [areaAttempted, setAreaAttempted] = useState(false);
   const [measurementFrame, setMeasurementFrame] =
     useState<TemporalInstant | null>(null);
   const [observationA, setObservationA] =
@@ -419,8 +427,13 @@ export function App() {
 
   const forecastFrames = useMemo(() => forecastFrameInstants(forecastSeries), [forecastSeries]);
   useEffect(() => {
-    clock.setPlaybackSamples(temporal.mode === 'forecast' ? forecastFrames : null);
-  }, [clock, temporal.mode, forecastFrames]);
+    if (temporal.mode === 'scenario') {
+      if (activeOperatorScenario?.id === temporal.scenarioId && activeOperatorScenario.endIso) {
+        try { clock.setModeledRange(activeOperatorScenario.startIso, activeOperatorScenario.endIso); }
+        catch { clock.setPlaybackSamples(null); }
+      } else clock.setPlaybackSamples(null);
+    } else clock.setPlaybackSamples(temporal.mode === 'forecast' ? forecastFrames : null);
+  }, [clock, temporal.mode, temporal.scenarioId, forecastFrames, activeOperatorScenario]);
 
   const activeAtmosphere =
     temporal.mode === 'live'
@@ -444,18 +457,18 @@ export function App() {
 
   const measurement = useMemo<SpatialMeasurement | null>(
     () =>
-      measurementPoints.length >= 2
+      measurementPoints.length === 2 && interactionMode !== 'measure-area' && !areaMeasurement
         ? measureSpatialPoints(measurementPoints[0], measurementPoints[1])
         : null,
-    [measurementPoints]
+    [measurementPoints, interactionMode, areaMeasurement]
   );
 
   const measurementOverlay = useMemo(
     () =>
-      measurement && measurementFrame
+      areaMeasurement && measurementFrame ? spatialAreaToOverlay(areaMeasurement, measurementFrame) : measurement && measurementFrame
         ? measurementToOverlay(measurement, measurementFrame)
         : null,
-    [measurement, measurementFrame]
+    [measurement, measurementFrame, areaMeasurement]
   );
   const incidentOverlay = useMemo(
     () => spatialIncidentsToOverlay(spatialIncidents, temporalInstant),
@@ -473,7 +486,7 @@ export function App() {
 
   const operatorScenarioOverlay = useMemo(
     () =>
-      activeOperatorScenario
+      activeOperatorScenario && temporalInstant.mode === 'scenario' && activeOperatorScenario.id === temporalInstant.scenarioId
         ? operatorScenarioToOverlay(
             activeOperatorScenario,
             worksetGeometry,
@@ -591,6 +604,8 @@ export function App() {
     setSelection(null);
     setMeasurementPoints([]);
     setMeasurementFrame(null);
+    setAreaMeasurement(null);
+    setAreaAttempted(false);
     setCityLoad({
       spatial: true,
       environment: true,
@@ -865,6 +880,8 @@ export function App() {
     if (!pendingSessionRestore) return;
     const workspace = pendingSessionRestore.workspace;
     setInteractionMode(workspace.interactionMode);
+    setAreaMeasurement(workspace.areaMeasurement ? measureSpatialArea(workspace.areaMeasurement.points) : null);
+    setAreaAttempted(false);
     setMeasurementPoints(
       workspace.measurementPoints.map((point) => ({ ...point }))
     );
@@ -1280,6 +1297,17 @@ export function App() {
     if (!point) return;
 
     setSelection(null);
+    if (interactionMode === 'measure-area') {
+      if (areaMeasurement) {
+        setMeasurementPoints([point]); setAreaMeasurement(null); setAreaAttempted(false);
+        setMeasurementFrame({ ...temporalInstant });
+      } else {
+        if (!measurementPoints.length) setMeasurementFrame({ ...temporalInstant });
+        setMeasurementPoints(current => current.length < 1000 ? [...current, point] : current);
+        setAreaAttempted(false);
+      }
+      return;
+    }
     if (measurementPoints.length >= 2) {
       setMeasurementPoints([point]);
       setMeasurementFrame({ ...temporalInstant });
@@ -1295,6 +1323,8 @@ export function App() {
   const clearMeasurement = () => {
     setMeasurementPoints([]);
     setMeasurementFrame(null);
+    setAreaMeasurement(null);
+    setAreaAttempted(false);
   };
 
   const captureObservation = (slot: 'a' | 'b') => {
@@ -1307,7 +1337,7 @@ export function App() {
       visualMode,
       cityIdentity: scope === 'city' ? cityIdentity : null,
       atmosphere:
-        scope === 'city' && temporal.mode === 'live' ? atmosphere : null,
+        scope === 'city' ? activeAtmosphere : null,
       liveContext:
         scope === 'city' && temporal.mode === 'live' ? liveContext : null,
       selection,
@@ -1449,7 +1479,7 @@ export function App() {
   };
   const activateOperatorScenario = (scenario: OperatorScenario) => {
     const comparison = compareOperatorScenario(scenario);
-    const sameScenario = activeOperatorScenario?.id === scenario.id;
+    const sameScenario = temporal.mode === 'scenario' && temporal.scenarioId === scenario.id && activeOperatorScenario?.id === scenario.id;
     setActiveOperatorScenario({ ...scenario, status: 'active' });
     setScenarioVisual(comparison.visual);
     if (!sameScenario) {
@@ -1553,8 +1583,9 @@ export function App() {
     showIntelligence('ai');
   };
   const changeInteractionMode = (mode: SpatialInteractionMode) => {
+    if (mode !== 'inspect' && mode !== interactionMode) clearMeasurement();
     setInteractionMode(mode);
-    if (mode === 'measure') {
+    if (mode !== 'inspect') {
       showIntelligence('analysis');
     }
   };
@@ -1660,6 +1691,7 @@ export function App() {
       visualMode,
       temporalMode: temporal.mode,
       cursorIso: temporal.cursorIso,
+      playbackRange: temporal.playbackRange ? { ...temporal.playbackRange } : null,
       scenarioId: temporal.scenarioId,
       scenarioVisual,
       useCase: activeUseCase,
@@ -1672,6 +1704,7 @@ export function App() {
       visualMode,
       temporal.mode,
       temporal.cursorIso,
+      temporal.playbackRange,
       temporal.scenarioId,
       scenarioVisual,
       activeUseCase,
@@ -1686,6 +1719,7 @@ export function App() {
       view: currentBookmark,
       interactionMode,
       measurementPoints: measurementPoints.map((point) => ({ ...point })),
+      areaMeasurement: areaMeasurement ? { ...areaMeasurement, points: areaMeasurement.points.map(point => ({ ...point })) } : null,
       measurementFrame: measurementFrame
         ? {
             ...measurementFrame,
@@ -1709,6 +1743,7 @@ export function App() {
       currentBookmark,
       interactionMode,
       measurementPoints,
+      areaMeasurement,
       measurementFrame,
       observationA,
       observationB,
@@ -1743,10 +1778,14 @@ export function App() {
     if (bookmark.temporalMode === 'live') {
       clock.goLive();
     } else if (bookmark.temporalMode === 'scenario') {
+      const savedModel = savedOperatorScenarios.find((scenario) => scenario.id === bookmark.scenarioId);
+      if (savedModel) setActiveOperatorScenario({ ...savedModel, status: 'active' });
+      else if (activeOperatorScenario?.id !== bookmark.scenarioId) setActiveOperatorScenario(null);
       clock.setMode('scenario', bookmark.scenarioId ?? null);
       clock.scrub(bookmark.cursorIso, 'scenario');
     } else {
       clock.scrub(bookmark.cursorIso, bookmark.temporalMode);
+      clock.restorePlaybackRange(bookmark.playbackRange ?? null);
     }
   };
 
@@ -1754,19 +1793,20 @@ export function App() {
     const view = session.workspace.view;
     setSelection(null);
     clock.pause();
-    setActiveOperatorScenario(
-      session.workspace.operatorScenario
-        ? (JSON.parse(
-            JSON.stringify(session.workspace.operatorScenario)
-          ) as OperatorScenario)
-        : null
-    );
     restoreBookmark({
       ...view,
       id: `session-view:${session.id}`,
       name: session.name,
       createdAt: session.createdAt
     });
+    // The embedded session model wins over the independently saved collection.
+    // A foreign model must never authorize this frame's modeled replay.
+    const embedded = session.workspace.operatorScenario;
+    setActiveOperatorScenario(
+      embedded && embedded.id === view.scenarioId
+        ? (JSON.parse(JSON.stringify(embedded)) as OperatorScenario)
+        : null
+    );
     saveSpatialWorkset(session.workspace.workset);
     setSpatialIncidents(saveSpatialIncidents(session.workspace.incidents));
     setPendingSessionRestore(session);
@@ -1985,7 +2025,8 @@ export function App() {
           <div className="rail-section layer-list">
             <span className="rail-kicker">LAYERS</span>
             {layers.map((layer) => (
-              <label key={layer.id}>
+              <div className="layer-control" key={layer.id}>
+              <label>
                 <input
                   type="checkbox"
                   checked={layer.visible}
@@ -1994,6 +2035,17 @@ export function App() {
                 <span>{layer.id.toUpperCase()}</span>
                 <em>{layerCounts[layer.id] ?? 0}</em>
               </label>
+              {!['terrain', 'weather', 'air'].includes(layer.id) && <label className="layer-opacity">
+                <span>Opacity</span>
+                <input type="range" min="0" max="1" step="0.05" aria-label={`${layer.id} opacity`}
+                  value={layer.opacity ?? 1} disabled={!layer.visible}
+                  onChange={(event) => {
+                    const opacity = Number(event.currentTarget.value);
+                    setLayers((current) => current.map((candidate) => candidate.id === layer.id ? { ...candidate, opacity } : candidate));
+                  }} />
+                <output>{Math.round((layer.opacity ?? 1) * 100)}%</output>
+              </label>}
+              </div>
             ))}
           </div>
           </div>
@@ -2031,14 +2083,15 @@ export function App() {
                 </button>
               </div>
               <div className="interaction-modes" role="group" aria-label="Spatial interaction">
-                {(['inspect', 'measure'] as const).map((mode) => (
+                {(['inspect', 'measure', 'measure-area'] as const).map((mode) => (
                   <button
                     type="button"
                     key={mode}
                     className={interactionMode === mode ? 'active' : ''}
+                    aria-pressed={interactionMode === mode}
                     onClick={() => changeInteractionMode(mode)}
                   >
-                    {mode.toUpperCase()}
+                    {mode === 'measure-area' ? 'AREA' : mode.toUpperCase()}
                   </button>
                 ))}
               </div>
@@ -2048,6 +2101,7 @@ export function App() {
                   key={mode}
                   type="button"
                   className={mode === visualMode ? 'active' : ''}
+                  aria-pressed={mode === visualMode}
                   onClick={() => {
                     setVisualMode(mode);
                   }}
@@ -2060,6 +2114,7 @@ export function App() {
           </div>
 
           <SpatialViewport
+            ref={viewportRef}
             target={sceneTarget}
             time={temporalInstant}
             layers={layers}
@@ -2336,7 +2391,7 @@ export function App() {
                 : `${city.latitude.toFixed(4)}°, ${city.longitude.toFixed(4)}°`}
             </strong>
             <small>
-              {interactionMode === 'measure'
+              {interactionMode === 'measure-area' ? 'SELECT POLYGON VERTICES, THEN FINISH AREA' : interactionMode === 'measure'
                 ? 'SELECT TWO GEOGRAPHIC POINTS TO MEASURE'
                 : 'CLICK OR TAP A 3D FEATURE TO INSPECT'}
             </small>
@@ -2678,6 +2733,9 @@ export function App() {
               mode={interactionMode}
               points={measurementPoints}
               measurement={measurement}
+              area={areaMeasurement}
+              areaUnavailable={areaAttempted && !areaMeasurement}
+              onFinishArea={() => { setAreaMeasurement(measureSpatialArea(measurementPoints)); setAreaAttempted(true); }}
               onModeChange={changeInteractionMode}
               onReset={clearMeasurement}
             />
@@ -2688,7 +2746,22 @@ export function App() {
               onCapture={captureObservation}
               onClear={clearComparison}
               onAnalyze={spatialComparison ? analyzeComparison : undefined}
+              onShowFrame={(observation) => {
+                const mapped = CITY_TARGETS.find(target => target.name === observation.region);
+                restoreBookmark(comparisonFrameBookmark(currentBookmark, observation,
+                  mapped ?? { id: 'comparison-coordinate', name: observation.region, latitude: observation.coordinate.latitude, longitude: observation.coordinate.longitude, rangeMeters: 2800, custom: true }));
+                setForecastRevision(current => current + 1);
+              }}
             />
+            <button type="button" onClick={() => downloadSpatialScene({
+              target: scope === 'city' ? city : { latitude: 20, longitude: 0, rangeMeters: 11_800_000 },
+              camera: viewportRef.current?.cameraSnapshot() ?? null, visualMode, layers, temporal: temporalInstant, selection,
+              datasets: [
+                ...overlaySceneReceipts(activeOverlays),
+                { role: 'weather', state: weatherSourceState, provider: null, dataset: temporal.mode === 'forecast' ? 'weather-forecast' : 'city-environment', sourceTime: activeAtmosphere?.sourceTime ?? null, fetchedAt: activeAtmosphere?.fetchedAt ?? null, attribution: activeAtmosphere?.attribution ?? null },
+                ...(entityDossier ? [entityDossier.entitySource, ...entityDossier.contextSources] : [])
+              ], scenario: activeOperatorScenario, area: areaMeasurement
+            })}>EXPORT SCENE JSON</button>
           </div>
           <div className="intel-workspace intel-ai">
             <AgentDock context={agentContext} handoff={agentHandoff} />

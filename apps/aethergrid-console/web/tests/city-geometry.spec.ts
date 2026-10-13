@@ -2,9 +2,9 @@ import { expect, test, type Page } from '@playwright/test';
 
 async function isolateGeometryContext(page: Page) {
   // Geometry contracts do not depend on changing live weather/cloud workloads.
-  for (const url of ['**/api/aethergrid/weather/**', '**/api/aethergrid/city-live?**']) {
-    await page.route(url, (route) => route.fulfill({ status: 503, json: { error: 'Live context unavailable in offline geometry contract fixture' } }));
-  }
+  await page.route('**/*', (route) => ['127.0.0.1','localhost'].includes(new URL(route.request().url()).hostname) ? route.continue() : route.abort('internetdisconnected'));
+  await page.route('**/api/aethergrid/**', (route) => ['/api/aethergrid/config/public','/api/aethergrid/profile'].includes(new URL(route.request().url()).pathname) ? route.continue()
+    : route.fulfill({ status: 503, json: { error: 'Unrelated source unavailable in offline geometry contract fixture' } }));
 }
 
 test('mapped building dossiers retain the provider and never label static massing live', async () => {
@@ -35,7 +35,8 @@ test('Cesium roof instances use mapped color and share body source identity', as
   expect([...instances[0].attributes.color.value]).toEqual([111, 120, 128, 255]);
   for (const roof of instances.slice(1)) {
     expect([...roof.attributes.color.value]).toEqual([149, 91, 65, 255]);
-    expect(roof.id).toBe(instances[0].id);
+    expect(roof.id.id).toBe(instances[0].id.id);
+    expect(roof.id.sourceFeatureId).toBe(instances[0].id.sourceFeatureId);
     expect(roof.id.sourceFeatureId).toBe('source-roof');
   }
   layer.destroy();
@@ -104,8 +105,8 @@ test('compiled renderer switch activates the native wireframe fallback', async (
   await page.getByText('Renderer tools', { exact: true }).click();
   await page.getByRole('group', { name: 'Spatial renderer' }).getByRole('button', { name: 'NATIVE', exact: true }).click();
   await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer', 'native-webgl', { timeout: 30_000 });
-  await expect(page.locator('.viewport-warning')).toContainText('wireframe fallback');
-  const warning = await page.locator('.viewport-warning').boundingBox();
+  await expect(page.locator('.native-fidelity')).toContainText('wireframe fallback');
+  const warning = await page.locator('.native-fidelity').boundingBox();
   const viewport = page.viewportSize()!;
   expect(warning && warning.x <= viewport.width / 2 && warning.x + warning.width >= viewport.width / 2 && warning.y <= viewport.height / 2 && warning.y + warning.height >= viewport.height / 2, 'fallback notice must not cover scene center').toBe(false);
   const caption = await page.locator('.scene-caption').boundingBox();

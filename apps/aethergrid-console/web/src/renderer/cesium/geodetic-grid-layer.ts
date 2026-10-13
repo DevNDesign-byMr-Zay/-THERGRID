@@ -31,6 +31,7 @@ export class GeodeticGridLayer {
   #collection: PolylineCollection;
   #lines: Polyline[] = [];
   #visible = true;
+  #opacity = 1;
   #mode: VisualMode = 'solid';
   #lastTime = new Date().toISOString();
 
@@ -43,8 +44,14 @@ export class GeodeticGridLayer {
 
   setVisible(visible: boolean): void {
     this.#visible = visible;
-    this.#collection.show = visible;
+    this.#collection.show = visible && this.#opacity > 0;
     this.#scene.requestRender();
+  }
+
+  setOpacity(opacity: number): void {
+    this.#opacity = Number.isFinite(opacity) ? Math.max(0, Math.min(1, opacity)) : 1;
+    this.#collection.show = this.#visible && this.#opacity > 0;
+    this.setTime(this.#lastTime);
   }
 
   setVisualMode(mode: VisualMode): void {
@@ -75,7 +82,7 @@ export class GeodeticGridLayer {
       const linePhase = (index % 12) / 12;
       const localPulse = 0.72 + 0.28 * Math.sin((phase + linePhase) * Math.PI * 2);
       const material = this.#lines[index].material;
-      material.uniforms.color = new Color(0.3, 0.84, 1, alpha * localPulse);
+      material.uniforms.color = new Color(0.3, 0.84, 1, alpha * localPulse * this.#opacity);
     }
 
     if (this.#visible) this.#scene.requestRender();

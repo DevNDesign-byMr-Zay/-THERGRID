@@ -39,6 +39,7 @@ export interface LegacyNativeSpatialBridge {
 }
 
 export class NativeSpatialRendererAdapter implements SpatialRenderer {
+  cameraSnapshot(): null { return null; }
   readonly engine = 'native-webgl' as const;
 
   #container: HTMLElement | null = null;

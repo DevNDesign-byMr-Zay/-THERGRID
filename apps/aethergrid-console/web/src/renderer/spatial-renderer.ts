@@ -8,13 +8,15 @@ export type SpatialEngine = 'cesium' | 'native-webgl';
 
 export type VisualMode =
   | 'solid'
+  | 'wireframe'
+  | 'grid'
   | 'xray'
   | 'holographic'
   | 'operations'
   | 'reality';
 
 export type TemporalMode = 'live' | 'historical' | 'forecast' | 'scenario';
-export type SpatialInteractionMode = 'inspect' | 'measure';
+export type SpatialInteractionMode = 'inspect' | 'measure' | 'measure-area';
 export type SpatialPerformanceMode =
   | 'auto'
   | 'quality'
@@ -31,6 +33,17 @@ export interface SpatialTarget {
   headingDegrees?: number;
   pitchDegrees?: number;
   journey?: 'full' | 'global' | 'direct';
+}
+
+export interface SpatialCameraSnapshot {
+  projection: 'geocentric' | 'local-projected';
+  latitude: number;
+  longitude: number;
+  heightMeters: number;
+  headingDegrees: number;
+  pitchDegrees: number;
+  rollDegrees: number;
+  target?: SpatialTarget;
 }
 
 export interface SpatialScenarioVisual {
@@ -162,6 +175,7 @@ export interface SpatialRenderer {
   clearAirQuality(): void;
   pick(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null>;
   pickSurface(point: SpatialPickPoint): Promise<SpatialSurfacePoint | null>;
+  cameraSnapshot?(): SpatialCameraSnapshot | null;
   resize(): void;
   status(): SpatialRendererStatus;
   destroy(): void;

@@ -5,7 +5,7 @@ import {
 } from '../renderer/overlays/atmospheric-overlay';
 import type { SpatialOverlaySnapshot } from '../renderer/overlays/spatial-overlay';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useImperativeHandle, type Ref } from 'react';
 
 import { CesiumSpatialRenderer } from '../renderer/cesium/cesium-renderer';
 import { NativeWebglSpatialRenderer } from '../renderer/native/native-webgl-renderer';
@@ -13,6 +13,7 @@ import { RendererManager } from '../renderer/renderer-manager';
 import type {
   LayerState,
   SpatialFeatureSelection,
+  SpatialCameraSnapshot,
   SpatialInteractionMode,
   SpatialRendererStatus,
   SpatialSurfacePoint,
@@ -25,6 +26,7 @@ import { loadPublicRuntimeConfig } from '../services/public-runtime-config';
 import { useSpatialPerformance } from '../hooks/use-spatial-performance';
 
 interface SpatialViewportProps {
+  ref?: Ref<SpatialViewportHandle>;
   target: SpatialTarget;
   time: TemporalInstant;
   layers: readonly LayerState[];
@@ -36,6 +38,7 @@ interface SpatialViewportProps {
   onSelection?(selection: SpatialFeatureSelection | null): void;
   onSurfacePoint?(point: SpatialSurfacePoint | null): void;
 }
+export interface SpatialViewportHandle { cameraSnapshot(): SpatialCameraSnapshot | null; }
 
 const STARTING_STATUS: SpatialRendererStatus = {
   engine: 'native-webgl',
@@ -46,6 +49,7 @@ const STARTING_STATUS: SpatialRendererStatus = {
 };
 
 export function SpatialViewport({
+  ref,
   target,
   time,
   layers,
@@ -59,6 +63,7 @@ export function SpatialViewport({
 }: SpatialViewportProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const managerRef = useRef<RendererManager | null>(null);
+  useImperativeHandle(ref, () => ({ cameraSnapshot: () => managerRef.current?.cameraSnapshot() ?? null }), []);
   const overlayIdsRef = useRef<Set<string>>(new Set());
   const journeyGenerationRef = useRef(0);
   const lastJourneyKeyRef = useRef<string | null>(null);
@@ -142,7 +147,7 @@ export function SpatialViewport({
         y: pointer.clientY - rect.top
       };
 
-      if (interactionModeRef.current === 'measure') {
+      if (interactionModeRef.current !== 'inspect') {
         void manager
           .pickSurface(screen)
           .then((surface) => onSurfacePointRef.current?.(surface))
@@ -361,8 +366,10 @@ export function SpatialViewport({
               : `${status.detailLevel?.toUpperCase() ?? 'STREAM'} · ${(status.buildingMode ?? 'none').toUpperCase().replace('-', ' ')}`
             : 'INITIALIZING'}
         </small>
+        {status.engine === 'native-webgl' && status.ready ? <small className="native-fidelity">Projected wireframe fallback · no terrain</small> : null}
         <details className="renderer-tools">
         <summary>Renderer tools</summary>
+        {status.engine === 'native-webgl' && status.reason ? <p className="renderer-limitations">{status.reason}</p> : null}
         <div className="renderer-engine-switch" role="group" aria-label="Spatial renderer">
           {[
             ['cesium', 'CESIUM'],
@@ -435,7 +442,7 @@ export function SpatialViewport({
           <small>{status.solar.localSolarHour.toFixed(1)}h SOLAR</small>
         </div>
       ) : null}
-      {status.reason ? <div className="viewport-warning">{status.reason}</div> : null}
+      {status.reason && status.engine !== 'native-webgl' ? <div className="viewport-warning">{status.reason}</div> : null}
     </div>
   );
 }

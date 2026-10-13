@@ -9,6 +9,7 @@ import type { SpatialIncident } from './spatial-incidents';
 import type { SpatialObservation } from './spatial-comparison';
 import type { SpatialWorksetItem } from './spatial-workset';
 import type { SpatialViewBookmark } from './view-bookmarks';
+import type { SpatialAreaMeasurement } from './spatial-area';
 
 export type OperatorSessionView = Omit<
   SpatialViewBookmark,
@@ -20,6 +21,7 @@ export interface OperatorSessionWorkspace {
   interactionMode: SpatialInteractionMode;
   measurementPoints: readonly SpatialSurfacePoint[];
   measurementFrame: TemporalInstant | null;
+  areaMeasurement?: SpatialAreaMeasurement | null;
   observationA: SpatialObservation | null;
   observationB: SpatialObservation | null;
   frozenDossier: SpatialEntityDossier | null;
@@ -87,6 +89,11 @@ function validSession(value: unknown): value is OperatorWorkspaceSession {
     typeof workspace?.view?.target?.latitude === 'number' &&
     typeof workspace?.view?.target?.longitude === 'number' &&
     typeof workspace?.view?.cursorIso === 'string' &&
+    (workspace?.view?.playbackRange == null || (
+      Number.isFinite(Date.parse(workspace.view.playbackRange.start)) &&
+      Number.isFinite(Date.parse(workspace.view.playbackRange.end)) &&
+      Date.parse(workspace.view.playbackRange.end) >= Date.parse(workspace.view.playbackRange.start)
+    )) &&
     Array.isArray(workspace?.view?.layers) &&
     Array.isArray(workspace?.measurementPoints) &&
     Array.isArray(workspace?.workset) &&

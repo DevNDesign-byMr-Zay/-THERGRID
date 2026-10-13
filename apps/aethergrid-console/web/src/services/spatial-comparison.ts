@@ -7,8 +7,19 @@ import type {
 import type { CityLiveSnapshot } from './city-live-context';
 import type { CityIdentitySummary } from './city-power-overlay';
 import type { SpatialMeasurement } from './spatial-analysis';
+import type { SpatialViewBookmark } from './view-bookmarks';
+
+export function comparisonFrameBookmark(current: Omit<SpatialViewBookmark, 'id' | 'name' | 'createdAt'>, observation: SpatialObservation, target: SpatialViewBookmark['target']): SpatialViewBookmark {
+  return { ...current, id: observation.id, name: observation.region, createdAt: observation.capturedAt,
+    scope: observation.region === 'GLOBAL' ? 'world' : 'city', target: { ...target },
+    visualMode: observation.visualMode, temporalMode: observation.temporal.mode, cursorIso: observation.temporal.iso,
+    scenarioId: observation.temporal.scenarioId ?? null,
+    scenarioVisual: observation.temporal.scenarioVisual ? { ...observation.temporal.scenarioVisual } : null,
+    playbackRange: observation.temporal.range ? { ...observation.temporal.range } : null };
+}
 
 export interface SpatialObservation {
+  weatherReceipt?: { state: 'live' | 'forecast' | 'stale' | 'simulated' | 'unavailable'; sourceTime: string | null; fetchedAt: string | null; attribution: string | null };
   id: string;
   capturedAt: string;
   region: string;
@@ -75,6 +86,7 @@ export interface SpatialObservationInput {
 }
 
 export interface SpatialMetricDelta {
+  basis: 'measured' | 'forecast' | 'mapped-context' | 'mixed-source-states' | 'unverified';
   key: keyof SpatialObservation['metrics'];
   label: string;
   unit: string;
@@ -101,10 +113,18 @@ export function captureSpatialObservation(
 ): SpatialObservation {
   const capturedAt = new Date().toISOString();
   const live = input.temporal.mode === 'live';
+  const atmosphere = input.atmosphere;
+  const aligned = input.temporal.mode === 'forecast' && Boolean(atmosphere?.current && !atmosphere.fallback && (atmosphere.live || atmosphere.stale) &&
+    Number.isFinite(Date.parse(atmosphere.sourceTime ?? '')) && Date.parse(atmosphere.sourceTime!) === Date.parse(input.temporal.iso) &&
+    Date.parse(atmosphere.current.time ?? '') === Date.parse(input.temporal.iso));
+  const weatherAvailable = Boolean(atmosphere?.current && (live || aligned));
+  const weatherState = !weatherAvailable ? 'unavailable' : atmosphere!.fallback ? 'simulated' : atmosphere!.stale ? 'stale' : aligned ? 'forecast' : atmosphere!.live ? 'live' : 'unavailable';
+  const mapped = live || input.temporal.mode === 'forecast';
 
   return {
     id: `observation-${capturedAt}-${Math.random().toString(36).slice(2, 8)}`,
     capturedAt,
+    weatherReceipt: { state: weatherState, sourceTime: weatherAvailable ? atmosphere?.sourceTime ?? null : null, fetchedAt: weatherAvailable ? atmosphere?.fetchedAt ?? null : null, attribution: weatherAvailable ? atmosphere?.attribution ?? null : null },
     region: input.region,
     coordinate: {
       latitude: input.latitude,
@@ -149,11 +169,11 @@ export function captureSpatialObservation(
         }
       : null,
     metrics: {
-      buildingCount: finite(input.cityIdentity?.buildingCount),
-      skylineMaxHeightM: finite(input.cityIdentity?.maxHeightM),
-      skylineP95HeightM: finite(input.cityIdentity?.p95HeightM),
-      temperatureC: live ? finite(input.atmosphere?.current?.temperatureC) : null,
-      windSpeedKph: live ? finite(input.atmosphere?.current?.windSpeedKph) : null,
+      buildingCount: mapped ? finite(input.cityIdentity?.buildingCount) : null,
+      skylineMaxHeightM: mapped ? finite(input.cityIdentity?.maxHeightM) : null,
+      skylineP95HeightM: mapped ? finite(input.cityIdentity?.p95HeightM) : null,
+      temperatureC: weatherAvailable && weatherState !== 'unavailable' ? finite(atmosphere?.current?.temperatureC) : null,
+      windSpeedKph: weatherAvailable && weatherState !== 'unavailable' ? finite(atmosphere?.current?.windSpeedKph) : null,
       usAqi: live ? finite(input.liveContext?.airQuality.current?.usAqi) : null,
       pm25UgM3: live ? finite(input.liveContext?.airQuality.current?.pm25UgM3) : null,
       seismicEventCount: live ? finite(input.liveContext?.seismic.eventCount) : null,
@@ -166,7 +186,7 @@ export function captureSpatialObservation(
       cityProvider: input.cityIdentity?.sourceProvider ?? null,
       citySourceTime: input.cityIdentity?.upstreamTimestamp ?? null,
       environmentAttribution: input.atmosphere?.attribution ?? null,
-      environmentSourceTime: live ? input.atmosphere?.sourceTime ?? null : null,
+      environmentSourceTime: weatherAvailable ? input.atmosphere?.sourceTime ?? null : null,
       airQualityProvider: live
         ? input.liveContext?.airQuality.source.provider ?? null
         : null,
@@ -208,9 +228,16 @@ export function compareSpatialObservations(
     const aValue = a.metrics[metric.key];
     const bValue = b.metrics[metric.key];
     if (aValue == null || bValue == null) return [];
+    const weather = metric.key === 'temperatureC' || metric.key === 'windSpeedKph';
+    const geometry = ['buildingCount', 'skylineMaxHeightM', 'skylineP95HeightM'].includes(metric.key);
+    const aState = a.weatherReceipt?.state, bState = b.weatherReceipt?.state;
+    const basis: SpatialMetricDelta['basis'] = geometry ? 'mapped-context' : weather
+      ? aState !== bState ? 'mixed-source-states' : aState === 'live' ? 'measured' : aState === 'forecast' ? 'forecast' : 'unverified'
+      : 'unverified';
     return [
       {
         ...metric,
+        basis,
         a: aValue,
         b: bValue,
         delta: bValue - aValue

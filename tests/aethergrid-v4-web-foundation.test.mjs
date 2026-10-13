@@ -1037,20 +1037,26 @@ test('v4 documentation and promotion gates describe only implemented spatial cap
 });
 
 test('v4 surface picking is renderer-neutral and labels terrain versus projection precision', async () => {
-  const [contract, cesium, nativeRenderer, manager] = await Promise.all([
+  const [contract, cesium, nativeRenderer, manager, surface] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/spatial-renderer.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
     text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
     text('apps/aethergrid-console/web/src/renderer/renderer-manager.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/surface-picking.ts'),
   ]);
 
   assert.match(contract, /interface SpatialSurfacePoint/u);
   assert.match(contract, /'depth-surface'/u);
   assert.match(contract, /'native-projection'/u);
   assert.match(contract, /pickSurface\(point: SpatialPickPoint\)/u);
-  assert.match(cesium, /scene\.pickPosition/u);
-  assert.match(cesium, /scene\.globe\.pick/u);
-  assert.match(cesium, /camera\.pickEllipsoid/u);
+  assert.match(
+    cesium,
+    /return pickCesiumSurface\(this\.#requireViewer\(\), point, this\.#ionEnabled\)/u,
+  );
+  assert.match(surface, /physicalSurface && viewer\.scene\.pickPositionSupported/u);
+  assert.match(surface, /scene\.pickPosition/u);
+  assert.match(surface, /scene\.globe\.pick/u);
+  assert.match(surface, /camera\.pickEllipsoid/u);
   assert.match(nativeRenderer, /source: 'native-projection'/u);
   assert.match(manager, /return this\.#current\.pickSurface\(point\)/u);
 });
@@ -1076,7 +1082,7 @@ test('v4 analysis workspace captures the 4d frame and routes measure clicks with
     text('apps/aethergrid-console/web/src/components/SpatialAnalysisPanel.tsx'),
   ]);
 
-  assert.match(viewport, /interactionModeRef\.current === 'measure'/u);
+  assert.match(viewport, /interactionModeRef\.current !== 'inspect'/u);
   assert.match(viewport, /\.pickSurface\(screen\)/u);
   assert.match(viewport, /\.pick\(screen\)/u);
   assert.match(app, /measurementFrame/u);
@@ -1092,7 +1098,11 @@ test('v4 frame comparison captures only temporally valid metrics and leaves miss
 
   assert.match(comparison, /captureSpatialObservation/u);
   assert.match(comparison, /const live = input\.temporal\.mode === 'live'/u);
-  assert.match(comparison, /temperatureC: live \?/u);
+  assert.match(comparison, /temperatureC: weatherAvailable && weatherState !== 'unavailable'/u);
+  assert.match(
+    comparison,
+    /Date\.parse\(atmosphere\.sourceTime!\) === Date\.parse\(input\.temporal\.iso\)/u,
+  );
   assert.match(comparison, /usAqi: live \?/u);
   assert.match(comparison, /seismicEventCount: live \?/u);
   assert.match(comparison, /if \(aValue == null \|\| bValue == null\) return \[\]/u);

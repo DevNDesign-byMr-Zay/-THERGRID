@@ -173,6 +173,12 @@ function pointSegmentDistance(
 }
 
 export class NativeWebglSpatialRenderer implements SpatialRenderer {
+  cameraSnapshot() {
+    if (!this.#ready) return null;
+    return { projection: 'local-projected' as const, latitude: this.#target.latitude, longitude: this.#target.longitude,
+      heightMeters: this.#target.heightMeters ?? 0, headingDegrees: this.#target.headingDegrees ?? 0,
+      pitchDegrees: this.#target.pitchDegrees ?? -55, rollDegrees: 0, target: { ...this.#target } };
+  }
   readonly engine = 'native-webgl' as const;
 
   #container: HTMLElement | null = null;
@@ -324,6 +330,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
 
   setLayers(layers: readonly LayerState[]): void {
     this.#layers = new Map(layers.map((layer) => [layer.id, { ...layer }]));
+    this.#revalidateSelection();
     this.#render();
   }
 
@@ -363,11 +370,13 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
 
   applyOverlay(snapshot: SpatialOverlaySnapshot): void {
     this.#overlays.set(snapshot.layerId, snapshot);
+    this.#revalidateSelection();
     this.#render();
   }
 
   clearOverlay(layerId: string): void {
     this.#overlays.delete(layerId);
+    this.#revalidateSelection();
     this.#render();
   }
 
@@ -660,13 +669,26 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     id: string,
     properties: Readonly<Record<string, unknown>> | undefined
   ): boolean {
-    if (id === this.#selectedId) return true;
     if (!this.#selectedSourceFeatureId || this.#selectedLayerId !== layerId) {
       return false;
     }
     return (
       this.#sourceFeatureId(id, properties) === this.#selectedSourceFeatureId
     );
+  }
+
+  #revalidateSelection(): void {
+    if (!this.#selectedId) return;
+    const layerId = this.#selectedLayerId;
+    const snapshot = layerId ? this.#overlays.get(layerId) : undefined;
+    const retained = snapshot && this.#layerVisible(layerId!, true) && this.#layerOpacity(layerId!) > 0 &&
+      [...snapshot.nodes, ...snapshot.edges, ...(snapshot.areas ?? [])].some(item =>
+        this.#sourceFeatureId(item.id, item.properties) === this.#selectedSourceFeatureId);
+    if (!retained) {
+      this.#selectedId = null;
+      this.#selectedSourceFeatureId = null;
+      this.#selectedLayerId = null;
+    }
   }
 
   #visualColor(base: Rgba): Rgba {
@@ -902,6 +924,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
 
     if (this.#layerVisible('grid', true)) {
       const grid = this.#visualColor(rgba('#4b89a8', 0.14));
+      grid.a *= this.#layerOpacity('grid');
       for (let index = -4; index <= 4; index += 1) {
         const value = index / 4;
         linePositions.push(-1, value, 1, value, value, -1, value, 1);
@@ -953,6 +976,8 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
 
     for (const snapshot of this.#overlays.values()) {
       if (!this.#layerVisible(snapshot.layerId, true)) continue;
+      const lineStart = lineColors.length;
+      const pointStart = pointColors.length;
       const scenario = this.#time.mode === 'scenario' ? this.#time.scenarioVisual : null;
       const base = this.#visualColor(layerColor(snapshot.layerId));
 
@@ -1114,6 +1139,9 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
           }
         });
       }
+      const opacity = this.#layerOpacity(snapshot.layerId);
+      for (let index = lineStart + 3; index < lineColors.length; index += 4) lineColors[index] *= opacity;
+      for (let index = pointStart + 3; index < pointColors.length; index += 4) pointColors[index] *= opacity;
     }
 
     return {
@@ -1209,7 +1237,9 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     };
 
     if (this.#layerVisible('grid', true)) {
-      context.strokeStyle = css(this.#visualColor(rgba('#4b89a8', 0.14)));
+      const gridColor = this.#visualColor(rgba('#4b89a8', 0.14));
+      gridColor.a *= this.#layerOpacity('grid');
+      context.strokeStyle = css(gridColor);
       context.lineWidth = 1;
       context.beginPath();
       for (let index = -4; index <= 4; index += 1) {
@@ -1268,6 +1298,8 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
 
     for (const snapshot of this.#overlays.values()) {
       if (!this.#layerVisible(snapshot.layerId, true)) continue;
+      context.save();
+      context.globalAlpha = this.#layerOpacity(snapshot.layerId);
       const base = this.#visualColor(layerColor(snapshot.layerId));
 
       for (const edge of snapshot.edges) {
@@ -1407,6 +1439,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
           }
         });
       }
+      context.restore();
     }
   }
 
@@ -1468,6 +1501,11 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
   }
 
   #layerVisible(id: string, fallback: boolean): boolean {
-    return this.#layers.get(id)?.visible ?? fallback;
+    return (this.#layers.get(id)?.visible ?? fallback) && this.#layerOpacity(id) > 0;
+  }
+
+  #layerOpacity(id: string): number {
+    const value = this.#layers.get(id)?.opacity ?? 1;
+    return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 1;
   }
 }

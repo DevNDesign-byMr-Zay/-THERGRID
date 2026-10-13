@@ -6,12 +6,16 @@ import {
   formatMeasurementDistance,
   type SpatialMeasurement
 } from '../services/spatial-analysis';
+import type { SpatialAreaMeasurement } from '../services/spatial-area';
 
 
 interface SpatialAnalysisPanelProps {
   mode: SpatialInteractionMode;
   points: readonly SpatialSurfacePoint[];
   measurement: SpatialMeasurement | null;
+  area: SpatialAreaMeasurement | null;
+  areaUnavailable: boolean;
+  onFinishArea(): void;
   onModeChange(mode: SpatialInteractionMode): void;
   onReset(): void;
 }
@@ -31,6 +35,9 @@ export function SpatialAnalysisPanel({
   mode,
   points,
   measurement,
+  area,
+  areaUnavailable,
+  onFinishArea,
   onModeChange,
   onReset
 }: SpatialAnalysisPanelProps) {
@@ -56,11 +63,12 @@ export function SpatialAnalysisPanel({
           >
             MEASURE
           </button>
+          <button type="button" aria-pressed={mode === 'measure-area'} className={mode === 'measure-area' ? 'active' : ''} onClick={() => onModeChange('measure-area')}>AREA</button>
         </div>
       </div>
 
       <p className="analysis-instruction">
-        {mode === 'measure'
+        {mode === 'measure-area' ? area ? 'Area complete. Select another point to start a new polygon.' : 'Select at least three vertices, then finish the polygon.' : mode === 'measure'
           ? points.length === 0
             ? 'Select the first geographic point in the scene.'
             : points.length === 1
@@ -71,15 +79,19 @@ export function SpatialAnalysisPanel({
 
       {points.length ? (
         <div className="analysis-points">
-          {points.slice(0, 2).map((point, index) => (
+          {points.map((point, index) => (
             <div key={`${index}:${point.latitude}:${point.longitude}`}>
-              <span>{index === 0 ? 'A' : 'B'}</span>
+              <span>{mode === 'measure-area' || area ? index + 1 : index === 0 ? 'A' : 'B'}</span>
               <strong>{pointLabel(point)}</strong>
               <small>{sourceLabel(point)}</small>
             </div>
           ))}
         </div>
       ) : null}
+
+      {mode === 'measure-area' && !area ? <button type="button" disabled={points.length < 3} onClick={onFinishArea}>Finish area</button> : null}
+      {areaUnavailable ? <p role="status">Area unavailable: invalid, intersecting, polar or oversized polygon. Clear and select a simple local polygon.</p> : null}
+      {area ? <dl className="analysis-results"><div><dt>AREA</dt><dd>{area.areaSquareMeters.toLocaleString(undefined, { maximumFractionDigits: 1 })} m²</dd></div><div><dt>PERIMETER</dt><dd>{formatMeasurementDistance(area.perimeterMeters)}</dd></div></dl> : null}
 
       {measurement ? (
         <dl className="analysis-results">
@@ -112,12 +124,12 @@ export function SpatialAnalysisPanel({
 
       <div className="analysis-boundary">
         <strong>
-          {measurement?.precision === 'terrain-aware'
+          {area || mode === 'measure-area' ? 'LOCAL TANGENT-PLANE AREA' : measurement?.precision === 'terrain-aware'
             ? 'DEPTH-SURFACE MEASUREMENT'
             : 'GEODESIC / PROJECTED MEASUREMENT'}
         </strong>
         <span>
-          Native fallback cannot claim terrain elevation. Elevation/slope appear only when both picked surfaces provide heights.
+          {area || mode === 'measure-area' ? 'Horizontal local projection, not terrain surface area. Limited to 20 km radius, below 85° latitude; self-intersections are unavailable.' : 'Native fallback cannot claim terrain elevation. Elevation/slope appear only when both picked surfaces provide heights.'}
         </span>
       </div>
 

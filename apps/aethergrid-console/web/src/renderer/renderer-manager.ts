@@ -7,6 +7,7 @@ import type { SpatialOverlaySnapshot } from './overlays/spatial-overlay';
 import type {
   LayerState,
   SpatialFeatureSelection,
+  SpatialCameraSnapshot,
   SpatialPickPoint,
   SpatialRenderer,
   SpatialRendererConfig,
@@ -162,6 +163,10 @@ export class RendererManager {
 
   resize(): void {
     this.#current.resize();
+  }
+
+  cameraSnapshot(): SpatialCameraSnapshot | null {
+    return this.#current.cameraSnapshot?.() ?? null;
   }
 
   status(): SpatialRendererStatus {

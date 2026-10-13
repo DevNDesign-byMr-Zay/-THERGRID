@@ -91,9 +91,15 @@ export function TemporalRail({
   const forecastLoading = forecast && !forecastSeries && !forecastError;
   const canSelect = forecast && samples.length > 0;
   const range = state.playbackRange;
+  const modeled = state.mode === 'scenario' && Boolean(range);
+  const modeledStart = Date.parse(range?.start ?? '');
+  const modeledEnd = Date.parse(range?.end ?? '');
+  const modeledCursor = Date.parse(state.cursorIso);
+  const modeledInRange = modeled && modeledCursor >= modeledStart && modeledCursor <= modeledEnd;
+  const supportedSourceRange = Boolean(range && samples.includes(range.start) && samples.includes(range.end));
   const replaySamples = range ? samples.filter((iso) => iso >= range.start && iso <= range.end) : [];
   const replayIndex = replaySamples.indexOf(state.cursorIso);
-  const canPlay = canSelect && replayIndex >= 0 && replayIndex < replaySamples.length - 1;
+  const canPlay = modeled ? modeledInRange && modeledCursor < modeledEnd : canSelect && supportedSourceRange && replayIndex >= 0 && replayIndex < replaySamples.length - 1;
   const issued = forecastInstant(forecastSeries?.modelRunAt, forecastSeries?.utcOffsetSeconds);
   const fetched = forecastInstant(forecastSeries?.fetchedAt);
   const chooseSample = (index: number) => {
@@ -143,19 +149,27 @@ export function TemporalRail({
         className="transport-button"
         type="button"
         disabled={!state.playing && !canPlay}
-        aria-label={state.playing ? 'Pause source samples' : 'Play source samples'}
+        aria-label={modeled ? state.playing ? 'Pause modeled scenario' : 'Play modeled scenario' : state.playing ? 'Pause source samples' : 'Play source samples'}
         onClick={() => (state.playing ? clock.pause() : clock.play())}
       >
         {state.mode === 'live' ? '●' : state.playing ? 'Ⅱ' : '▶'}
       </button>
 
       <label className="replay-rate">REPLAY
-        <select aria-label="Replay speed" value={state.playbackRate} disabled={!canSelect}
+        <select aria-label="Replay speed" value={state.playbackRate} disabled={!canSelect && !modeled}
           onChange={(event) => clock.setPlaybackRate(Number(event.currentTarget.value))}>
           {[1, 60, 3600, 86400].map((rate) => <option key={rate} value={rate}>{rate}×</option>)}
         </select>
       </label>
       <div className="source-time-selection">
+        {modeled ? <>
+          <strong className="modeled-frame-time">{timeLabel(state.cursorIso)} · MODELED</strong>
+          <input type="range" className="time-slider" min="0" max="1000" step="1"
+            aria-label="Modeled scenario progress" aria-valuetext={`${state.cursorIso} · modeled, not observed`}
+            value={modeledInRange ? Math.round((modeledCursor - modeledStart) / (modeledEnd - modeledStart) * 1000) : 0}
+            disabled={!modeledInRange}
+            onChange={(event) => clock.scrub(new Date(Math.round(modeledStart + (modeledEnd - modeledStart) * Number(event.currentTarget.value) / 1000)).toISOString(), 'scenario')} />
+        </> : <>
         <select aria-label="Forecast valid time" disabled={!canSelect} value={sampleIndex < 0 ? '' : state.cursorIso}
           onChange={(event) => clock.scrub(event.currentTarget.value, 'forecast')}>
           <option value="" disabled>{canSelect ? 'Cursor outside source samples' : 'Source samples unavailable'}</option>
@@ -173,8 +187,10 @@ export function TemporalRail({
           aria-valuetext={replayIndex >= 0 ? replaySamples[replayIndex] : 'No selected source sample in replay window'}
           onChange={(event) => chooseSample(Number(event.currentTarget.value))}
         />
+        </>}
       </div>
-      <button className="first-source-sample" type="button" disabled={!canSelect || replaySamples.length === 0} onClick={() => chooseSample(0)}>First source sample</button>
+      <button className="first-source-sample" type="button" disabled={!modeled && (!canSelect || replaySamples.length === 0)}
+        onClick={() => modeled && range ? clock.scrub(range.start, 'scenario') : chooseSample(0)}>{modeled ? 'Scenario start' : 'First source sample'}</button>
 
       <button className="live-button" type="button" onClick={() => clock.goLive()}>
         LIVE NOW
@@ -184,18 +200,21 @@ export function TemporalRail({
         <summary>Forecast replay range</summary>
         <div className="forecast-range-fields">
           <label>START
-            <select aria-label="Forecast range start" value={range.start}
+            <select aria-label="Forecast range start" value={range.start} disabled={!supportedSourceRange}
               onChange={(event) => clock.setPlaybackRange(event.currentTarget.value, range.end)}>
+              {!samples.includes(range.start) && <option value={range.start}>UNAVAILABLE · {timeLabel(range.start)}</option>}
               {samples.map((iso) => <option key={iso} value={iso} disabled={iso > range.end}>{timeLabel(iso)}</option>)}
             </select>
           </label>
           <label>END
-            <select aria-label="Forecast range end" value={range.end}
+            <select aria-label="Forecast range end" value={range.end} disabled={!supportedSourceRange}
               onChange={(event) => clock.setPlaybackRange(range.start, event.currentTarget.value)}>
+              {!samples.includes(range.end) && <option value={range.end}>UNAVAILABLE · {timeLabel(range.end)}</option>}
               {samples.map((iso) => <option key={iso} value={iso} disabled={iso < range.start}>{timeLabel(iso)}</option>)}
             </select>
           </label>
           <span>{replaySamples.length} replay frames{replayIndex < 0 ? ' · Cursor outside replay window' : ''}</span>
+          <button type="button" onClick={() => clock.setPlaybackRange(samples[0], samples.at(-1)!)}>Use full source range</button>
         </div>
       </details>}
 
@@ -208,7 +227,10 @@ export function TemporalRail({
           {canSelect && ` · ${forecastSeries?.provider ?? 'Provider unknown'} · MODEL RUN ${issued ? timeLabel(issued) : 'UNKNOWN'} · FETCHED ${fetched ? timeLabel(fetched) : 'UNKNOWN'}`}
         </span>}
         {forecast && !forecastLoading && !canSelect && onRetryForecast && <button className="forecast-retry" type="button" onClick={onRetryForecast}>Retry forecast</button>}
-        {state.mode === 'scenario' && <span>Replay unavailable without a supported modeled range</span>}
+        {forecast && canSelect && range && !supportedSourceRange && <span>Saved replay window unavailable in current source coverage</span>}
+        {state.mode === 'scenario' && <span>{modeled && range
+          ? `MODELED REPLAY · ${timeLabel(range.start)} → ${timeLabel(range.end)} · Operator interval, not observations${modeledInRange ? '' : ' · Cursor outside modeled interval'}`
+          : 'Replay unavailable without a supported modeled range'}</span>}
       </div>
 
       <output className="time-readout" data-cursor={state.cursorIso}>
