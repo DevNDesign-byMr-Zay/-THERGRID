@@ -1,5 +1,7 @@
 # Dependencies
 node_modules/
+.worktrees/
+.superpowers/
 
 # Test / coverage output
 coverage/

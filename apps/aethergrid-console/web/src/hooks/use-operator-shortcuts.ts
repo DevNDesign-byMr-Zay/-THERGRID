@@ -23,6 +23,7 @@ function editableTarget(target: EventTarget | null): boolean {
 export function useOperatorShortcuts(actions: OperatorShortcutActions): void {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || document.querySelector('dialog[open]')) return;
       const command = event.metaKey || event.ctrlKey;
 
       if (command && event.key.toLowerCase() === 'k') {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { BRAND } from '../components/brand';
 import { useCommandDrawer } from '../hooks/use-command-drawer';
 
@@ -7,6 +8,7 @@ import {
   type AgentHandoffRequest
 } from '../components/AgentDock';
 import { DataSourceBadge } from '../components/DataSourceBadge';
+import { sourcePresentationState } from '../services/source-presentation';
 import { EntityDossierPanel } from '../components/EntityDossierPanel';
 import { EvidencePanel } from '../components/EvidencePanel';
 import { OperationalDataPanel } from '../components/OperationalDataPanel';
@@ -1839,7 +1841,7 @@ export function App() {
             <span aria-hidden="true">{appearance.resolved === 'light' ? '☀' : '◐'}</span>
             <strong>{appearance.mode.toUpperCase()}</strong>
           </button>
-          <ProfileMenu />
+          <ProfileMenu onBeforeOpen={() => flushSync(() => { setNavOpen(false); setIntelOpen(false); })} />
           <div className="live-cluster">
             <span className="status-dot live" />
             <span>{temporal.mode.toUpperCase()} FRAME</span>
@@ -1882,7 +1884,7 @@ export function App() {
           ref={navigationDrawer.ref} tabIndex={-1}
           role={navigationDrawer.compact ? 'dialog' : 'complementary'}
           aria-modal={navigationDrawer.compact && navOpen ? true : undefined}
-          aria-label="Navigation and layers" inert={navigationDrawer.compact && !navOpen}>
+          aria-label="Navigation and layers" inert={!navOpen}>
           <div className="drawer-heading"><strong>NAVIGATION</strong>
             <button type="button" aria-label="Close navigation drawer" onClick={() => setNavOpen(false)}>×</button></div>
           <div className="rail-section">
@@ -2277,18 +2279,19 @@ export function App() {
             }
             state={
               scope === 'world'
-                ? globalLive?.overlay.live
-                  ? 'live'
-                  : globalLive
-                    ? 'fallback'
-                    : 'loading'
-                : powerOverlayError
-                  ? 'unavailable'
-                  : powerOverlay?.live
-                    ? 'live'
-                    : powerOverlay
-                      ? 'fallback'
-                      : 'loading'
+                ? sourcePresentationState({
+                    loading: !globalLive,
+                    live: globalLive?.overlay.live,
+                    stale: globalLive?.overlay.stale,
+                    fallback: globalLive?.overlay.fallback
+                  })
+                : sourcePresentationState({
+                    unavailable: Boolean(powerOverlayError),
+                    loading: !powerOverlay,
+                    stale: powerOverlay?.stale,
+                    mapped: Boolean(powerOverlay && !powerOverlay.fallback),
+                    fallback: powerOverlay?.fallback
+                  })
             }
             attribution={
               scope === 'world'
@@ -2346,7 +2349,7 @@ export function App() {
           ref={intelligenceDrawer.ref} tabIndex={-1}
           role={intelligenceDrawer.compact ? 'dialog' : 'complementary'}
           aria-modal={intelligenceDrawer.compact && intelOpen ? true : undefined}
-          aria-label="Intelligence workspace" inert={intelligenceDrawer.compact && !intelOpen}
+          aria-label="Intelligence workspace" inert={!intelOpen}
         >
           <div className="intel-mobile-head">
             <span>INTELLIGENCE</span>
