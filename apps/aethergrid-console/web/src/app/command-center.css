@@ -72,7 +72,8 @@ html, body, #root { width: 100%; height: 100%; min-height: 0; overflow: hidden; 
 .viewport-status .native-fidelity { grid-column: 1 / -1; color: var(--warning); font-size: 10px; }
 .renderer-limitations { font-size: 11px; line-height: 1.5; max-width: 280px; margin: 4px 0 10px; }
 .viewport-status:has(.renderer-tools[open]) { max-height: min(360px, calc(100dvh - var(--temporal-rail-height, 140px) - 210px)); overflow-y: auto; overscroll-behavior: contain; }
-.viewport-status { max-width: min(320px, calc(100% - 32px)); }
+.viewport-status { max-width: min(320px, calc(100% - 32px)); pointer-events: none; }
+.viewport-status :is(.renderer-tools summary, .renderer-tools[open]) { pointer-events: auto; }
 .viewport-status :is(strong, small) { font-size: 10px; }
 .city-load-status { top: 126px; bottom: auto; left: auto; right: 16px; transform: none; }
 .drawer-heading, .navigation-toggle { display: none; }
@@ -592,3 +593,30 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .temporal-rail .temporal-data-status { grid-column: 1 / -1; }
   .temporal-rail .time-readout { grid-column: 1 / -1; display: flex; gap: 8px; }
 }
+.agent-task-history article { padding: 12px 0; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+.agent-task-history code, .agent-runtime code { overflow-wrap: anywhere; }
+.agent-request-context, .agent-provenance { font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.agent-investigation-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.temporal-scene-receipt { grid-column: 1 / -1; min-width: 0; }
+.temporal-rail :is(.forecast-scene-badge, .scenario-scene-badge, .illumination-scene-badge) { position: static; transform: none; justify-items: start; width: auto; margin: 0; }
+.temporal-rail :is(.forecast-scene-badge, .scenario-scene-badge, .illumination-scene-badge) :is(span, strong, small) { font-size: 10px; line-height: 1.5; color: var(--text); overflow-wrap: anywhere; }
+
+@media (max-height: 500px) {
+  .immersive-spatial .left-rail,
+  .immersive-spatial .intel-rail { bottom: 8px; }
+  .immersive-spatial .left-rail > .rail-section { display: none; }
+  .immersive-spatial .left-rail .navigation-tabs { flex: 0 0 auto; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .immersive-spatial .drawer-heading,
+  .immersive-spatial .intel-mobile-head { flex: 0 0 auto; }
+}
+
+.agent-model-panel, .agent-reviewed-task { display: grid; gap: 8px; margin: 12px 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; overflow-wrap: anywhere; }
+.agent-model-panel > div { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.agent-model-panel p { margin: 0; font-size: 11px; }
+.agent-model-panel small, .agent-reviewed-task small { font-size: 11px; }
+.agent-investigation-steps { padding-left: 22px; font-size: 11px; line-height: 1.6; }
+.agent-reviewed-task p, .agent-message p, .agent-contributions p, .agent-task-history p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.agent-task-history button[aria-pressed="true"] { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+.agent-model-panel button, .agent-task-history button { padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--panel-strong); color: var(--cyan); font: inherit; cursor: pointer; }
+.agent-model-panel button:disabled, .agent-task-history button:disabled { opacity: .6; cursor: default; }

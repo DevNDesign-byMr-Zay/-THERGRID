@@ -741,8 +741,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
                   ? '#a96078'
                   : '#9fb3c3';
 
-    const timestamp = Date.parse(this.#time.iso);
-    const seconds = Number.isFinite(timestamp) ? timestamp / 1000 : 0;
+    const seconds = this.#motionPhaseSeconds();
     const windFrom = current.windDirectionDegrees ?? 0;
     const toward = ((windFrom + 180) * Math.PI) / 180;
     const speed = Math.max(0, current.windSpeedKph ?? 0);
@@ -774,6 +773,12 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     return { lines: [], points };
   }
 
+  #motionPhaseSeconds(): number {
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 0;
+    const timestamp = Date.parse(this.#time.iso);
+    return Number.isFinite(timestamp) ? timestamp / 1000 : 0;
+  }
+
   #weatherGeometry(): NativeWeatherGeometry {
     if (
       (this.#time.mode !== 'live' && this.#time.mode !== 'forecast') ||
@@ -785,8 +790,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
 
     const current = this.#atmosphere.current;
     const phenomenon = weatherPhenomenon(this.#atmosphere);
-    const timestamp = Date.parse(this.#time.iso);
-    const seconds = Number.isFinite(timestamp) ? timestamp / 1000 : 0;
+    const seconds = this.#motionPhaseSeconds();
     const cloudCover = clamp(current.cloudCoverPercent ?? 0, 0, 100);
     const precipitation = Math.max(0, current.precipitationMm ?? 0);
     const windSpeed = Math.max(0, current.windSpeedKph ?? 0);
@@ -998,8 +1002,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
         } else if (worksetGeometryEdge) {
           color = rgba('#63ffc5', 0.78);
         } else if (windEdge && this.#time.mode === 'live') {
-          const timestamp = Date.parse(this.#time.iso);
-          const phase = Number.isFinite(timestamp) ? timestamp / 1000 : 0;
+          const phase = this.#motionPhaseSeconds();
           const pulse = 0.5 + 0.5 * Math.sin(phase * 0.72 + (edge.intensity ?? 0.5) * 4.7);
           color = rgba('#7de9ff', 0.34 + pulse * 0.48);
         } else if (
@@ -1055,8 +1058,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
           node.properties?.analysisType === 'workset-geometry';
         const scenarioModelNode =
           node.properties?.analysisType === 'scenario-model';
-        const timestamp = Date.parse(this.#time.iso);
-        const phase = Number.isFinite(timestamp) ? timestamp / 1000 : 0;
+        const phase = this.#motionPhaseSeconds();
         const lightPulse =
           0.5 +
           0.5 *
@@ -1311,8 +1313,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
           edge.properties?.analysisType === 'workset-geometry';
         const scenarioModelEdge =
           edge.properties?.analysisType === 'scenario-model';
-        const timestamp = Date.parse(this.#time.iso);
-        const phase = Number.isFinite(timestamp) ? timestamp / 1000 : 0;
+        const phase = this.#motionPhaseSeconds();
         const pulse = 0.5 + 0.5 * Math.sin(phase * 0.72 + (edge.intensity ?? 0.5) * 4.7);
         const selected = this.#isSelectedSource(
           snapshot.layerId,
@@ -1385,8 +1386,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
           node.properties?.analysisType === 'workset-geometry';
         const scenarioModelNode =
           node.properties?.analysisType === 'scenario-model';
-        const timestamp = Date.parse(this.#time.iso);
-        const phase = Number.isFinite(timestamp) ? timestamp / 1000 : 0;
+        const phase = this.#motionPhaseSeconds();
         const lightPulse =
           0.5 +
           0.5 *

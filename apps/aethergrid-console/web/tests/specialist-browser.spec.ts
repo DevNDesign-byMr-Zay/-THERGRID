@@ -1,0 +1,40 @@
+import { expect, test } from '@playwright/test';
+
+for (const width of [1366,390]) test(`specialist receipts and evidence flow remain separate at ${width}`, async ({ page }) => {
+  test.setTimeout(180000);
+  await page.setViewportSize({width,height:width===390?844:768});
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.route('**/*',route => ['127.0.0.1','localhost'].includes(new URL(route.request().url()).hostname) ? route.continue() : route.abort('internetdisconnected'));
+  await page.route('**/api/aethergrid/**',route => ['/api/aethergrid/config/public','/api/aethergrid/profile'].includes(new URL(route.request().url()).pathname) ? route.continue() : route.fulfill({status:503,json:{error:'Offline specialist contract'}}));
+  await page.route(/\/api\/aethergrid\/(team|agents\/[^?]+)$/,route => {
+    const agent=route.request().url().endsWith('/team')?'TEAM':'AUREN';
+    return route.fulfill({json:{reply:`${agent} OFFLINE CONTRACT analysis`,receipt:`${agent}-execution-receipt`,runtime:{agent,provider:agent==='TEAM'?'offline-contract':'unknown',model:agent==='TEAM'?`${agent}-fixture-model`:null,fallbackUsed:false,latencyMs:12},evidence:{id:'fixture-evidence',title:'Offline evidence receipt',status:'Recorded'}}});
+  });
+  await page.route('**/api/aethergrid/evidence',route=>route.fulfill({json:{evidence:[{id:'older-evidence',title:'Older unrelated record',type:'scenario'}]}}));
+  await page.route('**/api/aethergrid/evidence/fixture-evidence',route=>route.fulfill({json:{evidence:{id:'fixture-evidence',title:'Offline evidence receipt',type:'analysis',receipt:'actual-evidence-receipt',details:{source:'returned specialist evidence'}}}}));
+  await page.goto('/');
+  await page.getByRole('navigation',{name:'Product modes'}).getByRole('button',{name:'AI',exact:true}).click();
+  const dock=page.locator('.agent-dock');
+  await dock.getByRole('textbox',{name:'Message TEAM'}).fill('Compare the available source receipts');
+  await dock.getByRole('button',{name:'SEND',exact:true}).click();
+  await expect(dock.locator('.agent-runtime')).toContainText('TEAM-fixture-model');
+  await dock.getByRole('group',{name:'ÆTHERGRID agents'}).getByRole('button',{name:'AUREN',exact:true}).click();
+  await expect(dock.locator('.agent-runtime')).toHaveCount(0);
+  await dock.getByRole('textbox',{name:'Message AUREN'}).fill('Inspect source limitations');
+  await dock.getByRole('button',{name:'SEND',exact:true}).click();
+  await expect(dock.locator('.agent-runtime')).toContainText('MODEL NOT PROVIDED');
+  await expect(dock.locator('.agent-runtime')).toContainText('UNVERIFIED RESPONSE');
+  await dock.getByRole('group',{name:'ÆTHERGRID agents'}).getByRole('button',{name:'TEAM',exact:true}).click();
+  await expect(dock.locator('.agent-runtime')).toContainText('TEAM-fixture-model');
+  await expect(dock.locator('.agent-provenance')).toContainText('do not verify its factual claims');
+  await dock.getByText(/Task history · TEAM/).click();
+  await expect(dock.locator('.agent-task-history')).toContainText('TEAM-execution-receipt');
+  await page.screenshot({path:`test-results/specialist-receipts-${width}.png`});
+  await dock.getByRole('button',{name:'COMPARE SCENARIOS'}).click();
+  await expect(page.getByRole('button',{name:'EXPORT SCENE JSON'})).toBeVisible();
+  await page.getByRole('navigation',{name:'Intelligence workspace'}).getByRole('button',{name:'AI',exact:true}).click();
+  await dock.getByRole('button',{name:'REVIEW EVIDENCE'}).click();
+  await expect(page.getByRole('navigation',{name:'Intelligence workspace'}).getByRole('button',{name:'EVIDENCE',exact:true})).toHaveAttribute('aria-pressed','true');
+  await expect(page.locator('.evidence-detail')).toContainText('actual-evidence-receipt');
+  await expect(page.locator('.evidence-detail')).toContainText('returned specialist evidence');
+});

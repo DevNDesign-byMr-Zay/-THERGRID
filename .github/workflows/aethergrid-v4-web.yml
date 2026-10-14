@@ -88,6 +88,16 @@ jobs:
           AETHERGRID_TEST_CANONICAL: "1"
         run: npx playwright test tests/spatial-tools-browser.spec.ts --output=test-results/spatial-tools --workers=1 --reporter=line
 
+      - name: Verify specialist receipts, D-Wave hold and reduced-motion contracts
+        env:
+          AETHERGRID_TEST_CANONICAL: "1"
+        run: npx playwright test tests/specialist-integration.spec.ts tests/specialist-workflow.spec.ts tests/quantum-hold.spec.ts tests/weather-motion.spec.ts --output=test-results/specialist-contracts --workers=1 --reporter=line
+
+      - name: Verify compiled specialists, operational pilot and responsive disclosures
+        env:
+          AETHERGRID_TEST_CANONICAL: "1"
+        run: npx playwright test tests/specialist-browser.spec.ts tests/specialist-workflow-browser.spec.ts tests/operational-pilot-browser.spec.ts tests/quantum-hold-browser.spec.ts tests/final-visual-browser.spec.ts --output=test-results/specialist-acceptance --workers=1 --reporter=line
+
       - name: Retain credential-free spatial screenshots
         if: always()
         uses: actions/upload-artifact@v7
@@ -104,6 +114,13 @@ jobs:
             apps/aethergrid-console/web/test-results/timeline-*.png
             apps/aethergrid-console/web/test-results/spatial-tools/
             apps/aethergrid-console/web/test-results/spatial-*.png
+            apps/aethergrid-console/web/test-results/specialist-acceptance/
+            apps/aethergrid-console/web/test-results/specialist-*.png
+            apps/aethergrid-console/web/test-results/step6-*.png
+            apps/aethergrid-console/web/test-results/operational-*.png
+            apps/aethergrid-console/web/test-results/dwave-held-*.png
+            apps/aethergrid-console/web/test-results/final-forecast-*.png
+            apps/aethergrid-console/web/test-results/final-night-disclosure-*.png
           if-no-files-found: warn
           retention-days: 14
 
@@ -113,4 +130,49 @@ jobs:
           name: aethergrid-v4-web-${{ github.sha }}
           path: apps/aethergrid-console/web/dist/
           if-no-files-found: error
+          retention-days: 14
+
+  sustained-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: apps/aethergrid-console/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install isolated web dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Type-check and build the spatial application
+        run: npm run typecheck && npm run build
+
+      - name: Install root runtime dependencies for canonical preview
+        working-directory: ${{ github.workspace }}
+        run: npm ci --ignore-scripts
+
+      - name: Install maintained Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify actual fifteen-minute modeled replay
+        env:
+          AETHERGRID_TEST_CANONICAL: "1"
+          AETHERGRID_LONG_ACCEPTANCE: "1"
+        run: |
+          export AETHERGRID_TEST_CHROMIUM="$(node --input-type=module -e 'import { chromium } from "@playwright/test"; process.stdout.write(chromium.executablePath());')"
+          npx playwright test tests/sustained-replay.spec.ts --output=test-results/sustained-replay --workers=1 --reporter=line
+
+      - name: Retain replay measurements and actual scene screenshot
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: aethergrid-sustained-replay-${{ github.sha }}
+          path: apps/aethergrid-console/web/test-results/sustained-replay/
+          if-no-files-found: warn
           retention-days: 14

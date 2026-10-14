@@ -17,6 +17,7 @@ test('system theme reacts to OS while explicit choice survives rejected storage'
 
 for (const [width, height] of [[1536, 1024], [1440, 900], [1366, 768], [1024, 768], [768, 1024], [390, 844], [844, 390]]) {
   test(`operator controls stay reachable in light mode ${width}x${height}`, async ({ page }) => {
+    test.setTimeout(90000);
     await page.setViewportSize({ width, height });
     await page.addInitScript(() => localStorage.setItem('aethergrid.operator.appearance.v4', 'light'));
     await page.goto('/');

@@ -395,6 +395,7 @@ export function App() {
     useState<OperatorScenario[]>(loadOperatorScenarios);
   const [agentHandoff, setAgentHandoff] = useState<AgentHandoffRequest | null>(null);
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceRecord | null>(null);
+  const [evidenceRequest, setEvidenceRequest] = useState<{id: string; generation: number} | null>(null);
   const [cityLoad, setCityLoad] = useState<CityLoadState>({
     spatial: true,
     environment: true,
@@ -2299,39 +2300,7 @@ export function App() {
             </div>
           ) : null}
 
-          {activeIllumination ? (
-            <div className="illumination-scene-badge">
-              <span>URBAN ILLUMINATION</span>
-              <strong>
-                {activeIllumination.nodes.length} MAPPED BUILDING POINTS
-              </strong>
-              <small>PRESENTATION ONLY · NOT MEASURED WINDOW LIGHTS</small>
-            </div>
-          ) : null}
 
-          {temporal.mode === 'scenario' && scenarioVisual ? (
-            <div className="scenario-scene-badge">
-              <span>MODELED SCENARIO · SOURCE DATA UNCHANGED</span>
-              <strong>{scenarioVisual.stressFactor.toFixed(2)}× NETWORK STRESS</strong>
-              <small>DIM = SOURCE BASELINE · BRIGHT = MODELED SCENARIO</small>
-            </div>
-          ) : null}
-
-          {temporal.mode === 'forecast' ? (
-            <div className="forecast-scene-badge">
-              <span>PROVIDER FORECAST · 4D CURSOR</span>
-              <strong>
-                {forecastAtmosphere
-                  ? `${weatherPhenomenon(forecastAtmosphere).toUpperCase()} · ${formatSourceTime(forecastAtmosphere.sourceTime)}`
-                  : 'NO ALIGNED FORECAST SAMPLE'}
-              </strong>
-              <small>
-                {forecastAtmosphere?.stale
-                  ? 'STALE SOURCE SAMPLE · NOT LIVE OBSERVATION'
-                  : 'FORECAST SAMPLE · NOT LIVE OBSERVATION'}
-              </small>
-            </div>
-          ) : null}
 
           <DataSourceBadge
             label={
@@ -2403,7 +2372,7 @@ export function App() {
                 ? 'LIVE AQI · USGS SEISMIC · SOLAR 4D'
                 : cityIdentity
                   ? `${sourceBuildingCount.toLocaleString()} MAPPED BUILDINGS · ${cityIdentity.sourceBackedHeightCoveragePercent.toFixed(1)}% MAPPED HEIGHT TAGS`
-                  : 'SOURCE-BACKED CITY GEOMETRY LOADING'}
+                  : powerOverlayError ? 'CITY GEOMETRY UNAVAILABLE' : 'SOURCE-BACKED CITY GEOMETRY LOADING'}
             </em>
           </div>
         </section>
@@ -2767,7 +2736,7 @@ export function App() {
             })}>EXPORT SCENE JSON</button>
           </div>
           <div className="intel-workspace intel-ai">
-            <AgentDock context={agentContext} handoff={agentHandoff} />
+            <AgentDock context={agentContext} handoff={agentHandoff} active={intelWorkspace === 'ai'} onEvidence={(id) => { setSelectedEvidence(null); setEvidenceRequest((previous) => ({id, generation: (previous?.generation ?? 0) + 1})); showIntelligence('evidence'); }} onComparison={() => showIntelligence('analysis')} />
           </div>
           <div className="intel-workspace intel-scenario">
             <ScenarioPanel
@@ -2803,7 +2772,7 @@ export function App() {
             <QuantumPanel />
           </div>
           <div className="intel-workspace intel-evidence">
-            <EvidencePanel onSelectEvidence={setSelectedEvidence} />
+            <EvidencePanel onSelectEvidence={setSelectedEvidence} requestedEvidence={evidenceRequest} />
           </div>
           <div className="intel-workspace intel-system">
             <RuntimeDiagnosticsPanel />
@@ -2878,7 +2847,40 @@ export function App() {
         onHeightChange={setTemporalRailHeight}
         onRetryForecast={() => setForecastRevision((revision) => revision + 1)}
         onScenarioEvent={restoreScenarioFromTemporalEvent}
-      />
+      >
+          {temporal.mode === 'scenario' && scenarioVisual ? (
+            <div className="scenario-scene-badge">
+              <span>MODELED SCENARIO · SOURCE DATA UNCHANGED</span>
+              <strong>{scenarioVisual.stressFactor.toFixed(2)}× NETWORK STRESS</strong>
+              <small>DIM = SOURCE BASELINE · BRIGHT = MODELED SCENARIO</small>
+            </div>
+          ) : null}
+
+          {temporal.mode === 'forecast' ? (
+            <div className="forecast-scene-badge">
+              <span>PROVIDER FORECAST · 4D CURSOR</span>
+              <strong>
+                {forecastAtmosphere
+                  ? `${weatherPhenomenon(forecastAtmosphere).toUpperCase()} · ${formatSourceTime(forecastAtmosphere.sourceTime)}`
+                  : 'NO ALIGNED FORECAST SAMPLE'}
+              </strong>
+              <small>
+                {forecastAtmosphere?.stale
+                  ? 'STALE SOURCE SAMPLE · NOT LIVE OBSERVATION'
+                  : 'FORECAST SAMPLE · NOT LIVE OBSERVATION'}
+              </small>
+            </div>
+          ) : null}
+          {activeIllumination ? (
+            <div className="illumination-scene-badge">
+              <span>URBAN ILLUMINATION</span>
+              <strong>
+                {activeIllumination.nodes.length} MAPPED BUILDING POINTS
+              </strong>
+              <small>PRESENTATION ONLY · NOT MEASURED WINDOW LIGHTS</small>
+            </div>
+          ) : null}
+      </TemporalRail>
     </main>
   );
 }

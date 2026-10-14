@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
+  DWAVE_ON_HOLD,
   loadDwaveJob,
   loadDwaveResult,
   loadDwaveSolvers,
@@ -119,7 +120,7 @@ export function QuantumPanel() {
     dwaveDiscovery.status !== 'unconfigured' &&
     dwaveReceipt?.fallback !== true;
   const canSubmitDwave =
-    dwaveConfigured &&
+    !DWAVE_ON_HOLD && dwaveConfigured &&
     Boolean(dwaveSolver) &&
     parsedProblem.value != null &&
     parsedParameters.value != null &&
@@ -168,7 +169,7 @@ export function QuantumPanel() {
         }
       });
 
-    void loadDwaveSolvers()
+    if (!DWAVE_ON_HOLD) void loadDwaveSolvers()
       .then((dwaveResult) => {
         if (cancelled) return;
         setDwaveDiscovery(dwaveResult.data);
@@ -216,6 +217,7 @@ export function QuantumPanel() {
   };
 
   const beginDwavePolling = (job: DwaveJobState) => {
+    if (DWAVE_ON_HOLD) return;
     if (!job.problemId || !job.hardwareSubmitted || job.hardwareExecuted) return;
     clearDwavePoll();
 
@@ -460,11 +462,12 @@ export function QuantumPanel() {
           </details>
         </>
       ) : (
-        <div className="dwave-workspace">
+        <fieldset className="dwave-workspace" disabled={DWAVE_ON_HOLD}>
+          <legend>D-WAVE ON HOLD · NON-EXECUTABLE</legend>
           <div className="quantum-runtime-grid">
             <span>
               <small>STATUS</small>
-              <strong>{dwaveDiscovery?.status || 'LOADING'}</strong>
+              <strong>{DWAVE_ON_HOLD ? 'UNCONFIGURED · ON HOLD' : dwaveDiscovery?.status || 'LOADING'}</strong>
             </span>
             <span>
               <small>SOLVERS</small>
@@ -599,7 +602,7 @@ export function QuantumPanel() {
             ÆTHERGRID does not synthesize an annealing result. “Hardware executed”
             is shown only after the provider returns a completed answer.
           </p>
-        </div>
+        </fieldset>
       )}
     </section>
   );

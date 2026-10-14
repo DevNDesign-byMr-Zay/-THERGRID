@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import type { TemporalMode } from '../renderer/spatial-renderer';
 import type { AtmosphericForecastSeries } from '../services/city-environment';
 import { forecastFrameInstants, forecastInstant } from '../time/forecast-frames';
@@ -24,6 +24,7 @@ function labelForOffset(value: number): string {
 }
 
 interface TemporalRailProps {
+  children?: ReactNode;
   clock: AethergridTemporalClock;
   state: Readonly<TemporalState>;
   events?: readonly TemporalNavigatorEvent[];
@@ -70,7 +71,8 @@ export function TemporalRail({
   forecastError = null,
   onHeightChange,
   onRetryForecast,
-  onScenarioEvent
+  onScenarioEvent,
+  children
 }: TemporalRailProps) {
   const railRef = useRef<HTMLElement | null>(null);
   useLayoutEffect(() => {
@@ -237,6 +239,7 @@ export function TemporalRail({
         <strong>{labelForOffset(offset)}</strong>
         <span>{timeLabel(state.cursorIso)}</span>
       </output>
+      {children ? <div className="temporal-scene-receipt">{children}</div> : null}
       {railEvents.length > 0 && <div className="local-time-events" role="group" aria-label="Operator-local time references">
         <span>LOCAL REFERENCES</span>
         {railEvents.map((event) => <button key={event.id} type="button" aria-label={`Jump to ${event.label}`}
