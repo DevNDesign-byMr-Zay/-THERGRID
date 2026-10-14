@@ -2,9 +2,9 @@
 
 The canonical specialist workspace uses the existing `GET /api/aethergrid/runtime`, `POST /api/aethergrid/agents/:id`, `POST /api/aethergrid/team` and returned-record evidence endpoints. VÆLON, AUREN, SOLVÆR and TEAM retain dedicated identities and advisory authority.
 
-Backend model configuration is visible before execution, refreshes every minute while the AI workspace is active, and supports manual refresh. Failed refreshes preserve the previous configuration with a STALE label and its last-check timestamp. Missing or malformed fields remain unavailable. Configuration does not establish which model executed a task; that information comes from its execution receipt.
+Backend model configuration is visible before execution, refreshes every minute while the AI workspace is active, and supports manual refresh. Failed refreshes preserve the previous configuration with a STALE label and its last-check timestamp. Missing or malformed fields remain unavailable. Configuration does not establish which model executed a task; the task shows the backend-reported model receipt and fallback status. A fallback receipt can still identify the requested provider/model; it does not prove that provider executed the response.
 
-Operators can review any of eight retained local tasks per specialist. The selected task controls its response, actual model, contributions, captured entity/source/time context and exact returned-evidence action. Failed and stopped requests retain their context and error without inventing a response or receipt. Stopping waits locally; the server outcome remains unknown. Late responses cannot overwrite a newer task. History clears on reload. Scenario comparison navigation uses the current workspace, explicitly disclosed beside the captured task context.
+Operators can review any of eight retained local tasks per specialist. The selected task controls its response, backend-reported model receipt, contributions, captured entity/source/time context and exact returned-evidence action. Failed and stopped requests retain their context and error without inventing a response or receipt. Stopping waits locally; the server outcome remains unknown. Late responses cannot overwrite a newer task. History clears on reload. Scenario comparison navigation uses the current workspace, explicitly disclosed beside the captured task context.
 
 ## Current backend dependency
 
@@ -21,3 +21,5 @@ Decisions: use backend configuration separately from execution receipts (cost: o
 ## Independent review
 
 Fresh read-only review of43dec214..edaf24a found no Critical, Important or Minor issues. The reviewer independently passed TypeScript and diff validation. Recommendations are future lifecycle coverage for active-panel refresh replacement and a different-specialist handoff during an active request; the inspected guards were sound. No second review or product fix was required. Live provider execution/accuracy, server cancellation, absent tool/citation contracts, auth/persisted server history/release and physical-GPU performance were explicitly outside this frontend extension. Their limits remain disclosed; those deferred verifications require backend/device evidence. Exact published-commit CI status is maintained in PR#171.
+
+Final copy clarification: describe returned model receipts and fallback status, because current backend fallback records can retain the requested provider/model. This changes disclosure only; request, history, evidence and rendering behavior are unchanged.

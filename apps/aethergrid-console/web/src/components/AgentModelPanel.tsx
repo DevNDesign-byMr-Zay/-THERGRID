@@ -32,7 +32,7 @@ export function AgentModelPanel({agent,active}:{agent:AgentId;active:boolean}) {
     <div><strong>Model configuration</strong><button type="button" onClick={()=>void refresh()} disabled={loading}>Refresh model configuration</button></div>
     <small role="status">{error?(checkedAt?'STALE':'UNAVAILABLE'):loading?'CHECKING':'BACKEND CONFIGURATION'}{checkedAt?` · Last checked ${checkedAt}`:''}</small>
     {visible.map(row=><p key={row.agent}><strong>{row.agent}</strong> · {row.provider??'PROVIDER NOT PROVIDED'} · {row.model??'MODEL NOT PROVIDED'} · {row.status}</p>)}
-    <small>Configuration does not verify an execution. Completed tasks show the provider and model that actually responded.</small>
+    <small>Configuration does not verify an execution. Completed tasks show backend-reported model receipts and fallback status.</small>
     {error?<small>{error}</small>:null}
   </section>;
 }
