@@ -49,7 +49,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$SUBMISSION_SHA"
           test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$SUBMISSION_SHA"
       - name: Require exact-SHA engineering and security gates
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const required = [['engineering/ci', '.github/workflows/ci.yml'], ['security/codeql', '.github/workflows/codeql.yml']];
