@@ -17,7 +17,7 @@ export function SessionGate({children}:{children:ReactNode}) {
  const [session,setSession]=useState<Session|null>(null);
  const [error,setError]=useState('');
  const [busy,setBusy]=useState(false);
- useEffect(()=>{void originalFetch('/api/aethergrid/auth/session').then(r=>r.json()).then((s:Session)=>{csrf=s.csrf;setSession(s);}).catch(()=>{if(location.protocol==='file:') setSession({enabled:false,user:null,csrf:null});else setError('Runtime unavailable. Reload to reconnect.');});},[]);
+ useEffect(()=>{if(location.protocol==='file:'){setSession({enabled:false,user:null,csrf:null});return;}void originalFetch('/api/aethergrid/auth/session').then(r=>r.json()).then((s:Session)=>{csrf=s.csrf;setSession(s);}).catch(()=>{setError('Runtime unavailable. Reload to reconnect.');});},[]);
  async function login(event:React.FormEvent<HTMLFormElement>){
   event.preventDefault();setBusy(true);setError('');
   const form=new FormData(event.currentTarget);
@@ -29,5 +29,5 @@ export function SessionGate({children}:{children:ReactNode}) {
  }
  if(!session) return <main className="session-gate" aria-busy="true">ÆTHERGRID · {error || 'Connecting'}</main>;
  if(session.enabled && !session.user) return <main className="session-gate"><form onSubmit={login}><h1>ÆTHERGRID</h1><p>Operator sign-in</p><label>Username<input name="username" autoComplete="username" required /></label><label>Password<input name="password" type="password" autoComplete="current-password" required /></label><p role="alert">{error}</p><button disabled={busy}>{busy ? 'Connecting…' : 'Sign in'}</button></form></main>;
- return <>{children}{location.protocol==='file:' && <div className="local-file-status" role="status">Local file · grid and controls available. Live data, sign-in and AI require the runtime.<a href="http://127.0.0.1:8090">Open connected workspace</a></div>}{session.user && <div className="session-status"><span>{session.user.username} · {session.user.role}</span><button onClick={async()=>{const response=await fetch('/api/aethergrid/auth/logout',{method:'POST'});if(response.ok){csrf=null;setSession({enabled:true,user:null,csrf:null});}}}>Sign out</button></div>}</>;
+ return <>{children}{location.protocol==='file:' && <div className="local-file-status" role="status">Local file · globe + 8 mapped cities. Public weather/seismic when online; AI/sign-in require runtime.<a href="http://127.0.0.1:8090">Open connected workspace</a></div>}{session.user && <div className="session-status"><span>{session.user.username} · {session.user.role}</span><button onClick={async()=>{const response=await fetch('/api/aethergrid/auth/logout',{method:'POST'});if(response.ok){csrf=null;setSession({enabled:true,user:null,csrf:null});}}}>Sign out</button></div>}</>;
 }

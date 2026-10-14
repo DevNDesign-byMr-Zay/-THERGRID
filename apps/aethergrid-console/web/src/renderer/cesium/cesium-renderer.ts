@@ -4,6 +4,7 @@ import type {
 } from '../overlays/atmospheric-overlay';
 import {
   Cartesian2,
+  Cartesian3,
   Cesium3DTileFeature,
   Cesium3DTileset,
   Color,
@@ -12,12 +13,14 @@ import {
   Ion,
   JulianDate,
   OpenStreetMapImageryProvider,
+  SingleTileImageryProvider,
   Math as CesiumMath,
   Terrain,
   Viewer,
   createGooglePhotorealistic3DTileset,
   createOsmBuildingsAsync
 } from 'cesium';
+import earthTexture from '../../../../assets/earth-natural-earth-ii.jpg';
 import { spatialRenderFrameKey } from '../../time/render-frame';
 
 import type { SpatialOverlaySnapshot } from '../overlays/spatial-overlay';
@@ -111,6 +114,10 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #degraded = false;
   #busy = false;
   #journeyPhase: SpatialJourneyPhase = 'idle';
+  #worldView = false;
+  #lastOrbitTime = 0;
+  #lastPointerTime = 0;
+  #removeIdleOrbit: (() => void) | null = null;
   #journeyGeneration = 0;
   #detailLevel: SpatialDetailLevel = 'district';
   #solar: SpatialSolarStatus | null = null;
@@ -122,9 +129,6 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
   async initialize(config: SpatialRendererConfig = {}): Promise<void> {
     if (!this.#container) throw new Error('Cesium renderer must be mounted before initialization');
-    if (typeof location !== 'undefined' && location.protocol === 'file:') {
-      throw new Error('Direct-open local workspace uses the native grid; connected map sources require the application runtime.');
-    }
 
     const ionEnabled = Boolean(config.cesiumIonToken);
     this.#ionEnabled = ionEnabled;
@@ -162,7 +166,22 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#motionQuery?.addEventListener('change', this.#onMotionChange);
     for (const type of ['wheel', 'pointerdown', 'pointermove', 'pointerup']) this.#viewer.canvas.addEventListener(type, this.#onCameraInput, {passive: true});
     this.#onMotionChange();
+    if (location.protocol === 'file:') {
+      this.#removeIdleOrbit = this.#viewer.scene.preUpdate.addEventListener(() => {
+        const now = performance.now();
+        const delta = Math.min(100, now - (this.#lastOrbitTime || now));
+        this.#lastOrbitTime = now;
+        if (this.#worldView && this.#journeyPhase === 'idle' && !this.#motionQuery?.matches && now - this.#lastPointerTime > 2500) {
+          this.#viewer?.camera.rotate(Cartesian3.UNIT_Z, delta / 1000 * 0.014);
+        }
+      });
+      this.#viewer.canvas.addEventListener('pointerdown', () => { this.#lastPointerTime = performance.now(); });
+      this.#viewer.canvas.addEventListener('pointermove', () => { this.#lastPointerTime = performance.now(); });
+    }
     if (!ionEnabled) {
+      if (location.protocol === 'file:') {
+        this.#viewer.imageryLayers.addImageryProvider(await SingleTileImageryProvider.fromUrl(earthTexture));
+      } else {
       try {
         const osmLayer = this.#viewer.imageryLayers.addImageryProvider(
           new OpenStreetMapImageryProvider({
@@ -175,6 +194,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
         osmLayer.gamma = 0.86;
       } catch {
         // The Cesium ellipsoid + source-backed overlays remain usable if imagery is unavailable.
+      }
       }
     }
 
@@ -242,6 +262,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   }
 
   async flyTo(target: SpatialTarget): Promise<void> {
+    this.#worldView = target.journey === 'global';
     this.#requireViewer();
     if (!this.#cameraJourney) throw new Error('Cesium camera journey is not initialized');
 
@@ -498,6 +519,8 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   }
 
   destroy(): void {
+    this.#removeIdleOrbit?.();
+    this.#removeIdleOrbit = null;
     for (const type of ['wheel', 'pointerdown', 'pointermove', 'pointerup']) this.#viewer?.canvas.removeEventListener(type, this.#onCameraInput);
     this.#motionQuery?.removeEventListener('change', this.#onMotionChange);
     this.#motionQuery = null;

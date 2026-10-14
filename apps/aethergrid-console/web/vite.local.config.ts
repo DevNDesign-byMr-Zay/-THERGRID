@@ -7,7 +7,24 @@ const directory = path.dirname(fileURLToPath(import.meta.url));
 
 // Classic inline JavaScript does not require a server or file-origin module access.
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), {
+    name: 'embedded-cesium-module-urls',
+    enforce: 'pre',
+    resolveId(source, importer) {
+      if (source.endsWith('buildModuleUrl.js') && importer?.includes('/@cesium/engine/')) {
+        return path.join(directory, 'src/standalone/cesium-module-url.ts');
+      }
+    },
+    transform(code, id) {
+      if (id.endsWith('/Core/TaskProcessor.js')) {
+        return code.replace('function createWorker(url) {', `function createWorker(url) {
+          const embedded = globalThis.__AETHERGRID_ASSETS__;
+          const key = 'Workers/' + url.replace(/\\.js$/, '') + '.js';
+          if (embedded && embedded[key]) return new Worker(embedded[key], {type:'classic'});
+        `);
+      }
+    }
+  }],
   define: {
     CESIUM_BASE_URL: JSON.stringify('./web/dist/cesium'),
     'process.env.NODE_ENV': JSON.stringify('production'),

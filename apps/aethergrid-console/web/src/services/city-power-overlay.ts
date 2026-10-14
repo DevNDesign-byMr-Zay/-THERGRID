@@ -108,6 +108,7 @@ interface CityMeshResponse {
   source?: {
     provider?: string;
     live?: boolean;
+    snapshot?: boolean;
     attribution?: string | null;
     fetchedAt?: string | null;
     upstreamTimestamp?: string | null;
@@ -171,8 +172,8 @@ function sourceFields(mesh: CityMeshResponse): OverlaySourceFields {
     sourceTime: source.upstreamTimestamp ?? null,
     fetchedAt: source.fetchedAt ?? null,
     live: source.live === true,
-    stale: false,
-    fallback: source.live !== true,
+    stale: source.snapshot === true,
+    fallback: source.live !== true && !(source.snapshot === true && source.provider === 'bundled-openstreetmap'),
     attribution: source.attribution ?? source.provider ?? null
   };
 }
