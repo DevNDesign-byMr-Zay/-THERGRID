@@ -66,14 +66,13 @@ export class CameraJourneyController {
     for (const stage of stages) {
       if (journey !== this.#activeJourney) return;
       onPhase?.(stage.phase);
-      await this.#flyStage(target, stage, journey);
+      await this.#flyStage(target, stage);
     }
   }
 
   async #flyStage(
     target: SpatialTarget,
-    stage: CameraJourneyStage,
-    journey: number
+    stage: CameraJourneyStage
   ): Promise<void> {
     const focus = Cartesian3.fromDegrees(
       target.longitude,
@@ -90,12 +89,13 @@ export class CameraJourneyController {
     await new Promise<void>((resolve) => {
       this.#camera.flyToBoundingSphere(sphere, {
         offset,
-        duration: stage.durationSeconds,
+        duration: typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : stage.durationSeconds,
         complete: resolve,
         cancel: resolve
       });
     });
 
-    if (journey !== this.#activeJourney) this.#camera.cancelFlight();
+    // A superseded flight has already completed/cancelled. Never cancel the
+    // shared camera here: it may now belong to a newer city journey.
   }
 }

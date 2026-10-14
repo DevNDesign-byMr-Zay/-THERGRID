@@ -1187,11 +1187,11 @@ button {
 
 .viewport-warning {
   position: absolute;
-  left: 50%;
-  top: 50%;
+  right: 16px;
+  bottom: 230px;
   z-index: 5;
-  max-width: 420px;
-  transform: translate(-50%, -50%);
+  max-width: min(360px, calc(100% - 32px));
+  pointer-events: none;
   padding: 12px 14px;
   border: 1px solid rgba(255, 192, 105, 0.35);
   border-radius: 9px;

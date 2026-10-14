@@ -140,7 +140,7 @@ export class WeatherAtmosphereLayer {
     this.#removePrecipitation();
     if (!this.#clouds.isDestroyed()) {
       this.#viewer.scene.primitives.remove(this.#clouds);
-      this.#clouds.destroy();
+      if (!this.#clouds.isDestroyed()) this.#clouds.destroy();
     }
     this.#snapshot = null;
   }

@@ -2336,7 +2336,7 @@ export function App() {
               {scope === 'world'
                 ? 'LIVE AQI · USGS SEISMIC · SOLAR 4D'
                 : cityIdentity
-                  ? `${sourceBuildingCount.toLocaleString()} MAPPED BUILDINGS · ${cityIdentity.sourceBackedHeightCoveragePercent.toFixed(1)}% SOURCE HEIGHTS`
+                  ? `${sourceBuildingCount.toLocaleString()} MAPPED BUILDINGS · ${cityIdentity.sourceBackedHeightCoveragePercent.toFixed(1)}% MAPPED HEIGHT TAGS`
                   : 'SOURCE-BACKED CITY GEOMETRY LOADING'}
             </em>
           </div>
@@ -2410,6 +2410,10 @@ export function App() {
               </span>
               <span className={cityIdentity?.live ? 'status-dot live' : 'status-dot'} />
             </div>
+            {cityIdentity && <p className="city-geometry-coverage" aria-label="Building geometry coverage">
+              Explicit height tags {cityIdentity.explicitHeightCoveragePercent.toFixed(1)}% · estimated tags {cityIdentity.estimatedHeightCoveragePercent.toFixed(1)}% · levels-derived {cityIdentity.levelsDerivedHeightCoveragePercent.toFixed(1)}% · modeled {cityIdentity.modeledHeightCoveragePercent.toFixed(1)}%.
+              {' '}{cityIdentity.refinedRoofCount} supported mapped roofs · {cityIdentity.limitedRoofCount} roofs retain simple massing · {cityIdentity.rejectedBuildingCount} invalid buildings withheld. Mapped tags are not surveyed measurements.
+            </p>}
             <div className="identity-metrics">
               <span>
                 <small>BUILDINGS</small>

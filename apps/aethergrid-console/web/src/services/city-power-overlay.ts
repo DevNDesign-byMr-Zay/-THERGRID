@@ -1,3 +1,4 @@
+import { buildingGeometry } from '../renderer/overlays/building-geometry';
 import type {
   OverlayCoordinate,
   OverlayNodeKind,
@@ -79,6 +80,13 @@ export interface CityIdentitySummary {
   p95HeightM: number;
   medianHeightM: number;
   sourceBackedHeightCoveragePercent: number;
+  explicitHeightCoveragePercent: number;
+  estimatedHeightCoveragePercent: number;
+  levelsDerivedHeightCoveragePercent: number;
+  modeledHeightCoveragePercent: number;
+  refinedRoofCount: number;
+  limitedRoofCount: number;
+  rejectedBuildingCount: number;
   buildingPartCount: number;
   roofTaggedCount: number;
   namedStructureCount: number;
@@ -263,15 +271,12 @@ function cityMeshToBuildingOverlay(
   const source = sourceFields(mesh);
   const areas: SpatialOverlayArea[] = (mesh.buildings ?? [])
     .filter((building) => (building.footprint?.length ?? 0) >= 3)
-    .map((building) => {
-      const minHeightM = Math.max(0, Number(building.minHeightM ?? 0));
-      const heightM = Math.max(
-        minHeightM + 3.2,
-        Number(building.heightM ?? minHeightM + 12)
-      );
-      const heightSource = String(building.heightSource ?? 'inferred');
+    .map((building): SpatialOverlayArea => {
+      const minHeightM = Number(building.minHeightM ?? 0);
+      const heightM = Number(building.heightM ?? minHeightM + 12);
+      const heightSource = building.heightM == null ? 'inferred' : String(building.heightSource ?? 'inferred');
       const sourceBacked =
-        heightSource !== 'inferred' && heightSource !== 'synthetic-fallback';
+        ['height', 'est_height', 'building:levels'].includes(heightSource);
       const envelope = footprintEnvelope(building.footprint ?? []);
       const envelopeCenter = envelope
         ? localMetersToCoordinate(mesh.city, envelope.center, 0)
@@ -288,6 +293,7 @@ function cityMeshToBuildingOverlay(
         properties: {
           sourceFeatureId: building.id,
           sourceDataset: 'osm-overpass',
+          sourceProvider: mesh.source?.provider ?? null,
           cityId: mesh.city.id,
           presentationType: 'source-backed-building',
           sourceBacked,
@@ -310,7 +316,7 @@ function cityMeshToBuildingOverlay(
           headingDegrees: envelope?.headingDegrees ?? 0
         }
       };
-    });
+    }).filter((area) => buildingGeometry(area) !== null);
 
   return {
     id: `buildings:${mesh.city.id}:${source.eventTime}`,
@@ -514,14 +520,27 @@ function arrivalHeadingDegrees(mesh: CityMeshResponse): number {
 
 function cityIdentity(mesh: CityMeshResponse): CityIdentitySummary {
   const profile = mesh.skylineProfile ?? {};
+  const admitted = cityMeshToBuildingOverlay(mesh).areas ?? [];
+  const geometries = admitted.map((area) => buildingGeometry(area)!);
+  const count = geometries.length;
+  const heights = geometries.map((g) => g.topM).sort((a, b) => a - b);
+  const percentile = (fraction: number) => heights[Math.floor((count - 1) * fraction)] ?? 0;
+  const coverage = (category: string) => count ? geometries.filter((g) => g.heightCategory === category).length / count * 100 : 0;
   return {
     cityId: mesh.city.id,
     district: profile.district ?? null,
-    buildingCount: Number(profile.buildingCount ?? 0),
-    maxHeightM: Number(profile.maxHeightM ?? 0),
-    p95HeightM: Number(profile.p95HeightM ?? 0),
-    medianHeightM: Number(profile.medianHeightM ?? 0),
-    sourceBackedHeightCoveragePercent: Number(profile.sourceBackedHeightCoveragePercent ?? 0),
+    buildingCount: count,
+    maxHeightM: percentile(1),
+    p95HeightM: percentile(0.95),
+    medianHeightM: percentile(0.5),
+    sourceBackedHeightCoveragePercent: 100 - (count ? coverage('modeled') : 100),
+    explicitHeightCoveragePercent: coverage('explicit-tag'),
+    estimatedHeightCoveragePercent: coverage('estimated-tag'),
+    levelsDerivedHeightCoveragePercent: coverage('levels-derived'),
+    modeledHeightCoveragePercent: coverage('modeled'),
+    refinedRoofCount: geometries.filter((g) => g.roofFaces.length > 0).length,
+    limitedRoofCount: geometries.filter((g) => g.limitation !== null).length,
+    rejectedBuildingCount: (mesh.buildings?.length ?? 0) - count,
     buildingPartCount: Number(profile.buildingPartCount ?? 0),
     roofTaggedCount: Number(profile.roofTaggedCount ?? 0),
     namedStructureCount: Number(profile.namedStructureCount ?? 0),
@@ -530,7 +549,7 @@ function cityIdentity(mesh: CityMeshResponse): CityIdentitySummary {
     namedStructures: Array.isArray(profile.namedStructures)
       ? profile.namedStructures
           .filter((item): item is NonNullable<CityIdentitySummary['namedStructures'][number]> =>
-            Boolean(item?.id && item?.name)
+            Boolean(item?.id && item?.name && Number.isFinite(item.heightM) && item.heightM > 0 && item.heightM <= 1200 && admitted.some((area) => area.id === item.id))
           )
           .slice(0, 12)
       : [],
@@ -545,7 +564,8 @@ function cityMeshToIlluminationOverlay(
   mesh: CityMeshResponse
 ): SpatialOverlaySnapshot {
   const source = sourceFields(mesh);
-  const candidates = (mesh.buildings ?? [])
+  const admittedIds = new Set((cityMeshToBuildingOverlay(mesh).areas ?? []).map((area) => area.id));
+  const candidates = (mesh.buildings ?? []).filter((building) => admittedIds.has(building.id))
     .map((building) => ({
       building,
       center: centroid(building.footprint),
