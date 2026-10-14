@@ -45,6 +45,7 @@ const boundedNumberFromEnv = (defaultValue, min = 1, max = 65535) =>
 export const envSchema = z.object({
   // App / System
   AETHERGRID_PORT: boundedNumberFromEnv(8090, 1, 65535),
+  AETHERGRID_BIND_ADDRESS: z.enum(['127.0.0.1', '0.0.0.0']).default('127.0.0.1'),
   PORT: boundedNumberFromEnv(8090, 1, 65535),
   AETHERGRID_DATA_DIR: z.string().optional().default('.aethergrid-data'),
 

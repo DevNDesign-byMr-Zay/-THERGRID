@@ -50,6 +50,7 @@ export function createProviderConfig(rawEnv = process.env) {
   return Object.freeze({
     app: Object.freeze({
       port: effectivePort,
+      bindAddress: env.AETHERGRID_BIND_ADDRESS,
       dataDir: env.AETHERGRID_DATA_DIR,
     }),
     ai: Object.freeze({

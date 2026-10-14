@@ -2041,7 +2041,7 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
 });
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  server.listen(port, '127.0.0.1', () => {
+  server.listen(port, providerRegistry.config.app.bindAddress, () => {
     activity(`ÆTHERGRID backend started on port ${port}.`, 'system');
     process.stdout.write(`ÆTHERGRID app listening on http://127.0.0.1:${port}\n`);
   });

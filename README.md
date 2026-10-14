@@ -70,6 +70,10 @@ The final submission gate must run on one exact `main` SHA after canonical packa
 
 The root `.env.example` configures the health service without secrets. The application backend's [environment example](apps/aethergrid-console/.env.example) documents server-side provider configuration. Keep credentials in encrypted Actions secrets or an ignored deployment/runtime environment; never commit them. Public provider/runtime endpoints redact server credentials.
 
+## Latest verified main evidence
+
+Main `9c2957f51fff0c0a58d2d71bc492a8cc30599fbb` passed [canonical acceptance](https://github.com/DevNDesign-byMr-Zay/-THERGRID/actions/runs/38508833100): 147 browser tests (3 skipped), followed by 2 credentialed Cesium tests. [Sanitized source receipts](https://github.com/DevNDesign-byMr-Zay/-THERGRID/actions/runs/38508833100/artifacts/11869564479) verify real AI specialist/TEAM responses, weather/forecast, EIA NYIS, NOAA BATN6, transit discovery, and 25 Cesium building tiles plus terrain/imagery. IBM passed authenticated discovery of three hardware backends; no hardware job was submitted or executed. The separate fifteen-minute replay passed on the source-identical final feature tree. See [rescore readiness](docs/RESCORE_READINESS.md) for boundaries and remaining work.
+
 ## Current status and future work
 
 Backend/provider PR #145, React command-center PR #144, repository cleanup #147, canonical runtime/ZIP migration #148, spatial-first renderer work #158-#159, release reconciliation #161, acceptance hardening #162 and verified-main trigger #163 are integrated. Exact-main Engineering CI, CodeQL, canonical browser acceptance, live-provider checks and sanitized evidence completed successfully for the current 0.2.1 candidate on October 11, 2026. Production deployment configuration remains outstanding. The runtime stack, initial schemas, synthetic fixture and initial test/CI foundation are complete. [Roadmap](docs/ROADMAP.md) separates delivered work from future pilots and actuation research.
@@ -104,7 +108,11 @@ The canonical fresh-clone Compose file is `docker-compose.yml`:
 docker compose -f docker-compose.yml up --build
 ```
 
-The health service is expected to become healthy at `http://127.0.0.1:8080/health` without external credentials.
+This starts both the canonical ÆTHERGRID React/backend application at `http://127.0.0.1:8090` and the independent health service at `http://127.0.0.1:8080/health`. The frontend is built inside `Dockerfile.aethergrid`; the Node runtime serves same-origin APIs. Local profiles persist in the named `aethergrid-data` volume. Docker Compose 2.24+ is required for the optional environment file.
+
+Provider credentials are optional for startup and must be supplied in an ignored `.env.aethergrid` file for live integrations. The image never contains those secrets. Without credentials, the application reports each provider's unavailable/fallback state. This command does not provision cloud infrastructure or certify every external provider. Ordinary local Node startup remains loopback-only; container binding is explicitly configured, and the app's published host port is restricted to loopback.
+
+`aethergrid-container-smoke` verifies the compiled React root and JavaScript asset, application configuration/runtime APIs, health service, and profile persistence through a container restart. Docker is required for this route. The ZIP remains extract-and-launch; opening a ZIP or HTML cannot start backend processes.
 
 ## Coverage evidence
 
