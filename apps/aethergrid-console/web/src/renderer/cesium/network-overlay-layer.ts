@@ -21,6 +21,8 @@ import {
   PolygonGraphics,
   PolygonHierarchy,
   PolylineGraphics,
+  PolylineGeometry,
+  PolylineColorAppearance,
   Primitive,
   Transforms,
   VerticalOrigin,
@@ -28,9 +30,9 @@ import {
   WallGraphics
 } from 'cesium';
 
-import { buildingGeometry } from '../overlays/building-geometry';
+import { buildingEdges, buildingGeometry } from '../overlays/building-geometry';
 
-import type { SpatialScenarioVisual, TemporalInstant } from '../spatial-renderer';
+import type { SpatialScenarioVisual, TemporalInstant, VisualMode } from '../spatial-renderer';
 
 import {
   isActiveAt,
@@ -582,6 +584,14 @@ export class NetworkOverlayLayer {
   #scenarioGhostEntities = new Map<string, Entity>();
   #areaEntities = new Map<string, Entity>();
   #buildingPrimitive: Primitive | null = null;
+  #buildingLines: Primitive | null = null;
+  #fillStyles: { id: object; value: Uint8Array; base: Color }[] = [];
+  #lineStyles: { id: { sourceFeatureId: string }; value: Uint8Array }[] = [];
+  #areaColors = new Map<string, Color>();
+  #labelColors = new Map<string, { fill: Color; outline: Color; background: Color }>();
+  #modelColors = new Map<string, Color>();
+  #presentation: VisualMode = 'solid';
+  #opacity = 1;
   #selectedSourceFeatureId: string | null = null;
   #time: TemporalInstant | null = null;
   #visible = true;
@@ -599,6 +609,12 @@ export class NetworkOverlayLayer {
     this.#edgeEntities.clear();
     this.#scenarioGhostEntities.clear();
     this.#areaEntities.clear();
+    this.#areaColors.clear();
+    this.#labelColors.clear();
+    this.#modelColors.clear();
+    if (this.#selectedSourceFeatureId && !(snapshot.areas ?? []).some((area) => this.#sourceFeatureId(area.id, area.properties) === this.#selectedSourceFeatureId) &&
+      !snapshot.nodes.some((node) => this.#sourceFeatureId(node.id, node.properties) === this.#selectedSourceFeatureId) &&
+      !snapshot.edges.some((edge) => this.#sourceFeatureId(edge.id, edge.properties) === this.#selectedSourceFeatureId)) this.#selectedSourceFeatureId = null;
 
     const provenance = provenanceProperties(snapshot);
 
@@ -609,6 +625,12 @@ export class NetworkOverlayLayer {
     for (const node of snapshot.nodes) {
       const entity = this.#source.entities.add(nodeEntity(node, provenance));
       this.#nodeEntities.set(node.id, entity);
+      if (entity.label) this.#labelColors.set(node.id, {
+        fill: Color.clone(entity.label.fillColor?.getValue() ?? Color.WHITE),
+        outline: Color.clone(entity.label.outlineColor?.getValue() ?? Color.BLACK),
+        background: Color.clone(entity.label.backgroundColor?.getValue() ?? Color.BLACK)
+      });
+      if (entity.model) this.#modelColors.set(node.id, Color.clone(entity.model.color?.getValue() ?? Color.WHITE));
     }
     for (const edge of snapshot.edges) {
       const entity = this.#source.entities.add(edgeEntity(edge, provenance));
@@ -628,16 +650,29 @@ export class NetworkOverlayLayer {
       if (area.positions.length < 3 || area.kind === 'building') continue;
       const entity = this.#source.entities.add(areaEntity(area, provenance));
       this.#areaEntities.set(area.id, entity);
+      const color = (entity.polygon?.material as ColorMaterialProperty | undefined)?.color?.getValue();
+      if (color) this.#areaColors.set(area.id, Color.clone(color));
     }
 
-    this.#source.show = this.#visible;
+    this.#source.show = this.#visible && this.#opacity > 0;
+    this.setPresentation(this.#presentation, this.#opacity);
     this.#viewer.scene.requestRender();
   }
 
   setVisible(visible: boolean): void {
     this.#visible = visible;
-    this.#source.show = visible;
-    if (this.#buildingPrimitive) this.#buildingPrimitive.show = visible;
+    this.#source.show = visible && this.#opacity > 0;
+    this.#applyBuildingStyle();
+    this.#viewer.scene.requestRender();
+  }
+
+  setPresentation(mode: VisualMode, opacity: number): void {
+    this.#presentation = mode;
+    this.#opacity = Number.isFinite(opacity) ? Math.max(0, Math.min(1, opacity)) : 1;
+    this.#source.show = this.#visible && this.#opacity > 0;
+    this.#applyBuildingStyle();
+    if (this.#time) this.setTime(this.#time);
+    else if (this.#snapshot) this.setTime({ iso: this.#snapshot.eventTime, mode: 'live' });
     this.#viewer.scene.requestRender();
   }
 
@@ -651,7 +686,7 @@ export class NetworkOverlayLayer {
     if (!this.#selectedSourceFeatureId) return;
     this.#selectedSourceFeatureId = null;
     if (this.#time) this.setTime(this.#time);
-    else this.#viewer.scene.requestRender();
+    else this.#applyBuildingStyle();
   }
 
   setTime(time: TemporalInstant): void {
@@ -677,6 +712,8 @@ export class NetworkOverlayLayer {
       const intensity = overlayIntensity(node.intensity);
       const urbanLight =
         node.properties?.presentationType === 'urban-illumination';
+      point.outlineColor = new ConstantProperty(Color.WHITE.withAlpha(.35));
+      point.outlineWidth = new ConstantProperty(urbanLight ? 0 : node.kind === 'aircraft' ? .8 : 1.25);
       const baseSize = urbanLight
         ? 1.2 + intensity * 1.8
         : 5 + intensity * 7;
@@ -789,6 +826,8 @@ export class NetworkOverlayLayer {
     }
 
     this.#applySelectionHighlight();
+    this.#applyBuildingStyle();
+    this.#applyEntityOpacity();
     if (this.#visible) this.#viewer.scene.requestRender();
   }
 
@@ -831,6 +870,7 @@ export class NetworkOverlayLayer {
           }
         };
 
+        const bodyColor = buildingAreaColor(area, 1);
         const body = new GeometryInstance({
           id,
           geometry: new PolygonGeometry({
@@ -843,22 +883,29 @@ export class NetworkOverlayLayer {
           }),
           attributes: {
             color: ColorGeometryInstanceAttribute.fromColor(
-              buildingAreaColor(area, 1)
+              bodyColor
             )
           }
         });
+        this.#fillStyles.push({ id, value: body.attributes.color.value, base: bodyColor });
         const roofArea = { ...area, properties: { ...area.properties,
           buildingColor: area.properties?.roofColor,
           buildingMaterial: area.properties?.roofMaterial } };
-        const roofs = massing.roofFaces.map((face) => new GeometryInstance({
-          id,
+        const roofs = massing.roofFaces.map((face, index) => {
+          const roofId = { ...id, geometryPart: `roof:${index}` };
+          const base = buildingAreaColor(roofArea, 1);
+          const instance = new GeometryInstance({
+          id: roofId,
           geometry: new PolygonGeometry({
             polygonHierarchy: new PolygonHierarchy(face.map((p) => Cartesian3.fromDegrees(p.longitude, p.latitude, p.heightMeters))),
             perPositionHeight: true,
             vertexFormat: PerInstanceColorAppearance.VERTEX_FORMAT
           }),
-          attributes: { color: ColorGeometryInstanceAttribute.fromColor(buildingAreaColor(roofArea, 1)) }
-        }));
+          attributes: { color: ColorGeometryInstanceAttribute.fromColor(base) }
+          });
+          this.#fillStyles.push({ id: roofId, value: instance.attributes.color.value, base });
+          return instance;
+        });
         return [body, ...roofs];
       });
 
@@ -876,13 +923,91 @@ export class NetworkOverlayLayer {
     primitive.show = this.#visible;
     this.#viewer.scene.primitives.add(primitive);
     this.#buildingPrimitive = primitive;
+    const lines = (snapshot.areas ?? []).flatMap((area) => area.kind !== 'building' ? [] : buildingEdges(area).map(([from, to], index) => {
+      const sourceFeatureId = this.#sourceFeatureId(area.id, area.properties);
+      const id = { aethergridSourceBuilding: true, id: area.id, sourceFeatureId, geometryPart: `edge:${index}`,
+        label: area.label ?? area.id, latitude: area.properties?.centroidLatitude, longitude: area.properties?.centroidLongitude,
+        heightM: area.properties?.heightM, properties: { ...provenance, ...area.properties, overlayKind: area.kind,
+          heightCategory: buildingGeometry(area)?.heightCategory, roofRefinement: buildingGeometry(area)?.roofFaces.length ? 'source-tagged-pyramidal' : 'simple-massing',
+          geometryLimitation: buildingGeometry(area)?.limitation } };
+      const instance = new GeometryInstance({ id, geometry: new PolylineGeometry({ positions: [coordinate(from), coordinate(to)], width: 1.5,
+        vertexFormat: PolylineColorAppearance.VERTEX_FORMAT }), attributes: { color: ColorGeometryInstanceAttribute.fromColor(Color.CYAN) } });
+      this.#lineStyles.push({ id, value: instance.attributes.color.value });
+      return instance;
+    }));
+    if (lines.length) {
+      this.#buildingLines = new Primitive({ geometryInstances: lines, appearance: new PolylineColorAppearance({ translucent: true }), asynchronous: false });
+      this.#viewer.scene.primitives.add(this.#buildingLines);
+    }
     this.#viewer.scene.requestRender();
   }
 
   #clearBuildingPrimitive(): void {
-    if (!this.#buildingPrimitive) return;
-    this.#viewer.scene.primitives.remove(this.#buildingPrimitive);
+    for (const primitive of [this.#buildingPrimitive, this.#buildingLines]) {
+      if (!primitive || primitive.isDestroyed()) continue;
+      this.#viewer.scene.primitives.remove(primitive);
+      if (!primitive.isDestroyed()) primitive.destroy();
+    }
     this.#buildingPrimitive = null;
+    this.#buildingLines = null;
+    this.#fillStyles = [];
+    this.#lineStyles = [];
+  }
+
+  #writeColor(primitive: Primitive | null, id: object, value: Uint8Array, color: Color): void {
+    const bytes = ColorGeometryInstanceAttribute.toValue(color);
+    value.set(bytes);
+    if (primitive?.ready) primitive.getGeometryInstanceAttributes(id).color = bytes;
+  }
+
+  #applyBuildingStyle(): void {
+    const mode = this.#presentation;
+    const alpha = (mode === 'holographic' ? .12 : mode === 'grid' ? .18 : mode === 'xray' ? .2 : 1) * this.#opacity;
+    if (this.#buildingPrimitive) {
+      this.#buildingPrimitive.show = this.#visible && this.#opacity > 0 && mode !== 'wireframe';
+      const translucent = alpha < 1;
+      if (this.#buildingPrimitive.appearance.translucent !== translucent) this.#buildingPrimitive.appearance = new PerInstanceColorAppearance({ closed: !translucent, translucent, flat: false });
+      for (const style of this.#fillStyles) this.#writeColor(this.#buildingPrimitive, style.id, style.value,
+        (mode === 'holographic' ? Color.fromCssColorString('#46eaff') : mode === 'xray' ? Color.fromCssColorString('#6bc7ff') : style.base).withAlpha(alpha));
+    }
+    if (this.#buildingLines) {
+      this.#buildingLines.show = this.#visible && this.#opacity > 0;
+      for (const style of this.#lineStyles) {
+        const selected = style.id.sourceFeatureId === this.#selectedSourceFeatureId;
+        const base = selected ? Color.WHITE : mode === 'solid' || mode === 'reality' ? Color.fromCssColorString('#324351') : Color.fromCssColorString('#58efff');
+        this.#writeColor(this.#buildingLines, style.id, style.value, base.withAlpha((selected ? 1 : mode === 'solid' || mode === 'reality' ? .35 : .9) * this.#opacity));
+      }
+    }
+  }
+
+  #applyEntityOpacity(): void {
+    for (const [id, entity] of this.#nodeEntities) {
+      if (entity.point) {
+        const color = entity.point.color?.getValue();
+        const outline = entity.point.outlineColor?.getValue();
+        if (color) entity.point.color = new ConstantProperty(color.withAlpha(color.alpha * this.#opacity));
+        if (outline) entity.point.outlineColor = new ConstantProperty(outline.withAlpha(outline.alpha * this.#opacity));
+      }
+      const label = this.#labelColors.get(id);
+      if (label && entity.label) {
+        entity.label.fillColor = new ConstantProperty(label.fill.withAlpha(label.fill.alpha * this.#opacity));
+        entity.label.outlineColor = new ConstantProperty(label.outline.withAlpha(label.outline.alpha * this.#opacity));
+        entity.label.backgroundColor = new ConstantProperty(label.background.withAlpha(label.background.alpha * this.#opacity));
+      }
+      const model = this.#modelColors.get(id);
+      if (model && entity.model) entity.model.color = new ConstantProperty(model.withAlpha(model.alpha * this.#opacity));
+    }
+    for (const entity of [...this.#edgeEntities.values(), ...this.#scenarioGhostEntities.values()]) {
+      const property = (entity.polyline?.material as ColorMaterialProperty | undefined)?.color;
+      const color = entity.properties?.overlayKind?.getValue() === 'scenario-baseline'
+        ? Color.fromCssColorString('#91a0ad').withAlpha(.24)
+        : property?.getValue();
+      if (color && entity.polyline) entity.polyline.material = new ColorMaterialProperty(color.withAlpha(color.alpha * this.#opacity));
+    }
+    for (const [id, entity] of this.#areaEntities) {
+      const color = this.#areaColors.get(id);
+      if (color && entity.polygon) entity.polygon.material = new ColorMaterialProperty(color.withAlpha(color.alpha * this.#opacity));
+    }
   }
 
   #sourceFeatureId(
@@ -965,5 +1090,8 @@ export class NetworkOverlayLayer {
     this.#edgeEntities.clear();
     this.#scenarioGhostEntities.clear();
     this.#areaEntities.clear();
+    this.#areaColors.clear();
+    this.#labelColors.clear();
+    this.#modelColors.clear();
   }
 }

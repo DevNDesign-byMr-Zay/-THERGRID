@@ -56,7 +56,7 @@ test('v4 dossiers omit current-only context outside LIVE mode and match A/B fram
     text('apps/aethergrid-console/web/src/services/spatial-entity-dossier.ts'),
   ]);
 
-  assert.match(app, /temporal\.mode === 'live' \? atmosphere : null/u);
+  assert.match(app, /scope === 'city' \? activeAtmosphere : null/u);
   assert.match(app, /temporal\.mode === 'live'[\s\S]*\? liveContext[\s\S]*: null/u);
   assert.match(dossier, /observation\.selectedEntity\.canonicalId !== canonicalId/u);
   assert.match(dossier, /matchingObservations/u);

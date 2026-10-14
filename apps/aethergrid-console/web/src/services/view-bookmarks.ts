@@ -6,6 +6,7 @@ import type {
   VisualMode
 } from '../renderer/spatial-renderer';
 import type { UseCaseId } from '../app/use-case-presets';
+import type { TimeRange } from '../time/temporal-model';
 
 export interface SpatialViewBookmark {
   id: string;
@@ -21,6 +22,7 @@ export interface SpatialViewBookmark {
   visualMode: VisualMode;
   temporalMode: TemporalMode;
   cursorIso: string;
+  playbackRange?: TimeRange | null;
   scenarioId?: string | null;
   scenarioVisual?: SpatialScenarioVisual | null;
   useCase: UseCaseId | null;
@@ -41,7 +43,10 @@ function validBookmark(value: unknown): value is SpatialViewBookmark {
     typeof item.target?.longitude === 'number' &&
     typeof item.cursorIso === 'string' &&
     typeof item.visualMode === 'string' &&
-    Array.isArray(item.layers)
+    Array.isArray(item.layers) &&
+    (item.playbackRange == null || (typeof item.playbackRange.start === 'string' && typeof item.playbackRange.end === 'string' &&
+      Number.isFinite(Date.parse(item.playbackRange.start)) && Number.isFinite(Date.parse(item.playbackRange.end)) &&
+      Date.parse(item.playbackRange.end) >= Date.parse(item.playbackRange.start)))
   );
 }
 
@@ -61,6 +66,7 @@ export function saveSpatialBookmarks(
   const next = bookmarks.slice(0, MAX_BOOKMARKS).map((bookmark) => ({
     ...bookmark,
     target: { ...bookmark.target },
+    playbackRange: bookmark.playbackRange ? { ...bookmark.playbackRange } : null,
     layers: bookmark.layers.map((layer) => ({ ...layer }))
   }));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
@@ -76,6 +82,7 @@ export function createSpatialBookmark(
     id: `view-${createdAt}-${Math.random().toString(36).slice(2, 8)}`,
     createdAt,
     target: { ...input.target },
+    playbackRange: input.playbackRange ? { ...input.playbackRange } : null,
     layers: input.layers.map((layer) => ({ ...layer }))
   };
 }

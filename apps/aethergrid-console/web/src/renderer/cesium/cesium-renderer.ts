@@ -10,6 +10,7 @@ import {
   EllipsoidTerrainProvider,
   Entity,
   Ion,
+  JulianDate,
   OpenStreetMapImageryProvider,
   Math as CesiumMath,
   Terrain,
@@ -17,12 +18,14 @@ import {
   createGooglePhotorealistic3DTileset,
   createOsmBuildingsAsync
 } from 'cesium';
+import { spatialRenderFrameKey } from '../../time/render-frame';
 
 import type { SpatialOverlaySnapshot } from '../overlays/spatial-overlay';
 
 import type {
   LayerState,
   SpatialFeatureSelection,
+  SpatialCameraSnapshot,
   SpatialPickPoint,
   SpatialRenderer,
   SpatialRendererConfig,
@@ -39,6 +42,7 @@ import type {
 
 import { AirQualityLayer } from './air-quality-layer';
 import { CameraJourneyController } from './camera-journey-controller';
+import { pickCesiumSurface } from './surface-picking';
 import { GeodeticGridLayer } from './geodetic-grid-layer';
 import { NetworkOverlayLayer } from './network-overlay-layer';
 import { SolarLightingController } from './solar-lighting-controller';
@@ -64,6 +68,13 @@ function featureProperties(feature: Cesium3DTileFeature): Readonly<Record<string
 export class CesiumSpatialRenderer implements SpatialRenderer {
   readonly engine = 'cesium' as const;
 
+  cameraSnapshot(): SpatialCameraSnapshot | null {
+    if (!this.#viewer || !this.#ready) return null;
+    const camera = this.#viewer.camera, position = camera.positionCartographic;
+    return { projection: 'geocentric', latitude: CesiumMath.toDegrees(position.latitude), longitude: CesiumMath.toDegrees(position.longitude),
+      heightMeters: position.height, headingDegrees: CesiumMath.toDegrees(camera.heading), pitchDegrees: CesiumMath.toDegrees(camera.pitch), rollDegrees: CesiumMath.toDegrees(camera.roll) };
+  }
+
   #container: HTMLElement | null = null;
   #viewer: Viewer | null = null;
   #buildings: Cesium3DTileset | null = null;
@@ -82,6 +93,20 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #selectedTile: { feature: Cesium3DTileFeature; color: Color } | null = null;
   #layers = new Map<string, LayerState>();
   #time: TemporalInstant | null = null;
+  #renderFrameKey: string | null = null;
+  #motionQuery: MediaQueryList | null = null;
+  #initialClockAnimation = false;
+  #onCameraInput = (event: Event) => {
+    if (this.#motionQuery?.matches !== true || (event.type === 'pointermove' && !(event as PointerEvent).buttons)) return;
+    this.#viewer?.scene.requestRender();
+  };
+  #onMotionChange = () => {
+    if (!this.#viewer) return;
+    this.#viewer.scene.requestRenderMode = this.#motionQuery?.matches === true;
+    this.#viewer.clock.shouldAnimate = this.#motionQuery?.matches ? false : this.#initialClockAnimation;
+    this.#renderFrameKey = null;
+    this.#viewer.scene.requestRender();
+  };
   #ready = false;
   #degraded = false;
   #busy = false;
@@ -102,7 +127,10 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#ionEnabled = ionEnabled;
     if (config.cesiumIonToken) Ion.defaultAccessToken = config.cesiumIonToken;
 
+    this.#motionQuery = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
     this.#viewer = new Viewer(this.#container, {
+      requestRenderMode: this.#motionQuery?.matches === true,
+      maximumRenderTimeChange: Number.POSITIVE_INFINITY,
       animation: false,
       baseLayerPicker: false,
       fullscreenButton: false,
@@ -127,6 +155,10 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
           })
     });
 
+    this.#initialClockAnimation = this.#viewer.clock.shouldAnimate;
+    this.#motionQuery?.addEventListener('change', this.#onMotionChange);
+    for (const type of ['wheel', 'pointerdown', 'pointermove', 'pointerup']) this.#viewer.canvas.addEventListener(type, this.#onCameraInput, {passive: true});
+    this.#onMotionChange();
     if (!ionEnabled) {
       try {
         const osmLayer = this.#viewer.imageryLayers.addImageryProvider(
@@ -161,10 +193,13 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
     if (ionEnabled) {
       try {
-        this.#buildings = await createOsmBuildingsAsync({
+        // The factory forwards all constructor options; its generated type omits these.
+        const buildingOptions: Cesium3DTileset.ConstructorOptions = {
+          enableDebugWireframe: true,
           enableShowOutline: true,
           showOutline: true
-        });
+        };
+        this.#buildings = await createOsmBuildingsAsync(buildingOptions);
         this.#viewer.scene.primitives.add(this.#buildings);
         this.#visualController.setBuildings(this.#buildings);
         this.#applyDetailForPhase(
@@ -228,7 +263,11 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
   setTime(time: TemporalInstant): void {
     const viewer = this.#requireViewer();
+    const key = spatialRenderFrameKey(time);
+    const unchanged = this.#motionQuery?.matches === true && this.#renderFrameKey === key;
     this.#time = { ...time };
+    this.#renderFrameKey = key;
+    if (unchanged) { viewer.clock.currentTime = JulianDate.fromIso8601(time.iso); return; }
     this.#solar = this.#solarLighting?.setTime(time) ?? this.#solar;
     if (this.#solar) this.#visualController?.setSolarPhase(this.#solar.phase);
     this.#grid?.setTime(time.iso);
@@ -288,6 +327,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       this.#overlays.set(snapshot.layerId, overlay);
     }
     overlay.apply(snapshot);
+    overlay.setPresentation(this.#appliedVisualMode, this.#layers.get(snapshot.layerId)?.opacity ?? 1);
     if (this.#time) overlay.setTime(this.#time);
     const sourceBuildingsSuppressed =
       snapshot.layerId === 'buildings' &&
@@ -334,48 +374,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   }
 
   async pickSurface(point: SpatialPickPoint): Promise<SpatialSurfacePoint | null> {
-    const viewer = this.#requireViewer();
-    const screen = new Cartesian2(point.x, point.y);
-
-    let cartesian =
-      viewer.scene.pickPositionSupported
-        ? viewer.scene.pickPosition(screen)
-        : undefined;
-    let source: SpatialSurfacePoint['source'] | null =
-      cartesian ? 'depth-surface' : null;
-
-    if (!cartesian) {
-      const ray = viewer.camera.getPickRay(screen);
-      const terrain = ray ? viewer.scene.globe.pick(ray, viewer.scene) : undefined;
-      if (terrain) {
-        cartesian = terrain;
-        source = 'terrain';
-      }
-    }
-
-    if (!cartesian) {
-      const ellipsoid = viewer.camera.pickEllipsoid(
-        screen,
-        viewer.scene.globe.ellipsoid
-      );
-      if (ellipsoid) {
-        cartesian = ellipsoid;
-        source = 'ellipsoid';
-      }
-    }
-
-    if (!cartesian || !source) return null;
-
-    const cartographic =
-      viewer.scene.globe.ellipsoid.cartesianToCartographic(cartesian);
-    if (!cartographic) return null;
-
-    return {
-      latitude: CesiumMath.toDegrees(cartographic.latitude),
-      longitude: CesiumMath.toDegrees(cartographic.longitude),
-      heightMeters: cartographic.height,
-      source
-    };
+    return pickCesiumSurface(this.#requireViewer(), point, this.#ionEnabled);
   }
 
   async pick(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null> {
@@ -416,6 +415,9 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       typeof primitiveFeature === 'object' &&
       primitiveFeature.aethergridSourceBuilding === true
     ) {
+      this.#clearSelection();
+      const layerId = typeof primitiveFeature.properties?.layerId === 'string' ? primitiveFeature.properties.layerId : 'buildings';
+      this.#overlays.get(layerId)?.selectSourceFeature(String(primitiveFeature.sourceFeatureId ?? primitiveFeature.id));
       const latitude = Number(primitiveFeature.latitude);
       const longitude = Number(primitiveFeature.longitude);
       const heightMeters = Number(primitiveFeature.heightM);
@@ -493,6 +495,10 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   }
 
   destroy(): void {
+    for (const type of ['wheel', 'pointerdown', 'pointermove', 'pointerup']) this.#viewer?.canvas.removeEventListener(type, this.#onCameraInput);
+    this.#motionQuery?.removeEventListener('change', this.#onMotionChange);
+    this.#motionQuery = null;
+    this.#renderFrameKey = null;
     this.#journeyGeneration += 1;
     this.#clearSelection();
     this.#cameraJourney?.cancel();
@@ -589,12 +595,15 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       : this.#layerVisible('terrain', true);
     if (this.#realityTiles) this.#realityTiles.show = realityActive;
     if (this.#buildings) {
-      this.#buildings.show = realityActive ? false : this.#buildingsShouldShow();
+      this.#buildings.show = realityActive ? false : this.#buildingsShouldShow() && (this.#layers.get('buildings')?.opacity ?? 1) > 0;
     }
+    this.#visualController?.setOpacity(this.#layers.get('buildings')?.opacity ?? 1);
     this.#grid?.setVisible(this.#layerVisible('grid', true));
+    this.#grid?.setOpacity(this.#layers.get('grid')?.opacity ?? 1);
     this.#weather?.setVisible(this.#layerVisible('weather', true));
     this.#airQuality?.setVisible(this.#layerVisible('air', true));
     for (const [layerId, overlay] of this.#overlays) {
+      overlay.setPresentation(this.#appliedVisualMode, this.#layers.get(layerId)?.opacity ?? 1);
       const sourceBuildingsSuppressed =
         layerId === 'buildings' &&
         this.#ionEnabled &&

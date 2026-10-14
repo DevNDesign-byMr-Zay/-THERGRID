@@ -69,6 +69,9 @@ html, body, #root { width: 100%; height: 100%; min-height: 0; overflow: hidden; 
 .renderer-tools :is(button, em) { font-size: 11px; }
 .renderer-tools button { min-height: 36px; }
 .renderer-tools .renderer-quality-switch { margin-top: 8px; }
+.viewport-status .native-fidelity { grid-column: 1 / -1; color: var(--warning); font-size: 10px; }
+.renderer-limitations { font-size: 11px; line-height: 1.5; max-width: 280px; margin: 4px 0 10px; }
+.viewport-status:has(.renderer-tools[open]) { max-height: min(360px, calc(100dvh - var(--temporal-rail-height, 140px) - 210px)); overflow-y: auto; overscroll-behavior: contain; }
 .viewport-status { max-width: min(320px, calc(100% - 32px)); }
 .viewport-status :is(strong, small) { font-size: 10px; }
 .city-load-status { top: 126px; bottom: auto; left: auto; right: 16px; transform: none; }
@@ -547,6 +550,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   color: var(--text); background: var(--panel-strong); padding: 5px 7px;
 }
 .source-time-selection { display: grid; min-width: 0; gap: 3px; }
+.modeled-frame-time { padding: 7px; font-size: 11px; font-weight: 500; color: var(--violet); overflow-wrap: anywhere; }
 .temporal-rail .first-source-sample { color: var(--text); max-width: 110px; }
 .temporal-rail .temporal-data-status { display: grid; grid-column: 1 / -2; }
 .temporal-rail .temporal-data-status span { font-size: 11px; line-height: 1.4; color: var(--muted); overflow-wrap: anywhere; }
@@ -557,6 +561,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .immersive-spatial .source-badge { bottom: calc(var(--temporal-rail-height, 140px) + 108px); }
 .temporal-rail .transport-button:disabled { opacity: .45; cursor: default; }
 .forecast-retry { justify-self: start; color: var(--text); }
+.layer-list .layer-control { border-bottom: 1px solid var(--line); padding: 5px 0; }
+.layer-list .layer-opacity { display: grid; grid-template-columns: 48px minmax(0, 1fr) 36px; gap: 6px; font-size: 11px; color: var(--muted); padding: 4px 0 6px; }
+.layer-opacity input[type='range'] { min-width: 0; width: 100%; accent-color: var(--cyan); min-height: 28px; }
+.layer-opacity output { text-align: right; }
 .local-time-events { grid-column: 1 / -1; display: flex; gap: 6px; overflow: auto; align-items: center; }
 .local-time-events > span { white-space: nowrap; color: var(--muted); }
 .local-time-events button { flex-shrink: 0; }

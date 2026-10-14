@@ -11,6 +11,7 @@ interface SpatialComparisonPanelProps {
   onCapture(slot: 'a' | 'b'): void;
   onClear(): void;
   onAnalyze?(): void;
+  onShowFrame(observation: SpatialObservation): void;
 }
 
 function frameSummary(observation: SpatialObservation | null): string {
@@ -30,7 +31,8 @@ export function SpatialComparisonPanel({
   comparison,
   onCapture,
   onClear,
-  onAnalyze
+  onAnalyze,
+  onShowFrame
 }: SpatialComparisonPanelProps) {
   return (
     <section className="spatial-comparison-panel">
@@ -53,6 +55,7 @@ export function SpatialComparisonPanel({
             <span>{label}</span>
             <strong>{frameSummary(observation)}</strong>
             <small>{frameTime(observation)}</small>
+            {observation ? <><small>WEATHER {observation.weatherReceipt?.state.toUpperCase() ?? 'UNVERIFIED'} · SOURCE {observation.weatherReceipt?.sourceTime ?? 'UNAVAILABLE'}</small><button type="button" onClick={() => onShowFrame(observation)}>SHOW FRAME {slot.toUpperCase()}</button></> : null}
             <button type="button" onClick={() => onCapture(slot)}>
               {observation ? 'RECAPTURE' : 'CAPTURE'}
             </button>
@@ -88,6 +91,7 @@ export function SpatialComparisonPanel({
               comparison.metricDeltas.map((metric) => (
                 <div key={metric.key}>
                   <span>{metric.label}</span>
+                  <small>{metric.basis.toUpperCase().replaceAll('-', ' ')}</small>
                   <small>
                     {metric.a.toFixed(2)}{metric.unit ? ` ${metric.unit}` : ''} →{' '}
                     {metric.b.toFixed(2)}{metric.unit ? ` ${metric.unit}` : ''}
@@ -127,7 +131,7 @@ export function SpatialComparisonPanel({
       <div className="analysis-boundary">
         <strong>OPERATOR ANALYSIS · NON-AUTHORITATIVE</strong>
         <span>
-          Missing metrics stay missing. Entity sameness uses canonical identity only; scene proximity is never treated as identity. Exported comparison packages are separate from the server evidence ledger.
+          Reduced comparison uses one renderer with frame switching and independent A/B receipts. Sources revalidate on switching; LIVE resumes the current clock. Missing metrics stay missing. Entity sameness uses canonical identity; scene proximity is never treated as identity. Mapped topology is not building history. Mixed, forecast and stale differences are not verified measured change.
         </span>
       </div>
     </section>

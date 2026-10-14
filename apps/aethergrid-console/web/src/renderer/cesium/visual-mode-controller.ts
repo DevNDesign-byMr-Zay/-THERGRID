@@ -23,6 +23,9 @@ export class VisualModeController {
   #realityEnabled = false;
   #mode: VisualMode = 'solid';
   #solarPhase: SolarPhase = 'day';
+  #opacity = 1;
+  #mappedColor = 'color("white")';
+  #mappedStyle: Cesium3DTileStyle | undefined;
 
   constructor(viewer: Viewer, options: { realityEnabled?: boolean } = {}) {
     this.#viewer = viewer;
@@ -31,7 +34,18 @@ export class VisualModeController {
 
   setBuildings(tileset: Cesium3DTileset | null): void {
     this.#buildings = tileset;
+    this.#mappedStyle = tileset?.style;
+    const color = tileset?.style?.style?.color;
+    this.#mappedColor = typeof color === 'string' ? color : 'color("white")';
   }
+
+  setOpacity(opacity: number): void {
+    const next = Number.isFinite(opacity) ? Math.max(0, Math.min(1, opacity)) : 1;
+    if (next === this.#opacity) return;
+    this.#opacity = next;
+    this.apply(this.#mode);
+  }
+
 
   setRealityTiles(tileset: Cesium3DTileset | null, error: string | null = null): void {
     this.#realityTiles = tileset;
@@ -48,6 +62,7 @@ export class VisualModeController {
     this.#mode = mode;
     const buildings = this.#buildings;
     const viewer = this.#viewer;
+    if (buildings) buildings.debugWireframe = mode === 'wireframe';
 
     if (mode === 'reality') {
       if (!this.#realityEnabled) {
@@ -100,23 +115,23 @@ export class VisualModeController {
       };
     }
 
-    if (mode === 'solid') {
+    if (mode === 'solid' || mode === 'wireframe') {
       this.#applySolid();
     } else if (mode === 'xray') {
       buildings.style = new Cesium3DTileStyle({
-        color: 'color("#6bc7ff", 0.20)'
+        color: `color("#6bc7ff", ${.2 * this.#opacity})`
       });
       buildings.showOutline = true;
       buildings.outlineColor = Color.fromCssColorString('#83ddff').withAlpha(0.85);
     } else if (mode === 'holographic') {
       buildings.style = new Cesium3DTileStyle({
-        color: 'color("#46eaff", 0.12)'
+        color: `color("#46eaff", ${.12 * this.#opacity})`
       });
       buildings.showOutline = true;
       buildings.outlineColor = Color.fromCssColorString('#58efff').withAlpha(0.96);
     } else {
       buildings.style = new Cesium3DTileStyle({
-        color: 'color("#6ca8c9", 0.58)'
+        color: `color("#6ca8c9", ${(mode === 'grid' ? .18 : .58) * this.#opacity})`
       });
       buildings.showOutline = true;
       buildings.outlineColor = Color.fromCssColorString('#88dcff').withAlpha(0.58);
@@ -137,18 +152,18 @@ export class VisualModeController {
     this.#viewer.scene.highDynamicRange = true;
     if (buildings) {
       if (this.#solarPhase === 'day') {
-        buildings.style = undefined;
+        buildings.style = this.#opacity === 1 ? this.#mappedStyle : new Cesium3DTileStyle({ color: `(${this.#mappedColor}) * vec4(1.0, 1.0, 1.0, ${this.#opacity})` });
       } else if (this.#solarPhase === 'golden-hour') {
         buildings.style = new Cesium3DTileStyle({
-          color: 'color("#d8b18a", 0.94)'
+          color: `(${this.#mappedColor}) * color("#d8b18a", ${.94 * this.#opacity})`
         });
       } else if (this.#solarPhase === 'twilight') {
         buildings.style = new Cesium3DTileStyle({
-          color: 'color("#59657a", 0.90)'
+          color: `(${this.#mappedColor}) * color("#59657a", ${.9 * this.#opacity})`
         });
       } else {
         buildings.style = new Cesium3DTileStyle({
-          color: 'color("#273243", 0.88)'
+          color: `(${this.#mappedColor}) * color("#273243", ${.88 * this.#opacity})`
         });
       }
 

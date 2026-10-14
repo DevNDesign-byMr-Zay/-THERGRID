@@ -1,5 +1,5 @@
 import type { TemporalMode } from '../renderer/spatial-renderer';
-import type { TemporalState } from './temporal-model';
+import type { TemporalState, TimeRange } from './temporal-model';
 import { assertIsoInstant } from './temporal-model';
 
 export type TemporalListener = (state: Readonly<TemporalState>) => void;
@@ -15,6 +15,8 @@ export class AethergridTemporalClock {
   #lastTickMs = 0;
   #playbackSamples: readonly number[] = [];
   #playheadMs = 0;
+  #modeled = false;
+  #requestedRange: TimeRange | null = null;
 
   constructor(now = new Date()) {
     const iso = now.toISOString();
@@ -49,7 +51,7 @@ export class AethergridTemporalClock {
 
   setMode(mode: TemporalMode, scenarioId: string | null = null): void {
     this.pause();
-    if (mode !== this.#state.mode) { this.#playbackSamples = []; this.#state.playbackRange = null; }
+    if (mode !== this.#state.mode || (mode === 'scenario' && scenarioId !== this.#state.scenarioId)) this.#resetCoverage();
     this.#state.mode = mode;
     this.#state.scenarioId = mode === 'scenario' ? scenarioId : null;
     if (mode === 'live') this.#state.cursorIso = this.#state.liveIso;
@@ -60,7 +62,7 @@ export class AethergridTemporalClock {
   scrub(isoTime: string, mode: TemporalMode = this.#state.mode): void {
     const cursor = assertIsoInstant(isoTime, 'temporal cursor');
     this.pause();
-    if (mode !== this.#state.mode) { this.#playbackSamples = []; this.#state.playbackRange = null; }
+    if (mode !== this.#state.mode) this.#resetCoverage();
     this.#state.cursorIso = mode === 'live' ? this.#state.liveIso : cursor;
     this.#playheadMs = Date.parse(this.#state.cursorIso);
     this.#state.mode = mode;
@@ -80,13 +82,14 @@ export class AethergridTemporalClock {
       scenarioId: null
     };
     this.#stopTimer();
-    this.#playbackSamples = [];
+    this.#resetCoverage();
     this.#playheadMs = Date.parse(liveIso);
     this.#emit();
   }
 
   setPlaybackSamples(samples: readonly string[] | null): void {
     this.pause();
+    this.#modeled = false;
     this.#playheadMs = Date.parse(this.#state.cursorIso);
     this.#playbackSamples = Object.freeze(
       [...new Set((samples ?? []).map((iso) => Date.parse(iso)).filter(Number.isFinite))]
@@ -94,7 +97,7 @@ export class AethergridTemporalClock {
     );
     const start = this.#playbackSamples[0];
     const end = this.#playbackSamples.at(-1);
-    this.#state.playbackRange = start == null || end == null ? null : { start: new Date(start).toISOString(), end: new Date(end).toISOString() };
+    this.#state.playbackRange = this.#requestedRange ? { ...this.#requestedRange } : start == null || end == null ? null : { start: new Date(start).toISOString(), end: new Date(end).toISOString() };
     this.#emit();
   }
 
@@ -105,6 +108,34 @@ export class AethergridTemporalClock {
       throw new RangeError('replay endpoints must be ordered source samples');
     }
     this.pause();
+    this.#requestedRange = null;
+    this.#state.playbackRange = { start, end };
+    this.#playheadMs = Date.parse(this.#state.cursorIso);
+    this.#emit();
+  }
+
+  restorePlaybackRange(range: TimeRange | null): void {
+    if (this.#state.mode !== 'forecast' && this.#state.mode !== 'historical') throw new RangeError('saved source windows require FORECAST or HISTORICAL mode');
+    const restored = range ? { start: assertIsoInstant(range.start, 'saved replay start'), end: assertIsoInstant(range.end, 'saved replay end') } : null;
+    if (restored && Date.parse(restored.end) < Date.parse(restored.start)) throw new RangeError('saved replay endpoints must be ordered');
+    this.pause();
+    this.#requestedRange = restored;
+    this.#state.playbackRange = restored ? { ...restored } : this.#playbackSamples.length ? {
+      start: new Date(this.#playbackSamples[0]).toISOString(), end: new Date(this.#playbackSamples.at(-1)!).toISOString()
+    } : null;
+    this.#playheadMs = Date.parse(this.#state.cursorIso);
+    this.#emit();
+  }
+
+  setModeledRange(startIso: string, endIso: string): void {
+    if (this.#state.mode !== 'scenario' || !this.#state.scenarioId) throw new RangeError('modeled replay requires an active scenario identifier');
+    const start = assertIsoInstant(startIso, 'modeled start');
+    const end = assertIsoInstant(endIso, 'modeled end');
+    if (Date.parse(end) <= Date.parse(start)) throw new RangeError('modeled end must follow start');
+    this.pause();
+    this.#modeled = true;
+    this.#requestedRange = null;
+    this.#playbackSamples = [];
     this.#state.playbackRange = { start, end };
     this.#playheadMs = Date.parse(this.#state.cursorIso);
     this.#emit();
@@ -117,11 +148,13 @@ export class AethergridTemporalClock {
   }
 
   play(): void {
-    if (this.#state.playing || (this.#state.mode !== 'forecast' && this.#state.mode !== 'historical')) return;
+    const modeled = this.#modeled && this.#state.mode === 'scenario';
+    if (this.#state.playing || (!modeled && this.#state.mode !== 'forecast' && this.#state.mode !== 'historical')) return;
     const cursor = Date.parse(this.#state.cursorIso);
     const index = this.#playbackSamples.indexOf(cursor);
     const range = this.#state.playbackRange;
-    if (index < 0 || !range || cursor < Date.parse(range.start) || cursor >= Date.parse(range.end)) return;
+    if (!range || cursor < Date.parse(range.start) || cursor >= Date.parse(range.end)) return;
+    if (!modeled && (index < 0 || !this.#playbackSamples.includes(Date.parse(range.start)) || !this.#playbackSamples.includes(Date.parse(range.end)))) return;
     this.#state.playing = true;
     this.#lastTickMs = Date.now();
     this.#timer = globalThis.setInterval(() => this.#tick(), 100);
@@ -174,7 +207,7 @@ export class AethergridTemporalClock {
     const end = this.#state.playbackRange ? Date.parse(this.#state.playbackRange.end) : null;
     if (end == null) { this.#state.playing = false; this.#stopTimer(); return; }
     this.#playheadMs = Math.min(end, this.#playheadMs + elapsedSeconds * this.#state.playbackRate * 1000);
-    const next = this.#playbackSamples.findLast((sample) => sample <= this.#playheadMs);
+    const next = this.#modeled && this.#state.mode === 'scenario' ? this.#playheadMs : this.#playbackSamples.findLast((sample) => sample <= this.#playheadMs);
     if (next != null) this.#state.cursorIso = new Date(next).toISOString();
     if (this.#playheadMs >= end) {
       this.#state.playing = false;
@@ -185,6 +218,13 @@ export class AethergridTemporalClock {
   #stopTimer(): void {
     if (this.#timer != null) globalThis.clearInterval(this.#timer);
     this.#timer = null;
+  }
+
+  #resetCoverage(): void {
+    this.#playbackSamples = [];
+    this.#state.playbackRange = null;
+    this.#requestedRange = null;
+    this.#modeled = false;
   }
 
   #emit(): void {

@@ -5,7 +5,7 @@ import {
 } from '../renderer/overlays/atmospheric-overlay';
 import type { SpatialOverlaySnapshot } from '../renderer/overlays/spatial-overlay';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useImperativeHandle, type Ref } from 'react';
 
 import { CesiumSpatialRenderer } from '../renderer/cesium/cesium-renderer';
 import { NativeWebglSpatialRenderer } from '../renderer/native/native-webgl-renderer';
@@ -13,6 +13,7 @@ import { RendererManager } from '../renderer/renderer-manager';
 import type {
   LayerState,
   SpatialFeatureSelection,
+  SpatialCameraSnapshot,
   SpatialInteractionMode,
   SpatialRendererStatus,
   SpatialSurfacePoint,
@@ -25,6 +26,7 @@ import { loadPublicRuntimeConfig } from '../services/public-runtime-config';
 import { useSpatialPerformance } from '../hooks/use-spatial-performance';
 
 interface SpatialViewportProps {
+  ref?: Ref<SpatialViewportHandle>;
   target: SpatialTarget;
   time: TemporalInstant;
   layers: readonly LayerState[];
@@ -36,6 +38,7 @@ interface SpatialViewportProps {
   onSelection?(selection: SpatialFeatureSelection | null): void;
   onSurfacePoint?(point: SpatialSurfacePoint | null): void;
 }
+export interface SpatialViewportHandle { cameraSnapshot(): SpatialCameraSnapshot | null; }
 
 const STARTING_STATUS: SpatialRendererStatus = {
   engine: 'native-webgl',
@@ -46,6 +49,7 @@ const STARTING_STATUS: SpatialRendererStatus = {
 };
 
 export function SpatialViewport({
+  ref,
   target,
   time,
   layers,
@@ -59,7 +63,11 @@ export function SpatialViewport({
 }: SpatialViewportProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const managerRef = useRef<RendererManager | null>(null);
+  const targetRef = useRef(target);
+  targetRef.current = target;
+  useImperativeHandle(ref, () => ({ cameraSnapshot: () => managerRef.current?.cameraSnapshot() ?? null }), []);
   const overlayIdsRef = useRef<Set<string>>(new Set());
+  const overlaySnapshotsRef = useRef(new Map<string, SpatialOverlaySnapshot>());
   const journeyGenerationRef = useRef(0);
   const lastJourneyKeyRef = useRef<string | null>(null);
   const interactionModeRef = useRef<SpatialInteractionMode>(interactionMode);
@@ -79,6 +87,8 @@ export function SpatialViewport({
       new NativeWebglSpatialRenderer()
     );
     managerRef.current = manager;
+    overlaySnapshotsRef.current.clear();
+    overlayIdsRef.current.clear();
     manager.mount(host);
 
     void (async () => {
@@ -93,7 +103,10 @@ export function SpatialViewport({
       manager.setLayers(layers);
       manager.setVisualMode(visualMode);
       manager.setTime(time);
-      for (const snapshot of overlays) manager.applyOverlay(snapshot);
+      for (const snapshot of overlays) {
+        manager.applyOverlay(snapshot);
+        overlaySnapshotsRef.current.set(snapshot.layerId, snapshot);
+      }
       if (atmosphere) manager.applyAtmosphere(atmosphere);
       if (airQuality) manager.applyAirQuality(airQuality);
       overlayIdsRef.current = new Set(overlays.map((snapshot) => snapshot.layerId));
@@ -142,7 +155,7 @@ export function SpatialViewport({
         y: pointer.clientY - rect.top
       };
 
-      if (interactionModeRef.current === 'measure') {
+      if (interactionModeRef.current !== 'inspect') {
         void manager
           .pickSurface(screen)
           .then((surface) => onSurfacePointRef.current?.(surface))
@@ -217,9 +230,12 @@ export function SpatialViewport({
 
     const nextIds = new Set(overlays.map((snapshot) => snapshot.layerId));
     for (const layerId of overlayIdsRef.current) {
-      if (!nextIds.has(layerId)) manager.clearOverlay(layerId);
+      if (!nextIds.has(layerId)) { manager.clearOverlay(layerId); overlaySnapshotsRef.current.delete(layerId); }
     }
-    for (const snapshot of overlays) manager.applyOverlay(snapshot);
+    for (const snapshot of overlays) {
+      if (overlaySnapshotsRef.current.get(snapshot.layerId) !== snapshot) manager.applyOverlay(snapshot);
+      overlaySnapshotsRef.current.set(snapshot.layerId, snapshot);
+    }
     overlayIdsRef.current = nextIds;
     setStatus(manager.status());
   }, [overlays, status.ready]);
@@ -293,7 +309,8 @@ export function SpatialViewport({
     try {
       const next = await manager.use(engine);
       setStatus(next);
-      await manager.flyTo(target);
+      lastJourneyKeyRef.current = null;
+      await manager.flyTo(targetRef.current);
       setStatus(manager.status());
     } catch (error) {
       setStatus({
@@ -361,8 +378,10 @@ export function SpatialViewport({
               : `${status.detailLevel?.toUpperCase() ?? 'STREAM'} · ${(status.buildingMode ?? 'none').toUpperCase().replace('-', ' ')}`
             : 'INITIALIZING'}
         </small>
+        {status.engine === 'native-webgl' && status.ready ? <small className="native-fidelity">Projected wireframe fallback · no terrain</small> : null}
         <details className="renderer-tools">
         <summary>Renderer tools</summary>
+        {status.engine === 'native-webgl' && status.reason ? <p className="renderer-limitations">{status.reason}</p> : null}
         <div className="renderer-engine-switch" role="group" aria-label="Spatial renderer">
           {[
             ['cesium', 'CESIUM'],
@@ -372,7 +391,7 @@ export function SpatialViewport({
               type="button"
               key={engine}
               className={status.engine === engine ? 'active' : ''}
-              disabled={switchingEngine}
+              disabled={switchingEngine || !status.ready}
               onClick={() =>
                 void switchEngine(
                   engine as SpatialRendererStatus['engine']
@@ -435,7 +454,7 @@ export function SpatialViewport({
           <small>{status.solar.localSolarHour.toFixed(1)}h SOLAR</small>
         </div>
       ) : null}
-      {status.reason ? <div className="viewport-warning">{status.reason}</div> : null}
+      {status.reason && status.engine !== 'native-webgl' ? <div className="viewport-warning">{status.reason}</div> : null}
     </div>
   );
 }
