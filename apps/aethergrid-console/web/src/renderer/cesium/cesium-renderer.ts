@@ -122,6 +122,9 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
   async initialize(config: SpatialRendererConfig = {}): Promise<void> {
     if (!this.#container) throw new Error('Cesium renderer must be mounted before initialization');
+    if (typeof location !== 'undefined' && location.protocol === 'file:') {
+      throw new Error('Direct-open local workspace uses the native grid; connected map sources require the application runtime.');
+    }
 
     const ionEnabled = Boolean(config.cesiumIonToken);
     this.#ionEnabled = ionEnabled;

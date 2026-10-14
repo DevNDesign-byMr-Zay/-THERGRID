@@ -38,7 +38,9 @@ Run:
 npm run package:aethergrid-app
 ```
 
-The packager performs a locked v4 web build and produces `dist/aethergrid-functional-app.zip`. The archive contains the canonical `web/dist/` application, Node backend/provider modules, the required Zod runtime dependency, launchers, manifests, integrity inventory, and the native v3 compatibility surface under `legacy/`.
+The packager performs a locked v4 web build and produces `dist/aethergrid-functional-app.zip`. The archive contains the canonical `web/dist/` application, a self-contained root `index.html`, Node backend/provider modules, the required Zod runtime dependency, launchers, manifests, integrity inventory, and the native v3 compatibility surface under `legacy/`.
+
+Extract the ZIP, then open **the root `index.html`** in Chrome, Edge or Safari to see the current React workspace immediately. Its scripts, styles and brand images are embedded; no install, terminal or server is needed to display the UI and native WebGL grid. It supports navigation, local preferences and spatial/time controls. Connected geographic layers, operator sign-in, stored observations, AI and quantum providers require the application runtime and remain unavailable in file mode. An HTML file cannot start operating-system processes. To use those services on Windows, run `START-AETHERGRID.cmd` and use the connected workspace at `http://127.0.0.1:8090`. Do not open the server build at `web/dist/index.html` directly. Mobile file previewers that disable JavaScript can show only the loading screen; use a browser that executes local HTML.
 
 `legacy/standalone.html` remains available for direct-open native-WebGL/offline compatibility. It is explicitly noncanonical and does not replace the React/Cesium command center.
 

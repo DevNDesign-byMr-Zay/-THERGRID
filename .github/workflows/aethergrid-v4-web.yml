@@ -43,6 +43,12 @@ jobs:
       - name: Install maintained Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Build and verify the direct-open local workspace without network access
+        run: |
+          npx vite build --config vite.local.config.ts
+          node ../../../scripts/assemble-aethergrid-local-html.mjs
+          npx playwright test --config playwright.local.config.ts --workers=1 --reporter=line
+
       - name: Verify authenticated operator sessions and recorded playback
         env:
           AETHERGRID_TEST_CANONICAL: "1"
