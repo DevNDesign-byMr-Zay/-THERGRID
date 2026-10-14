@@ -5,6 +5,7 @@
   "version": "4.0.0-alpha.1",
   "format": "react+typescript+vite+cesium+node-app",
   "entrypoints": {
+    "directOpenHtml": "index.html",
     "webApp": "web/dist/index.html",
     "backend": "server.mjs",
     "standaloneHtml": "legacy/standalone.html",

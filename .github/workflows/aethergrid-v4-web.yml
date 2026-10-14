@@ -28,7 +28,7 @@ jobs:
           node-version: 22
 
       - name: Install isolated web dependencies
-        run: npm install --ignore-scripts --no-audit --no-fund
+        run: npm ci --ignore-scripts --include=optional --no-audit --no-fund
 
       - name: Type-check v4 spatial application
         run: npm run typecheck
@@ -42,6 +42,12 @@ jobs:
 
       - name: Install maintained Chromium
         run: npx playwright install --with-deps chromium
+
+      - name: Build and verify the direct-open local workspace without network access
+        run: |
+          npx vite build --config vite.local.config.ts
+          node ../../../scripts/assemble-aethergrid-local-html.mjs
+          npx playwright test --config playwright.local.config.ts --workers=1 --reporter=line
 
       - name: Verify authenticated operator sessions and recorded playback
         env:
@@ -164,7 +170,7 @@ jobs:
           node-version: 22
 
       - name: Install isolated web dependencies
-        run: npm install --ignore-scripts --no-audit --no-fund
+        run: npm ci --ignore-scripts --include=optional --no-audit --no-fund
 
       - name: Type-check and build the spatial application
         run: npm run typecheck && npm run build

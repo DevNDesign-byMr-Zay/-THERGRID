@@ -298,6 +298,11 @@ const VISUAL_MODES: readonly VisualMode[] = [
 ];
 
 export function App() {
+  const [worldLongitude] = useState(() => {
+    const now = new Date();
+    // Open on the sunlit hemisphere; the solar clock and day/night model remain real.
+    return location.protocol === 'file:' ? 180 - (now.getUTCHours() + now.getUTCMinutes() / 60) * 15 : 0;
+  });
   const viewportRef = useRef<SpatialViewportHandle>(null);
   const { clock, state: temporal } = useTemporalClock();
   const [temporalRailHeight, setTemporalRailHeight] = useState(140);
@@ -987,7 +992,7 @@ export function App() {
     if (scope === 'world') {
       return {
         latitude: 20,
-        longitude: 0,
+        longitude: worldLongitude,
         rangeMeters: 11_800_000,
         pitchDegrees: -88,
         headingDegrees: 0,
@@ -998,12 +1003,17 @@ export function App() {
     const identityMatches = cityIdentity?.cityId === city.id;
     return {
       ...city,
+      ...(location.protocol === 'file:' ? {
+        rangeMeters: (city.rangeMeters ?? 1050) * 1.6,
+        heightMeters: Math.max(city.heightMeters ?? 90, 150),
+        pitchDegrees: -32
+      } : {}),
       headingDegrees: identityMatches
         ? cityIdentity.arrivalHeadingDegrees
         : city.headingDegrees ?? 0,
       journey: identityMatches ? 'direct' : 'full'
     };
-  }, [scope, city, cityIdentity]);
+  }, [scope, city, cityIdentity, worldLongitude]);
 
   const worldOverlay = useMemo(
     () => (globalLive && temporal.mode === 'live' ? globalLive.overlay : null),

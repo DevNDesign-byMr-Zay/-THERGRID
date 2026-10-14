@@ -32,6 +32,7 @@ interface GlobalSeismicEvent {
 }
 
 interface GlobalLiveResponse {
+  snapshot?: boolean;
   generatedAt?: string;
   cities?: GlobalCityContext[];
   seismic?: {
@@ -92,8 +93,8 @@ export async function loadGlobalLiveContext(
       heightMeters: 18_000
     },
     label: city.name,
-    value: finite(city.airQuality?.usAqi, 0),
-    unit: 'US AQI',
+    value: city.airQuality?.usAqi == null ? undefined : finite(city.airQuality.usAqi, 0),
+    unit: city.airQuality?.usAqi == null ? undefined : 'US AQI',
     intensity: aqiIntensity(city.airQuality?.usAqi),
     properties: {
       cityId: city.id,
@@ -139,8 +140,9 @@ export async function loadGlobalLiveContext(
       live:
         cities.some((city) => city.source?.live === true) ||
         source?.live === true,
-      stale: false,
+      stale: payload.snapshot === true,
       fallback:
+        payload.snapshot !== true &&
         !cities.some((city) => city.source?.live === true) &&
         source?.live !== true,
       attribution:

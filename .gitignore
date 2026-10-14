@@ -35,3 +35,4 @@ secrets.env
 apps/aethergrid-console/.aethergrid-secrets/
 
 /test-results/
+apps/aethergrid-console/web/local-dist/

@@ -60,6 +60,7 @@ const REQUIRED_RUNTIME_FILES = Object.freeze([
   'START-AETHERGRID.ps1',
   'STOP-AETHERGRID.ps1',
   'START-AETHERGRID.cmd',
+  'index.html',
   'web/dist/index.html',
   'legacy/index.html',
   'legacy/styles.css',
@@ -203,7 +204,7 @@ function htmlAssetReferences(html) {
 
 function assertNoPrivateBrowserSecrets(payload) {
   for (const [path, data] of payload.entries()) {
-    if (!path.startsWith('web/dist/')) continue;
+    if (!path.startsWith('web/dist/') && path !== 'index.html') continue;
     const text = data.toString('utf8');
     for (const envName of PRIVATE_BROWSER_ENV_NAMES) {
       assert(!text.includes(envName), `canonical browser bundle references private server env name ${envName}: ${path}`);
@@ -214,9 +215,12 @@ function assertNoPrivateBrowserSecrets(payload) {
 const npm = npmCommand();
 run(npm, ['ci'], WEB_ROOT);
 run(npm, ['run', 'build'], WEB_ROOT);
+run(npm, ['exec', '--', 'vite', 'build', '--config', 'vite.local.config.ts'], WEB_ROOT);
+run(process.execPath, ['scripts/assemble-aethergrid-local-html.mjs'], REPO_ROOT);
 
 const payload = new Map();
 const legacySource = new Map();
+payload.set('index.html', await readFile(join(WEB_ROOT, 'local-dist', 'index.html')));
 
 for (const absolute of await collectFiles(APP_ROOT)) {
   const relativePath = normalizePath(relative(APP_ROOT, absolute));
@@ -228,6 +232,7 @@ for (const absolute of await collectFiles(APP_ROOT)) {
       relativePath !== '.env.example') ||
     relativePath.startsWith('web/node_modules/') ||
     relativePath.startsWith('web/dist/') ||
+    relativePath.startsWith('web/local-dist/') ||
     relativePath.startsWith('web/src/') ||
     relativePath.startsWith('web/tests/') ||
     relativePath.startsWith('web/test-results/')
@@ -292,6 +297,7 @@ assert(
 const appManifest = JSON.parse(payload.get('app.json').toString('utf8'));
 const uiManifest = JSON.parse(payload.get('ui.json').toString('utf8'));
 assert(appManifest.entrypoints?.webApp === 'web/dist/index.html', 'app.json must expose the canonical React build');
+assert(appManifest.entrypoints?.directOpenHtml === 'index.html', 'app.json must expose the direct-open workspace');
 assert(appManifest.entrypoints?.backend === 'server.mjs', 'app.json must expose server.mjs');
 assert(appManifest.entrypoints?.legacyWebApp === 'legacy/index.html', 'app.json must explicitly classify the native console as legacy');
 assert(appManifest.entrypoints?.standaloneHtml === 'legacy/standalone.html', 'standalone compatibility HTML must live under legacy/');
@@ -350,6 +356,7 @@ payload.set(
         productGeneration: 'v4',
         format: 'react-cesium-v4-node-app-with-native-webgl-compatibility',
         canonicalWebApp: 'web/dist/index.html',
+        directOpenHtml: 'index.html',
         backend: 'server.mjs',
         legacyCompatibility: {
           webApp: 'legacy/index.html',

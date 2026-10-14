@@ -38,7 +38,11 @@ Run:
 npm run package:aethergrid-app
 ```
 
-The packager performs a locked v4 web build and produces `dist/aethergrid-functional-app.zip`. The archive contains the canonical `web/dist/` application, Node backend/provider modules, the required Zod runtime dependency, launchers, manifests, integrity inventory, and the native v3 compatibility surface under `legacy/`.
+The packager performs a locked v4 web build and produces `dist/aethergrid-functional-app.zip`. The archive contains the canonical `web/dist/` application, a self-contained root `index.html`, Node backend/provider modules, the required Zod runtime dependency, launchers, manifests, integrity inventory, and the native v3 compatibility surface under `legacy/`.
+
+Extract the ZIP, then open **the root `index.html`** in Chrome or Edge. The current React workspace, Cesium renderer, classic workers, textures, globe image and eight mapped city districts are embedded. The globe rotates gently, pauses for interaction and respects reduced motion. City selection flies into distinct source-backed building extrusions, roads, water and green areas. Solid, wireframe and holographic controls, local profile/preferences and spatial/time controls work without a server. City geometry is a dated snapshot; tagged and estimated heights remain distinguished. See `assets/cities/SOURCE_NOTES.md` and the snapshot manifest for coverage and licensing.
+
+When online, the local-file read adapter requests public Open-Meteo current conditions/forecasts and USGS earthquake data directly. Offline weather and seismic observations remain unavailable; city maps stay usable. The local file contains no private provider keys. Operator sign-in, recorded observations, model-backed AI, private data providers and quantum submissions still require the application runtime. An HTML file cannot start operating-system processes. For those services on Windows, run `START-AETHERGRID.cmd` and use `http://127.0.0.1:8090`. Do not open `web/dist/index.html` directly. Mobile file previewers that disable JavaScript cannot run this application; Chromium desktop acceptance and responsive viewport checks do not constitute native iOS verification.
 
 `legacy/standalone.html` remains available for direct-open native-WebGL/offline compatibility. It is explicitly noncanonical and does not replace the React/Cesium command center.
 

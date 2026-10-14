@@ -1,0 +1,288 @@
+{
+  "format": "gzip-json",
+  "license": "ODbL 1.0",
+  "attribution": "\u00a9 OpenStreetMap contributors",
+  "snapshotScope": "district-level geographic footprints; tagged and inferred heights remain distinguished",
+  "cities": [
+    {
+      "city": {
+        "id": "new-york",
+        "name": "New York",
+        "country": "United States",
+        "district": "Midtown Manhattan",
+        "lat": 40.7549,
+        "lon": -73.984,
+        "radiusM": 1600
+      },
+      "source": {
+        "provider": "bundled-openstreetmap",
+        "live": false,
+        "partial": true,
+        "attribution": "\u00a9 OpenStreetMap contributors \u00b7 bundled snapshot 2026-10-14T20:38:15.844Z",
+        "fetchedAt": "2026-10-14T20:38:15.844Z",
+        "upstreamTimestamp": "2026-10-13T01:00:22Z",
+        "endpoint": "https://api.openstreetmap.org",
+        "freshnessModel": "OpenStreetMap upstream database at request time",
+        "snapshot": true,
+        "originalProvider": "OpenStreetMap Map API",
+        "snapshotBounds": {
+          "west": -73.99230112503326,
+          "east": -73.97569887496672,
+          "south": 40.748611821775064,
+          "north": 40.761188178224934,
+          "radiusM": 700
+        }
+      },
+      "buildings": 900,
+      "roads": 260,
+      "waterAreas": 24,
+      "greenAreas": 158,
+      "jsonSha256": "2e92841d561363db6b995f1b73d2eed396f36b85fa8cdf4a873cf6116e951a0c"
+    },
+    {
+      "city": {
+        "id": "london",
+        "name": "London",
+        "country": "United Kingdom",
+        "district": "City of London / South Bank",
+        "lat": 51.5136,
+        "lon": -0.0917,
+        "radiusM": 1700
+      },
+      "source": {
+        "provider": "bundled-openstreetmap",
+        "live": false,
+        "partial": true,
+        "attribution": "\u00a9 OpenStreetMap contributors \u00b7 bundled snapshot 2026-10-14T20:38:22.243Z",
+        "fetchedAt": "2026-10-14T20:38:22.243Z",
+        "upstreamTimestamp": "2026-10-14T11:18:08Z",
+        "endpoint": "https://api.openstreetmap.org",
+        "freshnessModel": "OpenStreetMap upstream database at request time",
+        "snapshot": true,
+        "originalProvider": "OpenStreetMap Map API",
+        "snapshotBounds": {
+          "west": -0.1018042691005823,
+          "east": -0.08159573089941771,
+          "south": 51.50731182177506,
+          "north": 51.51988817822493,
+          "radiusM": 700
+        }
+      },
+      "buildings": 900,
+      "roads": 260,
+      "waterAreas": 8,
+      "greenAreas": 125,
+      "jsonSha256": "e3ca25902ce41a35fd655410656d2469fe7b4b96db8507b441cb2d07c4731c0a"
+    },
+    {
+      "city": {
+        "id": "tokyo",
+        "name": "Tokyo",
+        "country": "Japan",
+        "district": "Shinjuku",
+        "lat": 35.6896,
+        "lon": 139.6917,
+        "radiusM": 1700
+      },
+      "source": {
+        "provider": "bundled-openstreetmap",
+        "live": false,
+        "partial": true,
+        "attribution": "\u00a9 OpenStreetMap contributors \u00b7 bundled snapshot 2026-10-14T20:38:25.525Z",
+        "fetchedAt": "2026-10-14T20:38:25.525Z",
+        "upstreamTimestamp": "2026-10-10T07:11:41Z",
+        "endpoint": "https://api.openstreetmap.org",
+        "freshnessModel": "OpenStreetMap upstream database at request time",
+        "snapshot": true,
+        "originalProvider": "OpenStreetMap Map API",
+        "snapshotBounds": {
+          "west": 139.68395774436675,
+          "east": 139.69944225563324,
+          "south": 35.683311821775064,
+          "north": 35.69588817822493,
+          "radiusM": 700
+        }
+      },
+      "buildings": 900,
+      "roads": 260,
+      "waterAreas": 15,
+      "greenAreas": 40,
+      "jsonSha256": "1f75c8c5ac6d2fbc7c3a689704cf8a6edb2398e9a3ac98785942e1009afff80e"
+    },
+    {
+      "city": {
+        "id": "singapore",
+        "name": "Singapore",
+        "country": "Singapore",
+        "district": "Marina Bay / Downtown Core",
+        "lat": 1.2838,
+        "lon": 103.8515,
+        "radiusM": 1700
+      },
+      "source": {
+        "provider": "bundled-openstreetmap",
+        "live": false,
+        "partial": true,
+        "attribution": "\u00a9 OpenStreetMap contributors \u00b7 bundled snapshot 2026-10-14T20:38:30.071Z",
+        "fetchedAt": "2026-10-14T20:38:30.071Z",
+        "upstreamTimestamp": "2026-10-14T15:42:51Z",
+        "endpoint": "https://api.openstreetmap.org",
+        "freshnessModel": "OpenStreetMap upstream database at request time",
+        "snapshot": true,
+        "originalProvider": "OpenStreetMap Map API",
+        "snapshotBounds": {
+          "west": 103.84521024294574,
+          "east": 103.85778975705426,
+          "south": 1.277511821775063,
+          "north": 1.2900881782249372,
+          "radiusM": 700
+        }
+      },
+      "buildings": 900,
+      "roads": 260,
+      "waterAreas": 5,
+      "greenAreas": 61,
+      "jsonSha256": "d5c2ef4e048ec2f99ccfb39e78f6099d6721644cf896b775857930cadc207a0d"
+    },
+    {
+      "city": {
+        "id": "sao-paulo",
+        "name": "S\u00e3o Paulo",
+        "country": "Brazil",
+        "district": "Paulista / Bela Vista",
+        "lat": -23.5614,
+        "lon": -46.6559,
+        "radiusM": 1700
+      },
+      "source": {
+        "provider": "bundled-openstreetmap",
+        "live": false,
+        "partial": true,
+        "attribution": "\u00a9 OpenStreetMap contributors \u00b7 bundled snapshot 2026-10-14T20:38:33.393Z",
+        "fetchedAt": "2026-10-14T20:38:33.393Z",
+        "upstreamTimestamp": "2026-10-13T11:00:05Z",
+        "endpoint": "https://api.openstreetmap.org",
+        "freshnessModel": "OpenStreetMap upstream database at request time",
+        "snapshot": true,
+        "originalProvider": "OpenStreetMap Map API",
+        "snapshotBounds": {
+          "west": -46.662760088464,
+          "east": -46.64903991153601,
+          "south": -23.567688178224937,
+          "north": -23.55511182177506,
+          "radiusM": 700
+        }
+      },
+      "buildings": 900,
+      "roads": 260,
+      "waterAreas": 3,
+      "greenAreas": 50,
+      "jsonSha256": "c827bedd2295cdf86253b48b777420f841a856d5ce63f99e24c2a5a2ab3d7610"
+    },
+    {
+      "city": {
+        "id": "lagos",
+        "name": "Lagos",
+        "country": "Nigeria",
+        "district": "Victoria Island / Eko Atlantic",
+        "lat": 6.4281,
+        "lon": 3.4219,
+        "radiusM": 1800
+      },
+      "source": {
+        "provider": "bundled-openstreetmap",
+        "live": false,
+        "partial": true,
+        "attribution": "\u00a9 OpenStreetMap contributors \u00b7 bundled snapshot 2026-10-14T20:38:34.744Z",
+        "fetchedAt": "2026-10-14T20:38:34.744Z",
+        "upstreamTimestamp": "2026-10-10T04:24:16Z",
+        "endpoint": "https://api.openstreetmap.org",
+        "freshnessModel": "OpenStreetMap upstream database at request time",
+        "snapshot": true,
+        "originalProvider": "OpenStreetMap Map API",
+        "snapshotBounds": {
+          "west": 3.4155720387120487,
+          "east": 3.428227961287951,
+          "south": 6.421811821775062,
+          "north": 6.434388178224937,
+          "radiusM": 700
+        }
+      },
+      "buildings": 692,
+      "roads": 214,
+      "waterAreas": 0,
+      "greenAreas": 1,
+      "jsonSha256": "7b45f99dda3a320513613480e6366a275ce3713b9572a4abb759af80369116cd"
+    },
+    {
+      "city": {
+        "id": "dubai",
+        "name": "Dubai",
+        "country": "United Arab Emirates",
+        "district": "Downtown Dubai",
+        "lat": 25.1972,
+        "lon": 55.2744,
+        "radiusM": 1800
+      },
+      "source": {
+        "provider": "bundled-openstreetmap",
+        "live": false,
+        "partial": true,
+        "attribution": "\u00a9 OpenStreetMap contributors \u00b7 bundled snapshot 2026-10-14T20:38:27.369Z",
+        "fetchedAt": "2026-10-14T20:38:27.369Z",
+        "upstreamTimestamp": "2026-10-11T12:16:25Z",
+        "endpoint": "https://api.openstreetmap.org",
+        "freshnessModel": "OpenStreetMap upstream database at request time",
+        "snapshot": true,
+        "originalProvider": "OpenStreetMap Map API",
+        "snapshotBounds": {
+          "west": 55.26745056848709,
+          "east": 55.28134943151291,
+          "south": 25.19091182177506,
+          "north": 25.203488178224937,
+          "radiusM": 700
+        }
+      },
+      "buildings": 298,
+      "roads": 260,
+      "waterAreas": 11,
+      "greenAreas": 76,
+      "jsonSha256": "1240d6a15bb7a463f644d9e35e8a68f66766f4bc1126bf047b41391cae3aa5ac"
+    },
+    {
+      "city": {
+        "id": "sydney",
+        "name": "Sydney",
+        "country": "Australia",
+        "district": "CBD / Circular Quay",
+        "lat": -33.8651,
+        "lon": 151.2099,
+        "radiusM": 1700
+      },
+      "source": {
+        "provider": "bundled-openstreetmap",
+        "live": false,
+        "partial": true,
+        "attribution": "\u00a9 OpenStreetMap contributors \u00b7 bundled snapshot 2026-10-14T20:38:38.604Z",
+        "fetchedAt": "2026-10-14T20:38:38.604Z",
+        "upstreamTimestamp": "2026-10-14T10:28:30Z",
+        "endpoint": "https://api.openstreetmap.org",
+        "freshnessModel": "OpenStreetMap upstream database at request time",
+        "snapshot": true,
+        "originalProvider": "OpenStreetMap Map API",
+        "snapshotBounds": {
+          "west": 151.20232709206553,
+          "east": 151.21747290793448,
+          "south": -33.87138817822493,
+          "north": -33.85881182177506,
+          "radiusM": 700
+        }
+      },
+      "buildings": 900,
+      "roads": 260,
+      "waterAreas": 32,
+      "greenAreas": 180,
+      "jsonSha256": "1f4ce96124a23e6443650c0f51f6e380c6f94b14c0366de89e6b13c58e2cb148"
+    }
+  ]
+}
