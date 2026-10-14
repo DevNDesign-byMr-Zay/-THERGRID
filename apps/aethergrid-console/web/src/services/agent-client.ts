@@ -22,7 +22,11 @@ export interface AgentContribution {
   runtime: AgentRuntimeReceipt;
 }
 
+export interface AgentCitation { receipt:string;kind:string;observedAt:string;href:string; }
+
 export interface AgentResponse {
+  citations?: AgentCitation[];
+  toolResults?: {tool:string;readOnly:boolean;count:number}[];
   reply: string;
   synthesis?: string;
   receipt: string;
@@ -94,6 +98,8 @@ export async function runAgent(
 
   return {
     reply,
+    citations: Array.isArray(payload.citations) ? payload.citations.filter(item=>/^[a-f0-9]{64}$/.test(item.receipt) && item.href.startsWith('/api/aethergrid/history?')) : [],
+    toolResults: Array.isArray(payload.toolResults) ? payload.toolResults : [],
     synthesis: payload.synthesis,
     receipt: String(payload.receipt || ''),
     runtime: {

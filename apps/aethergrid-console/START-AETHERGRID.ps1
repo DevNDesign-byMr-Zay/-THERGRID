@@ -22,6 +22,10 @@ if (Test-Path ".env") {
   $Args = @("server.mjs")
 }
 
+if (Test-Path ".env.aethergrid") {
+  $Args = @("--env-file-if-exists=.env", "--env-file=.env.aethergrid", "server.mjs")
+}
+
 if (Test-Path ".aethergrid.pid") {
   $ExistingPid = Get-Content ".aethergrid.pid" -ErrorAction SilentlyContinue
   if ($ExistingPid -and (Get-Process -Id $ExistingPid -ErrorAction SilentlyContinue)) {

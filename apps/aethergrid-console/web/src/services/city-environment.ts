@@ -296,12 +296,14 @@ export function selectCityEnvironmentForecast(
 export async function loadCityEnvironment(
   latitude: number,
   longitude: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  recordedAt?: string
 ): Promise<AtmosphericOverlaySnapshot> {
   const query = new URLSearchParams({
     lat: String(latitude),
     lon: String(longitude)
   });
+  if(recordedAt) query.set('at',recordedAt);
   const response = await fetch(`/api/aethergrid/weather/current?${query.toString()}`, {
     headers: { accept: 'application/json' },
     signal
@@ -347,7 +349,7 @@ export async function loadCityEnvironment(
     eventTime: sourceTime ?? fetchedAt,
     sourceTime,
     fetchedAt,
-    live: source.live === true,
+    live: !recordedAt && source.live === true,
     stale: receipt.stale === true,
     fallback: receipt.fallback === true || source.live !== true,
     attribution: source.attribution ?? source.provider ?? null,

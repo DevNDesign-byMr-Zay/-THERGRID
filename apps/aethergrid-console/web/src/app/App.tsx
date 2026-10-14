@@ -407,6 +407,24 @@ export function App() {
     [city.latitude, city.longitude]
   );
 
+  const [recordedFrames,setRecordedFrames]=useState<string[]>([]);
+  useEffect(()=>{
+    const controller=new AbortController();
+    const query=new URLSearchParams({kind:'weather',lat:String(city.latitude),lon:String(city.longitude)});
+    void fetch(`/api/aethergrid/history?${query}`,{signal:controller.signal}).then(r=>r.ok ? r.json() : Promise.reject()).then((value:{observations:{observedAt:string}[]})=>{if(!controller.signal.aborted) setRecordedFrames(value.observations.map(item=>item.observedAt).sort());}).catch(()=>{if(!controller.signal.aborted) setRecordedFrames([]);});
+    return ()=>controller.abort();
+  },[city.latitude,city.longitude,temporal.mode]);
+  const [recordedAtmosphere,setRecordedAtmosphere]=useState<AtmosphericOverlaySnapshot|null>(null);
+  const [recordedError,setRecordedError]=useState<string|null>(null);
+  useEffect(()=>{
+    if(temporal.mode !== 'historical'){setRecordedAtmosphere(null);setRecordedError(null);return;}
+    const controller=new AbortController();setRecordedAtmosphere(null);
+    void loadCityEnvironment(city.latitude,city.longitude,controller.signal,temporal.cursorIso)
+      .then(value=>{if(!controller.signal.aborted){setRecordedAtmosphere({...value,live:false});setRecordedError(null);}})
+      .catch(()=>{if(!controller.signal.aborted) setRecordedError('No recorded provider observation for this time and location.');});
+    return ()=>controller.abort();
+  },[temporal.mode,temporal.cursorIso,city.latitude,city.longitude]);
+
   const forecastAtmosphere = useMemo(
     () =>
       temporal.mode === 'forecast' && forecastSeries
@@ -436,24 +454,25 @@ export function App() {
         try { clock.setModeledRange(activeOperatorScenario.startIso, activeOperatorScenario.endIso); }
         catch { clock.setPlaybackSamples(null); }
       } else clock.setPlaybackSamples(null);
-    } else clock.setPlaybackSamples(temporal.mode === 'forecast' ? forecastFrames : null);
-  }, [clock, temporal.mode, temporal.scenarioId, forecastFrames, activeOperatorScenario]);
+    } else clock.setPlaybackSamples(temporal.mode === 'forecast' ? forecastFrames : temporal.mode === 'historical' ? recordedFrames : null);
+  }, [clock, temporal.mode, temporal.scenarioId, forecastFrames, recordedFrames, activeOperatorScenario]);
 
   const activeAtmosphere =
     temporal.mode === 'live'
       ? atmosphere
       : temporal.mode === 'forecast'
         ? forecastAtmosphere
-        : null;
+        : temporal.mode === 'historical' ? recordedAtmosphere : null;
 
   const activeAtmosphereError =
     temporal.mode === 'live'
       ? environmentError
       : temporal.mode === 'forecast'
         ? forecastError
-        : null;
-  const weatherSourceState = temporal.mode === 'historical' || temporal.mode === 'scenario'
-    ? 'unavailable'
+        : temporal.mode === 'historical' ? recordedError : null;
+  const weatherSourceState = temporal.mode === 'historical'
+    ? recordedAtmosphere ? 'recorded' : 'unavailable'
+    : temporal.mode === 'scenario' ? 'unavailable'
     : activeAtmosphereError ? 'unavailable'
     : temporal.mode === 'forecast'
       ? forecastAtmosphere?.stale ? 'stale' : forecastAtmosphere ? 'forecast' : forecastSeries ? 'unavailable' : 'loading'
@@ -1161,7 +1180,7 @@ export function App() {
     () =>
       scope === 'city' &&
       activeAtmosphere &&
-      (temporal.mode === 'live' || temporal.mode === 'forecast')
+      (temporal.mode === 'live' || temporal.mode === 'forecast' || temporal.mode === 'historical')
         ? atmosphereToWindOverlay(activeAtmosphere)
         : null,
     [scope, activeAtmosphere, temporal.mode]
@@ -2842,6 +2861,7 @@ export function App() {
         clock={clock}
         state={temporal}
         events={temporalEvents}
+        recordedFrames={recordedFrames}
         forecastSeries={forecastSeries}
         forecastError={forecastError}
         onHeightChange={setTemporalRailHeight}

@@ -32,7 +32,7 @@ function localReply(agent, message, context = {}) {
     return `VÆLON local fallback: for ${region} / ${scenario}, evaluate “${message}” as a bounded optimization problem. Preserve a classical baseline, quantify cost/emissions/reliability tradeoffs, and reject any candidate that violates reserve or evidence constraints.${metricSummary ? ` Current context: ${metricSummary}.` : ''}`;
   }
   if (agent.id === 'AUREN') {
-    return `AUREN local fallback: interpret “${message}” against the ${region} 4D spatial graph and ${scenario} context. Inspect topology, correlated risk, temporal changes and affected nodes before drawing an operator-facing conclusion.${metricSummary ? ` Current context: ${metricSummary}.` : ''}`;
+    return `AUREN local fallback: ${context.trustedObservations?.length ? `Read ${context.trustedObservations.length} recorded provider observations; receipts are attached. ` : 'No recorded provider evidence is available. '}interpret “${message}” against the ${region} 4D spatial graph and ${scenario} context. Inspect topology, correlated risk, temporal changes and affected nodes before drawing an operator-facing conclusion.${metricSummary ? ` Current context: ${metricSummary}.` : ''}`;
   }
   if (agent.id === 'SOLVÆR') {
     return `SOLVÆR local fallback: treat “${message}” as a simulation/evidence request for ${region} / ${scenario}. Define assumptions, comparison baseline, reproducible inputs, uncertainty and the evidence required before a recommendation can be promoted.`;
@@ -55,6 +55,7 @@ async function callOpenAiCompatible(agent, messages, signal) {
       model: agent.model,
       messages: messages.map(({ role, content }) => ({ role, content })),
       temperature: 0.2,
+      max_tokens: 1200,
     }),
     signal,
   });
@@ -108,7 +109,7 @@ function contextMessage(context = {}) {
   };
 }
 
-export function createAgentRuntime({ env = process.env, now = () => Date.now() } = {}) {
+export function createAgentRuntime({ env = process.env, now = () => Date.now(), tools = {} } = {}) {
   let config = resolveAgentConfig(env);
 
   function reload(nextEnv = env) {
@@ -129,6 +130,15 @@ export function createAgentRuntime({ env = process.env, now = () => Date.now() }
   async function runAgent(id, { message, context = {}, history = [] } = {}) {
     const agent = config[id];
     if (!agent || id === 'TEAM') throw new Error(`unknown individual agent: ${id}`);
+    const toolResults = [];
+    const citations = [];
+    if (tools.readObservations) {
+      const records = await tools.readObservations(context);
+      context = {...context,citations:[],trustedObservations:[]};
+      toolResults.push({tool:'readObservations',readOnly:true,count:records.length});
+      for(const item of records.slice(0,20)) citations.push({receipt:item.receipt,kind:item.kind,observedAt:item.observedAt,ageSeconds:Math.max(0,Math.round((now()-Date.parse(item.observedAt))/1000)),href:`/api/aethergrid/history?kind=${encodeURIComponent(item.kind)}&at=${encodeURIComponent(item.observedAt)}`});
+      context = {...context, trustedObservations:records.slice(0,20), citations};
+    }
     const startedAt = now();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(new Error('model request timed out')), agent.timeoutMs);
@@ -171,8 +181,10 @@ export function createAgentRuntime({ env = process.env, now = () => Date.now() }
     };
     return {
       reply: result.text,
+      citations,
+      toolResults,
       runtime: record,
-      receipt: receipt({ message, context, record, reply: result.text, completedAt }),
+      receipt: receipt({ message, context, record, toolResults, citations, reply: result.text, completedAt }),
     };
   }
 
@@ -248,6 +260,7 @@ export function createAgentRuntime({ env = process.env, now = () => Date.now() }
       advisoryOnly: true,
     };
     return {
+      citations: [...new Map(contributions.flatMap(item=>item.citations).map(item=>[item.receipt,item])).values()],
       synthesis: synthesisResult.text,
       reply: synthesisResult.text,
       contributions: contributions.map((item) => ({
@@ -255,6 +268,8 @@ export function createAgentRuntime({ env = process.env, now = () => Date.now() }
         reply: item.reply,
         receipt: item.receipt,
         runtime: item.runtime,
+        citations: item.citations,
+        toolResults: item.toolResults,
       })),
       runtime,
       receipt: receipt({
