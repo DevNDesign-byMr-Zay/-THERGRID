@@ -271,3 +271,26 @@ jobs:
           curl --fail --silent http://127.0.0.1:8080/health
           curl --fail --silent http://127.0.0.1:8080/status
           docker compose ps
+
+  aethergrid-container-smoke:
+    name: aethergrid-container-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Validate and run the complete local application stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          export COMPOSE_FILE=docker-compose.yml
+          trap 'docker compose down --volumes --remove-orphans' EXIT
+          docker compose config --quiet
+          docker compose up --build --detach health aethergrid
+          node scripts/smoke-aethergrid-compose.mjs --profile-write
+          docker compose restart aethergrid
+          node scripts/smoke-aethergrid-compose.mjs --profile-verify

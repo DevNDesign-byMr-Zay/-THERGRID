@@ -22,3 +22,34 @@ services:
       timeout: 5s
       start_period: 5s
       retries: 3
+  aethergrid:
+    build:
+      context: .
+      dockerfile: Dockerfile.aethergrid
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    env_file:
+      - path: .env.aethergrid
+        required: false
+    environment:
+      AETHERGRID_PORT: "8090"
+      AETHERGRID_BIND_ADDRESS: "0.0.0.0"
+      AETHERGRID_DATA_DIR: /data
+    ports:
+      - "127.0.0.1:8090:8090"
+    volumes:
+      - aethergrid-data:/data
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:8090/api/aethergrid/config/public').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+volumes:
+  aethergrid-data:
