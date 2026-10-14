@@ -109,7 +109,7 @@ test('TEAM retains real specialist contributions and provider truth', async ({ p
   await expect(page.getByText('Specialist contributions · 3', { exact: true })).toBeVisible();
   await page.getByText('Specialist contributions · 3', { exact: true }).click();
   await expect(page.locator('.agent-contributions article')).toHaveCount(3);
-  await expect(page.locator('.agent-runtime')).toContainText(result.runtime.fallbackUsed ? 'FALLBACK' : 'PROVIDER');
+  await expect(page.locator('.agent-runtime')).toContainText(result.runtime.provider === 'local' || result.runtime.fallbackUsed ? 'LOCAL FALLBACK' : 'PROVIDER RESPONSE');
   await expect(page.locator('.agent-runtime')).toContainText(result.runtime.provider);
 });
 
@@ -144,7 +144,7 @@ test('specialist conversations consume the actual runtime contract', async ({ pa
     const result = await response.json();
     if (requireCloudAI) verifyCloudRuntime(result.runtime);
     await expect(page.locator('.agent-runtime')).toContainText(result.runtime.provider);
-    await expect(page.locator('.agent-runtime')).toContainText(result.runtime.fallbackUsed ? 'FALLBACK' : 'PROVIDER');
+    await expect(page.locator('.agent-runtime')).toContainText(result.runtime.provider === 'local' || result.runtime.fallbackUsed ? 'LOCAL FALLBACK' : 'PROVIDER RESPONSE');
     await expect(page.locator('.agent-message.assistant')).toBeVisible();
   }
 });
