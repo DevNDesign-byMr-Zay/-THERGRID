@@ -312,6 +312,14 @@ export async function loadCityEnvironment(
     throw new Error(`city environment request failed with HTTP ${response.status}`);
   }
 
+  const observationReceipt = response.headers.get('x-aethergrid-observation');
+  const archivedAt = response.headers.get('x-aethergrid-recorded-at');
+  if (recordedAt && (!Number.isFinite(Date.parse(recordedAt)) || !/^[a-f0-9]{64}$/.test(observationReceipt || '') ||
+      !archivedAt || !Number.isFinite(Date.parse(archivedAt)) ||
+      Date.parse(archivedAt) > Date.parse(recordedAt) ||
+      Date.parse(recordedAt) - Date.parse(archivedAt) > 6 * 60 * 60 * 1000)) {
+    throw new Error('Missing or invalid recorded observation receipt');
+  }
   const envelope = object(await response.json());
   const receipt = object(envelope.receipt) as ForecastReceipt;
   const data = object(envelope.data ?? envelope);
@@ -349,6 +357,8 @@ export async function loadCityEnvironment(
     eventTime: sourceTime ?? fetchedAt,
     sourceTime,
     fetchedAt,
+    recordedAt: recordedAt ? archivedAt : null,
+    observationReceipt: recordedAt ? observationReceipt : null,
     live: !recordedAt && source.live === true,
     stale: receipt.stale === true,
     fallback: receipt.fallback === true || source.live !== true,

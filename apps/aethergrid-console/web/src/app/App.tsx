@@ -2527,7 +2527,9 @@ export function App() {
                       ? forecastAtmosphere
                         ? `${weatherPhenomenon(forecastAtmosphere).toUpperCase()} · FORECAST`
                         : 'FORECAST · NO SAMPLE'
-                      : `${temporal.mode.toUpperCase()} · DATA PENDING`}
+                      : temporal.mode === 'historical' && recordedAtmosphere
+                        ? `${weatherPhenomenon(recordedAtmosphere).toUpperCase()} · RECORDED`
+                        : `${temporal.mode.toUpperCase()} · DATA PENDING`}
                 </strong>
               </span>
               <em data-source-state={weatherSourceState}>{weatherSourceState.toUpperCase()}</em>
@@ -2567,7 +2569,9 @@ export function App() {
                     : forecastSeries
                       ? 'No returned provider forecast sample aligns to this 4D cursor.'
                       : 'Forecast provider request pending.'
-                  : temporal.mode !== 'live'
+                  : temporal.mode === 'historical' && recordedAtmosphere
+                    ? `Recorded observation · ${recordedAtmosphere.recordedAt} · ${recordedAtmosphere.attribution ?? 'Provider archive'}`
+                    : temporal.mode !== 'live'
                     ? 'Current weather is hidden outside LIVE; provider forecast is available in FORECAST mode.'
                     : atmosphere?.attribution ?? 'Weather source pending'}
             </p>
