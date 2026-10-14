@@ -185,7 +185,7 @@ export function AgentDock({ context, active = true, handoff = null, onEvidence, 
           <span>{lastRun.runtime.provider}</span>
           <span>{lastRun.runtime.model || 'MODEL NOT PROVIDED'}</span>
           <span>{lastRun.runtime.latencyMs} ms</span>
-          <span className={lastRun.runtime.fallbackUsed ? 'fallback' : agentResponseState(lastRun) === 'PROVIDER RESPONSE' ? 'verified' : 'unknown'}>
+          <span className={agentResponseState(lastRun) === 'LOCAL FALLBACK' ? 'fallback' : agentResponseState(lastRun) === 'PROVIDER RESPONSE' ? 'verified' : 'unknown'}>
             {agentResponseState(lastRun)}
           </span>
           <code>{lastRun.receipt || 'NO RECEIPT'}</code>
@@ -222,7 +222,7 @@ export function AgentDock({ context, active = true, handoff = null, onEvidence, 
           {lastRun.contributions.map((contribution) => (
             <article key={`${contribution.agent}:${contribution.receipt}`}>
               <strong>{contribution.agent}</strong>
-              <small>{contribution.runtime.provider} · {contribution.runtime.model ?? 'MODEL NOT PROVIDED'} · {contribution.runtime.fallbackUsed ? 'FALLBACK' : contribution.runtime.provider !== 'unknown' && contribution.runtime.model ? 'PROVIDER RESPONSE' : 'UNVERIFIED RESPONSE'}</small>
+              <small>{contribution.runtime.provider} · {contribution.runtime.model ?? 'MODEL NOT PROVIDED'} · {agentResponseState({runtime:contribution.runtime})}</small>
               <p>{contribution.reply}</p>
               <code>{contribution.receipt || 'NO RECEIPT'}</code>
             </article>

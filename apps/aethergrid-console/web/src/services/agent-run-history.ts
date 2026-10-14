@@ -36,7 +36,7 @@ export function appendAgentRun(runs: readonly AgentRunRecord[], record: AgentRun
   return [...runs, record].slice(-8);
 }
 
-export function agentResponseState(response: AgentResponse): string {
-  if (response.runtime.fallbackUsed) return 'LOCAL FALLBACK';
+export function agentResponseState(response: Pick<AgentResponse, 'runtime'>): string {
+  if (response.runtime.fallbackUsed || response.runtime.provider === 'local') return 'LOCAL FALLBACK';
   return response.runtime.provider && response.runtime.provider !== 'unknown' && response.runtime.model ? 'PROVIDER RESPONSE' : 'UNVERIFIED RESPONSE';
 }
