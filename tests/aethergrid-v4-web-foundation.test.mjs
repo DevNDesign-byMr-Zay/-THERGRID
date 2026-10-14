@@ -89,7 +89,7 @@ test('v4 temporal model separates live, historical, forecast and scenario time',
   assert.match(store, /unsupported/u);
   assert.match(store, /failed/u);
   assert.match(rail, /LIVE NOW/u);
-  assert.match(rail, /Time offset from live/u);
+  assert.match(rail, /Source sample index/u);
 });
 
 test('v4 operator shell keeps the spatial viewport dominant and responsive', async () => {
@@ -913,8 +913,8 @@ test('v4 live 4d clock advances automatically while non-live cursors remain inde
   assert.match(clock, /this\.#state\.mode === 'live' && !this\.#state\.playing/u);
   assert.match(clock, /this\.#state\.cursorIso = liveIso/u);
   assert.match(clock, /clearInterval\(this\.#liveTimer\)/u);
-  assert.match(rail, /disabled=\{state\.mode === 'live'\}/u);
-  assert.match(rail, /Live time advances automatically/u);
+  assert.match(rail, /disabled=\{!state\.playing && !canPlay\}/u);
+  assert.match(rail, /Play source samples/u);
 });
 
 test('v4 thunderstorm presentation is source-bounded and explicitly synthetic in timing', async () => {

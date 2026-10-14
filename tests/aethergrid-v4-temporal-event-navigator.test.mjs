@@ -38,15 +38,13 @@ test('v4 temporal event navigation demotes old LIVE captures to historical conte
   assert.match(service, /return delta < 0 \? 'historical' : 'forecast'/u);
 });
 
-test('v4 temporal rail exposes event markers inside the same bounded -6h to +7d control window', async () => {
+test('v4 temporal rail separates local event references from source sample coverage', async () => {
   const rail = await text('apps/aethergrid-console/web/src/components/TemporalRail.tsx');
 
-  assert.match(rail, /TEMPORAL_RAIL_PAST_MINUTES/u);
-  assert.match(rail, /TEMPORAL_RAIL_FUTURE_MINUTES/u);
   assert.match(rail, /temporalEventInRailWindow/u);
-  assert.match(rail, /temporalEventRailPercent/u);
-  assert.match(rail, /time-event-markers/u);
-  assert.match(rail, /time-event-marker/u);
+  assert.match(rail, /local-time-events/u);
+  assert.match(rail, /does not establish historical availability/u);
+  assert.match(rail, /Source sample index/u);
   assert.match(rail, /Jump to/u);
 });
 

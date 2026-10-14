@@ -346,7 +346,8 @@ export function createOperatorScenario(
       temporal: {
         iso: context.temporal.iso,
         mode: context.temporal.mode,
-        liveReferenceIso: context.temporal.sourceTime ?? null
+        liveReferenceIso: context.temporal.liveReferenceIso ??
+          (context.temporal.mode === 'live' ? context.temporal.sourceTime ?? null : null)
       },
       region: context.region,
       positionedEntityCount: context.geometry.positionedEntityCount,

@@ -2,6 +2,7 @@ import type {
   AtmosphericCurrentState,
   AtmosphericOverlaySnapshot
 } from '../renderer/overlays/atmospheric-overlay';
+import { forecastInstant } from '../time/forecast-frames';
 import type {
   OverlayCoordinate,
   SpatialOverlayEdge,
@@ -48,6 +49,7 @@ export interface AtmosphericForecastSeries {
   attribution: string | null;
   sourceBacked: boolean;
   stale: boolean;
+  utcOffsetSeconds?: number | null;
   samples: readonly AtmosphericCurrentState[];
 }
 
@@ -125,8 +127,7 @@ export async function loadCityEnvironmentForecast(
     text(source.fetchedAt);
   const modelRunAt =
     text(receipt.modelRunAt) ??
-    text(source.modelRunAt) ??
-    text(source.modelTime);
+    text(source.modelRunAt);
   const attribution =
     text(receipt.attribution) ??
     text(source.attribution) ??
@@ -241,6 +242,7 @@ export async function loadCityEnvironmentForecast(
     attribution,
     sourceBacked,
     stale,
+    utcOffsetSeconds: finiteOrNull(envelope.utcOffsetSeconds ?? providerData.utcOffsetSeconds ?? providerData.utc_offset_seconds),
     samples
   };
 }
@@ -248,9 +250,10 @@ export async function loadCityEnvironmentForecast(
 export function selectCityEnvironmentForecast(
   series: AtmosphericForecastSeries,
   cursorIso: string,
-  utcOffsetSeconds = 0,
-  maxDistanceMs = 90 * 60 * 1000
+  utcOffsetSeconds: number | null = series.utcOffsetSeconds ?? null,
+  maxDistanceMs = 0
 ): AtmosphericOverlaySnapshot | null {
+  if (!series.sourceBacked) return null;
   const cursorTime = Date.parse(cursorIso);
   if (!Number.isFinite(cursorTime)) return null;
 
@@ -259,7 +262,7 @@ export function selectCityEnvironmentForecast(
   let bestDistance = Number.POSITIVE_INFINITY;
 
   for (const sample of series.samples) {
-    const sourceIso = modelTimeToIso(sample.time, utcOffsetSeconds);
+    const sourceIso = forecastInstant(sample.time, utcOffsetSeconds);
     if (!sourceIso) continue;
     const distance = Math.abs(Date.parse(sourceIso) - cursorTime);
     if (distance < bestDistance) {
@@ -282,7 +285,7 @@ export function selectCityEnvironmentForecast(
     fallback: !series.sourceBacked,
     attribution: series.attribution ?? series.provider,
     timezone: null,
-    utcOffsetSeconds,
+    utcOffsetSeconds: utcOffsetSeconds ?? 0,
     current: {
       ...selected,
       time: selectedIso

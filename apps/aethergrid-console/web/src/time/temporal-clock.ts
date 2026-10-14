@@ -13,6 +13,8 @@ export class AethergridTemporalClock {
   #timer: ReturnType<typeof globalThis.setInterval> | null = null;
   #liveTimer: ReturnType<typeof globalThis.setInterval> | null = null;
   #lastTickMs = 0;
+  #playbackSamples: readonly number[] = [];
+  #playheadMs = 0;
 
   constructor(now = new Date()) {
     const iso = now.toISOString();
@@ -22,13 +24,14 @@ export class AethergridTemporalClock {
       liveIso: iso,
       playing: false,
       playbackRate: 60,
+      playbackRange: null,
       scenarioId: null
     };
     this.#startLiveTimer();
   }
 
   snapshot(): Readonly<TemporalState> {
-    return Object.freeze({ ...this.#state });
+    return Object.freeze({ ...this.#state, playbackRange: this.#state.playbackRange ? Object.freeze({ ...this.#state.playbackRange }) : null });
   }
 
   subscribe(listener: TemporalListener): () => void {
@@ -45,14 +48,21 @@ export class AethergridTemporalClock {
   }
 
   setMode(mode: TemporalMode, scenarioId: string | null = null): void {
+    this.pause();
+    if (mode !== this.#state.mode) { this.#playbackSamples = []; this.#state.playbackRange = null; }
     this.#state.mode = mode;
     this.#state.scenarioId = mode === 'scenario' ? scenarioId : null;
     if (mode === 'live') this.#state.cursorIso = this.#state.liveIso;
+    this.#playheadMs = Date.parse(this.#state.cursorIso);
     this.#emit();
   }
 
   scrub(isoTime: string, mode: TemporalMode = this.#state.mode): void {
-    this.#state.cursorIso = assertIsoInstant(isoTime, 'temporal cursor');
+    const cursor = assertIsoInstant(isoTime, 'temporal cursor');
+    this.pause();
+    if (mode !== this.#state.mode) { this.#playbackSamples = []; this.#state.playbackRange = null; }
+    this.#state.cursorIso = mode === 'live' ? this.#state.liveIso : cursor;
+    this.#playheadMs = Date.parse(this.#state.cursorIso);
     this.#state.mode = mode;
     if (mode !== 'scenario') this.#state.scenarioId = null;
     this.#emit();
@@ -66,9 +76,37 @@ export class AethergridTemporalClock {
       cursorIso: liveIso,
       liveIso,
       playing: false,
+      playbackRange: null,
       scenarioId: null
     };
     this.#stopTimer();
+    this.#playbackSamples = [];
+    this.#playheadMs = Date.parse(liveIso);
+    this.#emit();
+  }
+
+  setPlaybackSamples(samples: readonly string[] | null): void {
+    this.pause();
+    this.#playheadMs = Date.parse(this.#state.cursorIso);
+    this.#playbackSamples = Object.freeze(
+      [...new Set((samples ?? []).map((iso) => Date.parse(iso)).filter(Number.isFinite))]
+        .sort((a, b) => a - b)
+    );
+    const start = this.#playbackSamples[0];
+    const end = this.#playbackSamples.at(-1);
+    this.#state.playbackRange = start == null || end == null ? null : { start: new Date(start).toISOString(), end: new Date(end).toISOString() };
+    this.#emit();
+  }
+
+  setPlaybackRange(startIso: string, endIso: string): void {
+    const start = assertIsoInstant(startIso, 'replay start');
+    const end = assertIsoInstant(endIso, 'replay end');
+    if (Date.parse(end) < Date.parse(start) || !this.#playbackSamples.includes(Date.parse(start)) || !this.#playbackSamples.includes(Date.parse(end))) {
+      throw new RangeError('replay endpoints must be ordered source samples');
+    }
+    this.pause();
+    this.#state.playbackRange = { start, end };
+    this.#playheadMs = Date.parse(this.#state.cursorIso);
     this.#emit();
   }
 
@@ -79,7 +117,11 @@ export class AethergridTemporalClock {
   }
 
   play(): void {
-    if (this.#state.playing) return;
+    if (this.#state.playing || (this.#state.mode !== 'forecast' && this.#state.mode !== 'historical')) return;
+    const cursor = Date.parse(this.#state.cursorIso);
+    const index = this.#playbackSamples.indexOf(cursor);
+    const range = this.#state.playbackRange;
+    if (index < 0 || !range || cursor < Date.parse(range.start) || cursor >= Date.parse(range.end)) return;
     this.#state.playing = true;
     this.#lastTickMs = Date.now();
     this.#timer = globalThis.setInterval(() => this.#tick(), 100);
@@ -88,6 +130,7 @@ export class AethergridTemporalClock {
 
   pause(): void {
     if (!this.#state.playing) return;
+    this.#advancePlayback();
     this.#state.playing = false;
     this.#stopTimer();
     this.#emit();
@@ -96,9 +139,7 @@ export class AethergridTemporalClock {
   step(seconds: number): void {
     if (!Number.isFinite(seconds)) throw new TypeError('step seconds must be finite');
     const next = Date.parse(this.#state.cursorIso) + seconds * 1000;
-    this.#state.cursorIso = new Date(next).toISOString();
-    if (this.#state.mode === 'live') this.#state.mode = seconds === 0 ? 'live' : 'historical';
-    this.#emit();
+    this.scrub(new Date(next).toISOString(), this.#state.mode === 'live' && seconds !== 0 ? 'historical' : this.#state.mode);
   }
 
   destroy(): void {
@@ -122,12 +163,23 @@ export class AethergridTemporalClock {
 
   #tick(): void {
     if (!this.#state.playing) return;
+    this.#advancePlayback();
+    this.#emit();
+  }
+
+  #advancePlayback(): void {
     const nowMs = Date.now();
     const elapsedSeconds = Math.max(0, (nowMs - this.#lastTickMs) / 1000);
     this.#lastTickMs = nowMs;
-    const next = Date.parse(this.#state.cursorIso) + elapsedSeconds * this.#state.playbackRate * 1000;
-    this.#state.cursorIso = new Date(next).toISOString();
-    this.#emit();
+    const end = this.#state.playbackRange ? Date.parse(this.#state.playbackRange.end) : null;
+    if (end == null) { this.#state.playing = false; this.#stopTimer(); return; }
+    this.#playheadMs = Math.min(end, this.#playheadMs + elapsedSeconds * this.#state.playbackRate * 1000);
+    const next = this.#playbackSamples.findLast((sample) => sample <= this.#playheadMs);
+    if (next != null) this.#state.cursorIso = new Date(next).toISOString();
+    if (this.#playheadMs >= end) {
+      this.#state.playing = false;
+      this.#stopTimer();
+    }
   }
 
   #stopTimer(): void {

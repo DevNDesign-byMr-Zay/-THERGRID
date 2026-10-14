@@ -532,3 +532,55 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   font-style: normal;
   letter-spacing: 0.08em;
 }
+.immersive-spatial .temporal-rail {
+  grid-template-columns: auto 40px auto minmax(180px, 1fr) auto auto;
+  grid-template-rows: auto auto;
+  gap: 8px;
+  max-height: min(38vh, 300px);
+  overflow: auto;
+}
+.temporal-rail .temporal-modes { display: flex; }
+.temporal-rail .replay-rate { display: grid; gap: 4px; font-size: 9px; color: var(--muted); }
+.temporal-rail select {
+  min-width: 0; max-width: 100%; min-height: 36px;
+  border: 1px solid var(--line); border-radius: 7px;
+  color: var(--text); background: var(--panel-strong); padding: 5px 7px;
+}
+.source-time-selection { display: grid; min-width: 0; gap: 3px; }
+.temporal-rail .first-source-sample { color: var(--text); max-width: 110px; }
+.temporal-rail .temporal-data-status { display: grid; grid-column: 1 / -2; }
+.temporal-rail .temporal-data-status span { font-size: 11px; line-height: 1.4; color: var(--muted); overflow-wrap: anywhere; }
+.temporal-rail .forecast-coverage[data-state='unavailable'] { color: var(--warning); }
+.temporal-rail .time-readout { display: grid; min-width: 0; grid-column: -2; font-size: 10px; }
+.temporal-rail .time-readout span { white-space: normal; }
+.immersive-spatial :is(.scene-caption, .viewport-status) { bottom: calc(var(--temporal-rail-height, 140px) + 28px); }
+.immersive-spatial .source-badge { bottom: calc(var(--temporal-rail-height, 140px) + 108px); }
+.temporal-rail .transport-button:disabled { opacity: .45; cursor: default; }
+.forecast-retry { justify-self: start; color: var(--text); }
+.local-time-events { grid-column: 1 / -1; display: flex; gap: 6px; overflow: auto; align-items: center; }
+.local-time-events > span { white-space: nowrap; color: var(--muted); }
+.local-time-events button { flex-shrink: 0; }
+.forecast-replay-range { grid-column: 1 / -1; color: var(--muted); font-size: 11px; }
+.forecast-replay-range summary { cursor: pointer; min-height: 32px; padding: 7px; }
+.forecast-range-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 6px; }
+.forecast-range-fields label { min-width: 0; display: grid; gap: 4px; }
+.forecast-range-fields span { grid-column: 1 / -1; }
+.weather-card-head em { font-style: normal; font-size: 11px; }
+.weather-card-head em[data-source-state='stale'], .weather-card-head em[data-source-state='unavailable'] { color: var(--warning); }
+.weather-card-head em[data-source-state='forecast'] { color: var(--cyan); }
+.weather-card-head em[data-source-state='live'] { color: var(--success); }
+.weather-card-head em[data-source-state='simulated'] { color: var(--violet); }
+@media (max-width: 900px) {
+  .immersive-spatial .temporal-rail {
+    grid-template-columns: 40px auto minmax(0, 1fr) auto;
+    grid-template-rows: auto;
+    padding: 8px; max-height: 42vh;
+  }
+  .temporal-rail .temporal-modes { grid-column: 1 / -1; grid-row: auto; justify-content: stretch; }
+  .temporal-rail .temporal-modes button { flex: 1; padding: 7px 3px; }
+  .temporal-rail .source-time-selection { grid-column: 3 / -1; }
+  .temporal-rail .first-source-sample { grid-column: 1 / 3; max-width: none; }
+  .temporal-rail .live-button { grid-column: 3 / -1; }
+  .temporal-rail .temporal-data-status { grid-column: 1 / -1; }
+  .temporal-rail .time-readout { grid-column: 1 / -1; display: flex; gap: 8px; }
+}
