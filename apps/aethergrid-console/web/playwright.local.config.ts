@@ -4,10 +4,11 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   testMatch: 'local-file.spec.ts',
+  expect: { timeout: 45000 },
   use: {
-    launchOptions: process.env.AETHERGRID_TEST_CHROMIUM ? {
+    launchOptions: {
       executablePath: process.env.AETHERGRID_TEST_CHROMIUM,
       args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader']
-    } : undefined
+    }
   }
 });

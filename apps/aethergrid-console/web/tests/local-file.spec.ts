@@ -63,3 +63,24 @@ test('standalone public weather uses provider data while historical and private 
   expect(results.history).toBe(404);
   expect(results.privateAction).toBe(503);
 });
+
+test('every bundled city renders its own mapped district without a server', async ({ page }) => {
+  test.setTimeout(360000);
+  const errors: string[] = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.route('http://**/*', route => route.abort());
+  await page.route('https://**/*', route => route.abort());
+  await page.goto(pathToFileURL(process.env.AETHERGRID_LOCAL_HTML || resolve('local-dist/index.html')).href);
+  await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer-ready', 'true');
+  for (const name of ['NEW YORK','LONDON','TOKYO','DUBAI','SINGAPORE','SÃO PAULO','LAGOS','SYDNEY']) {
+    await page.getByRole('button', { name: 'Navigation and layers' }).click();
+    await page.getByRole('navigation', { name: 'City targets' }).getByRole('button', { name: new RegExp(name) }).click();
+    await page.getByRole('button', { name: 'Close navigation drawer' }).click();
+    await expect.poll(async () => Number(await page.locator('.world-stage').getAttribute('data-source-building-count'))).toBeGreaterThan(100);
+    await expect(page.locator('.journey-status')).toHaveCount(0, {timeout:45000});
+    await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer','cesium');
+    await expect(page.locator('.cesium-widget-errorPanel')).toHaveCount(0);
+    await page.screenshot({ path: `test-results/local-district-${name.replaceAll(' ','-')}.png` });
+  }
+  expect(errors).toEqual([]);
+});
