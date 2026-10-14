@@ -373,3 +373,8 @@ Batch 18 establishes the production backend provider, configuration, secret-safe
 - **Provider Registry ()**: Wraps existing runtimes (spatial, geo, weather, air quality, seismic, terrain, quantum, AI, energy, transit, hydrology) and exposes normalized status (, , , , ).
 - **Resilience Primitives**: In-memory cache (), circuit breaker (), and per-provider rate limiter ().
 - **Public Runtime Endpoint**:  provides safe, secret-redacted provider readiness metadata.
+### Operator accounts and recorded replay
+
+Set `AETHERGRID_SETUP_PASSWORD` locally, then run `node configure-account.mjs USERNAME Administrator` from the extracted app folder. Passwords require at least 12 characters. Clear the setup password variable after use. The launcher reads the ignored `.env.aethergrid` account configuration alongside `.env` provider settings. Sessions expire after eight hours; Viewer reads, Analyst runs advisory tools and edits their profile, Administrator additionally controls reset and quantum job routes. Without configured accounts this remains a local single-operator workspace. Configure accounts before sharing the runtime.
+
+History records real source-backed provider responses in `.aethergrid-data/observations-v1`. Historical weather playback uses recorded samples; missing observations remain unavailable. Specialists use server-recorded observation tools and expose citation receipts. TEAM preserves contribution citations. Recordings do not reconstruct unobserved buildings or validate AI conclusions.

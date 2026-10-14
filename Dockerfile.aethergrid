@@ -1,21 +1,21 @@
-FROM node:22-alpine AS builder
+FROM reg.mini.dev/node:22-dev AS builder
+USER root
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts
 COPY apps/aethergrid-console/web/package.json apps/aethergrid-console/web/package-lock.json ./apps/aethergrid-console/web/
 RUN npm --prefix apps/aethergrid-console/web ci --ignore-scripts
 COPY apps/aethergrid-console ./apps/aethergrid-console
-RUN npm --prefix apps/aethergrid-console/web run build && rm -rf apps/aethergrid-console/web/node_modules
+RUN npm --prefix apps/aethergrid-console/web run build && rm -rf apps/aethergrid-console/web/node_modules && mkdir -p /data
 
-FROM node:22-alpine AS runtime
+FROM reg.mini.dev/node:22 AS runtime
 WORKDIR /app
-COPY --from=builder --chown=node:node /app/node_modules ./node_modules
-COPY --from=builder --chown=node:node /app/apps/aethergrid-console ./apps/aethergrid-console
-COPY --chown=node:node src ./src
+COPY --from=builder --chown=1000:1000 /app/node_modules ./node_modules
+COPY --from=builder --chown=1000:1000 /app/apps/aethergrid-console ./apps/aethergrid-console
+COPY --chown=1000:1000 src ./src
 COPY package.json ./package.json
-RUN mkdir -p /data && chown node:node /data
+COPY --from=builder --chown=1000:1000 /data /data
 ENV NODE_ENV=production AETHERGRID_PORT=8090 AETHERGRID_BIND_ADDRESS=0.0.0.0 AETHERGRID_DATA_DIR=/data
-USER node
 EXPOSE 8090
-HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 CMD node -e "fetch('http://127.0.0.1:8090/api/aethergrid/config/public').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 CMD ["node", "-e", "fetch('http://127.0.0.1:8090/api/aethergrid/config/public').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
 CMD ["node", "apps/aethergrid-console/server.mjs"]

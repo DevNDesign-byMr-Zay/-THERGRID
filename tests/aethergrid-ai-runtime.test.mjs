@@ -150,3 +150,32 @@ test('provider failure degrades to local advisory fallback with evidence', async
   assert.ok(typeof result.runtime.error === 'string' && result.runtime.error.length > 0);
   assert.match(result.receipt, /^[a-f0-9]{64}$/u);
 });
+
+test('specialists execute trusted read-only tools and TEAM retains citations', async () => {
+  const runtime = createAgentRuntime({
+    env: {},
+    tools: {
+      readObservations: async () => [
+        {
+          receipt: 'a'.repeat(64),
+          kind: 'weather',
+          observedAt: '2026-10-14T07:00:00Z',
+          payload: { temperatureC: 20 },
+        },
+      ],
+    },
+  });
+  const result = await runtime.runAgent('AUREN', {
+    message: 'Inspect risk',
+    context: { citations: [{ receipt: 'forged' }] },
+  });
+  assert.equal(result.citations[0].receipt, 'a'.repeat(64));
+  assert.equal(result.toolResults[0].tool, 'readObservations');
+  assert.equal(
+    result.citations.some((c) => c.receipt === 'forged'),
+    false,
+  );
+  const team = await runtime.runTeam({ message: 'Compare' });
+  assert.equal(team.citations[0].receipt, 'a'.repeat(64));
+  assert.ok(team.contributions.every((c) => c.citations.length === 1));
+});

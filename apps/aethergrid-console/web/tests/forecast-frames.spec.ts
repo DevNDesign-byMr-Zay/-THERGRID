@@ -69,3 +69,11 @@ test('forecast valid time cannot stand in for an unknown model-run receipt', asy
     expect(result.fetchedAt).toBeNull();
   } finally { globalThis.fetch = original; }
 });
+
+test('historical weather rejects current payloads without archive receipts',async()=>{
+ const {loadCityEnvironment}=await import('../src/services/city-environment');
+ const original=globalThis.fetch;
+ globalThis.fetch=async()=>Response.json({source:{live:true},current:{temperatureC:37}});
+ try{await expect(loadCityEnvironment(40,-74,undefined,'2026-10-14T07:00:00Z')).rejects.toThrow('recorded observation receipt');}
+ finally{globalThis.fetch=original;}
+});

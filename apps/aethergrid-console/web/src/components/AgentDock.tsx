@@ -189,10 +189,12 @@ export function AgentDock({ context, active = true, handoff = null, onEvidence, 
             {agentResponseState(lastRun)}
           </span>
           <code>{lastRun.receipt || 'NO RECEIPT'}</code>
+          {lastRun.toolResults?.map((tool)=><p key={tool.tool}>{tool.tool} · read only · {tool.count} observations</p>)}
+          {lastRun.citations?.map((citation)=><p key={citation.receipt}><a href={citation.href} target="_blank" rel="noreferrer">{citation.kind} · {citation.observedAt}</a><code>{citation.receipt}</code></p>)}
         </div>
       ) : null}
       {lastRecord ? <>
-        <p className="agent-provenance">Backend request · {lastRecord.endpoint} · {lastRecord.status === 'completed' ? 'Completed' : 'Waiting ended'} {lastRecord.completedAt}. Execution receipts identify a request; they do not verify its factual claims. Tool-call provenance and citations are unavailable in the published API.</p>
+        <p className="agent-provenance">Backend request · {lastRecord.endpoint} · {lastRecord.status === 'completed' ? 'Completed' : 'Waiting ended'} {lastRecord.completedAt}. Execution receipts identify a request; they do not verify its factual claims. Attached citations reference recorded server observations; missing citations mean the response has no recorded provider grounding.</p>
         <article className="agent-reviewed-task" aria-label="Reviewed specialist task">
           <strong>{lastRecord.prompt}</strong>
           <small>{lastRecord.context.region} · {lastRecord.context.temporalMode.toUpperCase()} · {lastRecord.context.temporalCursor} · {lastRecord.context.selectedEntityId ?? 'No selected entity'} · {lastRecord.context.sourceFeatureId ?? 'No source feature ID'}</small>

@@ -28,6 +28,7 @@ interface TemporalRailProps {
   clock: AethergridTemporalClock;
   state: Readonly<TemporalState>;
   events?: readonly TemporalNavigatorEvent[];
+  recordedFrames?: readonly string[];
   forecastSeries?: AtmosphericForecastSeries | null;
   forecastError?: string | null;
   onHeightChange?(height: number): void;
@@ -59,7 +60,7 @@ function dataModeCopy(mode: TemporalMode): {
   }
   return {
     label: 'STATIC MAP CONTEXT',
-    detail: 'Persisted observations unavailable · Historical building reconstruction unavailable · Solar time is computed · current weather/AQI/seismic hidden'
+    detail: 'Recorded weather when available · Historical building reconstruction unavailable · Solar time is computed · current AQI/seismic hidden'
   };
 }
 
@@ -67,6 +68,7 @@ export function TemporalRail({
   clock,
   state,
   events = [],
+  recordedFrames = [],
   forecastSeries = null,
   forecastError = null,
   onHeightChange,
@@ -87,11 +89,11 @@ export function TemporalRail({
   const timeLabel = (iso: string) => `${new Date(iso).toLocaleString(undefined, { timeZone: 'UTC' })} UTC`;
   const offset = offsetMinutes(state);
   const dataMode = dataModeCopy(state.mode);
-  const samples = useMemo(() => forecastFrameInstants(forecastSeries), [forecastSeries]);
+  const samples = useMemo(() => state.mode === 'historical' ? [...recordedFrames] : forecastFrameInstants(forecastSeries), [forecastSeries, recordedFrames, state.mode]);
   const sampleIndex = samples.indexOf(state.cursorIso);
   const forecast = state.mode === 'forecast';
   const forecastLoading = forecast && !forecastSeries && !forecastError;
-  const canSelect = forecast && samples.length > 0;
+  const canSelect = (forecast || state.mode === 'historical') && samples.length > 0;
   const range = state.playbackRange;
   const modeled = state.mode === 'scenario' && Boolean(range);
   const modeledStart = Date.parse(range?.start ?? '');
@@ -106,7 +108,7 @@ export function TemporalRail({
   const fetched = forecastInstant(forecastSeries?.fetchedAt);
   const chooseSample = (index: number) => {
     const iso = replaySamples[index];
-    if (iso) clock.scrub(iso, 'forecast');
+    if (iso) clock.scrub(iso, state.mode === 'historical' ? 'historical' : 'forecast');
   };
   const railEvents = events.filter((event) =>
     temporalEventInRailWindow(event, state.liveIso)
@@ -172,8 +174,8 @@ export function TemporalRail({
             disabled={!modeledInRange}
             onChange={(event) => clock.scrub(new Date(Math.round(modeledStart + (modeledEnd - modeledStart) * Number(event.currentTarget.value) / 1000)).toISOString(), 'scenario')} />
         </> : <>
-        <select aria-label="Forecast valid time" disabled={!canSelect} value={sampleIndex < 0 ? '' : state.cursorIso}
-          onChange={(event) => clock.scrub(event.currentTarget.value, 'forecast')}>
+        <select aria-label={state.mode === 'historical' ? 'Recorded valid time' : 'Forecast valid time'} disabled={!canSelect} value={sampleIndex < 0 ? '' : state.cursorIso}
+          onChange={(event) => clock.scrub(event.currentTarget.value, state.mode === 'historical' ? 'historical' : 'forecast')}>
           <option value="" disabled>{canSelect ? 'Cursor outside source samples' : 'Source samples unavailable'}</option>
           {samples.map((iso) => <option key={iso} value={iso}>{timeLabel(iso)}</option>)}
         </select>
@@ -199,7 +201,7 @@ export function TemporalRail({
       </button>
 
       {canSelect && range && <details className="forecast-replay-range">
-        <summary>Forecast replay range</summary>
+        <summary>{state.mode === 'historical' ? 'Recorded replay range' : 'Forecast replay range'}</summary>
         <div className="forecast-range-fields">
           <label>START
             <select aria-label="Forecast range start" value={range.start} disabled={!supportedSourceRange}
@@ -223,6 +225,7 @@ export function TemporalRail({
       <div className="temporal-data-status" data-mode={state.mode}>
         <strong>{dataMode.label}</strong>
         <span>{dataMode.detail}</span>
+        {state.mode === 'historical' && <span className="recorded-coverage">{samples.length ? `${samples.length} recorded samples · Gaps are not reconstructed` : 'Persisted observations unavailable'}</span>}
         {forecast && <span className="forecast-coverage" data-state={forecastLoading ? 'loading' : forecastError || !canSelect || sampleIndex < 0 ? 'unavailable' : forecastSeries?.stale ? 'stale' : 'forecast'}>
           {forecastError ? `UNAVAILABLE · ${forecastError}` : forecastLoading ? 'LOADING · Awaiting source-valid forecast instants' : !canSelect ? 'UNAVAILABLE · No source-valid forecast instants' :
             `${forecastSeries?.stale ? 'STALE · ' : ''}${samples.length} source samples · ${sampleIndex < 0 ? 'Cursor unavailable · ' : ''}Gaps are not reconstructed`}

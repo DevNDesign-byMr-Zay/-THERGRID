@@ -1,3 +1,6 @@
+import { appendFile, mkdir } from 'node:fs/promises';
+import { createSessionRuntime } from './security/session-runtime.mjs';
+import { createObservationStore } from './observation-store.mjs';
 import { validateCoordinates } from "./providers/coordinate-validator.mjs";
 import { createRequestContext } from './providers/request-context.mjs';
 import { createPublicConfig } from './config/public-config.mjs';
@@ -122,7 +125,13 @@ function createPipelineFetch(providerId) {
   };
 }
 
-const agentRuntime = createAgentRuntime();
+const dataDir = process.env.AETHERGRID_DATA_DIR || join(root, '.aethergrid-data');
+const sessionRuntime = createSessionRuntime();
+const observationStore = createObservationStore({dataDir});
+const operatorQuotas = new Map();
+const agentRuntime = createAgentRuntime({tools:{
+  readObservations: async (context) => observationStore.list({lat:context.coordinate?.latitude,lon:context.coordinate?.longitude,at:context.temporalMode === 'historical' ? context.temporalCursor : undefined}),
+}});
 const cityEnvironmentRuntime = createCityEnvironmentRuntime({ fetchImpl: createPipelineFetch('weather') });
 const cityLiveRuntime = createCityLiveRuntime({ fetchImpl: createPipelineFetch('air-quality') });
 const geoRuntime = createGeoRuntime({ fetchImpl: createPipelineFetch('geo') });
@@ -792,7 +801,17 @@ function send(response, status, body, type = 'application/json; charset=utf-8') 
   response.end(body);
 }
 
-function json(response, status, payload) {
+async function json(response, status, payload) {
+  if (status === 200 && response.observation) {
+    const data = payload.data || payload;
+    const live = payload.receipt?.live === true || data.source?.live === true || data.airQuality?.source?.live === true;
+    if (live) {
+      try {
+        const saved = await observationStore.record({...response.observation,payload:providerRegistry.redactor.redactValue(payload)});
+        response.setHeader('x-aethergrid-observation',saved.receipt);
+      } catch { return send(response,503,JSON.stringify({error:'observation_storage_unavailable'})); }
+    }
+  }
   send(response, status, JSON.stringify(payload, null, 2));
 }
 
@@ -874,6 +893,62 @@ const server = http.createServer(async (request, response) => {
   try {
     const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
 
+    const authPrefix = '/api/aethergrid/auth/';
+    response.setHeader('cache-control','no-store');
+    if (url.pathname.startsWith('/api/aethergrid/') && !['GET','HEAD'].includes(request.method)) {
+      const origin = request.headers.origin;
+      if (origin && origin !== `http://${request.headers.host}` && origin !== process.env.AETHERGRID_PUBLIC_ORIGIN) return json(response,403,{error:'origin_rejected'});
+    }
+    if (request.method === 'GET' && url.pathname === `${authPrefix}session`) {
+      const session = sessionRuntime.session(request);
+      return json(response,200,{enabled:sessionRuntime.enabled,user:session?.user || null,csrf:session?.csrf || null});
+    }
+    if (request.method === 'POST' && url.pathname === `${authPrefix}login`) {
+      const input=await body(request);
+      const session=sessionRuntime.login(input.username,input.password,request.socket.remoteAddress);
+      response.setHeader('set-cookie',`aethergrid_session=${session.token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${process.env.AETHERGRID_PUBLIC_ORIGIN?.startsWith('https:') ? '; Secure' : ''}`);
+      return json(response,200,{enabled:true,user:session.user,csrf:session.csrf});
+    }
+    if (request.method === 'POST' && url.pathname === `${authPrefix}logout`) {
+      const session=sessionRuntime.session(request);
+      if(session && request.headers['x-aethergrid-csrf'] !== session.csrf) return json(response,403,{error:'csrf_rejected'});
+      sessionRuntime.logout(request);
+      response.setHeader('set-cookie','aethergrid_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');
+      return json(response,200,{ok:true});
+    }
+    const publicPaths=['/api/aethergrid/health','/api/aethergrid/config/public'];
+    if(url.pathname.startsWith('/api/aethergrid/') && !publicPaths.includes(url.pathname)) {
+      const session=sessionRuntime.authorize(request,request.method,url.pathname);
+      request.operator=session.user;
+      if(sessionRuntime.enabled && request.method === 'POST' && /\/(agents\/|team$|chat$|optimize$)/.test(url.pathname)) {
+        const key=session.user.username;const window=operatorQuotas.get(key);
+        const quota=window && window.until>Date.now() ? window : {count:0,until:Date.now()+60_000};
+        operatorQuotas.set(key,quota);
+        if(++quota.count>20) return json(response,429,{error:'operator_request_quota'});
+      }
+      if(!['GET','HEAD'].includes(request.method)) {
+        await mkdir(dataDir,{recursive:true,mode:0o700});
+        await appendFile(join(dataDir,'operator-audit.jsonl'),JSON.stringify({at:new Date().toISOString(),operator:session.user.username,role:session.user.role,method:request.method,path:url.pathname})+'\n',{mode:0o600});
+      }
+    }
+    if(request.method === 'GET' && url.pathname === '/api/aethergrid/history') {
+      const query={kind:url.searchParams.get('kind') || undefined,lat:url.searchParams.has('lat') ? Number(url.searchParams.get('lat')) : undefined,lon:url.searchParams.has('lon') ? Number(url.searchParams.get('lon')) : undefined,at:url.searchParams.get('at') || undefined};
+      const observations=await observationStore.list(query);
+      return json(response,200,{version:1,observations,source:'recorded-provider-observations',interpolated:false});
+    }
+    const observationKinds={'/api/aethergrid/weather/current':'weather','/api/aethergrid/environment':'environment','/api/aethergrid/city-live':'city-live'};
+    const kind=observationKinds[url.pathname];
+    if(request.method === 'GET' && kind && url.searchParams.has('at')) {
+      const record=await observationStore.replay({kind,lat:Number(url.searchParams.get('lat')),lon:Number(url.searchParams.get('lon')),at:url.searchParams.get('at')});
+      if(!record) return json(response,404,{error:'recorded_observation_unavailable'});
+      response.setHeader('x-aethergrid-recorded-at',record.observedAt);
+      response.setHeader('x-aethergrid-observation',record.receipt);
+      return json(response,200,record.payload);
+    }
+    if(request.method === 'GET' && kind) {
+      const coordinate=validateCoordinates(url.searchParams.get('lat'),url.searchParams.get('lon'));
+      if(coordinate.valid) response.observation={kind,coordinate:{lat:Number(url.searchParams.get('lat')),lon:Number(url.searchParams.get('lon'))}};
+    }
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/health') {
       const runtime = agentRuntime.summary();
       return json(response, 200, {
@@ -1192,12 +1267,12 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
     }
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/profile') {
-      return json(response, 200, { profile: await profileStore.load() });
+      return json(response, 200, { profile: await (sessionRuntime.enabled ? createProfileStore({dataDir:join(dataDir, 'profiles', request.operator.username)}) : profileStore).load() });
     }
 
     if (request.method === 'PUT' && url.pathname === '/api/aethergrid/profile') {
       const input = await body(request);
-      const profile = await profileStore.save(input.profile || input);
+      const profile = await (sessionRuntime.enabled ? createProfileStore({dataDir:join(dataDir, 'profiles', request.operator.username)}) : profileStore).save(input.profile || input);
       activity(`Operator profile updated for ${profile.displayName}.`, 'profile');
       return json(response, 200, { profile, activity: state.activity });
     }

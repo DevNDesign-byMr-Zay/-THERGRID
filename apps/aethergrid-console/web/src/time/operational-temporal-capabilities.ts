@@ -26,10 +26,10 @@ export const OPERATIONAL_TEMPORAL_CAPABILITIES: readonly OperationalTemporalCapa
     id: 'weather',
     label: 'WEATHER',
     live: 'available',
-    historical: 'pending-provider',
+    historical: 'available',
     forecast: 'available',
     scenario: 'pending-provider',
-    note: 'Current atmosphere and provider-backed forecast sampling are implemented. Forecast values appear only when the selected 4D cursor aligns to an actual returned provider sample; historical weather remains unavailable.'
+    note: 'Current atmosphere and provider-backed forecast sampling are implemented. Forecast values appear only when the selected 4D cursor aligns to an actual returned provider sample; historical weather uses server-recorded observations and discloses gaps.'
   },
   {
     id: 'hazards',
