@@ -28,7 +28,7 @@ jobs:
           node-version: 22
 
       - name: Install isolated web dependencies
-        run: npm install --ignore-scripts --no-audit --no-fund
+        run: npm ci --ignore-scripts --include=optional --no-audit --no-fund
 
       - name: Type-check v4 spatial application
         run: npm run typecheck
@@ -170,7 +170,7 @@ jobs:
           node-version: 22
 
       - name: Install isolated web dependencies
-        run: npm install --ignore-scripts --no-audit --no-fund
+        run: npm ci --ignore-scripts --include=optional --no-audit --no-fund
 
       - name: Type-check and build the spatial application
         run: npm run typecheck && npm run build
