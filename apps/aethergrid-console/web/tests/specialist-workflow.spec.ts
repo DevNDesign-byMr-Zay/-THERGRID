@@ -21,3 +21,10 @@ test('failed and stopped requests retain context without fabricating execution r
     expect(JSON.stringify(record)).not.toContain('SECRET');
   }
 });
+
+
+test('local advisory responses remain fallback even when the backend fallback flag is false', async()=>{
+  const {agentResponseState}=await import('../src/services/agent-run-history');
+  const response:any={runtime:{provider:'local',model:'local-team',fallbackUsed:false}};
+  expect(agentResponseState(response)).toBe('LOCAL FALLBACK');
+});
