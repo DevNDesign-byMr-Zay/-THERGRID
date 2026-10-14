@@ -125,6 +125,7 @@ jobs:
             apps/aethergrid-console/web/test-results/specialist-acceptance/
             apps/aethergrid-console/web/test-results/specialist-*.png
             apps/aethergrid-console/web/test-results/step6-*.png
+            apps/aethergrid-console/web/test-results/existing-runtime/
             apps/aethergrid-console/web/test-results/merged-runtime/
             apps/aethergrid-console/web/test-results/merged-runtime-*.png
             apps/aethergrid-console/web/test-results/operational-*.png
