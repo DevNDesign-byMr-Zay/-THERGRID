@@ -2736,7 +2736,7 @@ export function App() {
             })}>EXPORT SCENE JSON</button>
           </div>
           <div className="intel-workspace intel-ai">
-            <AgentDock context={agentContext} handoff={agentHandoff} onEvidence={(id) => { setSelectedEvidence(null); setEvidenceRequest((previous) => ({id, generation: (previous?.generation ?? 0) + 1})); showIntelligence('evidence'); }} onComparison={() => showIntelligence('analysis')} />
+            <AgentDock context={agentContext} handoff={agentHandoff} active={intelWorkspace === 'ai'} onEvidence={(id) => { setSelectedEvidence(null); setEvidenceRequest((previous) => ({id, generation: (previous?.generation ?? 0) + 1})); showIntelligence('evidence'); }} onComparison={() => showIntelligence('analysis')} />
           </div>
           <div className="intel-workspace intel-scenario">
             <ScenarioPanel

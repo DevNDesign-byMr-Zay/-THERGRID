@@ -609,3 +609,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .immersive-spatial .drawer-heading,
   .immersive-spatial .intel-mobile-head { flex: 0 0 auto; }
 }
+
+.agent-model-panel, .agent-reviewed-task { display: grid; gap: 8px; margin: 12px 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; overflow-wrap: anywhere; }
+.agent-model-panel > div { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.agent-model-panel p { margin: 0; font-size: 11px; }
+.agent-model-panel small, .agent-reviewed-task small { font-size: 11px; }
+.agent-investigation-steps { padding-left: 22px; font-size: 11px; line-height: 1.6; }
+.agent-reviewed-task p, .agent-message p, .agent-contributions p, .agent-task-history p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.agent-task-history button[aria-pressed="true"] { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+.agent-model-panel button, .agent-task-history button { padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--panel-strong); color: var(--cyan); font: inherit; cursor: pointer; }
+.agent-model-panel button:disabled, .agent-task-history button:disabled { opacity: .6; cursor: default; }

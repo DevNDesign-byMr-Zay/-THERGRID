@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AGENT_ROLES, BRAND } from './brand';
+import { AgentModelPanel } from './AgentModelPanel';
 
 import {
   runAgent,
@@ -7,7 +8,7 @@ import {
   type AgentId,
   type AgentSpatialContext
 } from '../services/agent-client';
-import { agentResponseState, appendAgentRun, createAgentRunRecord, type AgentRunRecord } from '../services/agent-run-history';
+import { agentResponseState, appendAgentRun, createAgentRunRecord, createAgentUnfinishedRecord, type AgentRunRecord } from '../services/agent-run-history';
 
 const AGENTS: readonly AgentId[] = ['TEAM', 'AUREN', 'VÆLON', 'SOLVÆR'];
 
@@ -19,12 +20,13 @@ export interface AgentHandoffRequest {
 
 interface AgentDockProps {
   context: AgentSpatialContext;
+  active?: boolean;
   handoff?: AgentHandoffRequest | null;
   onEvidence?(id: string): void;
   onComparison?(): void;
 }
 
-export function AgentDock({ context, handoff = null, onEvidence, onComparison }: AgentDockProps) {
+export function AgentDock({ context, active = true, handoff = null, onEvidence, onComparison }: AgentDockProps) {
   const [agent, setAgent] = useState<AgentId>('TEAM');
   const [draft, setDraft] = useState('');
   const [histories, setHistories] = useState<Record<AgentId, AgentHistoryItem[]>>({
@@ -34,18 +36,29 @@ export function AgentDock({ context, handoff = null, onEvidence, onComparison }:
     'SOLVÆR': []
   });
   const [runs, setRuns] = useState<Record<AgentId, AgentRunRecord[]>>({ TEAM: [], AUREN: [], 'VÆLON': [], 'SOLVÆR': [] });
-  const lastRecord = runs[agent].at(-1);
+  const [reviewedId, setReviewedId] = useState<string | null>(null);
+  const lastRecord = runs[agent].find(record => record.id === reviewedId) ?? runs[agent].at(-1);
   const lastRun = lastRecord?.response ?? null;
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const requestRef = useRef<{agent: AgentId; prompt: string; context: AgentSpatialContext; startedAt: string} | null>(null);
+  const retain = (record: AgentRunRecord) => {
+    setRuns(current => ({...current, [record.agent]: appendAgentRun(current[record.agent], record)}));
+    setReviewedId(record.id);
+  };
+  const stopWaiting = () => {
+    const request = requestRef.current;
+    controllerRef.current?.abort(); controllerRef.current = null; requestRef.current = null;
+    if (request) retain(createAgentUnfinishedRecord(request.agent, request.prompt, request.context, 'stopped', 'Stopped waiting locally. The backend may still finish this request; no server cancellation endpoint is available.', request.startedAt, new Date().toISOString()));
+    setRunning(false);
+  };
 
   useEffect(() => {
     if (!handoff) return;
-    controllerRef.current?.abort();
-    controllerRef.current = null;
-    setRunning(false);
+    stopWaiting();
+    setReviewedId(null);
     setAgent(handoff.agent);
     setDraft(handoff.prompt);
     setError(null);
@@ -73,12 +86,14 @@ export function AgentDock({ context, handoff = null, onEvidence, onComparison }:
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
+    requestRef.current = {agent, prompt: message, context: requestedContext, startedAt};
+    setReviewedId(null);
 
     try {
-      const result = await runAgent(agent, message, context, before, controller.signal);
+      const result = await runAgent(agent, message, requestedContext, before, controller.signal);
       if (controller.signal.aborted || controllerRef.current !== controller) return;
       const record = createAgentRunRecord(agent, message, requestedContext, result, startedAt, new Date().toISOString());
-      setRuns(current => ({ ...current, [agent]: appendAgentRun(current[agent], record) }));
+      retain(record);
       setHistories((current) => ({
         ...current,
         [agent]: [
@@ -88,10 +103,14 @@ export function AgentDock({ context, handoff = null, onEvidence, onComparison }:
       }));
     } catch (runError) {
       if (controller.signal.aborted) return;
-      setError(runError instanceof Error ? runError.message : String(runError));
+      if (controllerRef.current !== controller) return;
+      const messageText = runError instanceof Error ? runError.message : String(runError);
+      retain(createAgentUnfinishedRecord(agent, message, requestedContext, 'failed', messageText, startedAt, new Date().toISOString()));
+      setError(messageText);
     } finally {
       if (controllerRef.current === controller) {
         controllerRef.current = null;
+        requestRef.current = null;
         setRunning(false);
       }
     }
@@ -110,7 +129,7 @@ export function AgentDock({ context, handoff = null, onEvidence, onComparison }:
       <div className="agent-identities" aria-label="Specialist identities">
         {(['AUREN', 'VÆLON', 'SOLVÆR'] as const).map((id) => (
           <button type="button" key={id} aria-pressed={agent === id} disabled={running}
-            onClick={() => { setAgent(id); setError(null); }}>
+            onClick={() => { setAgent(id); setReviewedId(null); setError(null); }}>
             <img src={BRAND[id]} alt={`${id} mark`} />
             <strong>{id}</strong>
           </button>
@@ -118,7 +137,7 @@ export function AgentDock({ context, handoff = null, onEvidence, onComparison }:
       </div>
       <p className="agent-role">{AGENT_ROLES[agent]}</p>
       <span className="agent-run-state" role="status">
-        {running ? 'RUNNING' : lastRun ? agentResponseState(lastRun) : 'READY TO REQUEST · PROVIDER NOT YET VERIFIED'}
+        {running ? 'RUNNING' : lastRecord?.status === 'failed' ? 'FAILED' : lastRecord?.status === 'stopped' ? 'STOPPED WAITING' : lastRun ? agentResponseState(lastRun) : 'READY TO REQUEST · PROVIDER NOT YET VERIFIED'}
       </span>
 
       <div className="agent-tabs" role="group" aria-label="ÆTHERGRID agents">
@@ -131,6 +150,7 @@ export function AgentDock({ context, handoff = null, onEvidence, onComparison }:
             aria-pressed={agent === id}
             onClick={() => {
               setAgent(id);
+              setReviewedId(null);
               setError(null);
             }}
           >
@@ -138,9 +158,13 @@ export function AgentDock({ context, handoff = null, onEvidence, onComparison }:
           </button>
         ))}
       </div>
+      <AgentModelPanel agent={agent} active={active} />
       <p className="agent-request-context">Request context · {context.region} · {context.temporalMode.toUpperCase()} · {context.temporalCursor}
         {context.selectedEntity?.id ? ` · Entity ${String(context.selectedEntity.id)}` : ' · No selected entity'}</p>
 
+      <ol className="agent-investigation-steps" aria-label="Investigation steps">
+        <li>Inspect the selected spatial context</li><li>Request specialist analysis</li><li>Compare scenarios in the workspace</li><li>Review returned evidence</li>
+      </ol>
       <div className="agent-thread" aria-live="polite">
         {visibleHistory.length ? (
           visibleHistory.map((item, index) => (
@@ -168,16 +192,24 @@ export function AgentDock({ context, handoff = null, onEvidence, onComparison }:
         </div>
       ) : null}
       {lastRecord ? <>
-        <p className="agent-provenance">Backend request · {lastRecord.endpoint} · Completed {lastRecord.completedAt}. Execution receipts identify a request; they do not verify its factual claims. Tool-call provenance and citations are unavailable in the published API.</p>
+        <p className="agent-provenance">Backend request · {lastRecord.endpoint} · {lastRecord.status === 'completed' ? 'Completed' : 'Waiting ended'} {lastRecord.completedAt}. Execution receipts identify a request; they do not verify its factual claims. Tool-call provenance and citations are unavailable in the published API.</p>
+        <article className="agent-reviewed-task" aria-label="Reviewed specialist task">
+          <strong>{lastRecord.prompt}</strong>
+          <small>{lastRecord.context.region} · {lastRecord.context.temporalMode.toUpperCase()} · {lastRecord.context.temporalCursor} · {lastRecord.context.selectedEntityId ?? 'No selected entity'} · {lastRecord.context.sourceFeatureId ?? 'No source feature ID'}</small>
+          <p>{lastRun?.reply ?? lastRecord.error}</p>
+          <small>Captured request context. Scenario comparisons use the current workspace.</small>
+        </article>
         <details className="agent-task-history"><summary>Task history · {agent} · {runs[agent].length} retained</summary>
+          <small>Eight local tasks per specialist; cleared when the application reloads.</small>
           {runs[agent].slice().reverse().map(record => <article key={record.id}>
             <strong>{record.prompt}</strong><small>{record.context.region} · {record.context.temporalMode.toUpperCase()} · {record.context.temporalCursor} · {record.context.selectedEntityId ?? 'No selected entity'}</small>
-            <small>{record.startedAt} → {record.completedAt} · {agentResponseState(record.response)} · {record.response.runtime.provider} · {record.response.runtime.model ?? 'MODEL NOT PROVIDED'}</small>
-            <p>{record.response.reply}</p><code>{record.response.receipt || 'NO RECEIPT'}</code>
+            <small>{record.startedAt} → {record.completedAt} · {record.response ? agentResponseState(record.response) : record.status === 'stopped' ? 'STOPPED WAITING' : 'FAILED'}{record.response ? ` · ${record.response.runtime.provider} · ${record.response.runtime.model ?? 'MODEL NOT PROVIDED'}` : ''}</small>
+            <p>{record.response?.reply ?? record.error}</p><code>{record.response?.receipt || 'NO RECEIPT'}</code>
+            <button type="button" aria-label={`Review task: ${record.prompt}`} aria-pressed={lastRecord.id === record.id} disabled={running} onClick={() => {setReviewedId(record.id);setError(null);}}>REVIEW TASK</button>
           </article>)}
         </details>
         <div className="agent-investigation-actions">
-          {onComparison ? <button type="button" onClick={onComparison}>COMPARE SCENARIOS</button> : null}
+          {lastRun && onComparison ? <button type="button" onClick={onComparison}>COMPARE SCENARIOS</button> : null}
           {lastRun?.evidence?.id && onEvidence ? <button type="button" onClick={() => onEvidence(lastRun.evidence!.id!)}>REVIEW EVIDENCE</button> : null}
         </div>
       </> : null}
@@ -188,7 +220,7 @@ export function AgentDock({ context, handoff = null, onEvidence, onComparison }:
         <details className="agent-contributions">
           <summary>Specialist contributions · {lastRun.contributions.length}</summary>
           {lastRun.contributions.map((contribution) => (
-            <article key={contribution.agent}>
+            <article key={`${contribution.agent}:${contribution.receipt}`}>
               <strong>{contribution.agent}</strong>
               <small>{contribution.runtime.provider} · {contribution.runtime.model ?? 'MODEL NOT PROVIDED'} · {contribution.runtime.fallbackUsed ? 'FALLBACK' : contribution.runtime.provider !== 'unknown' && contribution.runtime.model ? 'PROVIDER RESPONSE' : 'UNVERIFIED RESPONSE'}</small>
               <p>{contribution.reply}</p>
@@ -221,7 +253,7 @@ export function AgentDock({ context, handoff = null, onEvidence, onComparison }:
           {running ? 'ANALYZING…' : 'SEND'}
         </button>
       </form>
-      {running ? <button type="button" onClick={() => { controllerRef.current?.abort(); controllerRef.current = null; setRunning(false); setError('Stopped waiting locally. The backend may still finish this request; no server cancellation endpoint is available.'); }}>STOP WAITING</button> : null}
+      {running ? <button type="button" onClick={stopWaiting}>STOP WAITING</button> : null}
     </section>
   );
 }
