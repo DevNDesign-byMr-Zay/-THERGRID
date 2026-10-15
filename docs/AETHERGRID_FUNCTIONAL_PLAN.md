@@ -28,9 +28,11 @@
 ## Batch plan
 
 ### Batch 1 — View router + real settings
+
 Status: COMPLETE
 
 Deliver:
+
 - real workspace router: Grid, Holographic, Quantum, AI, Evidence, Scenarios, Settings;
 - top tabs and left navigation switch workspace content instead of only scrolling;
 - persistent browser settings using localStorage;
@@ -39,9 +41,11 @@ Deliver:
 - tests that prove views/settings are real controls.
 
 ### Batch 2 — Replaceable AI provider layer
+
 Status: COMPLETE
 
 Deliver:
+
 - provider-neutral agent runtime;
 - OpenAI-compatible HTTP adapter;
 - Ollama/local adapter;
@@ -51,9 +55,11 @@ Deliver:
 - timeout, error, fallback and receipt metadata.
 
 ### Batch 3 — Individual agents + team orchestration
+
 Status: COMPLETE
 
 Deliver:
+
 - VÆLON: optimization/scenario exploration;
 - AUREN: semantic/spatial analysis;
 - SOLVÆR: simulation/evidence generation;
@@ -63,9 +69,11 @@ Deliver:
 - visible model/provider badges.
 
 ### Batch 4 — Holographic workspace
+
 Status: COMPLETE
 
 Deliver:
+
 - full-screen spatial workspace;
 - WebGL camera presets;
 - selectable topology, assets, routes, risk, flow and future-state layers;
@@ -75,9 +83,11 @@ Deliver:
 - exportable spatial scene data.
 
 ### Batch 5 — Quantum workspace
+
 Status: COMPLETE
 
 Deliver:
+
 - objective selector;
 - weighted cost/emissions/reliability/renewable controls;
 - constraint editor;
@@ -87,9 +97,11 @@ Deliver:
 - visualization of objective landscape and selected candidate.
 
 ### Batch 6 — Evidence, scenarios and operator workflow
+
 Status: COMPLETE
 
 Deliver:
+
 - scenario builder;
 - scenario duplication/reset;
 - evidence browser;
@@ -100,9 +112,11 @@ Deliver:
 - reproducibility metadata.
 
 ### Batch 7 — Packaging, launchers and regression gates
+
 Status: COMPLETE
 
 Deliver:
+
 - Windows PowerShell launcher;
 - optional batch launcher;
 - generated self-contained standalone HTML;
@@ -118,6 +132,7 @@ Deliver:
 Status: IMPLEMENTED / PROMOTED TO CANONICAL APPLICATION
 
 Deliver:
+
 - typed React/Cesium operator shell under `apps/aethergrid-console/web/` while preserving the maintained Node backend;
 - continuous WGS84 globe → region → city → district camera travel with city-specific skyline framing derived from mapped geometry;
 - renderer-neutral `SpatialRenderer` contract with Cesium primary rendering and a real source-backed native WebGL failover;
@@ -135,6 +150,7 @@ Deliver:
 - persistent local spatial bookmarks that restore scope, target, layers, visual mode, operation mode and 4D cursor without backend mutation.
 
 Fidelity / authority boundaries:
+
 - thunderstorm flash cadence is synthetic presentation derived from provider-coded storm conditions, not detected lightning;
 - mapped-building illumination is presentation-only and is not occupancy, window-state or utility-load telemetry;
 - native failover preserves a functional operator scene but is not photorealistic equivalence to streamed Cesium content;
@@ -144,6 +160,7 @@ Fidelity / authority boundaries:
 - physical infrastructure actuation remains disabled.
 
 Promotion requirements:
+
 - dedicated v4 TypeScript/build gate passes;
 - root conventional tests, coverage, lint/format, strict renderer typecheck, fresh-clone smoke and container smoke pass;
 - CodeQL passes;
@@ -155,6 +172,7 @@ Promotion requirements:
 Status: IMPLEMENTED ON DRAFT BRANCH
 
 Deliver:
+
 - renderer-neutral geographic surface picking across Cesium and native fallback;
 - explicit surface provenance: depth surface, terrain, ellipsoid or native projection;
 - operator geodesic measurement with distance, bearing, midpoint and optional elevation/slope when both picked surfaces provide heights;
@@ -166,6 +184,7 @@ Deliver:
 - operator-controlled AUREN comparison review with explicit instruction not to infer causation from correlation.
 
 Accuracy boundaries:
+
 - native surface picks are projection estimates and do not claim terrain elevation;
 - elevation delta and slope are omitted unless both picked points provide finite heights;
 - non-LIVE captures do not inherit current-only weather, AQI or seismic values;
@@ -209,7 +228,6 @@ A fresh ZIP is considered functional when:
 - tests, lint, typecheck, coverage, release readiness, package assembly and CodeQL pass;
 - the runtime does not depend on the old dashboard screenshot.
 
-
 ## Current verified state
 
 Batches 1–16 are verified on `main`; Batch 17 is implemented on the feature branch and must pass the maintained gates before entering `main`.
@@ -236,6 +254,7 @@ The CI-built functional application archive was inspected after the final releas
 Status: COMPLETE
 
 ### Global God's-eye grid
+
 - native-WebGL planetary latitude/longitude grid;
 - real-coordinate world city nodes;
 - orbit, zoom, point selection and city focus;
@@ -247,6 +266,7 @@ Status: COMPLETE
 - explicit fallback labeling when live geometry is unavailable.
 
 ### Operator profile
+
 - editable profile dialog;
 - persistent local JSON store;
 - browser cache fallback;
@@ -255,6 +275,7 @@ Status: COMPLETE
 - no profile field grants infrastructure authority.
 
 ### Quantum compute
+
 - credential-free local Sampler fallback;
 - IBM Cloud IAM token exchange;
 - IBM Quantum backend discovery;
@@ -265,6 +286,7 @@ Status: COMPLETE
 - explicit separation between hardware submission and completed QPU execution.
 
 ### Next expansion
+
 - configurable commercial/self-hosted geospatial providers for higher-volume deployments;
 - terrain-aware building bases and transmission-line draping;
 - topology relationship inference across substations, lines, generation and load;
@@ -277,6 +299,7 @@ Status: COMPLETE
 Status: COMPLETE
 
 ### Arbitrary coordinate exploration
+
 - operator-entered latitude/longitude;
 - bounded 250 m–2 km local radius;
 - custom coordinate nodes injected into the live globe session;
@@ -284,6 +307,7 @@ Status: COMPLETE
 - same interactive city WebGL renderer used by preset cities.
 
 ### Real mapped grid layers
+
 - live OpenStreetMap building footprints;
 - live road topology;
 - live mapped power line / minor-line / cable geometry;
@@ -294,6 +318,7 @@ Status: COMPLETE
 - visible source attribution and fallback state.
 
 ### Live terrain elevation
+
 - bounded real-coordinate elevation sampling through a replaceable terrain adapter;
 - Open-Meteo elevation provider backed by Copernicus DEM GLO-90;
 - independent TERRAIN layer in the city renderer;
@@ -302,17 +327,20 @@ Status: COMPLETE
 - terrain provider credentials remain server-side.
 
 ### 4D city review
+
 - city renderer retains x/y/z geometry plus time-phase animation;
 - GLOBAL workspace exposes a dedicated 24-hour time index;
 - time affects spatial animation without altering source provenance.
 
 ### Shared agent context
+
 - last loaded geospatial summary becomes bounded AI context;
 - last quantum submission/result state becomes bounded AI context;
 - individual agents and team synthesis receive the same external-context envelope;
 - credentials, bearer tokens, and actuation authority never enter that envelope.
 
 ### Verification requirements
+
 - parser tests cover OSM buildings, roads, power lines and power assets;
 - custom coordinate validation is tested;
 - standalone fallback contains buildings, roads and power topology;
@@ -321,6 +349,7 @@ Status: COMPLETE
 - release-readiness fails if the live power parser, coordinate endpoint, or agent context disappears.
 
 ### Next expansion
+
 - transmission/asset relationship graph inference from source topology;
 - weather/renewables overlays behind separately attributed adapters;
 - hosted multi-user authentication/session boundary;
@@ -332,6 +361,7 @@ Status: COMPLETE
 Status: COMPLETE
 
 ### Live elevation
+
 - provider-neutral `terrain-runtime.mjs`;
 - default Open-Meteo Elevation adapter;
 - Copernicus DEM GLO-90 attribution;
@@ -342,6 +372,7 @@ Status: COMPLETE
 - explicit flat-local fallback when the provider cannot be reached.
 
 ### Packaging and safety
+
 - terrain runtime is a required non-empty ZIP file;
 - standalone HTML retains terrain controls and native WebGL terrain code;
 - provider credentials remain server-side;
@@ -350,6 +381,7 @@ Status: COMPLETE
 - physical actuation and infrastructure dispatch remain disabled.
 
 ### Next expansion
+
 - terrain-aware building base elevation and transmission-line draping;
 - relationship graph inference across mapped substations, lines and generation assets;
 - weather and renewable-resource overlays behind separately attributed adapters;
@@ -361,6 +393,7 @@ Status: COMPLETE
 Status: COMPLETE
 
 ### Solid live 3D cities
+
 - OSM building footprints are extruded into translucent WebGL triangle surfaces instead of wireframe-only shells;
 - wireframe edges remain available for readable topology and X-ray review;
 - OSM building:part and minimum-height metadata are retained when present;
@@ -368,6 +401,7 @@ Status: COMPLETE
 - globe selection performs a cinematic planetary descent and a second local city fly-in while geometry/terrain load.
 
 ### Operational city use cases
+
 - Grid Resilience;
 - Outage Impact;
 - Emergency Access;
@@ -377,6 +411,7 @@ Status: COMPLETE
 Each workflow analyzes the currently loaded bounded city mesh, returns transparent map-derived metrics and a 0–100 planning proxy, recommends renderer layers, creates an evidence receipt, and adds the result to bounded AI context. These indicators are decision-support proxies, not operational truth or physical actuation.
 
 ### Dedicated AI chats
+
 - TEAM, VÆLON, AUREN and SOLVÆR each retain an independent browser-side conversation thread;
 - the active thread sends only a bounded recent history window to its existing provider-neutral backend route;
 - selecting another agent changes to that agent's own transcript instead of reusing the shared log;
@@ -384,6 +419,7 @@ Each workflow analyzes the currently loaded bounded city mesh, returns transpare
 - provider configuration remains replaceable and secrets remain server-side.
 
 ### Verification requirements
+
 - semantic HTML must expose the cinematic transition, visual modes, city-use-case controls and thread state;
 - native WebGL source must contain solid city triangle geometry in addition to wireframe topology;
 - geospatial tests must prove building-part and minimum-height parsing;
@@ -396,6 +432,7 @@ Each workflow analyzes the currently loaded bounded city mesh, returns transpare
 Status: COMPLETE
 
 ### City-specific 3D/4D identity
+
 - preset city coordinates target recognizable skyline districts rather than generic centroids;
 - OpenStreetMap ways and relation outer geometry are accepted for buildings and building parts;
 - source-backed height supports `height`, `est_height`, `building:levels`, `min_height`, and `building:min_level`;
@@ -406,6 +443,7 @@ Status: COMPLETE
 - skyline max, P95 height, source-backed height coverage, building-part count, roof coverage and upstream timestamp remain explicit metadata.
 
 ### Current open-data context
+
 - OpenStreetMap Overpass remains operator-triggered and attribution-bound;
 - upstream OSM timestamp is retained when returned by Overpass;
 - `city-environment-runtime.mjs` adds current Open-Meteo temperature, apparent temperature, weather code, cloud cover, daylight, precipitation, wind speed and wind direction;
@@ -415,15 +453,18 @@ Status: COMPLETE
 - provider timestamps and fallback state are visible rather than represented as live when unavailable.
 
 ### Appearance
+
 - Settings expose Dark, Light and System modes;
 - appearance persists in the existing local settings store;
 - System mode reacts to operating-system color preference changes;
 - semantic panels, controls and native WebGL city/globe palettes respond to the resolved theme.
 
 ### Fidelity boundary
+
 The city twin is only as exact as the open-source geometry and metadata available for the selected coordinate. ÆTHERGRID must never invent an unverified landmark, façade, roof dimension or hardware state and then label it as source-backed. Missing data remains visible through coverage/provenance readouts or an explicit fallback state.
 
 ### Verification requirements
+
 - tests prove an 828 m source height is not flattened and imperial heights are converted correctly;
 - tests prove relation building geometry and roof metadata survive parsing;
 - tests prove current environment data maps through the provider-neutral runtime without browser secrets;
@@ -436,6 +477,7 @@ The city twin is only as exact as the open-source geometry and metadata availabl
 Status: COMPLETE
 
 ### Animated planet
+
 - secondary native-WebGL atmospheric shell;
 - current UTC sweep around the globe;
 - current modeled AQI pulses for maintained world-city nodes;
@@ -444,6 +486,7 @@ Status: COMPLETE
 - live-context rendering remains separate from base city coordinates and OpenStreetMap geometry.
 
 ### Animated city atmosphere
+
 - wind vectors derive from current modeled wind speed and direction;
 - precipitation streak density derives from current precipitation and leans with wind;
 - air-quality particles derive from current modeled US AQI and change visual emphasis by AQ category;
@@ -452,7 +495,9 @@ Status: COMPLETE
 - reduced-motion preference suppresses pulse animation while preserving source state.
 
 ### Source-driven city operations
+
 Eight maintained workflows:
+
 - Grid Resilience;
 - Outage Impact;
 - Emergency Access;
@@ -465,6 +510,7 @@ Eight maintained workflows:
 Each workflow combines only the bounded sources relevant to the operation, returns transparent metrics/live signals, selects renderer layers, selects an animation profile, records a receipt and remains advisory-only. Weather/AQ/seismic context never becomes physical authority.
 
 ### Live-source adapters
+
 - current Open-Meteo weather context;
 - current Open-Meteo Air Quality / CAMS context;
 - USGS M2.5+ past-day GeoJSON feed with a bounded one-minute local cache;
@@ -472,6 +518,7 @@ Each workflow combines only the bounded sources relevant to the operation, retur
 - explicit local fallback structures are returned when a provider cannot be reached.
 
 ### Verification requirements
+
 - unit tests must exercise Air Quality and USGS adapters without external network dependencies;
 - city-operation tests must exercise all eight workflows with live-source fixtures;
 - semantic HTML must expose all three live layers and three new use cases;
@@ -481,6 +528,7 @@ Each workflow combines only the bounded sources relevant to the operation, retur
 - test, lint, typecheck, coverage, fresh-clone, container, quality/release-readiness, package and CodeQL gates must remain green.
 
 ### Accuracy boundary
+
 The animated layers visualize the freshest bounded feed/model data received by ÆTHERGRID. They are not synthetic claims of street-level sensing. Model weather/AQ resolution and source timestamps remain visible, seismic events are geospatial context rather than damage predictions, and absent live data must remain absent or explicitly fallback.
 
 ## Batch 14 — Solar city identity, atmospheric motion, and environmental operations
@@ -488,6 +536,7 @@ The animated layers visualize the freshest bounded feed/model data received by �
 Status: COMPLETE
 
 ### Real-time solar globe
+
 - current subsolar latitude/longitude is calculated from UTC solar declination and equation of time;
 - the globe renders a live day/night terminator independently from the UTC longitude sweep;
 - the subsolar point is rendered as a dedicated live marker;
@@ -495,6 +544,7 @@ Status: COMPLETE
 - solar geometry is recomputed on a bounded minute cadence and is not presented as astronomical ephemeris-grade output.
 
 ### City-specific atmosphere and light
+
 - Open-Meteo modeled cloud cover controls a separate cloud-particle deck;
 - cloud motion is driven by current wind direction/speed through shader flow uniforms;
 - weather vectors now translate directionally through the city scene;
@@ -503,6 +553,7 @@ Status: COMPLETE
 - procedural lights respond to modeled day/night state and do not represent measured occupancy, window state, or utility demand.
 
 ### Expanded environment context
+
 - relative humidity;
 - surface pressure;
 - sunrise and sunset;
@@ -511,7 +562,9 @@ Status: COMPLETE
 - existing temperature, apparent temperature, cloud, precipitation, wind, gust, radiation, visibility, AQI, and seismic context remain available.
 
 ### Environmental operations
+
 Ten maintained workflows now include:
+
 - Heat Stress;
 - Visibility Operations;
 - the eight existing v2.7 workflows.
@@ -519,6 +572,7 @@ Ten maintained workflows now include:
 Heat Stress combines apparent temperature, modeled relative humidity, UV, and mapped built density into a bounded attention proxy. Visibility Operations combines modeled visibility, cloud, precipitation, AQI, mapped roads, and built form into a bounded operational-context proxy. Neither result is an operational clearance or health diagnosis.
 
 ### Verification requirements
+
 - environment-runtime tests must prove humidity, pressure and daily solar fields are requested and mapped;
 - semantic UI tests must require CLOUDS, CITY LIGHTS, solar status, Heat Stress and Visibility Operations controls;
 - WebGL source tests must require cloud particles, procedural city lights, directional flow and precipitation drop uniforms;
@@ -528,6 +582,7 @@ Heat Stress combines apparent temperature, modeled relative humidity, UV, and ma
 - all test, lint, typecheck, coverage, fresh-clone, container, package, quality/release-readiness and CodeQL gates remain mandatory.
 
 ### Fidelity boundary
+
 ÆTHERGRID continues to distinguish source-backed structure from visualization. Building geometry and supported heights/roofs come from mapped source data when available; weather and air quality remain provider model context; seismic events remain event-feed context; skyline lights and cloud particles are procedural render layers driven by those bounded inputs rather than claims of direct sensing.
 
 ## Batch 15 — Source-backed city identity and semantic weather
@@ -535,6 +590,7 @@ Heat Stress combines apparent temperature, modeled relative humidity, UV, and ma
 Status: COMPLETE
 
 ### City identity
+
 - extend skyline profiles with source-backed named structures and tall-structure counts;
 - render independent landmark points and vertical skyline spines for named/tall mapped structures;
 - expose LANDMARKS as an independent city layer;
@@ -543,6 +599,7 @@ Status: COMPLETE
 - source-backed names and heights remain tied to the bounded OpenStreetMap sample.
 
 ### Semantic weather animation
+
 - classify current provider weather codes into Clear / Cloudy / Fog / Rain / Snow / Thunderstorm / Mixed presentation states;
 - rain retains wind drift and continuous fall;
 - snow uses a separate drifting/falling point field;
@@ -550,12 +607,14 @@ Status: COMPLETE
 - thunderstorm state adds a pulsing procedural bolt field while precipitation remains separate.
 
 ### Fidelity boundary
+
 - a named structure is displayed only when the source building carries a name;
 - unnamed tall structures may be highlighted as tall mapped geometry but are not assigned invented landmark names;
 - thunder pulses indicate a modeled thunderstorm weather code, not detected strike coordinates;
 - weather particles visualize provider model state and are not street-level sensors.
 
 ### Verification requirements
+
 - geospatial tests must prove named skyline anchors survive parsing and ordering;
 - semantic UI tests must require LANDMARKS, CITY IDENTITY and the weather-specific geometry paths;
 - standalone packaging must retain landmark extraction, identity inspector, snow, fog and storm rendering;
@@ -567,6 +626,7 @@ Status: COMPLETE
 Status: COMPLETE
 
 ### Reconciled identity stack
+
 - preserve Batch 15 named/tall source-backed skyline anchors and semantic weather modes;
 - add source-backed OSM water areas, linear waterways and coastline;
 - add source-backed OSM parks and green-space polygons;
@@ -574,16 +634,19 @@ Status: COMPLETE
 - expose WATER and GREEN as independent city layers while retaining LANDMARKS.
 
 ### New operations
+
 - Flood Context;
 - Green Infrastructure;
 - maintained city-operation total: 12.
 
 ### Strict fallback
+
 - standalone/local fallback may continue to generate clearly labeled local building/road/grid demonstration geometry;
 - it must return empty water, waterway, coastline and green-space collections rather than fabricate local geography;
 - material styling appears only when mapped material/colour metadata exists.
 
 ### Verification
+
 - live OSM fixtures include a named glass tower, water polygon, river, coastline and park;
 - fallback tests require zero invented water/green features;
 - renderer tests retain landmark/weather identity plus water/green/material buffers;
@@ -592,6 +655,7 @@ Status: COMPLETE
 - engineering CI and CodeQL remain mandatory before merge.
 
 ### Fidelity boundary
+
 Geographic layers improve recognizability but remain bounded to the selected OpenStreetMap sample and its completeness. A missing feature is unknown, not evidence of real-world absence. Flood/green outputs remain advisory planning context rather than physical forecasts, measurements or directives.
 
 ## Batch 17 — Terrain-conforming 3D city geometry
@@ -599,6 +663,7 @@ Geographic layers improve recognizability but remain bounded to the selected Ope
 Status: IMPLEMENTED / VERIFYING
 
 ### Vertical city fidelity
+
 - use bilinear interpolation across the bounded local-meter elevation grid;
 - anchor each building foundation to interpolated terrain at its footprint center while keeping the foundation plane structurally flat;
 - drape mapped roads and waterways per source vertex;
@@ -608,6 +673,7 @@ Status: IMPLEMENTED / VERIFYING
 - keep coastline on the bounded terrain datum instead of warping it over inland relief.
 
 ### Runtime transparency
+
 - GLOBAL stats expose DEM DRAPED versus FLAT FALLBACK;
 - CITY IDENTITY exposes the same terrain-fit state;
 - provenance explains that vertical fitting is interpolation over bounded DEM samples rather than survey/LiDAR precision;
@@ -615,16 +681,17 @@ Status: IMPLEMENTED / VERIFYING
 - standalone fallback continues to work without claiming live elevation.
 
 ### Fidelity boundary
+
 Copernicus DEM GLO-90 / Open-Meteo elevation is used as visualization context, not engineering-grade vertical truth. Terrain fitting does not establish legal elevation, foundation design, road grade, drainage, flood depth, water level, clearance or infrastructure safety.
 
 ### Verification requirements
+
 - unit tests must verify bilinear interpolation at grid corners, center and an intermediate coordinate;
 - WebGL source tests must require terrain-surface interpolation and terrain-conformance state;
 - standalone packaging must preserve interpolation, terrain-fitting logic and Terrain Fit readouts;
 - release-readiness must require the v3 terrain capabilities and non-survey-grade boundary;
 - all existing city identity, semantic weather, mapped geography, agent, quantum and safety gates remain mandatory;
 - test, lint, typecheck, coverage, fresh-clone smoke, container smoke, quality/release-readiness, package verification and CodeQL must pass on the exact merge head.
-
 
 ## v4 spatial operator migration lane — frontend / renderer scope
 
@@ -633,6 +700,7 @@ Status: IMPLEMENTED / VERIFYING ON DRAFT PR
 This lane is intentionally separate from provider/backend integration work. It migrates the operator experience to a typed renderer-neutral web surface without changing provider secrets, provider-adapter ownership, backend actuation boundaries, or the authority of source data.
 
 ### Spatial renderer foundation
+
 - React/TypeScript operator web surface under `apps/aethergrid-console/web/`;
 - Cesium primary WGS84 globe/city renderer;
 - functional native WebGL failover using the same normalized spatial overlays;
@@ -642,6 +710,7 @@ This lane is intentionally separate from provider/backend integration work. It m
 - adaptive detail so expensive building rendering activates only at useful city/district scale.
 
 ### Real 4D operator behavior
+
 - LIVE time advances automatically;
 - historical, forecast and scenario cursors remain independent;
 - solar elevation/azimuth is computed from the active 4D instant and geographic target;
@@ -649,6 +718,7 @@ This lane is intentionally separate from provider/backend integration work. It m
 - the temporal rail states whether the operator is seeing LIVE SOURCES, STATIC MAP CONTEXT or MODELED + STATIC context.
 
 ### Source-backed city motion and identity
+
 - source weather drives cloud cover, rain/snow, fog, wind drift and AQI particles;
 - modeled thunderstorm codes may trigger bounded presentation flashes, but flash timing is synthetic and never labeled as detected lightning;
 - current wind speed/direction/gusts generate a real geographic wind-vector overlay shared by both renderers;
@@ -658,6 +728,7 @@ This lane is intentionally separate from provider/backend integration work. It m
 - roads, water, green space, power topology and recent seismic context remain separately attributed/selectable.
 
 ### Operator workflow
+
 - explicit city-load readiness for geometry, atmosphere and live context;
 - operation-mode presets use only implemented layers;
 - selected entities expose layer/source timestamps and fallback/live provenance;
@@ -667,20 +738,22 @@ This lane is intentionally separate from provider/backend integration work. It m
 - scenario mode preserves a dim source baseline beneath the brighter modeled network effect and labels source vs modeled state.
 
 ### Verification boundary
-The v4 migration is not considered the maintained release merely because the draft UI builds. Promotion requires the dedicated v4 web typecheck/build plus the repository test, lint/format, coverage, fresh-clone, container, quality/release-readiness and CodeQL gates on the exact merge head. Provider/backend work that is not implemented in this lane must not be advertised as complete here.
 
+The v4 migration is not considered the maintained release merely because the draft UI builds. Promotion requires the dedicated v4 web typecheck/build plus the repository test, lint/format, coverage, fresh-clone, container, quality/release-readiness and CodeQL gates on the exact merge head. Provider/backend work that is not implemented in this lane must not be advertised as complete here.
 
 ## Batch 19 — provider-backed operator integrations
 
 Status: IMPLEMENTED / VERIFYING ON DRAFT PR
 
 ### Connection and forecast runtime
+
 - consume safe provider readiness from `GET /api/aethergrid/runtime/providers` in the operator Connection Center;
 - expose configured/ready/degraded/fallback/unavailable/unconfigured states without browser credentials;
 - consume the merged Tomorrow.io normalized `timesteps` forecast contract while retaining the legacy timeline adapter only for compatibility;
 - keep Tomorrow provider-specific weather codes out of the Open-Meteo weather-code namespace.
 
 ### Live spatial operations
+
 - render NWS active-alert boundaries only from provider-returned GeoJSON;
 - render decoded GTFS-Realtime vehicle coordinates as a LIVE/stale transit layer with source/feed timestamps;
 - do not synthesize transit route geometry, interpolate missing vehicle locations, or promote fallback/undecoded feeds to live;
@@ -690,11 +763,13 @@ Status: IMPLEMENTED / VERIFYING ON DRAFT PR
 - preserve NOAA metadata-only partial state when stageflow is unavailable.
 
 ### Energy context
+
 - retain EIA respondent, period, fuel type, fuel description, nullable value and source units;
 - show latest-period source-backed fuel rows in the operator panel;
 - do not invent balancing-region polygons or attach EIA values to arbitrary map geometry.
 
 ### Quantum annealing operator path
+
 - discover real D-Wave solvers through the server route;
 - require the operator to select a solver and supported problem type;
 - require an actual encoded D-Wave problem object and explicit provider parameters;
@@ -704,4 +779,5 @@ Status: IMPLEMENTED / VERIFYING ON DRAFT PR
 - distinguish hardware submitted from hardware executed and never synthesize a QPU result.
 
 ### Promotion gate
+
 Batch 19 remains draft until the exact promotion head passes v4 web build/typecheck, repository tests, coverage, lint/format, fresh-clone smoke, container smoke, release readiness and CodeQL. Source-backed, modeled, fallback and hardware-executed states must remain visibly distinct.

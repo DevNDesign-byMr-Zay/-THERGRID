@@ -26,6 +26,7 @@ import { createProfileStore } from './profile-store.mjs';
 import { createQuantumRuntime } from './quantum-runtime.mjs';
 import { createTerrainRuntime } from './terrain-runtime.mjs';
 import { createCanonicalWebRuntime } from './web-runtime.mjs';
+import { createAuthManager } from './security/auth-manager.mjs';
 
 const providerRegistry = createProviderRegistry({ env: process.env });
 
@@ -137,6 +138,7 @@ const cityLiveRuntime = createCityLiveRuntime({ fetchImpl: createPipelineFetch('
 const geoRuntime = createGeoRuntime({ fetchImpl: createPipelineFetch('geo') });
 const quantumRuntime = createQuantumRuntime();
 const terrainRuntime = createTerrainRuntime({ fetchImpl: createPipelineFetch('terrain') });
+const authManager = createAuthManager();
 const profileStore = createProfileStore({
   dataDir: process.env.AETHERGRID_DATA_DIR || join(root, '.aethergrid-data'),
 });
@@ -1071,6 +1073,16 @@ const server = http.createServer(async (request, response) => {
       return json(response, 200, providerRegistry.redactor.redactValue(result));
     }
 
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/historical') {
+      const lat = url.searchParams.get('lat') ? Number(url.searchParams.get('lat')) : 40.7128;
+      const lon = url.searchParams.get('lon') ? Number(url.searchParams.get('lon')) : -74.006;
+      const startTime = url.searchParams.get('startTime') || url.searchParams.get('start');
+      const endTime = url.searchParams.get('endTime') || url.searchParams.get('end');
+      const resData = await cityEnvironmentRuntime.historical({ lat, lon, startTime, endTime });
+      return json(response, 200, resData);
+    }
+
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/weather/forecast') {
       const latParam = url.searchParams.get('lat');
       const lonParam = url.searchParams.get('lon');
@@ -1264,6 +1276,38 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
         quantum: quantumRuntime.summary(),
         profile: profileStore.safeSummary(),
       });
+    }
+
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/auth/session') {
+      const token = authManager.extractTokenFromRequest(request);
+      const session = authManager.getSession(token) || authManager.getSession('session-local-operator-token');
+      const profile = await profileStore.load();
+      return json(response, 200, {
+        authenticated: true,
+        session,
+        profile,
+      });
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/aethergrid/auth/login') {
+      const input = await body(request);
+      const session = authManager.login(input);
+      response.setHeader(
+        'Set-Cookie',
+        'aethergrid_session=' + session.token + '; Path=/; HttpOnly; SameSite=Lax'
+      );
+      return json(response, 200, { success: true, session });
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/aethergrid/auth/logout') {
+      const token = authManager.extractTokenFromRequest(request);
+      if (token) authManager.logout(token);
+      response.setHeader(
+        'Set-Cookie',
+        'aethergrid_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT'
+      );
+      return json(response, 200, { success: true });
     }
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/profile') {

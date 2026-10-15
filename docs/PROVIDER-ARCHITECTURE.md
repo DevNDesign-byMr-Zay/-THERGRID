@@ -34,6 +34,7 @@ process.env → validated config → provider registry → provider adapters →
 ## Provider Lifecycle & Status States
 
 Providers transition across normalized readiness states:
+
 - `ready`: Fully configured and operational.
 - `degraded`: Configured but encountering partial issues or missing optional parameters.
 - `unconfigured`: Optional provider with no credentials or endpoint configured.
@@ -45,15 +46,19 @@ Providers transition across normalized readiness states:
 ## Core Safety & Reliability Primitives
 
 ### 1. Outbound URL Policy (`apps/aethergrid-console/security/url-policy.mjs`)
+
 Restricts server-side outbound HTTP requests strictly to pre-approved provider hostnames and validated local developer endpoints (e.g., local Ollama on `127.0.0.1`).
 
 ### 2. Provider Cache (`apps/aethergrid-console/providers/cache-store.mjs`)
+
 In-memory request cache supporting TTL, stale state detection, retrieval timestamps, hit/miss metadata, and stale-while-revalidate semantics.
 
 ### 3. Circuit Breaker (`apps/aethergrid-console/providers/circuit-breaker.mjs`)
+
 State machine (`CLOSED`, `OPEN`, `HALF_OPEN`) preventing repeated calls to failing upstream providers. Distinguishes timeouts, provider errors, and fallback activations.
 
 ### 4. Rate Limiting (`apps/aethergrid-console/providers/rate-limiter.mjs`)
+
 Per-provider request budget enforcement to prevent exceeding API limits (e.g., IBM Quantum submission limits).
 
 ---
@@ -61,10 +66,10 @@ Per-provider request budget enforcement to prevent exceeding API limits (e.g., I
 ## Registering Future Provider Adapters
 
 Future provider adapters (e.g., Cesium, Tomorrow.io, Overture, EIA, D-Wave) register with `providerRegistry` by defining:
+
 1. Schema additions in `env-schema.mjs`.
 2. A wrapped adapter invoking `getBreaker(id)`, `getRateLimiter(id)`, and `urlPolicy.validateUrl(...)`.
 3. Capability registration via `providerHealth.registerProvider(id, { name, capabilities, status })`.
-
 
 ---
 
@@ -96,6 +101,7 @@ The current production contract intentionally permits one enabled feed per city.
 Providers in ÆTHERGRID are explicitly classified across five status tiers:
 
 ### 1. IMPLEMENTED / NO CREDENTIAL
+
 - **Open-Meteo Weather**: Live weather observations, forecasts, air quality, and terrain elevation.
 - **USGS**: USGS Earthquake GeoJSON Feed.
 - **NWS**: National Weather Service active alerts and hazards.
@@ -103,6 +109,7 @@ Providers in ÆTHERGRID are explicitly classified across five status tiers:
 - **OSM / Overpass**: OpenStreetMap 3D spatial building footprint mesh data.
 
 ### 2. IMPLEMENTED / REQUIRES CREDENTIAL
+
 - **Tomorrow.io**: Weather realtime and forecast (API key required).
 - **EIA**: U.S. Energy Information Administration electricity grid fuel mix (API key required).
 - **Transitland**: Transitland v2 REST API feed/agency discovery catalog (API key required; `apikey` header authentication).
@@ -112,10 +119,13 @@ Providers in ÆTHERGRID are explicitly classified across five status tiers:
 - **Cesium**: Cesium Ion 3D tile asset streaming (client Ion token required).
 
 ### 3. PARTIALLY CONFIGURED
+
 - **IBM Quantum**: API key provided without Service CRN yields `instance_required` status. Hardware readiness requires both API key AND Service CRN.
 
 ### 4. UNCONFIGURED
+
 - Optional credential-backed providers when credentials or endpoints are absent. Falling back safely without preventing application startup.
 
 ### 5. FUTURE / RESEARCH
+
 - Qiskit direct worker or specialized Python QPU execution modules.
