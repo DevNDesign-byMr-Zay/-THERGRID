@@ -72,7 +72,7 @@ jobs:
       - name: Verify source geometry and renderer fallback contracts
         env:
           AETHERGRID_TEST_CANONICAL: "1"
-        run: npx playwright test tests/city-geometry.spec.ts --grep-invert compiled --output=test-results/city-contracts --workers=1 --reporter=line
+        run: npx playwright test tests/city-geometry.spec.ts tests/city-fidelity.spec.ts --grep-invert compiled --output=test-results/city-contracts --workers=1 --reporter=line
 
       - name: Verify compiled city picking and native renderer fallback
         env:

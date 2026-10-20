@@ -846,7 +846,8 @@ export class NetworkOverlayLayer {
         const hierarchy = new PolygonHierarchy(
           massing.ring.map((position) =>
             Cartesian3.fromDegrees(position.longitude, position.latitude)
-          )
+          ),
+          massing.holes.map(ring => new PolygonHierarchy(ring.map(position => Cartesian3.fromDegrees(position.longitude, position.latitude))))
         );
         const sourceFeatureId =
           typeof area.properties?.sourceFeatureId === 'string'
@@ -865,7 +866,7 @@ export class NetworkOverlayLayer {
             ...area.properties,
             overlayKind: area.kind,
             heightCategory: massing.heightCategory,
-            roofRefinement: massing.roofFaces.length ? 'source-tagged-pyramidal' : 'simple-massing',
+            roofRefinement: massing.roofRefinement,
             geometryLimitation: massing.limitation,
             sourceName: area.label ?? area.id
           }
@@ -929,7 +930,7 @@ export class NetworkOverlayLayer {
       const id = { aethergridSourceBuilding: true, id: area.id, sourceFeatureId, geometryPart: `edge:${index}`,
         label: area.label ?? area.id, latitude: area.properties?.centroidLatitude, longitude: area.properties?.centroidLongitude,
         heightM: area.properties?.heightM, properties: { ...provenance, ...area.properties, overlayKind: area.kind,
-          heightCategory: buildingGeometry(area)?.heightCategory, roofRefinement: buildingGeometry(area)?.roofFaces.length ? 'source-tagged-pyramidal' : 'simple-massing',
+          heightCategory: buildingGeometry(area)?.heightCategory, roofRefinement: buildingGeometry(area)?.roofRefinement,
           geometryLimitation: buildingGeometry(area)?.limitation } };
       const instance = new GeometryInstance({ id, geometry: new PolylineGeometry({ positions: [coordinate(from), coordinate(to)], width: 1.5,
         vertexFormat: PolylineColorAppearance.VERTEX_FORMAT }), attributes: { color: ColorGeometryInstanceAttribute.fromColor(Color.CYAN) } });

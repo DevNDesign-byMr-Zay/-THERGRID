@@ -1,8 +1,11 @@
+import { rectangularRoof } from './rectangular-roof';
 import type { OverlayCoordinate, SpatialOverlayArea } from './spatial-overlay';
 
 export type BuildingHeightCategory = 'explicit-tag' | 'estimated-tag' | 'levels-derived' | 'modeled';
 export interface BuildingGeometry {
   ring: readonly OverlayCoordinate[];
+  holes: readonly (readonly OverlayCoordinate[])[];
+  roofRefinement: string;
   baseM: number;
   topM: number;
   wallTopM: number;
@@ -63,15 +66,36 @@ function computeBuildingGeometry(area: SpatialOverlayArea): BuildingGeometry | n
     }
   }
   if (Math.abs(twiceArea) < 1e-14) return null;
-  const refine = shape === 'pyramidal' && convex && Number.isFinite(roofHeightM) && roofHeightM > 0 && roofHeightM < topM - baseM;
-  const wallTopM = refine ? topM - roofHeightM : topM;
+  const holes: (readonly OverlayCoordinate[])[] = [];
+  const inside = (p: OverlayCoordinate, boundary: readonly OverlayCoordinate[]) => {
+    let result = false;
+    for (let i = 0, j = boundary.length - 1; i < boundary.length; j = i++) {
+      const a = boundary[i], b = boundary[j];
+      if (onSegment(a, b, p)) return false;
+      if ((a.latitude > p.latitude) !== (b.latitude > p.latitude) && p.longitude < (b.longitude - a.longitude) * (p.latitude - a.latitude) / (b.latitude - a.latitude) + a.longitude) result = !result;
+    }
+    return result;
+  };
+  const intersects = (a: readonly OverlayCoordinate[], b: readonly OverlayCoordinate[]) => a.some((p, i) => b.some((q, j) => {
+    const r = a[(i + 1) % a.length], t = b[(j + 1) % b.length];
+    return onSegment(p,r,q) || onSegment(p,r,t) || onSegment(q,t,p) || onSegment(q,t,r) || (orientation(p,r,q) * orientation(p,r,t) < 0 && orientation(q,t,p) * orientation(q,t,r) < 0);
+  }));
+  for (const positions of area.holes ?? []) {
+    const hole = computeBuildingGeometry({...area, positions, holes: undefined, properties: {...area.properties, roofShape: 'flat'}})?.ring;
+    if (!hole || !hole.every(p => inside(p, ring)) || intersects(ring, hole) || holes.some(other => intersects(other, hole) || inside(hole[0], other) || inside(other[0], hole))) return null;
+    holes.push(hole);
+  }
+  const validRoofHeight = !holes.length && Number.isFinite(roofHeightM) && roofHeightM > 0 && roofHeightM < topM - baseM;
+  const refine = validRoofHeight && shape === 'pyramidal' && convex && Number.isFinite(roofHeightM) && roofHeightM > 0 && roofHeightM < topM - baseM;
+  const rectangularFaces = validRoofHeight ? rectangularRoof(ring, shape, topM - roofHeightM, topM, area.properties?.roofOrientation) : [];
+  const wallTopM = refine || rectangularFaces.length ? topM - roofHeightM : topM;
   const apex = { longitude: ring.reduce((n, p) => n + p.longitude, 0) / ring.length, latitude: ring.reduce((n, p) => n + p.latitude, 0) / ring.length, heightMeters: topM };
   const roofFaces = refine ? ring.map((p, i) => [
     { ...p, heightMeters: wallTopM },
     { ...ring[(i + 1) % ring.length], heightMeters: wallTopM }, apex
-  ]) : [];
-  return { ring, baseM, topM, wallTopM, roofFaces, heightCategory,
-    limitation: refine || !shape || shape === 'flat' ? null : 'Roof refinement unsupported for this shape, footprint or source dimensions; simple massing retained.' };
+  ]) : rectangularFaces;
+  return { ring, holes, roofRefinement: roofFaces.length ? `source-tagged-${shape}` : 'simple-massing', baseM, topM, wallTopM, roofFaces, heightCategory,
+    limitation: roofFaces.length || !shape || shape === 'flat' ? null : 'Roof refinement unsupported for this shape, footprint or source dimensions; simple massing retained.' };
 }
 
 /** Shared massing edges for the native renderer's explicit wireframe fallback. */
@@ -81,13 +105,20 @@ export function buildingEdges(area: SpatialOverlayArea): readonly (readonly [Ove
   const geometry = buildingGeometry(area);
   if (!geometry) return [];
   const edges: [OverlayCoordinate, OverlayCoordinate][] = [];
-  geometry.ring.forEach((point, index) => {
-    const next = geometry.ring[(index + 1) % geometry.ring.length];
+  for (const ring of [geometry.ring, ...geometry.holes]) ring.forEach((point, index) => {
+    const next = ring[(index + 1) % ring.length];
     const base = { ...point, heightMeters: geometry.baseM };
     const top = { ...point, heightMeters: geometry.wallTopM };
     edges.push([base, { ...next, heightMeters: geometry.baseM }], [base, top], [top, { ...next, heightMeters: geometry.wallTopM }]);
   });
-  geometry.roofFaces.forEach((face) => edges.push([face[0], face[2]]));
+  const seen = new Set<string>();
+  for (const face of geometry.roofFaces) for (let i = 0; i < face.length; i++) {
+    const a = face[i], b = face[(i + 1) % face.length];
+    if (a.heightMeters === geometry.wallTopM && b.heightMeters === geometry.wallTopM) continue;
+    if (a.longitude === b.longitude && a.latitude === b.latitude && a.heightMeters === b.heightMeters) continue;
+    const key = [JSON.stringify(a), JSON.stringify(b)].sort().join('|');
+    if (!seen.has(key)) { edges.push([a,b]); seen.add(key); }
+  }
   edgeCache.set(area, edges);
   return edges;
 }

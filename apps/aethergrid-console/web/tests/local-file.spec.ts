@@ -66,6 +66,7 @@ test('standalone public weather uses provider data while historical and private 
 
 test('every bundled city renders its own mapped district without a server', async ({ page }) => {
   test.setTimeout(360000);
+  await page.emulateMedia({reducedMotion:'reduce'});
   const errors: string[] = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.route('http://**/*', route => route.abort());
@@ -80,6 +81,16 @@ test('every bundled city renders its own mapped district without a server', asyn
     await expect(page.locator('.journey-status')).toHaveCount(0, {timeout:45000});
     await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer','cesium');
     await expect(page.locator('.cesium-widget-errorPanel')).toHaveCount(0);
+    const count = await page.locator('.world-stage').getAttribute('data-source-building-count');
+    for (const mode of ['SOLID','WIREFRAME','HOLOGRAPHIC','XRAY','GRID','REALITY']) {
+      const control = page.getByRole('group', {name:'Visual mode'}).getByRole('button', {name:mode,exact:true});
+      await control.click();
+      await expect(control).toHaveAttribute('aria-pressed','true');
+      await expect(page.locator('.world-stage')).toHaveAttribute('data-source-building-count',count!);
+      await page.waitForTimeout(80);
+      await expect(page.locator('.cesium-widget-errorPanel')).toHaveCount(0);
+    }
+    await page.getByRole('group', {name:'Visual mode'}).getByRole('button', {name:'SOLID',exact:true}).click();
     await page.screenshot({ path: `test-results/local-district-${name.replaceAll(' ','-')}.png` });
   }
   expect(errors).toEqual([]);

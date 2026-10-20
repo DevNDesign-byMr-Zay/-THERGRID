@@ -9,6 +9,8 @@
 
 ### Changed
 
+- Preserve mapped building courtyards and stitched multipolygon boundaries through both OSM providers, Cesium surfaces, and native wireframes. Refine rectangular gabled and hipped roofs from source dimensions; unsupported geometry remains explicitly simplified.
+
 - Promoted React/TypeScript/Cesium to the canonical Node-served and full-ZIP application through #148, preserving same-origin provider APIs and explicit native v3 compatibility.
 - Kept root package/lockfile and earlier evidence-console manifest aligned to the 0.2.1 release candidate; canonical application generation remains 4.0.0-alpha.1.
 - Updated startup and roadmap status to the merged production build/package contract; final-main and canonical live-provider evidence remain required before publication.

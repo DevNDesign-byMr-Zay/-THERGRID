@@ -1,3 +1,4 @@
+import { buildingPolygons } from './building-rings.mjs';
 import { createHash } from 'node:crypto';
 
 const DEFAULT_OVERPASS_ENDPOINTS = Object.freeze([
@@ -480,96 +481,53 @@ function xmlAttributes(fragment = '') {
 }
 
 function parseOsmApiBuildings(xml, city) {
-  const nodes = new Map();
+  const nodes = new Map(), ways = new Map(), elements = [];
   let upstreamTimestamp = null;
-
+  const rememberTime = (attrs) => {
+    if (attrs.timestamp && (!upstreamTimestamp || String(attrs.timestamp) > upstreamTimestamp)) upstreamTimestamp = String(attrs.timestamp);
+  };
+  const readTags = (body) => Object.fromEntries([...body.matchAll(/<tag\b([^>]*)\/?\s*>/gu)].map(match => {
+    const tag = xmlAttributes(match[1]);
+    return [tag.k, tag.v ?? ''];
+  }));
   for (const match of String(xml).matchAll(/<node\b([^>]*)\/?\s*>/gu)) {
     const attrs = xmlAttributes(match[1]);
-    const id = String(attrs.id || '');
-    const lat = Number(attrs.lat);
-    const lon = Number(attrs.lon);
-    if (id && Number.isFinite(lat) && Number.isFinite(lon)) {
-      nodes.set(id, { lat, lon });
-    }
-    if (
-      attrs.timestamp &&
-      (!upstreamTimestamp || String(attrs.timestamp) > upstreamTimestamp)
-    ) {
-      upstreamTimestamp = String(attrs.timestamp);
-    }
+    const lat = Number(attrs.lat), lon = Number(attrs.lon);
+    if (attrs.id && Number.isFinite(lat) && Number.isFinite(lon)) nodes.set(attrs.id, {lat, lon});
+    rememberTime(attrs);
   }
-
-  const buildings = [];
   for (const match of String(xml).matchAll(/<way\b([^>]*)>([\s\S]*?)<\/way>/gu)) {
-    const attrs = xmlAttributes(match[1]);
-    const body = match[2];
-    const tags = {};
-    for (const tagMatch of body.matchAll(/<tag\b([^>]*)\/?\s*>/gu)) {
-      const tag = xmlAttributes(tagMatch[1]);
-      if (tag.k) tags[tag.k] = tag.v ?? '';
-    }
-    if (!(tags.building || tags['building:part'])) continue;
-
-    const footprint = [];
-    for (const ndMatch of body.matchAll(/<nd\b([^>]*)\/?\s*>/gu)) {
-      const nd = xmlAttributes(ndMatch[1]);
-      const point = nodes.get(String(nd.ref || ''));
-      if (!point) continue;
-      footprint.push(projectPoint(point.lat, point.lon, city));
-    }
-    if (footprint.length < 3) continue;
-    const first = footprint[0];
-    const last = footprint.at(-1);
-    if (Math.hypot(first[0] - last[0], first[1] - last[1]) > 0.01) {
-      footprint.push([...first]);
-    }
-
-    const id = `osm-api-way-${String(attrs.id || buildings.length + 1)}`;
-    const height = heightProfile(tags, id);
-    buildings.push({
-      id,
-      osmId: Number(attrs.id) || attrs.id || null,
-      osmType: 'way',
-      name: String(tags.name || ''),
-      heightM: height.heightM,
-      heightSource: height.source,
-      minHeightM: numericMinHeight(tags),
-      levels: Number(tags['building:levels']) || null,
-      buildingType: String(tags.building || tags['building:part'] || 'yes'),
-      buildingPart: Boolean(tags['building:part']),
-      buildingMaterial: String(tags['building:material'] || ''),
-      buildingColor: String(tags['building:colour'] || ''),
-      roofShape: String(tags['roof:shape'] || ''),
-      roofHeightM: numericRoofHeight(tags),
-      roofLevels: Number(tags['roof:levels']) || null,
-      roofMaterial: String(tags['roof:material'] || ''),
-      roofColor: String(tags['roof:colour'] || ''),
-      startDate: String(tags.start_date || ''),
-      footprint,
-    });
-
-    if (
-      attrs.timestamp &&
-      (!upstreamTimestamp || String(attrs.timestamp) > upstreamTimestamp)
-    ) {
-      upstreamTimestamp = String(attrs.timestamp);
-    }
+    const attrs = xmlAttributes(match[1]), body = match[2];
+    const references = [...body.matchAll(/<nd\b([^>]*)\/?\s*>/gu)].map(nd => xmlAttributes(nd[1]).ref);
+    // Missing map members must not become invented closing edges.
+    const geometry = references.every(ref => nodes.has(ref)) ? references.map(ref => nodes.get(ref)) : undefined;
+    const way = {type:'way', id:Number(attrs.id), tags:readTags(body), geometry};
+    ways.set(attrs.id, way);
+    elements.push(way);
+    rememberTime(attrs);
   }
-
-  return {
-    buildings: representativeBuildings(buildings, 900),
-    upstreamTimestamp,
-  };
+  for (const match of String(xml).matchAll(/<relation\b([^>]*)>([\s\S]*?)<\/relation>/gu)) {
+    const attrs = xmlAttributes(match[1]), body = match[2];
+    const members = [...body.matchAll(/<member\b([^>]*)\/?\s*>/gu)].map(member => {
+      const entry = xmlAttributes(member[1]);
+      return {type:entry.type, ref:Number(entry.ref), role:entry.role, geometry:ways.get(entry.ref)?.geometry};
+    });
+    elements.push({type:'relation', id:Number(attrs.id), tags:readTags(body), members});
+    rememberTime(attrs);
+  }
+  return {buildings:parseOverpassBuildings({elements}, city), upstreamTimestamp};
 }
 
 function parseOverpassBuildings(payload, city) {
   const buildings = [];
   const seen = new Set();
+  const relationMembers = new Set((payload?.elements || []).filter(element => element.type === 'relation' && (element.tags?.building || element.tags?.['building:part'])).flatMap(element => (element.members || []).filter(member => member.type === 'way' && member.role !== 'inner').map(member => member.ref)));
   for (const element of payload?.elements || []) {
     if (!(element.tags?.building || element.tags?.['building:part'])) continue;
-    const geometries = buildingGeometries(element);
-    if (!geometries.length) continue;
-    geometries.forEach((geometry, geometryIndex) => {
+    if (element.type === 'way' && relationMembers.has(element.id)) continue;
+    const polygons = buildingPolygons(element);
+    if (!polygons.length) continue;
+    polygons.forEach(({outer: geometry, holes}, geometryIndex) => {
       if (!Array.isArray(geometry) || geometry.length < 4) return;
       const uniqueId = `${element.type}-${element.id}-${geometryIndex}`;
       if (seen.has(uniqueId)) return;
@@ -597,6 +555,7 @@ function parseOverpassBuildings(payload, city) {
         buildingPart: Boolean(element.tags?.['building:part']),
         buildingMaterial: String(element.tags?.['building:material'] || ''),
         buildingColor: String(element.tags?.['building:colour'] || ''),
+        roofOrientation: String(element.tags?.['roof:orientation'] || ''),
         roofShape: String(element.tags?.['roof:shape'] || ''),
         roofHeightM: numericRoofHeight(element.tags),
         roofLevels: Number(element.tags?.['roof:levels']) || null,
@@ -604,6 +563,7 @@ function parseOverpassBuildings(payload, city) {
         roofColor: String(element.tags?.['roof:colour'] || ''),
         startDate: String(element.tags?.start_date || ''),
         footprint,
+        holes: holes.map(ring => ring.map(point => projectPoint(point.lat, point.lon, city))),
       });
     });
   }

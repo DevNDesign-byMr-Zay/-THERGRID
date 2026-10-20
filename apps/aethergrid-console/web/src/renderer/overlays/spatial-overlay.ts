@@ -58,6 +58,7 @@ export interface SpatialOverlayEdge {
 }
 
 export interface SpatialOverlayArea {
+  holes?: readonly (readonly OverlayCoordinate[])[];
   id: string;
   kind: OverlayAreaKind;
   positions: readonly OverlayCoordinate[];
