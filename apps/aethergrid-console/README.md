@@ -136,6 +136,14 @@ The renderer keeps source-backed tall structures up to 1,200 m, preserves high-v
 This is a source-backed digital-twin representation, not photogrammetry. Where open map data lacks a height, roof, façade or building part, ÆTHERGRID exposes the coverage gap and does not claim architectural identity it cannot verify.
 
 Settings now include **Dark**, **Light**, and **System** appearance modes. The selected mode persists locally and changes the semantic UI plus WebGL scene palette.
+## Camera-driven live city streaming
+
+In LIVE city mode with the authenticated local backend, ÆTHERGRID preserves the central city snapshot while sampling camera-adjacent OpenStreetMap geometry. This is a bounded progressive district expansion, **not** a whole-city one-to-one surveyed twin.
+
+Camera positions snap to 650m cells, no farther than 2.6km from the selected district origin and only below 4km altitude. Two stable samples trigger a 450m-radius request using the existing authenticated `/api/aethergrid/geospatial/point?spatial=1` endpoint. At most four adjacent tiles stay loaded; source feature identities and power-line segments are deduplicated, and per-feature tile provenance is retained. Failure backs off for 30 seconds and never substitutes synthetic buildings.
+
+The `file://` ZIP view makes **no** progressive backend requests and continues to render the original bundled datasets. Non-live time modes do not fetch fresh city geometry. Returning to the global view cancels any in-flight camera tile request.
+
 ## v2.7 live city animation and operational context
 
 The GLOBAL workspace now animates current source context instead of applying the same ambient motion to every city.
