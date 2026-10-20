@@ -78,6 +78,7 @@ test('camera tile merger deduplicates OSM identity while retaining separate road
  expect(merged.identity.maxHeightM).toBe(100);
  expect(merged.identity.explicitHeightCoveragePercent).toBe(100);
  expect(merged.power.nodes).toHaveLength(1);
+ expect(merged.power.edges).toHaveLength(0);
  expect(merged.illumination.nodes).toHaveLength(3);
  expect(initial.semantics[0].areas).toHaveLength(2);
 });
@@ -94,4 +95,19 @@ test('streaming maintains base geometry, rejects fallback or stale tiles and evi
  bad.semantics[0].fallback=true;
  const safe=mergeCitySpatialTiles(initial,[{key:'fake',bundle:bad}]);
  expect(safe.identity.buildingCount).toBe(1);
+});
+
+test('tile merges preserve every power-line segment while deduplicating identical source edges', () => {
+  const core=bundle('core',['b1'],[]);
+  core.power.edges=[
+    {id:'line:segment:1',kind:'transmission',from:{latitude:40,longitude:-74},to:{latitude:41,longitude:-74},properties:{sourceFeatureId:'line'}},
+    {id:'line:segment:2',kind:'transmission',from:{latitude:41,longitude:-74},to:{latitude:42,longitude:-74},properties:{sourceFeatureId:'line'}}
+  ];
+  const nearby=bundle('nearby',['b2'],[]);
+  nearby.power.edges=[
+    {id:'line:segment:1',kind:'transmission',from:{latitude:40,longitude:-74},to:{latitude:41,longitude:-74},properties:{sourceFeatureId:'line'}},
+    {id:'line:segment:3',kind:'transmission',from:{latitude:42,longitude:-74},to:{latitude:43,longitude:-74},properties:{sourceFeatureId:'line'}}
+  ];
+  expect(mergeCitySpatialTiles(core,[{key:'tile:1:0',bundle:nearby}]).power.edges.map(edge=>edge.id))
+    .toEqual(['line:segment:1','line:segment:2','line:segment:3']);
 });
