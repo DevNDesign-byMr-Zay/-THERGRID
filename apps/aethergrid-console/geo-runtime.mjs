@@ -556,6 +556,7 @@ function parseOverpassBuildings(payload, city) {
         buildingMaterial: String(element.tags?.['building:material'] || ''),
         buildingColor: String(element.tags?.['building:colour'] || ''),
         roofOrientation: String(element.tags?.['roof:orientation'] || ''),
+        roofDirection: String(element.tags?.['roof:direction'] || ''),
         roofShape: String(element.tags?.['roof:shape'] || ''),
         roofHeightM: numericRoofHeight(element.tags),
         roofLevels: Number(element.tags?.['roof:levels']) || null,
