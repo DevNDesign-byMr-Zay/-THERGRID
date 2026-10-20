@@ -804,7 +804,8 @@ export async function loadCameraCityTile(
     lon: String(longitude),
     name: 'Camera Tile',
     radiusM: '450',
-    spatial: '1'
+    spatial: '1',
+    tile: '1'
   });
   const mesh = await cityMeshRequest(
     `/api/aethergrid/geospatial/point?${query.toString()}`,
