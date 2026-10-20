@@ -224,7 +224,14 @@ export class CameraTileStream {
       return;
     }
     this.#dwell += 1;
-    if (this.#dwell < 2 || this.#loaded.has(tile.key) || this.#pending) return;
+    if (this.#dwell < 2) return;
+    if (this.#loaded.has(tile.key)) {
+      const cached = this.#loaded.get(tile.key)!;
+      this.#loaded.delete(tile.key);
+      this.#loaded.set(tile.key,cached);
+      return;
+    }
+    if (this.#pending) return;
     if ((this.#failedUntil.get(tile.key) ?? 0) > this.#now()) return;
     const abort = new AbortController();
     this.#pending = {key:tile.key,abort};
