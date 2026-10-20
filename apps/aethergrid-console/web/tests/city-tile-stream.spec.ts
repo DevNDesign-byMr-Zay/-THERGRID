@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { cameraCityTile, mergeCitySpatialTiles, CameraTileStream, type CameraCityTile } from '../src/services/city-tile-stream';
-import type { CitySpatialBundle } from '../src/services/city-power-overlay';
+import { loadCameraCityTile, type CitySpatialBundle } from '../src/services/city-power-overlay';
 import type { SpatialOverlaySnapshot } from '../src/renderer/overlays/spatial-overlay';
 
 const city = { id: 'new-york', latitude: 40.7549, longitude: -73.984 };
@@ -160,4 +160,23 @@ test('camera tile loader aborts stale requests, blocks offline providers and nev
  expect(callbacks).toBe(0);
  expect(errors).toBe(0);
  expect(streaming.tiles).toHaveLength(0);
+});
+
+test('camera tile network requests carry the bounded radius and reject modeled fallback', async () => {
+ const originalFetch=globalThis.fetch;
+ let requested='';
+ globalThis.fetch=async (url) => {
+  requested=String(url);
+  return new Response(JSON.stringify({
+    city:{id:'coord-40.00000--73.00000',lat:40,lon:-73},
+    source:{provider:'local-fallback',live:false},
+    buildings:[],roads:[],powerAssets:[],powerLines:[]
+  }),{status:200,headers:{'content-type':'application/json'}});
+ };
+ try {
+  await expect(loadCameraCityTile(40,-73)).rejects.toThrow(/mapped.*unavailable|fallback/i);
+  expect(requested).toContain('/api/aethergrid/geospatial/point?');
+  expect(requested).toContain('radiusM=450');
+  expect(requested).toContain('spatial=1');
+ } finally {globalThis.fetch=originalFetch;}
 });
