@@ -71,8 +71,16 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci --ignore-scripts
-      - name: Run conventional tests
-        run: npm test
+      - name: Run conventional tests and emit JUnit evidence
+        run: npm run test:report
+      - name: Retain Node test results (including failures)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: node-test-results
+          path: test-results/node-tests.xml
+          if-no-files-found: error
+          retention-days: 30
 
   coverage:
     name: coverage
