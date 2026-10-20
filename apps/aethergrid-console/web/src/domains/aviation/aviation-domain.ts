@@ -215,6 +215,7 @@ export function sourceBackedRelationshipEdges(
 function historyEdges(state: AviationDomainState): readonly SpatialOverlayEdge[] {
   const edges: SpatialOverlayEdge[] = [];
   for (const aircraft of state.aircraft.slice(0,300)) {
+    if (!validGeographicPosition(aircraft)) continue;
     const points = state.history[aircraft.id] ?? [];
     for (let index = 1; index < points.length; index += 1) {
       const from = points[index - 1];
