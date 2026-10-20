@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { cameraCityTile, mergeCitySpatialTiles, CameraTileStream } from '../src/services/city-tile-stream';
+import { cameraCityTile, mergeCitySpatialTiles, CameraTileStream, type CameraCityTile } from '../src/services/city-tile-stream';
 import type { CitySpatialBundle } from '../src/services/city-power-overlay';
 import type { SpatialOverlaySnapshot } from '../src/renderer/overlays/spatial-overlay';
 
