@@ -187,7 +187,10 @@ test('revisiting a loaded tile makes it most recently used before eviction', asy
     load: async (tile: CameraCityTile) => bundle(tile.key,[tile.key],[]),
     onChange: () => undefined
   });
-  const points=[.0068,.014,.020,.027,.031].map(offset=>camera(city.longitude+offset));
+  const points=[
+    ...[.0068,.014,.020,.027].map(offset=>camera(city.longitude+offset)),
+    camera(city.longitude+.0068,city.latitude+.006)
+  ];
   for (const point of points.slice(0,4)) {
     await streaming.sample(point);
     await streaming.sample(point);
