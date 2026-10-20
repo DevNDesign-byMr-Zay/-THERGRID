@@ -1,3 +1,5 @@
+import {loadWeatherRadar,radarOverlay,type RadarManifest} from '../services/weather-radar';
+import {RadarControls} from '../components/RadarControls';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { flushSync } from 'react-dom';
 import { BRAND } from '../components/brand';
@@ -275,6 +277,7 @@ const INITIAL_LAYERS: readonly LayerState[] = [
   { id: 'green', visible: true },
   { id: 'grid', visible: true },
   { id: 'weather', visible: true },
+  { id: 'weather-radar', visible: true,opacity:.68 },
   { id: 'air', visible: true },
   { id: 'aviation', visible: true },
   { id: 'seismic', visible: true },
@@ -298,6 +301,11 @@ const VISUAL_MODES: readonly VisualMode[] = [
 ];
 
 export function App() {
+  const [worldLongitude] = useState(() => {
+    const now = new Date();
+    // Open on the sunlit hemisphere; the solar clock and day/night model remain real.
+    return location.protocol === 'file:' ? 180 - (now.getUTCHours() + now.getUTCMinutes() / 60) * 15 : 0;
+  });
   const viewportRef = useRef<SpatialViewportHandle>(null);
   const { clock, state: temporal } = useTemporalClock();
   const [temporalRailHeight, setTemporalRailHeight] = useState(140);
@@ -305,6 +313,9 @@ export function App() {
   const [city, setCity] = useState<CityTarget>(CITY_TARGETS[0]);
   const [scope, setScope] = useState<'world' | 'city'>('world');
   const [visualMode, setVisualMode] = useState<VisualMode>('solid');
+  const [aircraftTarget,setAircraftTarget]=useState<SpatialTarget|null>(null);
+  const [liveControlsOpen,setLiveControlsOpen]=useState(()=>window.innerWidth>760);
+  useEffect(()=>setAircraftTarget(null),[scope,city.id]);
   const [activeUseCase, setActiveUseCase] = useState<UseCaseId | null>(null);
   const [layers, setLayers] = useState<readonly LayerState[]>(INITIAL_LAYERS);
   const [selection, setSelection] = useState<SpatialFeatureSelection | null>(null);
@@ -374,6 +385,11 @@ export function App() {
   const [hazardError, setHazardError] = useState<string | null>(null);
   const [transitContext, setTransitContext] = useState<GtfsTransitContext | null>(null);
   const [transitError, setTransitError] = useState<string | null>(null);
+  const [radarManifest,setRadarManifest]=useState<RadarManifest|null>(null);
+  const [radarError,setRadarError]=useState<string|null>(null);
+  const [radarFrame,setRadarFrame]=useState(0);
+  const [radarPlaying,setRadarPlaying]=useState(()=>!window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const [radarCoverage,setRadarCoverage]=useState(false);
   const [aviationState, setAviationState] = useState<AviationDomainState | null>(null);
   const [aviationError, setAviationError] = useState<string | null>(null);
   const [operationalBindings, setOperationalBindings] =
@@ -816,10 +832,24 @@ export function App() {
     };
   }, [scope, city.id, temporal.mode]);
 
+  useEffect(()=>{const onError=(event:Event)=>setRadarError(String((event as CustomEvent).detail));window.addEventListener('aethergrid:radar-error',onError);return()=>window.removeEventListener('aethergrid:radar-error',onError);},[]);
+  const radarEnabled=layers.some(layer=>layer.id==='weather-radar' && layer.visible);
+  useEffect(()=>{
+    if(!radarEnabled || temporal.mode!=='live')return;
+    const controller=new AbortController();
+    const refresh=()=>{void loadWeatherRadar(controller.signal).then(next=>{if(controller.signal.aborted)return;setRadarManifest(next);setRadarFrame(next.frames.length-1);setRadarError(null);}).catch(error=>{if(!controller.signal.aborted){setRadarError(String(error.message));setRadarManifest(null);}});};
+    refresh();const timer=globalThis.setInterval(refresh,300000);return()=>{controller.abort();globalThis.clearInterval(timer);};
+  },[radarEnabled,temporal.mode]);
+  useEffect(()=>{
+    if(!radarPlaying || !radarManifest || temporal.mode!=='live' || !radarEnabled)return;
+    const timer=globalThis.setInterval(()=>setRadarFrame(previous=>(previous+1)%radarManifest.frames.length),2000);
+    return()=>globalThis.clearInterval(timer);
+  },[radarPlaying,radarManifest,temporal.mode,radarEnabled]);
+  const radarSnapshot=useMemo(()=>radarManifest && !radarError && radarEnabled && temporal.mode==='live'?radarOverlay(radarManifest,radarFrame,radarCoverage):null,[radarManifest,radarFrame,radarCoverage,radarError,radarEnabled,temporal.mode]);
+
+  const aviationEnabled = layers.some(layer=>layer.id==='aviation' && layer.visible);
   useEffect(() => {
-    const aviationEnabled = layers.some(
-      (layer) => layer.id === 'aviation' && layer.visible
-    );
+    setAviationState(null);setAviationError(null);
     if (!aviationEnabled || temporal.mode !== 'live') return;
 
     const controller = new AbortController();
@@ -848,7 +878,7 @@ export function App() {
             mergeAviationSnapshot(previous, incoming)
           );
           setAviationError(null);
-          schedule(15_000);
+          schedule(30_000);
         })
         .catch((error) => {
           if (controller.signal.aborted) return;
@@ -870,7 +900,7 @@ export function App() {
     city.latitude,
     city.longitude,
     temporal.mode,
-    layers
+    aviationEnabled
   ]);
 
   useEffect(() => {
@@ -984,10 +1014,11 @@ export function App() {
   };
 
   const sceneTarget = useMemo<SpatialTarget>(() => {
+    if(aircraftTarget)return aircraftTarget;
     if (scope === 'world') {
       return {
         latitude: 20,
-        longitude: 0,
+        longitude: worldLongitude,
         rangeMeters: 11_800_000,
         pitchDegrees: -88,
         headingDegrees: 0,
@@ -998,12 +1029,17 @@ export function App() {
     const identityMatches = cityIdentity?.cityId === city.id;
     return {
       ...city,
+      ...(location.protocol === 'file:' ? {
+        rangeMeters: (city.rangeMeters ?? 1050) * 1.6,
+        heightMeters: Math.max(city.heightMeters ?? 90, 150),
+        pitchDegrees: -32
+      } : {}),
       headingDegrees: identityMatches
         ? cityIdentity.arrivalHeadingDegrees
         : city.headingDegrees ?? 0,
       journey: identityMatches ? 'direct' : 'full'
     };
-  }, [scope, city, cityIdentity]);
+  }, [scope, city, cityIdentity, worldLongitude,aircraftTarget]);
 
   const worldOverlay = useMemo(
     () => (globalLive && temporal.mode === 'live' ? globalLive.overlay : null),
@@ -1272,13 +1308,14 @@ export function App() {
             measurementOverlay
           ];
 
-    return [aviationOverlay, ...contextualOverlays].filter(
+    return [aviationOverlay, radarSnapshot, ...contextualOverlays].filter(
       (snapshot): snapshot is SpatialOverlaySnapshot => Boolean(snapshot)
     );
   }, [
     scope,
     worldOverlay,
     aviationOverlay,
+    radarSnapshot,
     semanticOverlays,
     activeIllumination,
     powerOverlay,
@@ -1927,6 +1964,7 @@ export function App() {
             className={productMode === mode ? 'active' : ''}
             onClick={() => {
               setProductMode(mode); setInspector('overview'); setNavOpen(false);
+              if (['GLOBAL','GRID','HOLOGRAPHIC'].includes(mode))setAircraftTarget(null);
               if (mode === 'GLOBAL') { setScope('world'); setIntelOpen(false); }
               else if (mode === 'GRID' || mode === 'HOLOGRAPHIC') {
                 setScope('city'); setVisualMode(mode === 'HOLOGRAPHIC' ? 'holographic' : 'solid');
@@ -2150,7 +2188,10 @@ export function App() {
             onSurfacePoint={handleSurfacePoint}
           />
 
-          {temporal.mode === 'live' && (aviationState || aviationError) ? (
+          <details className="live-scene-controls" open={liveControlsOpen} onToggle={event=>setLiveControlsOpen(event.currentTarget.open)}>
+            <summary>LIVE WEATHER &amp; AIR TRAFFIC</summary>
+          {radarEnabled && temporal.mode==='live' ? <RadarControls manifest={radarManifest} error={radarError} index={radarFrame} playing={radarPlaying} coverage={radarCoverage} onIndex={setRadarFrame} onPlaying={setRadarPlaying} onCoverage={setRadarCoverage}/> : null}
+          {aviationEnabled && temporal.mode === 'live' && (aviationState || aviationError) ? (
             <div
               className="aviation-scene-badge"
               data-source-state={
@@ -2164,17 +2205,21 @@ export function App() {
               }
             >
               <span>AIR TRAFFIC</span>
+              {aviationState?.aircraft.length ? <><select aria-label="Focus observed aircraft" value="" onChange={event=>{const aircraft=aviationState.aircraft.find(a=>a.id===event.target.value);if(aircraft)setAircraftTarget({latitude:aircraft.latitude,longitude:aircraft.longitude,heightMeters:aircraft.geometricAltitudeMeters ?? aircraft.barometricAltitudeMeters ?? 0,rangeMeters:1800,pitchDegrees:-25,headingDegrees:aircraft.trackDegrees ?? 0,journey:'direct'});}}><option value="">Focus an aircraft (first 100)</option>{aviationState.aircraft.slice(0,100).map(a=><option key={a.id} value={a.id}>{a.callsign ?? a.icaoHex ?? a.id}</option>)}</select>{aircraftTarget?<button type="button" onClick={()=>setAircraftTarget(null)}>RETURN TO VIEW</button>:null}</> : null}
+              {location.protocol==='file:' && aviationError ? <a href="http://127.0.0.1:8090/" target="_blank" rel="noreferrer">Open connected workspace</a> : null}
               <strong>
                 {aviationError
                   ? 'PROVIDER UNAVAILABLE'
-                  : `${aviationState?.aircraft.length ?? 0} AIRCRAFT TRACKED`}
+                  : `${aviationState?.aircraft.length ?? 0} AIRCRAFT · ${aviationState?.stale?'DELAYED OBSERVATIONS':'RECENT OBSERVATIONS'}`}
               </strong>
               <small>
                 {aviationError ??
-                  `${aviationState?.provider ?? 'PROVIDER'} · ${aviationState?.sourceTime ?? 'SOURCE TIME PENDING'}`}
+                  `${aviationState?.provider ?? 'PROVIDER'} · ${aviationState?.sourceTime ?? 'SOURCE TIME PENDING'} · ${aviationState?.totalAircraft ?? aviationState?.aircraft.length ?? 0} in feed · geographic display limit applies`}
               </small>
             </div>
           ) : null}
+
+          </details>
 
           {scope === 'city' && Object.values(cityLoad).some(Boolean) ? (
             <div className="city-load-status" aria-live="polite">

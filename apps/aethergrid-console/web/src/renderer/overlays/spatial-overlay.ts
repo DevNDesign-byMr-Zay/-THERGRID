@@ -58,6 +58,7 @@ export interface SpatialOverlayEdge {
 }
 
 export interface SpatialOverlayArea {
+  holes?: readonly (readonly OverlayCoordinate[])[];
   id: string;
   kind: OverlayAreaKind;
   positions: readonly OverlayCoordinate[];
@@ -68,7 +69,10 @@ export interface SpatialOverlayArea {
   properties?: Readonly<Record<string, unknown>>;
 }
 
+export interface RadarRasterFrame {urlTemplate:string;frameTime:string;maximumLevel:number;credit:string;coverageUrl:string;coverageVisible:boolean;}
+
 export interface SpatialOverlaySnapshot {
+  raster?:RadarRasterFrame;
   id: string;
   layerId: string;
   eventTime: string;

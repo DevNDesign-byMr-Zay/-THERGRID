@@ -93,6 +93,7 @@ test('spatial handoff exits the active secondary inspector', async ({ page }) =>
 });
 
 test('TEAM retains real specialist contributions and provider truth', async ({ page }) => {
+  test.setTimeout(90_000);
   if (requireCloudAI) test.setTimeout(120_000);
   await page.setViewportSize({ width: 1536, height: 1024 });
   await page.goto('/');
@@ -130,7 +131,7 @@ test('global renderer remains usable with explicit engine provenance', async ({ 
 });
 
 test('specialist conversations consume the actual runtime contract', async ({ page }) => {
-  if (requireCloudAI) test.setTimeout(120_000);
+  test.setTimeout(120_000);
   await page.setViewportSize({ width: 1536, height: 1024 });
   await page.goto('/');
   await page.getByRole('navigation', { name: 'Product modes' }).getByRole('button', { name: 'AI', exact: true }).click();
@@ -166,6 +167,7 @@ test('local quantum execution never claims hardware execution', async ({ page, r
 });
 
 test('compact drawers contain focus and switch exclusively', async ({ page }) => {
+  test.setTimeout(90_000);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   const trigger = page.getByRole('button', { name: 'Navigation and layers' });

@@ -93,6 +93,7 @@ export function createProviderConfig(rawEnv = process.env) {
       provider: env.AETHERGRID_ENVIRONMENT_PROVIDER,
       openMeteoUrl: env.AETHERGRID_OPEN_METEO_URL,
     }),
+    aviation: Object.freeze({clientId:env.AETHERGRID_OPENSKY_CLIENT_ID,clientSecret:env.AETHERGRID_OPENSKY_CLIENT_SECRET}),
     airQuality: Object.freeze({
       provider: env.AETHERGRID_AIR_QUALITY_PROVIDER,
       airQualityUrl: env.AETHERGRID_AIR_QUALITY_URL,

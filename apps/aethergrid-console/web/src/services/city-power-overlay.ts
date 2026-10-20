@@ -15,6 +15,8 @@ interface CityDescriptor {
 }
 
 interface CityBuilding {
+  holes?: readonly (readonly (readonly [number, number])[])[];
+  roofOrientation?: string | null;
   id: string;
   name?: string;
   heightM?: number | null;
@@ -108,6 +110,7 @@ interface CityMeshResponse {
   source?: {
     provider?: string;
     live?: boolean;
+    snapshot?: boolean;
     attribution?: string | null;
     fetchedAt?: string | null;
     upstreamTimestamp?: string | null;
@@ -171,8 +174,8 @@ function sourceFields(mesh: CityMeshResponse): OverlaySourceFields {
     sourceTime: source.upstreamTimestamp ?? null,
     fetchedAt: source.fetchedAt ?? null,
     live: source.live === true,
-    stale: false,
-    fallback: source.live !== true,
+    stale: source.snapshot === true,
+    fallback: source.live !== true && !(source.snapshot === true && source.provider === 'bundled-openstreetmap'),
     attribution: source.attribution ?? source.provider ?? null
   };
 }
@@ -288,6 +291,7 @@ function cityMeshToBuildingOverlay(
         positions: (building.footprint ?? []).map((point) =>
           localMetersToCoordinate(mesh.city, point, 0)
         ),
+        holes: (building.holes ?? []).map(ring => ring.map(point => localMetersToCoordinate(mesh.city, point, 0))),
         label: building.name || building.buildingType || building.id,
         intensity: Math.min(1, Math.max(0.16, heightM / 320)),
         properties: {
@@ -305,6 +309,7 @@ function cityMeshToBuildingOverlay(
           buildingPart: building.buildingPart === true,
           buildingMaterial: building.buildingMaterial ?? '',
           buildingColor: building.buildingColor ?? '',
+          roofOrientation: building.roofOrientation ?? '',
           roofShape: building.roofShape ?? '',
           roofHeightM: building.roofHeightM ?? 0,
           roofMaterial: building.roofMaterial ?? '',

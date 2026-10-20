@@ -158,7 +158,7 @@ test('source geometry validates massing and refines only explicit supported roof
   expect(geometry({ ...area, properties: { ...area.properties, heightM: Infinity } })).toBeNull();
   expect(geometry({ ...area, positions: [{ longitude: NaN, latitude: 0 }, ...positions] })).toBeNull();
   expect(geometry({ ...area, properties: { ...area.properties, roofHeightM: 80 } })!.roofFaces).toHaveLength(0);
-  expect(geometry({ ...area, properties: { ...area.properties, roofShape: 'gabled' } })!.limitation).toContain('unsupported');
+  expect(geometry({ ...area, properties: { ...area.properties, roofShape: 'dome' } })!.limitation).toContain('unsupported');
   expect(geometry({ ...area, properties: { heightM: 40, heightSource: 'building:levels' } })!.heightCategory).toBe('levels-derived');
   expect(geometry({ ...area, properties: { heightM: 40, heightSource: 'unknown-provider-field' } })!.heightCategory).toBe('modeled');
   expect(geometry({ ...area, properties: { heightSource: 'height' } })!.heightCategory).toBe('modeled');

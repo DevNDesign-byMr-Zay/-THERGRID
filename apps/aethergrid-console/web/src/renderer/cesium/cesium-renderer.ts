@@ -1,9 +1,11 @@
+import {RadarWeatherLayer} from './radar-weather-layer';
 import type {
   AirQualityOverlaySnapshot,
   AtmosphericOverlaySnapshot
 } from '../overlays/atmospheric-overlay';
 import {
   Cartesian2,
+  Cartesian3,
   Cesium3DTileFeature,
   Cesium3DTileset,
   Color,
@@ -12,12 +14,14 @@ import {
   Ion,
   JulianDate,
   OpenStreetMapImageryProvider,
+  SingleTileImageryProvider,
   Math as CesiumMath,
   Terrain,
   Viewer,
   createGooglePhotorealistic3DTileset,
   createOsmBuildingsAsync
 } from 'cesium';
+import earthTexture from '../../../../assets/earth-natural-earth-ii.jpg';
 import { spatialRenderFrameKey } from '../../time/render-frame';
 
 import type { SpatialOverlaySnapshot } from '../overlays/spatial-overlay';
@@ -84,6 +88,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #cameraJourney: CameraJourneyController | null = null;
   #visualController: VisualModeController | null = null;
   #weather: WeatherAtmosphereLayer | null = null;
+  #radar: RadarWeatherLayer|null=null;
   #airQuality: AirQualityLayer | null = null;
   #solarLighting: SolarLightingController | null = null;
   #overlays = new Map<string, NetworkOverlayLayer>();
@@ -111,6 +116,10 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #degraded = false;
   #busy = false;
   #journeyPhase: SpatialJourneyPhase = 'idle';
+  #worldView = false;
+  #lastOrbitTime = 0;
+  #lastPointerTime = 0;
+  #removeIdleOrbit: (() => void) | null = null;
   #journeyGeneration = 0;
   #detailLevel: SpatialDetailLevel = 'district';
   #solar: SpatialSolarStatus | null = null;
@@ -131,6 +140,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#viewer = new Viewer(this.#container, {
       requestRenderMode: this.#motionQuery?.matches === true,
       maximumRenderTimeChange: Number.POSITIVE_INFINITY,
+      targetFrameRate: 30,
       animation: false,
       baseLayerPicker: false,
       fullscreenButton: false,
@@ -159,7 +169,22 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#motionQuery?.addEventListener('change', this.#onMotionChange);
     for (const type of ['wheel', 'pointerdown', 'pointermove', 'pointerup']) this.#viewer.canvas.addEventListener(type, this.#onCameraInput, {passive: true});
     this.#onMotionChange();
+    if (location.protocol === 'file:') {
+      this.#removeIdleOrbit = this.#viewer.scene.preUpdate.addEventListener(() => {
+        const now = performance.now();
+        const delta = Math.min(100, now - (this.#lastOrbitTime || now));
+        this.#lastOrbitTime = now;
+        if (this.#worldView && this.#journeyPhase === 'idle' && !this.#motionQuery?.matches && now - this.#lastPointerTime > 2500) {
+          this.#viewer?.camera.rotate(Cartesian3.UNIT_Z, delta / 1000 * 0.014);
+        }
+      });
+      this.#viewer.canvas.addEventListener('pointerdown', () => { this.#lastPointerTime = performance.now(); });
+      this.#viewer.canvas.addEventListener('pointermove', () => { this.#lastPointerTime = performance.now(); });
+    }
     if (!ionEnabled) {
+      if (location.protocol === 'file:') {
+        this.#viewer.imageryLayers.addImageryProvider(await SingleTileImageryProvider.fromUrl(earthTexture));
+      } else {
       try {
         const osmLayer = this.#viewer.imageryLayers.addImageryProvider(
           new OpenStreetMapImageryProvider({
@@ -172,6 +197,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
         osmLayer.gamma = 0.86;
       } catch {
         // The Cesium ellipsoid + source-backed overlays remain usable if imagery is unavailable.
+      }
       }
     }
 
@@ -188,6 +214,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       realityEnabled: config.realityEnabled
     });
     this.#weather = new WeatherAtmosphereLayer(this.#viewer);
+    this.#radar=new RadarWeatherLayer(this.#viewer);
     this.#airQuality = new AirQualityLayer(this.#viewer);
     this.#solarLighting = new SolarLightingController(this.#viewer);
 
@@ -239,6 +266,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   }
 
   async flyTo(target: SpatialTarget): Promise<void> {
+    this.#worldView = target.journey === 'global';
     this.#requireViewer();
     if (!this.#cameraJourney) throw new Error('Cesium camera journey is not initialized');
 
@@ -273,6 +301,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#grid?.setTime(time.iso);
     for (const overlay of this.#overlays.values()) overlay.setTime(time);
     this.#weather?.setTime(time);
+    this.#radar?.setTime(time);
     this.#airQuality?.setTime(time);
     viewer.scene.requestRender();
   }
@@ -313,6 +342,9 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
     viewer.resolutionScale =
       tier === 'quality' ? 1 : tier === 'balanced' ? 0.84 : 0.66;
+    // Leave time for input and panels while retaining animated camera and weather updates.
+    viewer.targetFrameRate =
+      tier === 'quality' ? 45 : tier === 'balanced' ? 30 : 20;
     const phase =
       this.#journeyPhase === 'idle' ? 'district' : this.#journeyPhase;
     this.#applyDetailForPhase(phase);
@@ -321,6 +353,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
   applyOverlay(snapshot: SpatialOverlaySnapshot): void {
     const viewer = this.#requireViewer();
+    if(snapshot.layerId==='weather-radar' && snapshot.raster){this.#radar?.apply(snapshot.raster);if(this.#time)this.#radar?.setTime(this.#time);this.#radar?.setVisible(this.#layerVisible('weather-radar',true),this.#layers.get('weather-radar')?.opacity ?? .68);return;}
     let overlay = this.#overlays.get(snapshot.layerId);
     if (!overlay) {
       overlay = new NetworkOverlayLayer(viewer);
@@ -345,6 +378,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   }
 
   clearOverlay(layerId: string): void {
+    if(layerId==='weather-radar'){this.#radar?.setVisible(false);return;}
     const overlay = this.#overlays.get(layerId);
     if (!overlay) return;
     overlay.destroy();
@@ -357,6 +391,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
   applyAtmosphere(snapshot: AtmosphericOverlaySnapshot): void {
     this.#weather?.apply(snapshot);
+    this.#radar?.setVisible(this.#layerVisible('weather-radar',true),this.#layers.get('weather-radar')?.opacity ?? .68);
     this.#weather?.setVisible(this.#layerVisible('weather', true));
   }
 
@@ -495,6 +530,8 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   }
 
   destroy(): void {
+    this.#removeIdleOrbit?.();
+    this.#removeIdleOrbit = null;
     for (const type of ['wheel', 'pointerdown', 'pointermove', 'pointerup']) this.#viewer?.canvas.removeEventListener(type, this.#onCameraInput);
     this.#motionQuery?.removeEventListener('change', this.#onMotionChange);
     this.#motionQuery = null;
@@ -504,6 +541,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#cameraJourney?.cancel();
     this.#cameraJourney = null;
     this.#visualController = null;
+    this.#radar?.destroy();this.#radar=null;
     this.#weather?.destroy();
     this.#weather = null;
     this.#airQuality?.destroy();
@@ -600,6 +638,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#visualController?.setOpacity(this.#layers.get('buildings')?.opacity ?? 1);
     this.#grid?.setVisible(this.#layerVisible('grid', true));
     this.#grid?.setOpacity(this.#layers.get('grid')?.opacity ?? 1);
+    this.#radar?.setVisible(this.#layerVisible('weather-radar',true),this.#layers.get('weather-radar')?.opacity ?? .68);
     this.#weather?.setVisible(this.#layerVisible('weather', true));
     this.#airQuality?.setVisible(this.#layerVisible('air', true));
     for (const [layerId, overlay] of this.#overlays) {

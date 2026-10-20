@@ -21,6 +21,7 @@ import type {
 
 export class RendererManager {
   #container: HTMLElement | null = null;
+  #disposed = false;
   #current: SpatialRenderer;
   #primary: SpatialRenderer;
   #fallback: SpatialRenderer;
@@ -52,6 +53,7 @@ export class RendererManager {
   }
 
   async initialize(config: SpatialRendererConfig = {}): Promise<SpatialRendererStatus> {
+    if (this.#disposed) throw new Error('renderer manager is disposed');
     if (!this.#container) throw new Error('renderer manager must be mounted before initialization');
     this.#config = { ...config };
 
@@ -59,6 +61,7 @@ export class RendererManager {
       await this.#activate(this.#primary);
       this.#failoverReason = null;
     } catch (error) {
+      if (this.#disposed) throw new Error('renderer manager is disposed');
       this.#primary.destroy();
       this.#failoverReason = this.#errorMessage(error);
       await this.#activate(this.#fallback);
@@ -204,7 +207,10 @@ export class RendererManager {
   }
 
   destroy(): void {
-    this.#current.destroy();
+    this.#disposed = true;
+    this.#container = null;
+    this.#primary.destroy();
+    this.#fallback.destroy();
   }
 
   #errorMessage(error: unknown): string {
@@ -213,9 +219,14 @@ export class RendererManager {
   }
 
   async #activate(renderer: SpatialRenderer): Promise<void> {
+    if (this.#disposed) throw new Error('renderer manager is disposed');
     if (!this.#container) throw new Error('renderer manager is not mounted');
     renderer.mount(this.#container);
     await renderer.initialize(this.#config);
+    if (this.#disposed) {
+      renderer.destroy();
+      throw new Error('renderer manager is disposed');
+    }
     renderer.setLayers(this.#layers);
     renderer.setVisualMode(this.#mode);
     renderer.setPerformanceTier(this.#performanceTier);

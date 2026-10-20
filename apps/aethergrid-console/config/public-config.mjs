@@ -7,7 +7,7 @@ export function createPublicConfig(rawConfigOrEnv = process.env) {
       : createProviderConfig(rawConfigOrEnv);
 
   const cesiumToken = config.futureProviders?.cesium?.token || '';
-  const spatialProvider = cesiumToken ? 'cesium' : 'native-webgl';
+  const spatialProvider = 'cesium';
 
   return Object.freeze({
     app: Object.freeze({
@@ -31,6 +31,8 @@ export function createPublicConfig(rawConfigOrEnv = process.env) {
     weather: Object.freeze({
       provider: config.weather.provider,
     }),
+    aviation: Object.freeze({provider:'adsb-lol / opensky',authenticated:Boolean(config.aviation?.clientId && config.aviation?.clientSecret)}),
+    radar: Object.freeze({provider:'rainviewer',configured:true}),
     airQuality: Object.freeze({
       provider: config.airQuality.provider,
     }),

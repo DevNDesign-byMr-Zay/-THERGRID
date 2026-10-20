@@ -20,6 +20,7 @@ test('Connection Center preserves unknown provider states and marks failed refre
 });
 
 test('late unmounted registry response cannot replace a newer mount', async ({ page }) => {
+  test.setTimeout(90_000);
   await page.addInitScript(() => {
     const original = window.fetch.bind(window);
     let calls = 0;

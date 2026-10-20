@@ -9,6 +9,8 @@
 
 ### Changed
 
+- Preserve mapped building courtyards and stitched multipolygon boundaries through both OSM providers, Cesium surfaces, and native wireframes. Refine rectangular gabled and hipped roofs from source dimensions; unsupported geometry remains explicitly simplified.
+
 - Promoted React/TypeScript/Cesium to the canonical Node-served and full-ZIP application through #148, preserving same-origin provider APIs and explicit native v3 compatibility.
 - Kept root package/lockfile and earlier evidence-console manifest aligned to the 0.2.1 release candidate; canonical application generation remains 4.0.0-alpha.1.
 - Updated startup and roadmap status to the merged production build/package contract; final-main and canonical live-provider evidence remain required before publication.
@@ -22,6 +24,8 @@
 - Added scheduled dependency-freshness evidence without automatic dependency mutation.
 
 ### Added
+- Added normalized ADSB.lol city and OpenSky global aircraft APIs, observed-fix interpolation, aircraft camera focus, bounded trails, cache/backoff and private server-side OAuth.
+- Added animated RainViewer radar composites in globe and city views across all seven visual modes, including frame playback, coverage controls, timestamps and failure states. Added public spatial connection settings and a scoped loopback aircraft bridge for the direct-open HTML.
 - Added credential-free Cesium startup with a real WGS84 globe, OpenStreetMap imagery, source-backed OpenStreetMap building-footprint extrusions and live world-node animation; Cesium Ion now augments the scene instead of being required for the scene to exist.
 - Added LIVE-only NWS active-hazard visualization with severity-coded point-context markers and provider-returned Polygon/MultiPolygon boundary geometry; alerts without geometry remain point-context only and never receive fabricated affected-area fills.
 - Added per-city/coordinate operator bindings for NOAA NWPS gauge IDs and EIA balancing-region codes, enabling source-backed live hydrology and energy reads without location-based identifier guessing or browser-stored provider credentials.

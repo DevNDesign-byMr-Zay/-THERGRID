@@ -76,6 +76,8 @@ export interface PublicProviderCapability {
 }
 
 export interface PublicProviderRuntime {
+  aviation?:PublicProviderCapability;
+  radar?:PublicProviderCapability;
   spatial?: PublicProviderCapability;
   geo?: PublicProviderCapability;
   terrain?: PublicProviderCapability;

@@ -5,6 +5,7 @@
   "version": "4.0.0-alpha.1",
   "format": "react+typescript+vite+cesium+node-app",
   "entrypoints": {
+    "directOpenHtml": "index.html",
     "webApp": "web/dist/index.html",
     "backend": "server.mjs",
     "standaloneHtml": "legacy/standalone.html",
@@ -59,6 +60,8 @@
       "GET /api/aethergrid/geospatial/cities",
       "GET /api/aethergrid/geospatial/runtime",
       "GET /api/aethergrid/terrain",
+      "GET /api/aethergrid/domains/aviation/aircraft",
+      "GET /api/aethergrid/weather/radar",
       "PUT /api/aethergrid/profile",
       "GET /api/aethergrid/profile",
       "POST /api/aethergrid/view",

@@ -61,6 +61,8 @@ export function SpatialViewport({
   onSelection,
   onSurfacePoint
 }: SpatialViewportProps) {
+  const [connectionRevision,setConnectionRevision]=useState(0);
+  useEffect(()=>{const reconnect=()=>setConnectionRevision(n=>n+1);window.addEventListener('aethergrid:spatial-config',reconnect);return()=>window.removeEventListener('aethergrid:spatial-config',reconnect);},[]);
   const hostRef = useRef<HTMLDivElement | null>(null);
   const managerRef = useRef<RendererManager | null>(null);
   const targetRef = useRef(target);
@@ -87,17 +89,19 @@ export function SpatialViewport({
       new NativeWebglSpatialRenderer()
     );
     managerRef.current = manager;
+    setStatus(STARTING_STATUS);
     overlaySnapshotsRef.current.clear();
     overlayIdsRef.current.clear();
     manager.mount(host);
 
     void (async () => {
       const publicConfig = await loadPublicRuntimeConfig();
+      if (cancelled) return;
       const next = await manager.initialize({
         cesiumIonToken: publicConfig.spatial.cesiumIonToken,
         realityEnabled: publicConfig.spatial.realityEnabled
       });
-      if (cancelled) return;
+      if (cancelled) { manager.destroy(); return; }
       setStatus(next);
       manager.setPerformanceTier(performance.resolved);
       manager.setLayers(layers);
@@ -188,7 +192,7 @@ export function SpatialViewport({
       manager.destroy();
       if (managerRef.current === manager) managerRef.current = null;
     };
-  }, []);
+  }, [connectionRevision]);
 
   useEffect(() => {
     interactionModeRef.current = interactionMode;

@@ -1,3 +1,4 @@
+import {readPublicSpatialToken} from './public-spatial-connection';
 export interface PublicRuntimeConfig {
   spatial: {
     provider: 'cesium' | 'native-webgl';
@@ -17,7 +18,7 @@ const FALLBACK_CONFIG: PublicRuntimeConfig = {
   }
 };
 
-export async function loadPublicRuntimeConfig(): Promise<PublicRuntimeConfig> {
+async function loadServerRuntimeConfig(): Promise<PublicRuntimeConfig> {
   try {
     const response = await fetch('/api/aethergrid/config/public', {
       headers: { accept: 'application/json' }
@@ -41,4 +42,9 @@ export async function loadPublicRuntimeConfig(): Promise<PublicRuntimeConfig> {
   } catch {
     return FALLBACK_CONFIG;
   }
+}
+
+export async function loadPublicRuntimeConfig():Promise<PublicRuntimeConfig>{
+ const config=await loadServerRuntimeConfig(),token=readPublicSpatialToken();
+ return token?{spatial:{provider:"cesium",cesiumIonToken:token,realityEnabled:true}}:config;
 }

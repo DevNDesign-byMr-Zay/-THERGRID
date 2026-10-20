@@ -13,4 +13,11 @@ test('reduced motion stops unchanged Cesium GPU draws but camera and preference 
   let before=await page.evaluate(()=>(window as any).__gpuDraws);await page.mouse.move(700,350);await page.mouse.wheel(0,300);await expect.poll(()=>page.evaluate(()=>(window as any).__gpuDraws)).toBeGreaterThan(before);
   expect((await page.screenshot({clip})).equals(pixelsBefore),'Camera input must change the actual spatial view').toBe(false);
   before=await page.evaluate(()=>(window as any).__gpuDraws);await page.emulateMedia({reducedMotion:'no-preference'});await expect.poll(()=>page.evaluate(()=>(window as any).__gpuDraws)).toBeGreaterThan(before);
+  const continuous=await page.evaluate(()=>(window as any).__gpuDraws);
+  await page.waitForTimeout(1200);
+  expect(await page.evaluate(()=>(window as any).__gpuDraws),'Normal motion must continue drawing after the preference change').toBeGreaterThan(continuous);
+  await page.getByRole('button',{name:'Navigation and layers'}).click();
+  await expect(page.getByRole('dialog',{name:'Navigation and layers'})).toBeVisible();
+  await page.getByRole('button',{name:'Close navigation drawer'}).click();
+  await expect(page.getByRole('dialog',{name:'Navigation and layers'})).not.toBeVisible();
 });

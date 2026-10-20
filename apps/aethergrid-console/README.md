@@ -38,7 +38,11 @@ Run:
 npm run package:aethergrid-app
 ```
 
-The packager performs a locked v4 web build and produces `dist/aethergrid-functional-app.zip`. The archive contains the canonical `web/dist/` application, Node backend/provider modules, the required Zod runtime dependency, launchers, manifests, integrity inventory, and the native v3 compatibility surface under `legacy/`.
+The packager performs a locked v4 web build and produces `dist/aethergrid-functional-app.zip`. The archive contains the canonical `web/dist/` application, a self-contained root `index.html`, Node backend/provider modules, the required Zod runtime dependency, launchers, manifests, integrity inventory, and the native v3 compatibility surface under `legacy/`.
+
+Extract the ZIP, then open **the root `index.html`** in Chrome or Edge. The current React workspace, Cesium renderer, classic workers, textures, globe image and eight mapped city districts are embedded. The globe rotates gently, pauses for interaction and respects reduced motion. City selection flies into distinct source-backed building extrusions, roads, water and green areas. Solid, wireframe and holographic controls, local profile/preferences and spatial/time controls work without a server. City geometry is a dated snapshot; tagged and estimated heights remain distinguished. See `assets/cities/SOURCE_NOTES.md` and the snapshot manifest for coverage and licensing.
+
+When online, the local-file read adapter requests public Open-Meteo current conditions/forecasts and USGS earthquake data directly. Offline weather and seismic observations remain unavailable; city maps stay usable. The local file contains no private provider keys. Operator sign-in, recorded observations, model-backed AI, private data providers and quantum submissions still require the application runtime. An HTML file cannot start operating-system processes. For those services on Windows, run `START-AETHERGRID.cmd` and use `http://127.0.0.1:8090`. Do not open `web/dist/index.html` directly. Mobile file previewers that disable JavaScript cannot run this application; Chromium desktop acceptance and responsive viewport checks do not constitute native iOS verification.
 
 `legacy/standalone.html` remains available for direct-open native-WebGL/offline compatibility. It is explicitly noncanonical and does not replace the React/Cesium command center.
 
@@ -378,3 +382,9 @@ Batch 18 establishes the production backend provider, configuration, secret-safe
 Set `AETHERGRID_SETUP_PASSWORD` locally, then run `node configure-account.mjs USERNAME Administrator` from the extracted app folder. Passwords require at least 12 characters. Clear the setup password variable after use. The launcher reads the ignored `.env.aethergrid` account configuration alongside `.env` provider settings. Sessions expire after eight hours; Viewer reads, Analyst runs advisory tools and edits their profile, Administrator additionally controls reset and quantum job routes. Without configured accounts this remains a local single-operator workspace. Configure accounts before sharing the runtime.
 
 History records real source-backed provider responses in `.aethergrid-data/observations-v1`. Historical weather playback uses recorded samples; missing observations remain unavailable. Specialists use server-recorded observation tools and expose citation receipts. TEAM preserves contribution citations. Recordings do not reconstruct unobserved buildings or validate AI conclusions.
+
+## Live maps
+
+The connected workspace includes ADSB.lol city aircraft, OpenSky global aircraft and animated RainViewer radar in globe/city views. Use Settings → Developer → Live map connections to check feeds and optionally apply a public Cesium ion browser token. Photorealistic Reality requires provider access to the relevant 3D tiles asset. Anonymous global aircraft refresh upstream every 15 minutes; optional server-side `AETHERGRID_OPENSKY_CLIENT_ID` / `AETHERGRID_OPENSKY_CLIENT_SECRET` enables OAuth. Provider quotas, attribution and usage terms apply.
+
+Direct-open `index.html` embeds city snapshots and the renderer. Radar/weather require internet; aircraft additionally need the running backend at `http://127.0.0.1:8090/` because upstream providers block browser requests from local files. Run the launcher to start it. Account-protected deployments should use the signed-in connected workspace. District massing and inferred heights are not surveyed 1:1 city replicas.

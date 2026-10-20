@@ -915,7 +915,8 @@ describe('ÆTHERGRID v4.0 Provider Runtime Execution Layer & Verification', () =
         const res = await fetch(`${baseUrl}/api/aethergrid/runtime/providers`);
         assert.equal(res.status, 200);
         const body = await res.json();
-        assert.equal(body.spatial.provider, 'native-webgl');
+        assert.equal(body.spatial.provider, 'cesium');
+        assert.equal(body.spatial.fallbackProvider, 'native-webgl');
         assert.equal(body.weather.provider, 'open-meteo');
       });
     });

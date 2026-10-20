@@ -42,6 +42,9 @@ export interface AviationRelationship {
 }
 
 export interface AviationProviderSnapshot {
+  totalAircraft?:number;
+  displayedAircraft?:number;
+  upstreamRefreshMs?:number|null;
   provider: string;
   sourceTime: string | null;
   fetchedAt: string;
@@ -128,8 +131,9 @@ export function mergeAviationSnapshot(
   const sameProvider = previous
     ? previous.provider === incoming.provider
     : false;
+  const currentIds=new Set(incoming.aircraft.map(a=>a.id));
   const nextHistory: Record<string, readonly AviationTrackPoint[]> =
-    sameProvider ? { ...(previous?.history ?? {}) } : {};
+    sameProvider ? Object.fromEntries(Object.entries(previous?.history ?? {}).filter(([id])=>currentIds.has(id))) : {};
 
   for (const aircraft of incoming.aircraft) {
     if (
@@ -170,7 +174,7 @@ export function sourceBackedRelationshipEdges(
 
 function historyEdges(state: AviationDomainState): readonly SpatialOverlayEdge[] {
   const edges: SpatialOverlayEdge[] = [];
-  for (const aircraft of state.aircraft) {
+  for (const aircraft of state.aircraft.slice(0,300)) {
     const points = state.history[aircraft.id] ?? [];
     for (let index = 1; index < points.length; index += 1) {
       const from = points[index - 1];

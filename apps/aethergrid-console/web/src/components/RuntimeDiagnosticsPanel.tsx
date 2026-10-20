@@ -31,6 +31,8 @@ const PROVIDER_LABELS: ReadonlyArray<{
   { id: 'spatial', label: 'SPATIAL', fallbackProvider: 'native-webgl' },
   { id: 'geo', label: 'GEOSPATIAL', fallbackProvider: 'osm-overpass' },
   { id: 'terrain', label: 'TERRAIN', fallbackProvider: 'open-meteo' },
+  { id: 'aviation',label:'AIR TRAFFIC',fallbackProvider:'adsb-lol / opensky'},
+  { id: 'radar',label:'WEATHER RADAR',fallbackProvider:'rainviewer'},
   { id: 'weather', label: 'WEATHER', fallbackProvider: 'open-meteo' },
   { id: 'airQuality', label: 'AIR QUALITY', fallbackProvider: 'open-meteo' },
   { id: 'seismic', label: 'SEISMIC', fallbackProvider: 'usgs' },

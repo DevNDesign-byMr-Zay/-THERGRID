@@ -1,4 +1,7 @@
+import {aircraftModelUri} from './aircraft-model';
 import {
+  CallbackPositionProperty,
+  CallbackProperty,
   Cartesian2,
   Cartesian3,
   BoxGraphics,
@@ -232,7 +235,8 @@ function aircraftHeading(node: SpatialOverlayNode): number {
 
 function nodeEntity(
   node: SpatialOverlayNode,
-  provenance: Readonly<Record<string, unknown>>
+  provenance: Readonly<Record<string, unknown>>,
+  viewer: Viewer
 ): Entity {
   const intensity = overlayIntensity(node.intensity);
   const position = coordinate(node.position);
@@ -251,7 +255,7 @@ function nodeEntity(
       ? Transforms.headingPitchRollQuaternion(
           position,
           new HeadingPitchRoll(
-            CesiumMath.toRadians(aircraftHeading(node)),
+            CesiumMath.toRadians(aircraftHeading(node)-90),
             0,
             0
           )
@@ -272,17 +276,22 @@ function nodeEntity(
       outlineWidth: urbanLight ? 0 : aircraft ? 0.8 : 1.25,
       distanceDisplayCondition: new ConstantProperty(
         aircraft
-          ? new DistanceDisplayCondition(850_000, nodeFarDistance(node))
+          ? new DistanceDisplayCondition(aircraftModel ? 850_000 : 0, nodeFarDistance(node))
           : new DistanceDisplayCondition(0, nodeFarDistance(node))
       ),
       disableDepthTestDistance:
-        node.kind === 'city' || node.kind === 'event' || aircraft
+        node.kind === 'city' || node.kind === 'event'
           ? Number.POSITIVE_INFINITY
-          : 1_500_000
+          : aircraft ? 0 : 1_500_000
     }),
     model: aircraftModel
       ? new ModelGraphics({
-          uri: '/models/aethergrid-aircraft.gltf',
+          // ModelVisualizer checks show before creating the model; distanceDisplayCondition runs later.
+          show: new CallbackProperty(() => {
+            const cameraPosition = viewer.camera?.positionWC;
+            return !cameraPosition || Cartesian3.distanceSquared(cameraPosition, position) <= 900_000 * 900_000;
+          }, false),
+          uri: aircraftModelUri,
           scale: 8,
           minimumPixelSize: 12,
           maximumScale: 18,
@@ -311,7 +320,7 @@ function nodeEntity(
           distanceDisplayCondition: new ConstantProperty(
             new DistanceDisplayCondition(0, 420_000)
           ),
-          disableDepthTestDistance: Number.POSITIVE_INFINITY
+          disableDepthTestDistance: 0
         })
       : undefined,
     properties: {
@@ -577,6 +586,7 @@ function areaEntity(
 
 export class NetworkOverlayLayer {
   #viewer: Viewer;
+  #aircraftFixes=new Map<string,{position:Cartesian3;time:number}>();
   #source = new CustomDataSource('aethergrid-network-overlay');
   #snapshot: SpatialOverlaySnapshot | null = null;
   #nodeEntities = new Map<string, Entity>();
@@ -622,8 +632,18 @@ export class NetworkOverlayLayer {
       this.#applyBuildingPrimitive(snapshot, provenance);
     }
 
+    const nextAircraftFixes=new Map<string,{position:Cartesian3;time:number}>();
     for (const node of snapshot.nodes) {
-      const entity = this.#source.entities.add(nodeEntity(node, provenance));
+      const entity = this.#source.entities.add(nodeEntity(node, provenance, this.#viewer));
+      if(node.kind==='aircraft'){
+        const fix={position:coordinate(node.position),time:Date.parse(String(node.properties?.observedAt ?? snapshot.sourceTime ?? snapshot.eventTime))};
+        const previous=this.#aircraftFixes.get(node.id);
+        const reduced=typeof window!=='undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if(previous && !reduced && node.properties?.truthState!=='stale' && fix.time>previous.time && fix.time-previous.time<=60000 && Cartesian3.distance(previous.position,fix.position)<50000){
+          const started=performance.now();entity.position=new CallbackPositionProperty(()=>Cartesian3.lerp(previous.position,fix.position,Math.min(1,(performance.now()-started)/1000),new Cartesian3()),false);
+        }
+        nextAircraftFixes.set(node.id,fix);
+      }
       this.#nodeEntities.set(node.id, entity);
       if (entity.label) this.#labelColors.set(node.id, {
         fill: Color.clone(entity.label.fillColor?.getValue() ?? Color.WHITE),
@@ -632,6 +652,7 @@ export class NetworkOverlayLayer {
       });
       if (entity.model) this.#modelColors.set(node.id, Color.clone(entity.model.color?.getValue() ?? Color.WHITE));
     }
+    this.#aircraftFixes=nextAircraftFixes;
     for (const edge of snapshot.edges) {
       const entity = this.#source.entities.add(edgeEntity(edge, provenance));
       this.#edgeEntities.set(edge.id, entity);
@@ -846,7 +867,8 @@ export class NetworkOverlayLayer {
         const hierarchy = new PolygonHierarchy(
           massing.ring.map((position) =>
             Cartesian3.fromDegrees(position.longitude, position.latitude)
-          )
+          ),
+          massing.holes.map(ring => new PolygonHierarchy(ring.map(position => Cartesian3.fromDegrees(position.longitude, position.latitude))))
         );
         const sourceFeatureId =
           typeof area.properties?.sourceFeatureId === 'string'
@@ -865,7 +887,7 @@ export class NetworkOverlayLayer {
             ...area.properties,
             overlayKind: area.kind,
             heightCategory: massing.heightCategory,
-            roofRefinement: massing.roofFaces.length ? 'source-tagged-pyramidal' : 'simple-massing',
+            roofRefinement: massing.roofRefinement,
             geometryLimitation: massing.limitation,
             sourceName: area.label ?? area.id
           }
@@ -929,7 +951,7 @@ export class NetworkOverlayLayer {
       const id = { aethergridSourceBuilding: true, id: area.id, sourceFeatureId, geometryPart: `edge:${index}`,
         label: area.label ?? area.id, latitude: area.properties?.centroidLatitude, longitude: area.properties?.centroidLongitude,
         heightM: area.properties?.heightM, properties: { ...provenance, ...area.properties, overlayKind: area.kind,
-          heightCategory: buildingGeometry(area)?.heightCategory, roofRefinement: buildingGeometry(area)?.roofFaces.length ? 'source-tagged-pyramidal' : 'simple-massing',
+          heightCategory: buildingGeometry(area)?.heightCategory, roofRefinement: buildingGeometry(area)?.roofRefinement,
           geometryLimitation: buildingGeometry(area)?.limitation } };
       const instance = new GeometryInstance({ id, geometry: new PolylineGeometry({ positions: [coordinate(from), coordinate(to)], width: 1.5,
         vertexFormat: PolylineColorAppearance.VERTEX_FORMAT }), attributes: { color: ColorGeometryInstanceAttribute.fromColor(Color.CYAN) } });
