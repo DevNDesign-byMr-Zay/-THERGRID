@@ -786,9 +786,12 @@ async function main() {
   const aethergridStartScript = await text('apps/aethergrid-console/START-AETHERGRID.ps1');
   const aethergridAppEnv = await text('apps/aethergrid-console/.env.example');
   assert(
-    /Node\.js 22\+/u.test(aethergridStartScript) &&
+    /Get-Command node/u.test(aethergridStartScript) &&
+      /\$NodeMajor -ne 22/u.test(aethergridStartScript) &&
       /--env-file=\.env/u.test(aethergridStartScript) &&
-      /server\.mjs/u.test(aethergridStartScript),
+      /server\.mjs/u.test(aethergridStartScript) &&
+      /Invoke-RestMethod -Uri \$HealthUrl/u.test(aethergridStartScript) &&
+      /\$Process\.HasExited/u.test(aethergridStartScript),
     'ÆTHERGRID Windows launcher must verify Node 22 and launch the packaged backend',
   );
   assert(
