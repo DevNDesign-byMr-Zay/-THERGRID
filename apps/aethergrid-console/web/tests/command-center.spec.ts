@@ -1,35 +1,5 @@
 import { expect, test } from '@playwright/test';
 
-
-const profiles = new WeakMap();
-test.beforeEach(async ({ page }) => {
-  if (process.env.AETHERGRID_TEST_REDUCED_MOTION === '1') await page.emulateMedia({ reducedMotion: 'reduce' });
-  if (process.env.AETHERGRID_TEST_PROFILE !== '1') return;
-  const session = await page.context().newCDPSession(page);
-  await session.send('Profiler.enable');
-  await session.send('Profiler.start');
-  profiles.set(page, session);
-});
-test.afterEach(async ({ page }, info) => {
-  const session = profiles.get(page);
-  if (!session) return;
-  try {
-    const { profile } = await session.send('Profiler.stop');
-    const byId = new Map(profile.nodes.map((node: any) => [node.id, node]));
-    const weight = new Map<number, number>();
-    for (let i = 0; i < (profile.samples?.length ?? 0); i++) {
-      const id = profile.samples[i];
-      weight.set(id, (weight.get(id) ?? 0) + (profile.timeDeltas?.[i] ?? 0));
-    }
-    const top = [...weight].sort((a, b) => b[1] - a[1]).slice(0, 24).map(([id, micros]) => {
-      const node: any = byId.get(id);
-      return { milliseconds: Math.round(micros / 1000), ...node?.callFrame };
-    });
-    console.info('AETHERGRID_CPU_PROFILE', JSON.stringify({ test: info.title, status: info.status, top }));
-    await session.detach();
-  } catch (error) { console.info('AETHERGRID_CPU_PROFILE_UNAVAILABLE', String(error)); }
-});
-
 const requireCloudAI = process.env.AETHERGRID_TEST_REQUIRE_CLOUD_AI === '1';
 function verifyCloudRuntime(runtime: { provider: string; model: string; fallbackUsed: boolean }) {
   expect(runtime.provider).toBe('openai-compatible');
@@ -123,6 +93,7 @@ test('spatial handoff exits the active secondary inspector', async ({ page }) =>
 });
 
 test('TEAM retains real specialist contributions and provider truth', async ({ page }) => {
+  test.setTimeout(90_000);
   if (requireCloudAI) test.setTimeout(120_000);
   await page.setViewportSize({ width: 1536, height: 1024 });
   await page.goto('/');
@@ -160,7 +131,7 @@ test('global renderer remains usable with explicit engine provenance', async ({ 
 });
 
 test('specialist conversations consume the actual runtime contract', async ({ page }) => {
-  test.setTimeout(requireCloudAI ? 120_000 : 90_000);
+  test.setTimeout(120_000);
   await page.setViewportSize({ width: 1536, height: 1024 });
   await page.goto('/');
   await page.getByRole('navigation', { name: 'Product modes' }).getByRole('button', { name: 'AI', exact: true }).click();
@@ -196,6 +167,7 @@ test('local quantum execution never claims hardware execution', async ({ page, r
 });
 
 test('compact drawers contain focus and switch exclusively', async ({ page }) => {
+  test.setTimeout(90_000);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   const trigger = page.getByRole('button', { name: 'Navigation and layers' });

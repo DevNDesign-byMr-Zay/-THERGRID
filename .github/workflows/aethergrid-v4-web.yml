@@ -71,8 +71,6 @@ jobs:
         if: matrix.suite == 'operator'
         env:
           AETHERGRID_TEST_CANONICAL: "1"
-          DEBUG: "pw:api"
-          AETHERGRID_TEST_PROFILE: "1"
         run: npx playwright test tests/command-center.spec.ts --grep "compact drawers contain focus and switch exclusively" --output=test-results/drawer-focus --workers=1 --reporter=line
 
       - name: Verify production shell, appearance and source truth
@@ -133,23 +131,10 @@ jobs:
         if: matrix.suite == 'local-runtime'
         env:
           AETHERGRID_TEST_CANONICAL: "1"
-          DEBUG: "pw:api"
-          AETHERGRID_TEST_PROFILE: "1"
           AETHERGRID_AI_PROVIDER: "local"
         run: |
           npx playwright test tests/merged-runtime-browser.spec.ts --output=test-results/merged-runtime --workers=1 --reporter=line
           npx playwright test tests/command-center.spec.ts --grep "TEAM retains real|specialist conversations" --output=test-results/existing-runtime --workers=1 --reporter=line
-
-
-      - name: Diagnose local input under reduced motion
-        if: always() && matrix.suite == 'local-runtime'
-        env:
-          AETHERGRID_TEST_CANONICAL: "1"
-          AETHERGRID_AI_PROVIDER: "local"
-          AETHERGRID_TEST_PROFILE: "1"
-          AETHERGRID_TEST_REDUCED_MOTION: "1"
-          DEBUG: "pw:api"
-        run: npx playwright test tests/command-center.spec.ts --grep "TEAM retains real|specialist conversations" --output=test-results/reduced-motion-input --workers=1 --reporter=line
 
       - name: Retain credential-free spatial screenshots
         if: always()
@@ -170,6 +155,7 @@ jobs:
             apps/aethergrid-console/web/test-results/specialist-acceptance/
             apps/aethergrid-console/web/test-results/specialist-*.png
             apps/aethergrid-console/web/test-results/step6-*.png
+            apps/aethergrid-console/web/test-results/drawer-focus/
             apps/aethergrid-console/web/test-results/existing-runtime/
             apps/aethergrid-console/web/test-results/merged-runtime/
             apps/aethergrid-console/web/test-results/merged-runtime-*.png

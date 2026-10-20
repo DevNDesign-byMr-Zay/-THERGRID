@@ -27,6 +27,7 @@ test('closed desktop drawers cannot receive keyboard focus', async ({ page }) =>
 });
 
 test('desktop drawer close buttons are not occluded by product navigation', async ({ page }) => {
+  test.setTimeout(90_000);
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');

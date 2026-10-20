@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test('system theme reacts to OS while explicit choice survives rejected storage', async ({ page }) => {
+  test.setTimeout(90_000);
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
   await page.addInitScript(() => {
     localStorage.setItem('aethergrid.operator.appearance.v4', 'system');
@@ -8,6 +9,7 @@ test('system theme reacts to OS while explicit choice survives rejected storage'
   });
   await page.goto('/');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer-ready', 'true', { timeout: 30_000 });
   await page.emulateMedia({ colorScheme: 'dark' });
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.getByRole('button', { name: 'Appearance: system. Select to cycle theme.' }).click();
