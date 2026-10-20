@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { cameraCityTile, mergeCitySpatialTiles, type CameraCityTile } from '../src/services/city-tile-stream';
+import { cameraCityTile, mergeCitySpatialTiles, CameraTileStream } from '../src/services/city-tile-stream';
 import type { CitySpatialBundle } from '../src/services/city-power-overlay';
 import type { SpatialOverlaySnapshot } from '../src/renderer/overlays/spatial-overlay';
 
@@ -110,4 +110,54 @@ test('tile merges preserve every power-line segment while deduplicating identica
   ];
   expect(mergeCitySpatialTiles(core,[{key:'tile:1:0',bundle:nearby}]).power.edges.map(edge=>edge.id))
     .toEqual(['line:segment:1','line:segment:2','line:segment:3']);
+});
+
+test('camera streaming requires a stable camera tile, coalesces duplicates and obeys its LRU limit', async () => {
+ const loadedKeys:string[] = [];
+ let requests = 0;
+ const streaming = new CameraTileStream({
+  center:city,
+  load:async (tile:CameraCityTile) => {requests++;return bundle(tile.key,[tile.key],[]);},
+  onChange:entries=>loadedKeys.push(entries.map(item=>item.key).join(','))
+ });
+ const east=camera(city.longitude + .0068);
+ await streaming.sample(east);
+ expect(requests).toBe(0);
+ await streaming.sample(east);
+ expect(requests).toBe(1);
+ await streaming.sample(east);
+ expect(requests).toBe(1);
+ for (const offset of [.014,.020,.027]) {
+  const target=camera(city.longitude+offset);
+  await streaming.sample(target);
+  await streaming.sample(target);
+ }
+ expect(requests).toBe(4);
+ expect(streaming.tiles).toHaveLength(4);
+ expect(new Set(streaming.tiles.map(tile=>tile.key)).size).toBe(4);
+ expect(loadedKeys).toHaveLength(4);
+ streaming.dispose();
+});
+
+test('camera tile loader aborts stale requests, blocks offline providers and never emits after disposal', async () => {
+ let callbacks=0, errors=0, aborts=0;
+ const streaming=new CameraTileStream({
+  center:city,
+  load:async (_tile:CameraCityTile,signal:AbortSignal) => {
+   return await new Promise<CitySpatialBundle>((_resolve,reject)=>{
+    signal.addEventListener('abort',()=>{aborts++;reject(new DOMException('Aborted','AbortError'))},{once:true});
+   });
+  },
+  onChange:()=>{callbacks++;},
+  onError:()=>{errors++;}
+ });
+ const east=camera(city.longitude+.0068);
+ await streaming.sample(east);
+ const unresolved=streaming.sample(east);
+ streaming.dispose();
+ await unresolved;
+ expect(aborts).toBe(1);
+ expect(callbacks).toBe(0);
+ expect(errors).toBe(0);
+ expect(streaming.tiles).toHaveLength(0);
 });
