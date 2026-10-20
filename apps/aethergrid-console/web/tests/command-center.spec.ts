@@ -130,7 +130,7 @@ test('global renderer remains usable with explicit engine provenance', async ({ 
 });
 
 test('specialist conversations consume the actual runtime contract', async ({ page }) => {
-  if (requireCloudAI) test.setTimeout(120_000);
+  test.setTimeout(requireCloudAI ? 120_000 : 90_000);
   await page.setViewportSize({ width: 1536, height: 1024 });
   await page.goto('/');
   await page.getByRole('navigation', { name: 'Product modes' }).getByRole('button', { name: 'AI', exact: true }).click();

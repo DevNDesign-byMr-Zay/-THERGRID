@@ -1,6 +1,7 @@
 import {aircraftModelUri} from './aircraft-model';
 import {
   CallbackPositionProperty,
+  CallbackProperty,
   Cartesian2,
   Cartesian3,
   BoxGraphics,
@@ -234,7 +235,8 @@ function aircraftHeading(node: SpatialOverlayNode): number {
 
 function nodeEntity(
   node: SpatialOverlayNode,
-  provenance: Readonly<Record<string, unknown>>
+  provenance: Readonly<Record<string, unknown>>,
+  viewer: Viewer
 ): Entity {
   const intensity = overlayIntensity(node.intensity);
   const position = coordinate(node.position);
@@ -284,6 +286,11 @@ function nodeEntity(
     }),
     model: aircraftModel
       ? new ModelGraphics({
+          // ModelVisualizer checks show before creating the model; distanceDisplayCondition runs later.
+          show: new CallbackProperty(() => {
+            const cameraPosition = viewer.camera?.positionWC;
+            return !cameraPosition || Cartesian3.distanceSquared(cameraPosition, position) <= 900_000 * 900_000;
+          }, false),
           uri: aircraftModelUri,
           scale: 8,
           minimumPixelSize: 12,
@@ -627,7 +634,7 @@ export class NetworkOverlayLayer {
 
     const nextAircraftFixes=new Map<string,{position:Cartesian3;time:number}>();
     for (const node of snapshot.nodes) {
-      const entity = this.#source.entities.add(nodeEntity(node, provenance));
+      const entity = this.#source.entities.add(nodeEntity(node, provenance, this.#viewer));
       if(node.kind==='aircraft'){
         const fix={position:coordinate(node.position),time:Date.parse(String(node.properties?.observedAt ?? snapshot.sourceTime ?? snapshot.eventTime))};
         const previous=this.#aircraftFixes.get(node.id);
