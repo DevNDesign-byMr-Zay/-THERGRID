@@ -167,3 +167,89 @@ export function mergeCitySpatialTiles(
     }
   };
 }
+
+
+export interface CameraTileStreamOptions {
+  center: CameraTileCenter;
+  load: (tile: CameraCityTile, signal: AbortSignal) => Promise<CitySpatialBundle>;
+  onChange: (tiles: readonly LoadedCityTile[]) => void;
+  onError?: (message: string) => void;
+  now?: () => number;
+  maxTiles?: number;
+}
+
+/**
+ * One in-flight request, at most four retained tiles, two stable camera samples
+ * before requesting. Abort when leaving a district; failures back off for 30s.
+ */
+export class CameraTileStream {
+  readonly #center: CameraTileCenter;
+  readonly #load: CameraTileStreamOptions['load'];
+  readonly #onChange: CameraTileStreamOptions['onChange'];
+  readonly #onError: NonNullable<CameraTileStreamOptions['onError']>;
+  readonly #now: () => number;
+  readonly #limit: number;
+  readonly #loaded = new Map<string, CitySpatialBundle>();
+  readonly #failedUntil = new Map<string, number>();
+  #candidate: string | null = null;
+  #dwell = 0;
+  #pending: {key: string; abort: AbortController} | null = null;
+  #disposed = false;
+
+  constructor(options: CameraTileStreamOptions) {
+    this.#center = options.center;
+    this.#load = options.load;
+    this.#onChange = options.onChange;
+    this.#onError = options.onError ?? (()=>undefined);
+    this.#now = options.now ?? Date.now;
+    this.#limit = Math.max(1,Math.min(MAX_STREAMED_TILES,Math.floor(options.maxTiles ?? MAX_STREAMED_TILES)));
+  }
+
+  get tiles(): readonly LoadedCityTile[] {
+    return [...this.#loaded].map(([key,bundle])=>({key,bundle}));
+  }
+
+  async sample(camera: CameraTilePosition): Promise<void> {
+    if (this.#disposed) return;
+    const tile = cameraCityTile({center:this.#center,camera});
+    if (!tile) {
+      this.#candidate = null;
+      this.#dwell = 0;
+      return;
+    }
+    if (tile.key !== this.#candidate) {
+      this.#candidate = tile.key;
+      this.#dwell = 1;
+      if (this.#pending && this.#pending.key !== tile.key) this.#pending.abort.abort();
+      return;
+    }
+    this.#dwell += 1;
+    if (this.#dwell < 2 || this.#loaded.has(tile.key) || this.#pending) return;
+    if ((this.#failedUntil.get(tile.key) ?? 0) > this.#now()) return;
+    const abort = new AbortController();
+    this.#pending = {key:tile.key,abort};
+    try {
+      const bundle = await this.#load(tile,abort.signal);
+      if (this.#disposed || abort.signal.aborted) return;
+      if (!admissible(bundle)) throw new Error('Live OpenStreetMap tile unavailable; fallback withheld');
+      this.#loaded.set(tile.key,bundle);
+      if (this.#loaded.size > this.#limit) this.#loaded.delete(this.#loaded.keys().next().value!);
+      this.#failedUntil.delete(tile.key);
+      this.#onChange(this.tiles);
+    } catch (error) {
+      if (this.#disposed || abort.signal.aborted) return;
+      this.#failedUntil.set(tile.key,this.#now()+30_000);
+      this.#onError(error instanceof Error ? error.message : String(error));
+    } finally {
+      if (this.#pending?.abort === abort) this.#pending = null;
+    }
+  }
+
+  dispose(): void {
+    this.#disposed = true;
+    this.#pending?.abort.abort();
+    this.#pending = null;
+    this.#loaded.clear();
+    this.#failedUntil.clear();
+  }
+}
