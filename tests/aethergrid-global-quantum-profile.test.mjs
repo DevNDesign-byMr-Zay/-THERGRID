@@ -204,6 +204,7 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
     now: () => 1000,
   });
 
+  assert.ok(runtime.summary().skylineFields.includes('roof:direction'));
   const first = await runtime.cityMesh('new-york');
   assert.equal(first.source.live, true);
   assert.equal(first.source.provider, 'OpenStreetMap Overpass');
