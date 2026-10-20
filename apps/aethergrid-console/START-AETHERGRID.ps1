@@ -1,17 +1,19 @@
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $Root
+# PowerShell 5.1 can misdecode UTF-8 scripts without a BOM; assemble the brand name safely.
+$ProductName = ([char]0x00C6) + "THERGRID"
 
 $NodeCommand = Get-Command node -ErrorAction SilentlyContinue
 if (-not $NodeCommand) {
-  Write-Host "Node.js 22 is required for the live ÆTHERGRID services. The root index.html can still open without Node." -ForegroundColor Red
+  Write-Host "Node.js 22 is required for the live $ProductName services. The root index.html can still open without Node." -ForegroundColor Red
   exit 1
 }
 
 $NodeVersion = (& $NodeCommand.Source --version).TrimStart("v")
 $NodeMajor = 0
 if (-not [int]::TryParse(($NodeVersion -split "\.")[0], [ref]$NodeMajor) -or $NodeMajor -ne 22) {
-  Write-Host "ÆTHERGRID requires Node.js 22. Current version: v$NodeVersion" -ForegroundColor Red
+  Write-Host "$ProductName requires Node.js 22. Current version: v$NodeVersion" -ForegroundColor Red
   exit 1
 }
 
@@ -50,8 +52,14 @@ $HealthUrl = "$Url/api/aethergrid/health"
 function Test-AethergridReady {
   try {
     $Health = Invoke-RestMethod -Uri $HealthUrl -Method Get -TimeoutSec 2
-    return $Health.ok -eq $true -and $Health.product -eq "ÆTHERGRID"
+    if ($env:AETHERGRID_LAUNCH_DIAGNOSTICS -eq "1") {
+      Write-Host "Health probe: ok=$($Health.ok), product=$($Health.product)"
+    }
+    return $Health.ok -eq $true -and $Health.product -eq "$ProductName"
   } catch {
+    if ($env:AETHERGRID_LAUNCH_DIAGNOSTICS -eq "1") {
+      Write-Host "Health probe failed: $($_.Exception.Message)"
+    }
     return $false
   }
 }
@@ -64,11 +72,11 @@ if (Test-Path $PidPath) {
     $ExistingProcess = Get-Process -Id $PreviousPid -ErrorAction SilentlyContinue
     if ($ExistingProcess -and $ExistingProcess.ProcessName -eq "node") {
       if (Test-AethergridReady) {
-        Write-Host "ÆTHERGRID is already running (PID $PreviousPid)." -ForegroundColor Yellow
+        Write-Host "$ProductName is already running (PID $PreviousPid)." -ForegroundColor Yellow
         if ($env:AETHERGRID_NO_BROWSER -ne "1") { Start-Process $Url }
         exit 0
       }
-      Write-Host "A previous Node process (PID $PreviousPid) exists, but ÆTHERGRID did not answer on port $Port. No duplicate server launched." -ForegroundColor Red
+      Write-Host "A previous Node process (PID $PreviousPid) exists, but $ProductName did not answer on port $Port. No duplicate server launched." -ForegroundColor Red
       exit 1
     }
   }
@@ -88,7 +96,7 @@ try {
   $Process = Start-Process -FilePath $NodeCommand.Source -ArgumentList $Arguments -WorkingDirectory $Root -PassThru
   $Process.Id | Set-Content $PidPath
   $Ready = $false
-  for ($Attempt = 0; $Attempt -lt 30; $Attempt++) {
+  for ($Attempt = 0; $Attempt -lt 60; $Attempt++) {
     $Process.Refresh()
     if ($Process.HasExited) { break }
     if (Test-AethergridReady) {
@@ -99,14 +107,14 @@ try {
   }
   if (-not $Ready) {
     Remove-Item $PidPath -Force -ErrorAction SilentlyContinue
-    Write-Host "ÆTHERGRID did not become ready on $HealthUrl. The server may have failed or the port may be occupied." -ForegroundColor Red
+    Write-Host "$ProductName did not become ready on $HealthUrl. The server may have failed or the port may be occupied." -ForegroundColor Red
     exit 1
   }
   if ($env:AETHERGRID_NO_BROWSER -ne "1") { Start-Process $Url }
-  Write-Host "ÆTHERGRID ready at $Url (PID $($Process.Id))." -ForegroundColor Cyan
+  Write-Host "$ProductName ready at $Url (PID $($Process.Id))." -ForegroundColor Cyan
   Write-Host "Run STOP-AETHERGRID.ps1 to stop the local server."
 } catch {
   Remove-Item $PidPath -Force -ErrorAction SilentlyContinue
-  Write-Host "ÆTHERGRID startup failed: $($_.Exception.Message)" -ForegroundColor Red
+  Write-Host "$ProductName startup failed: $($_.Exception.Message)" -ForegroundColor Red
   exit 1
 }
