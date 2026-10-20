@@ -135,6 +135,8 @@ The renderer keeps source-backed tall structures up to 1,200 m, preserves high-v
 
 This is a source-backed digital-twin representation, not photogrammetry. Where open map data lacks a height, roof, façade or building part, ÆTHERGRID exposes the coverage gap and does not claim architectural identity it cannot verify.
 
+Live OpenStreetMap buildings with `roof:shape=skillion`, a supported `roof:direction` azimuth (degrees clockwise from north or a cardinal direction), and a valid `roof:height` now render a single sloping roof with closed upper wall faces. Those are reconstructed from the mapped footprint and tags, not surveyed roof meshes. Unsupported or absent direction/height, or footprints with courtyards, retain labeled simple massing rather than guessing a slope. Previously bundled district snapshots do not automatically acquire newly supported roof tags; refresh them through the source ingestion workflow to carry additional data into the offline HTML.
+
 Settings now include **Dark**, **Light**, and **System** appearance modes. The selected mode persists locally and changes the semantic UI plus WebGL scene palette.
 ## v2.7 live city animation and operational context
 
