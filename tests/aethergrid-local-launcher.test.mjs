@@ -33,7 +33,8 @@ test('launcher resolves browser port using the same env-file ordering as Node an
 test('launcher cannot report startup success without verified ÆTHERGRID health and a live child process', async () => {
   const launcher = await readFile(launcherPath, 'utf8');
   assert.match(launcher, /Invoke-RestMethod -Uri \$HealthUrl/u);
-  assert.match(launcher, /\$Health\.ok -eq \$true -and \$Health\.product -eq "ÆTHERGRID"/u);
+  assert.match(launcher, /\$ProductName = \(\[char\]0x00C6\) \+ "THERGRID"/u);
+  assert.match(launcher, /\$Health\.ok -eq \$true -and \$Health\.product -eq "\$ProductName"/u);
   assert.match(launcher, /\$ExistingProcess\.ProcessName -eq "node"/u);
   assert.match(launcher, /\$Process\.HasExited/u);
   assert.match(launcher, /if \(-not \$Ready\)/u);
