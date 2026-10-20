@@ -1,7 +1,7 @@
 # Bundled district maps
 
 These gzip JSON datasets contain mapped OpenStreetMap footprints and context
-retrieved on 2026-10-14 through the official OpenStreetMap map API. Each source
+retrieved on 2026-10-20 through the official OpenStreetMap map API. Each source
 record retains its fetch timestamp and upstream timestamp. The data is a dated
 snapshot, never a live or historically reconstructed infrastructure observation.
 
@@ -12,7 +12,7 @@ The adjacent city-snapshots-manifest.json records the cities, feature counts,
 source receipts and SHA-256 of each decompressed JSON dataset.
 
 Coverage is district-level around each declared coordinate. Ways may extend
-beyond the requested bounding box. Footprints, road paths, water and green areas
+beyond the requested bounding box. Completed multipolygon boundaries and courtyards are preserved; incomplete relations are withheld. Footprints, road paths, water and green areas
 are mapped; building heights retain their explicit, levels-derived or inferred
 classification. This is not a survey, a photogrammetric mesh, or a terrain survey.
 

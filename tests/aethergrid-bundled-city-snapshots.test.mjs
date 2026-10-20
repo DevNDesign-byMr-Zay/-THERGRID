@@ -22,6 +22,9 @@ test('all eight offline districts retain distinct mapped geometry and dated sour
     assert.equal(mesh.source.provider, 'bundled-openstreetmap');
     assert.ok(Number.isFinite(Date.parse(mesh.source.fetchedAt)));
     assert.ok(mesh.buildings.length > 100);
+    assert.equal(mesh.buildings.length, record.buildings);
+    assert.ok(mesh.buildings.some((building) => building.holes?.length > 0));
+    assert.equal(mesh.source.snapshotBounds.radiusM, 700);
     assert.ok(mesh.roads.length > 0);
     assert.ok(
       mesh.buildings.every(

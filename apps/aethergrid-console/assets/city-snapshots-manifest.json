@@ -1,7 +1,7 @@
 {
   "format": "gzip-json",
   "license": "ODbL 1.0",
-  "attribution": "\u00a9 OpenStreetMap contributors",
+  "attribution": "© OpenStreetMap contributors",
   "snapshotScope": "district-level geographic footprints; tagged and inferred heights remain distinguished",
   "cities": [
     {
@@ -18,9 +18,9 @@
         "provider": "bundled-openstreetmap",
         "live": false,
         "partial": true,
-        "attribution": "\u00a9 OpenStreetMap contributors \u00b7 bundled snapshot 2026-10-14T20:38:15.844Z",
-        "fetchedAt": "2026-10-14T20:38:15.844Z",
-        "upstreamTimestamp": "2026-10-13T01:00:22Z",
+        "attribution": "© OpenStreetMap contributors · bundled snapshot 2026-10-20T04:28:30.664Z",
+        "fetchedAt": "2026-10-20T04:28:30.664Z",
+        "upstreamTimestamp": "2026-10-19T23:53:01Z",
         "endpoint": "https://api.openstreetmap.org",
         "freshnessModel": "OpenStreetMap upstream database at request time",
         "snapshot": true,
@@ -33,11 +33,11 @@
           "radiusM": 700
         }
       },
-      "buildings": 900,
+      "buildings": 1400,
       "roads": 260,
       "waterAreas": 24,
       "greenAreas": 158,
-      "jsonSha256": "2e92841d561363db6b995f1b73d2eed396f36b85fa8cdf4a873cf6116e951a0c"
+      "jsonSha256": "d1491cd35dc643999e8a0c3ef5e3ba95581521fe624776bdc8cabfe8bb4c30c0"
     },
     {
       "city": {
@@ -53,9 +53,9 @@
         "provider": "bundled-openstreetmap",
         "live": false,
         "partial": true,
-        "attribution": "\u00a9 OpenStreetMap contributors \u00b7 bundled snapshot 2026-10-14T20:38:22.243Z",
-        "fetchedAt": "2026-10-14T20:38:22.243Z",
-        "upstreamTimestamp": "2026-10-14T11:18:08Z",
+        "attribution": "© OpenStreetMap contributors · bundled snapshot 2026-10-20T04:28:38.097Z",
+        "fetchedAt": "2026-10-20T04:28:38.097Z",
+        "upstreamTimestamp": "2026-10-19T16:49:50Z",
         "endpoint": "https://api.openstreetmap.org",
         "freshnessModel": "OpenStreetMap upstream database at request time",
         "snapshot": true,
@@ -68,11 +68,11 @@
           "radiusM": 700
         }
       },
-      "buildings": 900,
+      "buildings": 1400,
       "roads": 260,
       "waterAreas": 8,
       "greenAreas": 125,
-      "jsonSha256": "e3ca25902ce41a35fd655410656d2469fe7b4b96db8507b441cb2d07c4731c0a"
+      "jsonSha256": "4720c36a998e42b8770e782473e1c39ea3cf128f4a9679436ef8616d0bc7475a"
     },
     {
       "city": {
@@ -88,9 +88,9 @@
         "provider": "bundled-openstreetmap",
         "live": false,
         "partial": true,
-        "attribution": "\u00a9 OpenStreetMap contributors \u00b7 bundled snapshot 2026-10-14T20:38:25.525Z",
-        "fetchedAt": "2026-10-14T20:38:25.525Z",
-        "upstreamTimestamp": "2026-10-10T07:11:41Z",
+        "attribution": "© OpenStreetMap contributors · bundled snapshot 2026-10-20T04:28:42.777Z",
+        "fetchedAt": "2026-10-20T04:28:42.777Z",
+        "upstreamTimestamp": "2026-10-16T12:00:46Z",
         "endpoint": "https://api.openstreetmap.org",
         "freshnessModel": "OpenStreetMap upstream database at request time",
         "snapshot": true,
@@ -103,11 +103,11 @@
           "radiusM": 700
         }
       },
-      "buildings": 900,
+      "buildings": 1400,
       "roads": 260,
       "waterAreas": 15,
       "greenAreas": 40,
-      "jsonSha256": "1f75c8c5ac6d2fbc7c3a689704cf8a6edb2398e9a3ac98785942e1009afff80e"
+      "jsonSha256": "4b475a1c0178dd5059fe41f0dacff7e53c0adf62bad2052c93640fa6c8755507"
     },
     {
       "city": {
@@ -123,9 +123,9 @@
         "provider": "bundled-openstreetmap",
         "live": false,
         "partial": true,
-        "attribution": "\u00a9 OpenStreetMap contributors \u00b7 bundled snapshot 2026-10-14T20:38:30.071Z",
-        "fetchedAt": "2026-10-14T20:38:30.071Z",
-        "upstreamTimestamp": "2026-10-14T15:42:51Z",
+        "attribution": "© OpenStreetMap contributors · bundled snapshot 2026-10-20T04:28:49.361Z",
+        "fetchedAt": "2026-10-20T04:28:49.361Z",
+        "upstreamTimestamp": "2026-10-20T04:27:56Z",
         "endpoint": "https://api.openstreetmap.org",
         "freshnessModel": "OpenStreetMap upstream database at request time",
         "snapshot": true,
@@ -138,16 +138,16 @@
           "radiusM": 700
         }
       },
-      "buildings": 900,
+      "buildings": 1400,
       "roads": 260,
       "waterAreas": 5,
       "greenAreas": 61,
-      "jsonSha256": "d5c2ef4e048ec2f99ccfb39e78f6099d6721644cf896b775857930cadc207a0d"
+      "jsonSha256": "d46aa695e77bdd58ab7e40302afafd0843c8ff0d65b07b71308f900304cc6478"
     },
     {
       "city": {
         "id": "sao-paulo",
-        "name": "S\u00e3o Paulo",
+        "name": "São Paulo",
         "country": "Brazil",
         "district": "Paulista / Bela Vista",
         "lat": -23.5614,
@@ -158,9 +158,9 @@
         "provider": "bundled-openstreetmap",
         "live": false,
         "partial": true,
-        "attribution": "\u00a9 OpenStreetMap contributors \u00b7 bundled snapshot 2026-10-14T20:38:33.393Z",
-        "fetchedAt": "2026-10-14T20:38:33.393Z",
-        "upstreamTimestamp": "2026-10-13T11:00:05Z",
+        "attribution": "© OpenStreetMap contributors · bundled snapshot 2026-10-20T04:28:54.076Z",
+        "fetchedAt": "2026-10-20T04:28:54.076Z",
+        "upstreamTimestamp": "2026-10-18T11:03:07Z",
         "endpoint": "https://api.openstreetmap.org",
         "freshnessModel": "OpenStreetMap upstream database at request time",
         "snapshot": true,
@@ -173,11 +173,11 @@
           "radiusM": 700
         }
       },
-      "buildings": 900,
+      "buildings": 1400,
       "roads": 260,
       "waterAreas": 3,
       "greenAreas": 50,
-      "jsonSha256": "c827bedd2295cdf86253b48b777420f841a856d5ce63f99e24c2a5a2ab3d7610"
+      "jsonSha256": "e624c2888863217167245cec9e2c6f683b0f2b05ec11ea8b7385854908f0ff6b"
     },
     {
       "city": {
@@ -193,9 +193,9 @@
         "provider": "bundled-openstreetmap",
         "live": false,
         "partial": true,
-        "attribution": "\u00a9 OpenStreetMap contributors \u00b7 bundled snapshot 2026-10-14T20:38:34.744Z",
-        "fetchedAt": "2026-10-14T20:38:34.744Z",
-        "upstreamTimestamp": "2026-10-10T04:24:16Z",
+        "attribution": "© OpenStreetMap contributors · bundled snapshot 2026-10-20T04:28:55.530Z",
+        "fetchedAt": "2026-10-20T04:28:55.530Z",
+        "upstreamTimestamp": "2026-10-12T06:05:34Z",
         "endpoint": "https://api.openstreetmap.org",
         "freshnessModel": "OpenStreetMap upstream database at request time",
         "snapshot": true,
@@ -208,11 +208,11 @@
           "radiusM": 700
         }
       },
-      "buildings": 692,
+      "buildings": 696,
       "roads": 214,
       "waterAreas": 0,
       "greenAreas": 1,
-      "jsonSha256": "7b45f99dda3a320513613480e6366a275ce3713b9572a4abb759af80369116cd"
+      "jsonSha256": "d9652fa21aaf065470b850d81f012af2098123e09c1a991b9bf54b01ddbc3afc"
     },
     {
       "city": {
@@ -228,9 +228,9 @@
         "provider": "bundled-openstreetmap",
         "live": false,
         "partial": true,
-        "attribution": "\u00a9 OpenStreetMap contributors \u00b7 bundled snapshot 2026-10-14T20:38:27.369Z",
-        "fetchedAt": "2026-10-14T20:38:27.369Z",
-        "upstreamTimestamp": "2026-10-11T12:16:25Z",
+        "attribution": "© OpenStreetMap contributors · bundled snapshot 2026-10-20T04:28:45.506Z",
+        "fetchedAt": "2026-10-20T04:28:45.506Z",
+        "upstreamTimestamp": "2026-10-13T13:39:17Z",
         "endpoint": "https://api.openstreetmap.org",
         "freshnessModel": "OpenStreetMap upstream database at request time",
         "snapshot": true,
@@ -243,11 +243,11 @@
           "radiusM": 700
         }
       },
-      "buildings": 298,
+      "buildings": 309,
       "roads": 260,
       "waterAreas": 11,
       "greenAreas": 76,
-      "jsonSha256": "1240d6a15bb7a463f644d9e35e8a68f66766f4bc1126bf047b41391cae3aa5ac"
+      "jsonSha256": "ecda883c96ad741b8be848d1bd88591040d69c973a021204b3162d29b8d5267d"
     },
     {
       "city": {
@@ -263,9 +263,9 @@
         "provider": "bundled-openstreetmap",
         "live": false,
         "partial": true,
-        "attribution": "\u00a9 OpenStreetMap contributors \u00b7 bundled snapshot 2026-10-14T20:38:38.604Z",
-        "fetchedAt": "2026-10-14T20:38:38.604Z",
-        "upstreamTimestamp": "2026-10-14T10:28:30Z",
+        "attribution": "© OpenStreetMap contributors · bundled snapshot 2026-10-20T04:29:01.282Z",
+        "fetchedAt": "2026-10-20T04:29:01.282Z",
+        "upstreamTimestamp": "2026-10-20T00:14:19Z",
         "endpoint": "https://api.openstreetmap.org",
         "freshnessModel": "OpenStreetMap upstream database at request time",
         "snapshot": true,
@@ -278,11 +278,11 @@
           "radiusM": 700
         }
       },
-      "buildings": 900,
+      "buildings": 1204,
       "roads": 260,
       "waterAreas": 32,
       "greenAreas": 180,
-      "jsonSha256": "1f4ce96124a23e6443650c0f51f6e380c6f94b14c0366de89e6b13c58e2cb148"
+      "jsonSha256": "e2dc2378ff4cf0aed9b62a4c533436c7c903f6a8a17888936a46e5dd63143cb0"
     }
   ]
 }
