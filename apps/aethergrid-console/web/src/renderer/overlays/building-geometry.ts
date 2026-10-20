@@ -125,6 +125,13 @@ export function buildingEdges(area: SpatialOverlayArea): readonly (readonly [Ove
     const key = [JSON.stringify(a), JSON.stringify(b)].sort().join('|');
     if (!seen.has(key)) { edges.push([a,b]); seen.add(key); }
   }
+  if (geometry.roofRefinement === 'source-tagged-skillion') {
+    for (const point of geometry.roofFaces[0] ?? []) {
+      if ((point.heightMeters ?? geometry.wallTopM) > geometry.wallTopM + 1e-6) {
+        edges.push([{ ...point, heightMeters: geometry.wallTopM }, point]);
+      }
+    }
+  }
   edgeCache.set(area, edges);
   return edges;
 }
