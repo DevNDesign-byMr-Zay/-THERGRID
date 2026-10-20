@@ -9,6 +9,9 @@
 
 ### Changed
 
+- Separated canonical React city camera presets, visible spatial layers and visual modes into a typed module with browser regression coverage; retained the existing app controls and renderer behavior.
+- Consolidated reproducibility guidance around the production React/Cesium entrypoint, historical standalone compatibility and exact-SHA live acceptance boundaries.
+
 - Promoted React/TypeScript/Cesium to the canonical Node-served and full-ZIP application through #148, preserving same-origin provider APIs and explicit native v3 compatibility.
 - Kept root package/lockfile and earlier evidence-console manifest aligned to the 0.2.1 release candidate; canonical application generation remains 4.0.0-alpha.1.
 - Updated startup and roadmap status to the merged production build/package contract; final-main and canonical live-provider evidence remain required before publication.
@@ -22,6 +25,8 @@
 - Added scheduled dependency-freshness evidence without automatic dependency mutation.
 
 ### Added
+- Added real JUnit artifacts to the ordinary Node test CI job while leaving the blocking 84% line / 70% branch / 85% function coverage gate unchanged. The local `npm run test:report` script produces the same machine-readable results in `test-results/`.
+- Added a maintained test matrix covering Node integration, canonical Playwright UI, deterministic packaging and protected provider verification.
 - Added credential-free Cesium startup with a real WGS84 globe, OpenStreetMap imagery, source-backed OpenStreetMap building-footprint extrusions and live world-node animation; Cesium Ion now augments the scene instead of being required for the scene to exist.
 - Added LIVE-only NWS active-hazard visualization with severity-coded point-context markers and provider-returned Polygon/MultiPolygon boundary geometry; alerts without geometry remain point-context only and never receive fabricated affected-area fills.
 - Added per-city/coordinate operator bindings for NOAA NWPS gauge IDs and EIA balancing-region codes, enabling source-backed live hydrology and energy reads without location-based identifier guessing or browser-stored provider credentials.
