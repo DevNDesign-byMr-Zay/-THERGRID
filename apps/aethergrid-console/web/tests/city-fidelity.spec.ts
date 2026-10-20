@@ -101,6 +101,18 @@ test('mapped skillion roof uses observed east-facing slope and seals rising wall
   expect(geometry.limitation).toBeNull();
   const roof = geometry.roofFaces[0];
   expect(roof.map(p => p.heightMeters)).toEqual([30, 24, 24, 30]);
+  const raisedVertices = roof.filter(p => p.heightMeters === 30);
+  const allEdges = buildingEdges(source);
+  for (const point of raisedVertices) {
+    expect(allEdges.some(([from, to]) =>
+      from.longitude === point.longitude &&
+      from.latitude === point.latitude &&
+      to.longitude === point.longitude &&
+      to.latitude === point.latitude &&
+      from.heightMeters === geometry.wallTopM &&
+      to.heightMeters === point.heightMeters
+    ), 'wireframe needs a rising facade edge at every raised eave vertex').toBe(true);
+  }
   expect(buildingGeometry({...source, positions: [...rectangle].reverse()})!.roofFaces[0]
     .filter(p => p.longitude === 0).every(p => p.heightMeters === 30)).toBe(true);
   const mesh = {city: {id: 'sloped-district', lat: 40, lon: -74}, buildings: [{
