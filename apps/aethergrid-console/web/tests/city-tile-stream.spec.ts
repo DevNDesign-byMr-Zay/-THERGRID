@@ -180,3 +180,23 @@ test('camera tile network requests carry the bounded radius and reject modeled f
   expect(requested).toContain('spatial=1');
  } finally {globalThis.fetch=originalFetch;}
 });
+
+test('revisiting a loaded tile makes it most recently used before eviction', async () => {
+  const streaming = new CameraTileStream({
+    center: city,
+    load: async (tile: CameraCityTile) => bundle(tile.key,[tile.key],[]),
+    onChange: () => undefined
+  });
+  const points=[.0068,.014,.020,.027,.031].map(offset=>camera(city.longitude+offset));
+  for (const point of points.slice(0,4)) {
+    await streaming.sample(point);
+    await streaming.sample(point);
+  }
+  await streaming.sample(points[0]);
+  await streaming.sample(points[0]);
+  await streaming.sample(points[4]);
+  await streaming.sample(points[4]);
+  expect(streaming.tiles.map(tile=>tile.key)).toContain('new-york:1:0');
+  expect(streaming.tiles.map(tile=>tile.key)).not.toContain('new-york:2:0');
+  streaming.dispose();
+});
