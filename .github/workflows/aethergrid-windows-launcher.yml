@@ -12,6 +12,8 @@ on:
       - "apps/aethergrid-console/web/src/services/city-power-overlay.ts"
       - "apps/aethergrid-console/web/src/app/App.tsx"
       - "apps/aethergrid-console/web/tests/city-tile-stream.spec.ts"
+      - "tests/aethergrid-camera-tiles-api.test.mjs"
+      - "apps/aethergrid-console/server.mjs"
   workflow_dispatch:
 
 permissions:
@@ -43,6 +45,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Canonical web build failed' }
           npm --prefix apps/aethergrid-console/web run test -- tests/city-tile-stream.spec.ts
           if ($LASTEXITCODE -ne 0) { throw 'Camera tile stream regression tests failed' }
+          node --test tests/aethergrid-camera-tiles-api.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Active operator city isolation test failed' }
 
       - name: Verify PowerShell 5.1 startup, port precedence and live health
         shell: powershell
