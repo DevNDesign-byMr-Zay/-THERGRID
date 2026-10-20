@@ -8,7 +8,7 @@ const commandPath = new URL('../apps/aethergrid-console/START-AETHERGRID.cmd', i
 test('Windows launcher preserves unprivileged double-click startup and Node 22 compatibility', async () => {
   const [launcher, command] = await Promise.all([
     readFile(launcherPath, 'utf8'),
-    readFile(commandPath, 'utf8')
+    readFile(commandPath, 'utf8'),
   ]);
   assert.match(command, /powershell -NoProfile -ExecutionPolicy Bypass -File/u);
   assert.match(command, /START-AETHERGRID\.ps1/u);
