@@ -1,0 +1,83 @@
+name: aethergrid/windows-launcher
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/aethergrid-windows-launcher.yml"
+      - "apps/aethergrid-console/START-AETHERGRID.ps1"
+      - "apps/aethergrid-console/START-AETHERGRID.cmd"
+      - "apps/aethergrid-console/README.md"
+      - "tests/aethergrid-local-launcher.test.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-local-startup:
+    name: windows-local-startup
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Node 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install locked runtime and compile canonical React application
+        shell: powershell
+        run: |
+          npm ci --ignore-scripts
+          if ($LASTEXITCODE -ne 0) { throw 'Root dependency install failed' }
+          npm --prefix apps/aethergrid-console/web ci
+          if ($LASTEXITCODE -ne 0) { throw 'Web dependency install failed' }
+          npm --prefix apps/aethergrid-console/web run build
+          if ($LASTEXITCODE -ne 0) { throw 'Canonical web build failed' }
+
+      - name: Verify PowerShell 5.1 startup, port precedence and live health
+        shell: powershell
+        env:
+          AETHERGRID_NO_BROWSER: "1"
+        run: |
+          $ErrorActionPreference = "Stop"
+          $Root = Join-Path (Get-Location).Path "apps/aethergrid-console"
+          $EnvFile = Join-Path $Root ".env"
+          $OverrideFile = Join-Path $Root ".env.aethergrid"
+          $PidFile = Join-Path $Root ".aethergrid.pid"
+          $Started = @()
+          try {
+            Set-Content $EnvFile "AETHERGRID_PORT=8091"
+            Set-Content $OverrideFile "AETHERGRID_PORT=8092"
+
+            foreach ($Case in @(
+              @{ Port = 8092; InheritedPort = $null },
+              @{ Port = 8093; InheritedPort = "8093" }
+            )) {
+              if ($Case.InheritedPort) {
+                $env:AETHERGRID_PORT = $Case.InheritedPort
+              } else {
+                Remove-Item Env:AETHERGRID_PORT -ErrorAction SilentlyContinue
+              }
+              & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root "START-AETHERGRID.ps1")
+              if ($LASTEXITCODE -ne 0) { throw "Launcher failed for port $($Case.Port)" }
+              $Response = Invoke-RestMethod -Uri "http://127.0.0.1:$($Case.Port)/api/aethergrid/health" -Method Get -TimeoutSec 5
+              if ($Response.ok -ne $true -or $Response.product -ne "ÆTHERGRID") {
+                throw "Wrong health response for port $($Case.Port)"
+              }
+              $StartedId = [int](Get-Content $PidFile)
+              $Started += $StartedId
+              Stop-Process -Id $StartedId -Force
+              Start-Sleep -Milliseconds 300
+              Remove-Item $PidFile -Force -ErrorAction SilentlyContinue
+            }
+          } finally {
+            foreach ($StartedId in $Started) {
+              Stop-Process -Id $StartedId -Force -ErrorAction SilentlyContinue
+            }
+            Remove-Item Env:AETHERGRID_PORT -ErrorAction SilentlyContinue
+            Remove-Item $PidFile, $EnvFile, $OverrideFile -Force -ErrorAction SilentlyContinue
+          }
