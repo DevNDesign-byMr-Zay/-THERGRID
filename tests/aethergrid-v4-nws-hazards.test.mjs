@@ -65,9 +65,10 @@ test('v4 NWS hazards render consistently in Cesium and native failover', async (
 });
 
 test('v4 NWS hazard scene layer is live-only and excluded on fallback receipts', async () => {
-  const [app, presets] = await Promise.all([
+  const [app, presets, defaults] = await Promise.all([
     text('apps/aethergrid-console/web/src/app/App.tsx'),
     text('apps/aethergrid-console/web/src/app/use-case-presets.ts'),
+    text('apps/aethergrid-console/web/src/app/spatial-defaults.ts'),
   ]);
 
   assert.match(app, /loadNwsHazards/u);
@@ -75,6 +76,7 @@ test('v4 NWS hazard scene layer is live-only and excluded on fallback receipts',
   assert.match(app, /globalThis\.setInterval\(refresh, 60_000\)/u);
   assert.match(app, /!hazardContext\.fallback/u);
   assert.match(app, /NWS ACTIVE HAZARDS/u);
-  assert.match(app, /\{ id: 'hazards', visible: true \}/u);
+  assert.match(defaults, /\{ id: 'hazards', visible: true \}/u);
+  assert.match(app, /from '\.\/spatial-defaults'/u);
   assert.match(presets, /'hazards'/u);
 });
