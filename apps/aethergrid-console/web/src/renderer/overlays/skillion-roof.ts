@@ -19,7 +19,7 @@ export function skillionRoof(
   const input = String(direction ?? '').trim().toUpperCase();
   const azimuth = Object.hasOwn(COMPASS_DEGREES, input)
     ? COMPASS_DEGREES[input]
-    : /^(?:\\d+(?:\\.\\d+)?)$/u.test(input) ? Number(input) : Number.NaN;
+    : /^[0-9]+(?:[.][0-9]+)?$/u.test(input) ? Number(input) : Number.NaN;
   if (
     ring.length < 3 ||
     !Number.isFinite(azimuth) ||
