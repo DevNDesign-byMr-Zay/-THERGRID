@@ -40,6 +40,6 @@ test('launcher cannot report startup success without verified ÆTHERGRID health 
   assert.match(launcher, /if \(-not \$Ready\)/u);
   assert.match(launcher, /Remove-Item \$PidPath -Force/u);
   assert.match(launcher, /if \(Test-AethergridReady\)/u);
-  assert.match(launcher, /ÆTHERGRID ready at/u);
+  assert.match(launcher, /\$ProductName ready at/u);
   assert.doesNotMatch(launcher, /Start-Sleep -Milliseconds 750/u);
 });
