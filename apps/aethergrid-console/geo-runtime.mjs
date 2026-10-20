@@ -767,7 +767,7 @@ export function createGeoRuntime({
         'coastline',
         'green-areas',
       ],
-      skylineFields: ['height', 'est_height', 'building:levels', 'min_height', 'building:min_level', 'roof:shape', 'roof:height', 'roof:levels', 'building:material', 'building:colour', 'roof:material', 'roof:colour'],
+      skylineFields: ['height', 'est_height', 'building:levels', 'min_height', 'building:min_level', 'roof:shape', 'roof:direction', 'roof:height', 'roof:levels', 'building:material', 'building:colour', 'roof:material', 'roof:colour'],
       upstreamFreshness: 'OpenStreetMap replication-backed upstream state when queried',
     };
   }
