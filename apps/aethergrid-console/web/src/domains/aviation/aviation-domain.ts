@@ -71,6 +71,47 @@ function finiteCoordinate(value: number): boolean {
   return Number.isFinite(value);
 }
 
+function validGeographicPosition(position: { latitude: number; longitude: number }): boolean {
+  return (
+    finiteCoordinate(position.latitude) &&
+    finiteCoordinate(position.longitude) &&
+    Math.abs(position.latitude) <= 90 &&
+    Math.abs(position.longitude) <= 180
+  );
+}
+
+const MAX_OBSERVED_TRACK_GAP_MS = 180_000;
+const MAX_PLAUSIBLE_TRACK_SPEED_MPS = 500;
+const TRACK_FIX_TOLERANCE_METERS = 1_000;
+const EARTH_MEAN_RADIUS_METERS = 6_371_008.8;
+
+/** A track segment is an endpoint connection, never a claimed observed flight path. */
+function supportedObservedTrackLeg(from: AviationTrackPoint, to: AviationTrackPoint): boolean {
+  if (
+    from.truthState !== 'observed' ||
+    to.truthState !== 'observed' ||
+    !validGeographicPosition(from) ||
+    !validGeographicPosition(to)
+  ) return false;
+
+  const durationMs = Date.parse(to.observedAt) - Date.parse(from.observedAt);
+  if (!Number.isFinite(durationMs) || durationMs <= 0 || durationMs > MAX_OBSERVED_TRACK_GAP_MS) {
+    return false;
+  }
+  const radians = Math.PI / 180;
+  const latitudeDelta = (to.latitude - from.latitude) * radians;
+  const longitudeDelta = (to.longitude - from.longitude) * radians;
+  const haversine =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(from.latitude * radians) *
+      Math.cos(to.latitude * radians) *
+      Math.sin(longitudeDelta / 2) ** 2;
+  const arc = 2 * Math.atan2(Math.sqrt(Math.min(1, haversine)), Math.sqrt(Math.max(0, 1 - haversine)));
+  const distanceMeters = EARTH_MEAN_RADIUS_METERS * arc;
+  return distanceMeters <= TRACK_FIX_TOLERANCE_METERS +
+    MAX_PLAUSIBLE_TRACK_SPEED_MPS * (durationMs / 1_000);
+}
+
 function sourceAltitudeMeters(aircraft: AviationAircraft): number | null {
   const altitude =
     aircraft.geometricAltitudeMeters ?? aircraft.barometricAltitudeMeters;
@@ -137,8 +178,7 @@ export function mergeAviationSnapshot(
 
   for (const aircraft of incoming.aircraft) {
     if (
-      !finiteCoordinate(aircraft.latitude) ||
-      !finiteCoordinate(aircraft.longitude)
+      !validGeographicPosition(aircraft)
     ) {
       continue;
     }
@@ -179,6 +219,7 @@ function historyEdges(state: AviationDomainState): readonly SpatialOverlayEdge[]
     for (let index = 1; index < points.length; index += 1) {
       const from = points[index - 1];
       const to = points[index];
+      if (!supportedObservedTrackLeg(from, to)) continue;
       edges.push({
         id: `aviation:track:${aircraft.id}:${index}`,
         kind: 'route',
@@ -191,7 +232,8 @@ function historyEdges(state: AviationDomainState): readonly SpatialOverlayEdge[]
           eventType: 'aircraft-history',
           sourceBacked: true,
           aircraftId: aircraft.id,
-          truthState: to.truthState
+          truthState: to.truthState,
+          trackReconstruction: 'straight-line-observed-endpoints'
         }
       });
     }
@@ -218,8 +260,7 @@ export function aviationOverlay(
     .filter(
       (aircraft) =>
         observedOrStale(aircraft) &&
-        finiteCoordinate(aircraft.latitude) &&
-        finiteCoordinate(aircraft.longitude)
+        validGeographicPosition(aircraft)
     )
     .map((aircraft) => ({
       id: `aviation:aircraft:${aircraft.id}`,
