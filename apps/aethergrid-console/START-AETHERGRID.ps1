@@ -65,7 +65,7 @@ if (Test-Path $PidPath) {
     if ($ExistingProcess -and $ExistingProcess.ProcessName -eq "node") {
       if (Test-AethergridReady) {
         Write-Host "ÆTHERGRID is already running (PID $PreviousPid)." -ForegroundColor Yellow
-        Start-Process $Url
+        if ($env:AETHERGRID_NO_BROWSER -ne "1") { Start-Process $Url }
         exit 0
       }
       Write-Host "A previous Node process (PID $PreviousPid) exists, but ÆTHERGRID did not answer on port $Port. No duplicate server launched." -ForegroundColor Red
@@ -102,7 +102,7 @@ try {
     Write-Host "ÆTHERGRID did not become ready on $HealthUrl. The server may have failed or the port may be occupied." -ForegroundColor Red
     exit 1
   }
-  Start-Process $Url
+  if ($env:AETHERGRID_NO_BROWSER -ne "1") { Start-Process $Url }
   Write-Host "ÆTHERGRID ready at $Url (PID $($Process.Id))." -ForegroundColor Cyan
   Write-Host "Run STOP-AETHERGRID.ps1 to stop the local server."
 } catch {
