@@ -24,7 +24,7 @@ function Get-ConfiguredPort {
     if (-not (Test-Path $FilePath)) { continue }
     foreach ($Line in (Get-Content $FilePath)) {
       if ($Line -match '^\s*AETHERGRID_PORT\s*=\s*(.*?)\s*(?:#.*)?$') {
-        $Value = $Matches[1].Trim().Trim('"', "'")
+        $Value = $Matches[1].Trim().Trim([char[]]@('"', "'"))
       }
     }
   }
