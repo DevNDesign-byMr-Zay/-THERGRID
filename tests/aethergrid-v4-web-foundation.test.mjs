@@ -334,8 +334,8 @@ test('v4 Cesium city identity includes mapped roads water coastline and green ar
   assert.match(layer, /edge\.kind === 'waterway'/u);
   assert.match(defaults, /id: 'roads', visible: true/u);
   assert.match(app, /from '\.\/spatial-defaults'/u);
-  assert.match(app, /id: 'water', visible: true/u);
-  assert.match(app, /id: 'green', visible: true/u);
+  assert.match(defaults, /id: 'water', visible: true/u);
+  assert.match(defaults, /id: 'green', visible: true/u);
 });
 
 test('v4 city inspector surfaces source-backed skyline identity and coverage', async () => {
