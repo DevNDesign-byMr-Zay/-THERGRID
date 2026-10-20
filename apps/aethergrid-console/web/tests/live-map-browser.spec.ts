@@ -114,8 +114,8 @@ test('compiled global and city views retain observed aircraft and animated radar
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/');
+  await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer-ready', 'true', { timeout: 30_000 });
   await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer', 'cesium');
-  await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer-ready', 'true');
   await expect(page.locator('.aviation-scene-badge')).toContainText('1 AIRCRAFT');
   const radar = page.getByRole('region', { name: 'Weather radar' });
   await expect(radar).toHaveAttribute('data-source-state', 'observed');

@@ -140,6 +140,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#viewer = new Viewer(this.#container, {
       requestRenderMode: this.#motionQuery?.matches === true,
       maximumRenderTimeChange: Number.POSITIVE_INFINITY,
+      targetFrameRate: 30,
       animation: false,
       baseLayerPicker: false,
       fullscreenButton: false,
@@ -341,6 +342,9 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
     viewer.resolutionScale =
       tier === 'quality' ? 1 : tier === 'balanced' ? 0.84 : 0.66;
+    // Leave time for input and panels while retaining animated camera and weather updates.
+    viewer.targetFrameRate =
+      tier === 'quality' ? 45 : tier === 'balanced' ? 30 : 20;
     const phase =
       this.#journeyPhase === 'idle' ? 'district' : this.#journeyPhase;
     this.#applyDetailForPhase(phase);
