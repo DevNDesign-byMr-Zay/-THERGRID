@@ -12,7 +12,12 @@ permissions:
   contents: read
 
 jobs:
-  web-build:
+  web-acceptance:
+    name: web-acceptance (${{ matrix.suite }})
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [offline, operator, appearance, city-live-maps, temporal, tools, specialists, local-runtime]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     defaults:
@@ -44,72 +49,86 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Build and verify the direct-open local workspace without network access
+        if: matrix.suite == 'offline'
         run: |
           npx vite build --config vite.local.config.ts
           node ../../../scripts/assemble-aethergrid-local-html.mjs
           npx playwright test --config playwright.local.config.ts --workers=1 --reporter=line
 
       - name: Verify authenticated operator sessions and recorded playback
+        if: matrix.suite == 'operator'
         env:
           AETHERGRID_TEST_CANONICAL: "1"
         run: npx playwright test tests/session-history.spec.ts --workers=1 --reporter=line
 
       - name: Verify credential-free globe and 3D city mesh
+        if: matrix.suite == 'operator'
         env:
           AETHERGRID_TEST_CANONICAL: "1"
         run: npx playwright test tests/tokenless-spatial.spec.ts --workers=1 --reporter=line
 
       - name: Verify compact navigation drawer focus and keyboard containment
+        if: matrix.suite == 'operator'
         env:
           AETHERGRID_TEST_CANONICAL: "1"
         run: npx playwright test tests/command-center.spec.ts --grep "compact drawers contain focus and switch exclusively" --output=test-results/drawer-focus --workers=1 --reporter=line
 
       - name: Verify production shell, appearance and source truth
+        if: matrix.suite == 'appearance'
         env:
           AETHERGRID_TEST_CANONICAL: "1"
         run: npx playwright test 'tests/production-.*\.spec\.ts' --output=test-results/production-shell --workers=1 --reporter=line
 
       - name: Verify source geometry and renderer fallback contracts
+        if: matrix.suite == 'city-live-maps'
         env:
           AETHERGRID_TEST_CANONICAL: "1"
         run: npx playwright test tests/city-geometry.spec.ts tests/city-fidelity.spec.ts tests/live-maps.spec.ts --grep-invert compiled --output=test-results/city-contracts --workers=1 --reporter=line
 
       - name: Verify compiled city picking and native renderer fallback
+        if: matrix.suite == 'city-live-maps'
         env:
           AETHERGRID_TEST_CANONICAL: "1"
         run: npx playwright test tests/city-geometry.spec.ts tests/live-map-browser.spec.ts --grep compiled --output=test-results/city-geometry --workers=1 --reporter=line
 
       - name: Verify source-valid timeline and unavailable history
+        if: matrix.suite == 'temporal'
         env:
           AETHERGRID_TEST_CANONICAL: "1"
         run: npx playwright test tests/operational-timeline.spec.ts tests/forecast-frames.spec.ts tests/operational-timeline-browser.spec.ts --output=test-results/operational-timeline --workers=1 --reporter=line
 
       - name: Verify spatial presentations, modeled replay, area and scene contracts
+        if: matrix.suite == 'temporal'
         env:
           AETHERGRID_TEST_CANONICAL: "1"
         run: npx playwright test tests/spatial-presentations.spec.ts tests/modeled-replay.spec.ts tests/spatial-area.spec.ts tests/spatial-scene.spec.ts tests/surface-picking.spec.ts tests/native-selection.spec.ts tests/renderer-transition.spec.ts tests/render-frame.spec.ts --output=test-results/spatial-contracts --workers=1 --reporter=line
 
       - name: Verify idle GPU rendering and camera input under reduced motion
+        if: matrix.suite == 'temporal'
         env:
           AETHERGRID_TEST_CANONICAL: "1"
         run: npx playwright test tests/renderer-demand-browser.spec.ts --output=test-results/renderer-demand --workers=1 --reporter=line
 
       - name: Verify compiled spatial tools and source comparisons
+        if: matrix.suite == 'tools'
         env:
           AETHERGRID_TEST_CANONICAL: "1"
         run: npx playwright test tests/spatial-tools-browser.spec.ts --output=test-results/spatial-tools --workers=1 --reporter=line
 
       - name: Verify specialist receipts, D-Wave hold and reduced-motion contracts
+        if: matrix.suite == 'specialists'
         env:
           AETHERGRID_TEST_CANONICAL: "1"
         run: npx playwright test tests/specialist-integration.spec.ts tests/specialist-workflow.spec.ts tests/quantum-hold.spec.ts tests/weather-motion.spec.ts --output=test-results/specialist-contracts --workers=1 --reporter=line
 
       - name: Verify compiled specialists, operational pilot and responsive disclosures
+        if: matrix.suite == 'specialists'
         env:
           AETHERGRID_TEST_CANONICAL: "1"
         run: npx playwright test tests/specialist-browser.spec.ts tests/specialist-workflow-browser.spec.ts tests/operational-pilot-browser.spec.ts tests/quantum-hold-browser.spec.ts tests/final-visual-browser.spec.ts --output=test-results/specialist-acceptance --workers=1 --reporter=line
 
       - name: Verify actual local TEAM runtime and offline recovery
+        if: matrix.suite == 'local-runtime'
         env:
           AETHERGRID_TEST_CANONICAL: "1"
           AETHERGRID_AI_PROVIDER: "local"
@@ -121,7 +140,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: aethergrid-spatial-preview-${{ github.sha }}
+          name: aethergrid-spatial-preview-${{ github.sha }}-${{ matrix.suite }}
           path: |
             apps/aethergrid-console/web/test-results/credential-free-global.png
             apps/aethergrid-console/web/test-results/credential-free-new-york-3d.png
@@ -147,12 +166,24 @@ jobs:
           retention-days: 14
 
       - name: Retain v4 spatial application bundle
+        if: matrix.suite == 'city-live-maps'
         uses: actions/upload-artifact@v7
         with:
           name: aethergrid-v4-web-${{ github.sha }}
           path: apps/aethergrid-console/web/dist/
           if-no-files-found: error
           retention-days: 14
+
+  web-build:
+    name: web-build
+    needs: web-acceptance
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every browser acceptance suite
+        env:
+          ACCEPTANCE_RESULT: ${{ needs.web-acceptance.result }}
+        run: test "$ACCEPTANCE_RESULT" = success
 
   sustained-replay:
     runs-on: ubuntu-latest
