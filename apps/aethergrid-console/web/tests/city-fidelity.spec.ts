@@ -56,7 +56,7 @@ test('courtyard source rings survive conversion, mesh triangulation and every vi
     const built = PolygonGeometry.createGeometry(body.geometryInstances[0].geometry)!;
     expect(built.indices!.length).toBeGreaterThan(0);
     expect(body.geometryInstances[0].geometry._polygonHierarchy.holes).toHaveLength(1);
-    for (const mode of ['solid','wireframe','holographic','xray','grid','reality'] as const) {
+    for (const mode of ['solid','wireframe','holographic','xray','grid','operations','reality'] as const) {
       layer.setPresentation(mode, 1);
       expect(lines.show, mode).toBe(true);
       expect(body.show, mode).toBe(mode !== 'wireframe');
