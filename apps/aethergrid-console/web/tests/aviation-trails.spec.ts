@@ -97,17 +97,18 @@ test('aircraft trails preserve short antimeridian crossings', () => {
 
 test('invalid geographic fixes cannot create source-backed tracks or markers', () => {
   const previous = update(
-    null,
-    observedAircraft(-74, 40, '2026-10-20T14:00:00Z')
+    update(null, observedAircraft(-74, 40, '2026-10-20T14:00:00Z')),
+    observedAircraft(-73.999, 40, '2026-10-20T14:00:12Z')
   );
+  expect(aviationOverlay(previous, 'live')?.edges).toHaveLength(1);
   const current = update(
     previous,
-    observedAircraft(-73.999, 99, '2026-10-20T14:00:12Z')
+    observedAircraft(-73.998, 99, '2026-10-20T14:00:24Z')
   );
   const overlay = aviationOverlay(current, 'live');
   expect(overlay?.nodes).toHaveLength(0);
   expect(overlay?.edges).toHaveLength(0);
-  expect(current.history['aircraft-123']).toHaveLength(1);
+  expect(current.history['aircraft-123']).toHaveLength(2);
 });
 
 test('interpolated or predicted positions are not labeled recorded flight tracks', () => {
