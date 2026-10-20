@@ -295,12 +295,13 @@ test('v4 city-live context renders source-backed AQI and seismic events only in 
 });
 
 test('v4 Cesium city identity includes mapped roads water coastline and green areas', async () => {
-  const [contract, service, layer, renderer, app] = await Promise.all([
+  const [contract, service, layer, renderer, app, defaults] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/overlays/spatial-overlay.ts'),
     text('apps/aethergrid-console/web/src/services/city-power-overlay.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/app/spatial-defaults.ts'),
   ]);
 
   assert.match(contract, /OverlayAreaKind = 'water' \| 'green'/u);
@@ -331,7 +332,8 @@ test('v4 Cesium city identity includes mapped roads water coastline and green ar
   assert.match(service, /bboxDepthM/u);
   assert.match(layer, /edge\.kind === 'coastline'/u);
   assert.match(layer, /edge\.kind === 'waterway'/u);
-  assert.match(app, /id: 'roads', visible: true/u);
+  assert.match(defaults, /id: 'roads', visible: true/u);
+  assert.match(app, /from '\.\/spatial-defaults'/u);
   assert.match(app, /id: 'water', visible: true/u);
   assert.match(app, /id: 'green', visible: true/u);
 });
@@ -581,14 +583,18 @@ test('v4 AIR toggle renders a source-driven AQI field only for live city context
 });
 
 test('v4 layer controls expose only implemented layers with live feature counts', async () => {
-  const app = await text('apps/aethergrid-console/web/src/app/App.tsx');
+  const [app, defaults] = await Promise.all([
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/app/spatial-defaults.ts'),
+  ]);
 
   assert.match(app, /const layerCounts = useMemo/u);
   assert.match(app, /powerOverlay\.nodes\.length \+ powerOverlay\.edges\.length/u);
   assert.match(app, /cityIdentity\?\.buildingCount/u);
   assert.match(app, /layerCounts\[layer\.id\] \?\? 0/u);
-  assert.match(app, /id: 'transit'/u);
-  assert.match(app, /id: 'hydrology'/u);
+  assert.match(defaults, /id: 'transit'/u);
+  assert.match(defaults, /id: 'hydrology'/u);
+  assert.match(app, /from '\.\/spatial-defaults'/u);
   assert.match(app, /transitOverlay\.nodes\.length \+ transitOverlay\.edges\.length/u);
   assert.match(app, /hydrologyOverlay\.nodes\.length \+ hydrologyOverlay\.edges\.length/u);
 });
