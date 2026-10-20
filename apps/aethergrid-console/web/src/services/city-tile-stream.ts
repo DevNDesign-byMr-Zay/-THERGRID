@@ -75,7 +75,7 @@ function mergeLayer(
 ): SpatialOverlaySnapshot {
   if (!parts.length) return base;
   const nodes = new Map(base.nodes.map(item => [uniqueKey(item,base.layerId),item]));
-  const edges = new Map(base.edges.map(item => [uniqueKey(item,base.layerId),item]));
+  const edges = new Map(base.edges.map(item => [item.id,item]));
   const areas = new Map((base.areas ?? []).map(item => [uniqueKey(item,base.layerId),item]));
   for (const {key,snapshot} of parts) {
     const fromTile = <T extends Feature>(item: T): T => ({
@@ -94,8 +94,7 @@ function mergeLayer(
       if (!nodes.has(id)) nodes.set(id,fromTile(item));
     }
     for (const item of snapshot.edges) {
-      const id = uniqueKey(item,base.layerId);
-      if (!edges.has(id)) edges.set(id,fromTile(item));
+      if (!edges.has(item.id)) edges.set(item.id,fromTile(item));
     }
     for (const item of snapshot.areas ?? []) {
       const id = uniqueKey(item,base.layerId);
