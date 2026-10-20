@@ -71,13 +71,17 @@ test('v4 workset geometry panel explicitly rejects inferred real-world relations
 });
 
 test('v4 app synchronizes workset persistence into the graph and renders it in world and city scopes', async () => {
-  const app = await text('apps/aethergrid-console/web/src/app/App.tsx');
+  const [app, defaults] = await Promise.all([
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/app/spatial-defaults.ts'),
+  ]);
 
   assert.match(app, /loadSpatialWorkset/u);
   assert.match(app, /SPATIAL_WORKSET_EVENT/u);
   assert.match(app, /buildSpatialWorksetGeometry/u);
   assert.match(app, /spatialWorksetGeometryToOverlay/u);
-  assert.match(app, /\{ id: 'workset-analysis', visible: true \}/u);
+  assert.match(defaults, /\{ id: 'workset-analysis', visible: true \}/u);
+  assert.match(app, /from '\.\/spatial-defaults'/u);
   assert.match(
     app,
     /worldOverlay,[\s\S]*incidentOverlay,[\s\S]*worksetGeometryOverlay,[\s\S]*operatorScenarioOverlay,[\s\S]*measurementOverlay/u,

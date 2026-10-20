@@ -9,8 +9,8 @@ THERGRID is a deterministic evidence and simulation platform before it is an act
 1. Start from current `main`.
 2. Install with `npm ci --ignore-scripts`.
 3. Make one focused behavioral or contract change.
-4. Add or update the regression that proves the new behavior or failure boundary.
-5. Run `npm run check` before pushing.
+4. Add or update the regression that proves the new behavior or failure boundary. Consult [the test matrix](docs/TESTING.md) for the root Node suite, canonical web browser acceptance, coverage, and credentialed live checks.
+5. Run `npm run check` before pushing; run the web workspace's TypeScript build and relevant Playwright tests when the canonical UI changes.
 6. Keep provider-specific integrations behind adapters and preserve deterministic classical baselines.
 7. Update `CHANGELOG.md` for meaningful maintained-surface changes.
 

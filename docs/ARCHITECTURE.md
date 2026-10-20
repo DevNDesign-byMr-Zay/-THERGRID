@@ -4,6 +4,8 @@
 
 THERGRID is an energy-systems digital-twin platform. It should separate **observation**, **simulation**, **decision support**, **visualization**, and any future **actuation** into distinct boundaries.
 
+The canonical operator application is `apps/aethergrid-console/web/` (React/TypeScript, Cesium primary and native fallback), served by `apps/aethergrid-console/server.mjs`. The separate `apps/aethergrid-console/app.js` is a legacy compatibility implementation; new operator features belong in the canonical web app. The Node health service is `src/platform-health-service.mjs`. See [the test and runtime matrix](TESTING.md) for verification by surface.
+
 The initial platform must remain useful with synthetic data and deterministic local computation. Cloud AI, quantum services, hardware telemetry, and advanced spatial rendering are integrations — not prerequisites for the core to run.
 
 ## 2. Logical layers

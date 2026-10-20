@@ -53,8 +53,11 @@ Open the Vite URL (normally `http://localhost:5174`); its development API proxy 
 
 ## Verification and evidence
 
+The [testing and verification matrix](docs/TESTING.md) identifies which Node, browser, container, security and credentialed-provider checks apply to each application surface, with exact commands and evidence boundaries.
+
 ```powershell
 npm test
+npm run test:report
 npm run coverage
 npm run lint
 npm run typecheck
@@ -70,35 +73,21 @@ The final submission gate must run on one exact `main` SHA after canonical packa
 
 The root `.env.example` configures the health service without secrets. The application backend's [environment example](apps/aethergrid-console/.env.example) documents server-side provider configuration. Keep credentials in encrypted Actions secrets or an ignored deployment/runtime environment; never commit them. Public provider/runtime endpoints redact server credentials.
 
-## Latest verified main evidence
+## Historical acceptance evidence (2026-10-11)
 
-Main `9c2957f51fff0c0a58d2d71bc492a8cc30599fbb` passed [canonical acceptance](https://github.com/DevNDesign-byMr-Zay/-THERGRID/actions/runs/38508833100): 147 browser tests (3 skipped), followed by 2 credentialed Cesium tests. [Sanitized source receipts](https://github.com/DevNDesign-byMr-Zay/-THERGRID/actions/runs/38508833100/artifacts/11869564479) verify real AI specialist/TEAM responses, weather/forecast, EIA NYIS, NOAA BATN6, transit discovery, and 25 Cesium building tiles plus terrain/imagery. IBM passed authenticated discovery of three hardware backends; no hardware job was submitted or executed. The separate fifteen-minute replay passed on the source-identical final feature tree. See [rescore readiness](docs/RESCORE_READINESS.md) for boundaries and remaining work.
+Commit `9c2957f51fff0c0a58d2d71bc492a8cc30599fbb` passed [canonical acceptance](https://github.com/DevNDesign-byMr-Zay/-THERGRID/actions/runs/38508833100): 147 browser tests (3 skipped), followed by 2 credentialed Cesium tests. [Sanitized source receipts](https://github.com/DevNDesign-byMr-Zay/-THERGRID/actions/runs/38508833100/artifacts/11869564479) verify real AI specialist/TEAM responses, weather/forecast, EIA NYIS, NOAA BATN6, transit discovery, and 25 Cesium building tiles plus terrain/imagery. IBM passed authenticated discovery of three hardware backends; no hardware job was submitted or executed. The separate fifteen-minute replay passed on the source-identical final feature tree. See [current test and acceptance boundaries](docs/TESTING.md) and [sanitized acceptance evidence](docs/acceptance/aethergrid-command-center/README.md) before treating any past run as proof of current live-provider readiness.
 
 ## Current status and future work
 
-Backend/provider PR #145, React command-center PR #144, repository cleanup #147, canonical runtime/ZIP migration #148, spatial-first renderer work #158-#159, release reconciliation #161, acceptance hardening #162 and verified-main trigger #163 are integrated. Exact-main Engineering CI, CodeQL, canonical browser acceptance, live-provider checks and sanitized evidence completed successfully for the current 0.2.1 candidate on October 11, 2026. Production deployment configuration remains outstanding. The runtime stack, initial schemas, synthetic fixture and initial test/CI foundation are complete. [Roadmap](docs/ROADMAP.md) separates delivered work from future pilots and actuation research.
+Backend/provider PR #145, React command-center PR #144, repository cleanup #147, canonical runtime/ZIP migration #148, spatial-first renderer work #158-#159, release reconciliation #161, acceptance hardening #162 and verified-main trigger #163 are integrated. Exact-main Engineering CI, CodeQL, canonical browser acceptance, live-provider checks and sanitized evidence were recorded for the 0.2.1 candidate on October 11, 2026; those historical runs do not establish the status of later commits or changing upstream providers. Production deployment configuration remains outstanding. The runtime stack, initial schemas, synthetic fixture and initial test/CI foundation are complete. [Roadmap](docs/ROADMAP.md) separates delivered work from future pilots and actuation research.
 
-## Reproducible verification
+## Reproducibility and deterministic demonstration
 
-THERGRID targets Node.js 22 and commits its lockfile so a fresh clone can reproduce the maintained quality path. The conventional application entrypoint is `npm start`, which runs `src/platform-health-service.mjs`.
+THERGRID targets Node.js 22 and commits root and frontend lockfiles. Use the [maintained testing matrix](docs/TESTING.md) for reproducible `npm test`, `npm run test:report`, `npm run coverage`, static checks, browser acceptance and optional credentialed-provider verification. The independent health service runs with `npm start`; the canonical 3D operator application runs with `npm run aethergrid-app`.
 
-```bash
-npm ci --ignore-scripts
-npm audit --audit-level=moderate
-npm run syntax
-npm run typecheck
-npm run typecheck:strict-renderer
-npm test
-npm run coverage
-npm run demo
-npm run verify:release
-```
+`npm run demo` exercises the deterministic synthetic-microgrid vertical slice, emitting the snapshot, experiment, receipt, scene, render target, provenance result, promotion status and advisory SOLVÆR handoff. Simulation/provenance failures and authoritative promotion fail closed. `npm run verify:release` checks required files and gates; it is not evidence that a release or live-provider validation occurred.
 
-`npm run demo` executes the deterministic synthetic-microgrid vertical slice and prints a compact evidence summary containing the snapshot, experiment, receipt, scene, render target, provenance result, promotion status, and the advisory SOLVÆR handoff state. The demo fails closed if simulation or provenance validation fails or if the promotion gate becomes authoritative.
-
-Pull requests and pushes to `main` run the same reproducible install, dependency audit, release-readiness contract, syntax checks, test coverage, demo path, and container smoke test. CodeQL runs separately as the maintained static security-analysis gate. `npm run verify:release` confirms those maintained quality/security/safety gates are still present before a real semantic tag is cut; it does not claim that a release already exists.
-
-`npm run typecheck:strict-renderer` applies TypeScript strict checking to the compact renderer evidence and no-actuation policy boundary. It retains the existing JavaScript migration's explicit `noImplicitAny: false` exception; broad strict-mode conversion is intentionally not claimed.
+The strict renderer type-check verifies the renderer evidence and no-actuation boundary; its existing JavaScript `noImplicitAny: false` exception is not a claim of full strict-mode migration.
 
 ### Container startup
 
@@ -114,9 +103,9 @@ Provider credentials are optional for startup and must be supplied in an ignored
 
 `aethergrid-container-smoke` verifies the compiled React root and JavaScript asset, application configuration/runtime APIs, health service, and profile persistence through a container restart. Docker is required for this route. The ZIP remains extract-and-launch; opening a ZIP or HTML cannot start backend processes.
 
-## Coverage evidence
+## Test and coverage evidence
 
-The blocking Node coverage gate now writes raw V8 coverage from the exact CI test run and retains it as a 30-day workflow artifact tied to the tested commit. Coverage thresholds are unchanged; the artifact adds reviewer-visible evidence without weakening the gate.
+Engineering CI publishes JUnit XML from the actual `npm run test:report` execution and retains raw V8 coverage as separate 30-day artifacts. The existing blocking thresholds are 84% lines, 70% branches and 85% functions. Test failures, coverage failures and externally degraded providers remain separate, truthful results. See [docs/TESTING.md](docs/TESTING.md).
 
 ## Provider-neutral error reporting
 

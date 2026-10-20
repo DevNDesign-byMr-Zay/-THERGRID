@@ -43,6 +43,9 @@ jobs:
       - name: Install maintained Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Verify canonical city targets and layer controls
+        run: npx playwright test tests/spatial-defaults.spec.ts --workers=1 --reporter=line
+
       - name: Verify authenticated operator sessions and recorded playback
         env:
           AETHERGRID_TEST_CANONICAL: "1"
