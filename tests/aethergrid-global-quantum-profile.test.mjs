@@ -69,7 +69,13 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
           ...Array.from({ length: 8 }, (_, index) => ({
             type: 'way',
             id: 1000 + index,
-            tags: { building: 'yes', 'building:levels': String(3 + index) },
+            tags: {
+              building: 'yes',
+              'building:levels': String(3 + index),
+              'roof:shape': 'skillion',
+              'roof:height': '3',
+              'roof:direction': 'E',
+            },
             geometry: geometry.map((point) => ({
               lat: point.lat + index * 0.00012,
               lon: point.lon + index * 0.00012,
@@ -249,6 +255,10 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
   assert.ok(skylineTower);
   assert.equal(skylineTower.heightM, 828);
   assert.equal(skylineTower.heightSource, 'height');
+  const directionalRoof = first.buildings.find((building) => building.id === 'osm-way-1000-0');
+  assert.equal(directionalRoof?.roofDirection, 'E');
+  assert.equal(directionalRoof?.roofShape, 'skillion');
+  assert.equal(directionalRoof?.roofHeightM, 3);
   assert.equal(skylineTower.roofShape, 'pyramidal');
   assert.equal(skylineTower.roofHeightM, 20);
   assert.equal(skylineTower.buildingMaterial, 'glass');
