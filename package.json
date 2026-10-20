@@ -26,7 +26,9 @@
     "package:aethergrid": "node scripts/assemble-aethergrid-package.mjs",
     "package:aethergrid-app": "node scripts/assemble-aethergrid-full-app.mjs",
     "build:aethergrid-web": "npm --prefix apps/aethergrid-console/web ci && npm --prefix apps/aethergrid-console/web run build",
-    "smoke:aethergrid-app": "node scripts/smoke-aethergrid-full-app.mjs"
+    "smoke:aethergrid-app": "node scripts/smoke-aethergrid-full-app.mjs",
+    "pretest:report": "node -e \"require('node:fs').mkdirSync('test-results',{recursive:true})\"",
+    "test:report": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=test-results/node-tests.xml tests/*.test.mjs tests/**/*.test.mjs"
   },
   "dependencies": {
     "pino": "10.3.1",
