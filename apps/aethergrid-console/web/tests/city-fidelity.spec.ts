@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { buildingGeometry, buildingEdges } from '../src/renderer/overlays/building-geometry';
 import { cityMeshToSpatialBundle } from '../src/services/city-power-overlay';
 import { NetworkOverlayLayer } from '../src/renderer/cesium/network-overlay-layer';
-import { DataSourceCollection, PolygonGeometry, PrimitiveCollection } from 'cesium';
+import { DataSourceCollection, PolygonGeometry, PrimitiveCollection, WallGeometry } from 'cesium';
 
 const rectangle = [[0,0],[.002,0],[.002,.001],[0,.001]].map(([longitude, latitude]) => ({longitude, latitude}));
 const area = (roofShape: string) => ({id: 'mapped-roof', kind: 'building' as const, positions: rectangle,
@@ -117,6 +117,10 @@ test('mapped skillion roof uses observed east-facing slope and seals rising wall
     layer.apply(mapped);
     const bodies = primitives.get(0);
     expect(bodies.geometryInstances).toHaveLength(5);
+    for (const roofWall of bodies.geometryInstances.slice(2)) {
+      const geometry = WallGeometry.createGeometry(roofWall.geometry);
+      expect(geometry?.indices?.length).toBeGreaterThan(0);
+    }
     for (const mode of ['solid','wireframe','holographic','xray','grid','reality'] as const) {
       layer.setPresentation(mode, 1);
       expect(bodies.show, mode).toBe(mode !== 'wireframe');
