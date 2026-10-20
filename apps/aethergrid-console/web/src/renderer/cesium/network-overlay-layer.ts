@@ -1,4 +1,6 @@
+import {aircraftModelUri} from './aircraft-model';
 import {
+  CallbackPositionProperty,
   Cartesian2,
   Cartesian3,
   BoxGraphics,
@@ -251,7 +253,7 @@ function nodeEntity(
       ? Transforms.headingPitchRollQuaternion(
           position,
           new HeadingPitchRoll(
-            CesiumMath.toRadians(aircraftHeading(node)),
+            CesiumMath.toRadians(aircraftHeading(node)-90),
             0,
             0
           )
@@ -272,17 +274,17 @@ function nodeEntity(
       outlineWidth: urbanLight ? 0 : aircraft ? 0.8 : 1.25,
       distanceDisplayCondition: new ConstantProperty(
         aircraft
-          ? new DistanceDisplayCondition(850_000, nodeFarDistance(node))
+          ? new DistanceDisplayCondition(aircraftModel ? 850_000 : 0, nodeFarDistance(node))
           : new DistanceDisplayCondition(0, nodeFarDistance(node))
       ),
       disableDepthTestDistance:
-        node.kind === 'city' || node.kind === 'event' || aircraft
+        node.kind === 'city' || node.kind === 'event'
           ? Number.POSITIVE_INFINITY
-          : 1_500_000
+          : aircraft ? 0 : 1_500_000
     }),
     model: aircraftModel
       ? new ModelGraphics({
-          uri: '/models/aethergrid-aircraft.gltf',
+          uri: aircraftModelUri,
           scale: 8,
           minimumPixelSize: 12,
           maximumScale: 18,
@@ -311,7 +313,7 @@ function nodeEntity(
           distanceDisplayCondition: new ConstantProperty(
             new DistanceDisplayCondition(0, 420_000)
           ),
-          disableDepthTestDistance: Number.POSITIVE_INFINITY
+          disableDepthTestDistance: 0
         })
       : undefined,
     properties: {
@@ -577,6 +579,7 @@ function areaEntity(
 
 export class NetworkOverlayLayer {
   #viewer: Viewer;
+  #aircraftFixes=new Map<string,{position:Cartesian3;time:number}>();
   #source = new CustomDataSource('aethergrid-network-overlay');
   #snapshot: SpatialOverlaySnapshot | null = null;
   #nodeEntities = new Map<string, Entity>();
@@ -622,8 +625,18 @@ export class NetworkOverlayLayer {
       this.#applyBuildingPrimitive(snapshot, provenance);
     }
 
+    const nextAircraftFixes=new Map<string,{position:Cartesian3;time:number}>();
     for (const node of snapshot.nodes) {
       const entity = this.#source.entities.add(nodeEntity(node, provenance));
+      if(node.kind==='aircraft'){
+        const fix={position:coordinate(node.position),time:Date.parse(String(node.properties?.observedAt ?? snapshot.sourceTime ?? snapshot.eventTime))};
+        const previous=this.#aircraftFixes.get(node.id);
+        const reduced=typeof window!=='undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if(previous && !reduced && node.properties?.truthState!=='stale' && fix.time>previous.time && fix.time-previous.time<=60000 && Cartesian3.distance(previous.position,fix.position)<50000){
+          const started=performance.now();entity.position=new CallbackPositionProperty(()=>Cartesian3.lerp(previous.position,fix.position,Math.min(1,(performance.now()-started)/1000),new Cartesian3()),false);
+        }
+        nextAircraftFixes.set(node.id,fix);
+      }
       this.#nodeEntities.set(node.id, entity);
       if (entity.label) this.#labelColors.set(node.id, {
         fill: Color.clone(entity.label.fillColor?.getValue() ?? Color.WHITE),
@@ -632,6 +645,7 @@ export class NetworkOverlayLayer {
       });
       if (entity.model) this.#modelColors.set(node.id, Color.clone(entity.model.color?.getValue() ?? Color.WHITE));
     }
+    this.#aircraftFixes=nextAircraftFixes;
     for (const edge of snapshot.edges) {
       const entity = this.#source.entities.add(edgeEntity(edge, provenance));
       this.#edgeEntities.set(edge.id, entity);

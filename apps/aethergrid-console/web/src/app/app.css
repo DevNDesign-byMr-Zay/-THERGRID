@@ -6451,3 +6451,22 @@ button {
 .settings-choice-grid button > span {
   font-size: 18px;
 }
+
+.radar-controls{position:absolute;left:16px;top:155px;z-index:12;width:min(330px,calc(100% - 32px));padding:10px 12px;border:1px solid var(--border,#36515f);border-radius:12px;background:var(--panel,#0c1622ed);color:var(--text,#d7eff8);font-size:11px;backdrop-filter:blur(12px)}
+.radar-controls>div:first-child{display:flex;justify-content:space-between;gap:12px}.radar-controls small,.radar-controls time{display:block;font-size:10px;line-height:1.6}.radar-controls a{color:inherit;font-size:10px}.radar-actions{display:flex;align-items:center;gap:8px;margin:6px 0}.radar-actions input[type=range]{min-width:50px;width:100%}.radar-actions label{display:flex;align-items:center;font-size:10px}.radar-actions button{font:inherit;white-space:nowrap;min-height:28px}
+@media(max-width:700px){.radar-controls{top:100px;width:235px;font-size:9px;max-width:calc(100% - 24px);left:12px;padding:6px 9px}.radar-controls small{font-size:9px}.radar-actions{gap:4px}.radar-actions button{font-size:9px}.radar-actions label{font-size:9px}}
+.aviation-scene-badge{position:absolute;left:16px;top:320px;max-width:330px;z-index:12;padding:8px 12px;border:1px solid #527582;border-radius:10px;background:#091722ed;color:#c9eaf5;display:grid;gap:3px;font-size:10px}.aviation-scene-badge small{font-size:9px;overflow-wrap:anywhere}.aviation-scene-badge[data-source-state=stale]{border-color:#ac9056}.live-connections{padding:16px;border:1px solid var(--border,#3a5261);border-radius:12px;margin-bottom:16px}.live-connections p,.live-connections small{line-height:1.6}.live-connections form{display:grid;gap:10px}.live-connections form label{display:grid;gap:8px}.live-connections input{padding:10px;width:100%;box-sizing:border-box}.live-connections button{padding:10px}.live-connections ul{padding-left:18px;overflow-wrap:anywhere}@media(max-width:700px){.aviation-scene-badge{left:12px;top:255px;max-width:235px;padding:6px 9px;font-size:9px}}
+
+/* Keep live source controls below navigation and in one scrollable stack. */
+.live-scene-controls{position:absolute;top:210px;left:16px;z-index:12;display:grid;gap:8px;width:min(330px,calc(100% - 32px));max-height:calc(100dvh - 410px);overflow:auto;scrollbar-width:thin}
+.live-scene-controls .radar-controls,.live-scene-controls .aviation-scene-badge{position:static;box-sizing:border-box;width:100%;max-width:none;margin:0;color:var(--text-primary);background:var(--panel)}
+.live-scene-controls select,.live-scene-controls button{font:inherit;color:inherit;background:var(--panel-strong);border:1px solid var(--line-strong);border-radius:5px;padding:4px;min-width:0}
+.live-scene-controls a{color:var(--cyan)}
+@media(max-width:760px){.live-scene-controls{top:292px;left:12px;width:min(260px,calc(100% - 24px));max-height:calc(100dvh - 440px)}}
+
+.live-scene-controls .radar-actions button,.live-scene-controls .radar-actions label{flex:0 0 auto}
+.live-scene-controls .radar-actions input[type=range]{flex:1 1 auto;width:0;min-width:40px}
+
+.live-scene-controls>summary{cursor:pointer;padding:8px 12px;border:1px solid var(--line-strong);border-radius:8px;font-size:10px;letter-spacing:.08em;color:var(--text-primary);background:var(--panel)}
+.live-scene-controls[open]>summary{margin-bottom:8px}.live-scene-controls[open]>.radar-controls{margin-bottom:8px}
+@media(max-width:760px){.live-scene-controls{top:232px}}

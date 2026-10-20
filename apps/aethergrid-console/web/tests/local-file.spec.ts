@@ -16,6 +16,7 @@ for (const width of [1366, 390]) test(`opening the packaged index file without a
   await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer', 'cesium');
   await expect(page.getByRole('status').filter({ hasText: 'Local file' })).toBeVisible();
   await expect(page.locator('#local-boot')).toHaveCount(0);
+  if(width===390){await expect(page.locator('.live-scene-controls')).not.toHaveAttribute('open','');await expect(page.getByText('LIVE WEATHER & AIR TRAFFIC',{exact:true})).toBeVisible();}
   const logo = page.locator('img').first();
   await expect(logo).toBeVisible();
   await expect.poll(() => logo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
@@ -82,7 +83,7 @@ test('every bundled city renders its own mapped district without a server', asyn
     await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer','cesium');
     await expect(page.locator('.cesium-widget-errorPanel')).toHaveCount(0);
     const count = await page.locator('.world-stage').getAttribute('data-source-building-count');
-    for (const mode of ['SOLID','WIREFRAME','HOLOGRAPHIC','XRAY','GRID','REALITY']) {
+    for (const mode of ['SOLID','WIREFRAME','HOLOGRAPHIC','XRAY','GRID','OPERATIONS','REALITY']) {
       const control = page.getByRole('group', {name:'Visual mode'}).getByRole('button', {name:mode,exact:true});
       await control.click();
       await expect(control).toHaveAttribute('aria-pressed','true');

@@ -209,6 +209,13 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           path: dist/aethergrid-functional-app.zip
+      - name: Retain direct-open workspace
+        uses: actions/upload-artifact@v7
+        with:
+          name: aethergrid-direct-open-html-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 30
+          path: apps/aethergrid-console/web/local-dist/index.html
       - name: Smoke-test release manifest generation
         shell: bash
         run: |

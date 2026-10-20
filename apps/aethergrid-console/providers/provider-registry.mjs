@@ -31,6 +31,7 @@ export function createProviderRegistry(options = {}) {
   redactor.registerSecretsFromConfig(config);
 
   const urlPolicy = createUrlPolicy([
+    'https://api.adsb.lol', 'https://opensky-network.org', 'https://auth.opensky-network.org', 'https://api.rainviewer.com',
     config.ai.openai.baseUrl,
     config.ai.ollama.baseUrl,
     config.geo.overpassUrl,
@@ -200,8 +201,9 @@ export function createProviderRegistry(options = {}) {
     const dwaveConfigured = Boolean(config.providers?.dwave?.token && config.providers.dwave.token.trim().length > 0);
     return Object.freeze({
       spatial: {
-        provider: 'native-webgl',
-        status: healthStatuses['native-webgl']?.status || PROVIDER_STATUS.UNCONFIGURED,
+        provider: 'cesium',
+        fallbackProvider:'native-webgl',
+        status: PROVIDER_STATUS.CONFIGURED,
       },
       geo: {
         provider: config.geo.provider,
@@ -215,6 +217,8 @@ export function createProviderRegistry(options = {}) {
         provider: config.weather.provider,
         status: healthStatuses['open-meteo-weather']?.status || PROVIDER_STATUS.UNCONFIGURED,
       },
+      aviation: {provider:'adsb-lol / opensky',status:healthStatuses['live-maps']?.status || PROVIDER_STATUS.CONFIGURED},
+      radar: {provider:'rainviewer',status:healthStatuses['live-maps']?.status || PROVIDER_STATUS.CONFIGURED},
       airQuality: {
         provider: config.airQuality.provider,
         status: healthStatuses['open-meteo-air-quality']?.status || PROVIDER_STATUS.UNCONFIGURED,

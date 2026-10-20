@@ -1,3 +1,4 @@
+import {createLiveMapRuntime} from './providers/live-map-runtime.mjs';
 import { appendFile, mkdir } from 'node:fs/promises';
 import { createSessionRuntime } from './security/session-runtime.mjs';
 import { createObservationStore } from './observation-store.mjs';
@@ -137,6 +138,8 @@ const cityLiveRuntime = createCityLiveRuntime({ fetchImpl: createPipelineFetch('
 const geoRuntime = createGeoRuntime({ fetchImpl: createPipelineFetch('geo') });
 const quantumRuntime = createQuantumRuntime();
 const terrainRuntime = createTerrainRuntime({ fetchImpl: createPipelineFetch('terrain') });
+providerRegistry.health.registerProvider('live-maps',{name:'Live aviation and radar',capability:'live-maps',capabilities:['aviation','radar'],status:'configured'});
+const liveMapRuntime = createLiveMapRuntime({fetchImpl:createPipelineFetch('live-maps'),...providerRegistry.config.aviation});
 const profileStore = createProfileStore({
   dataDir: process.env.AETHERGRID_DATA_DIR || join(root, '.aethergrid-data'),
 });
@@ -893,6 +896,12 @@ const server = http.createServer(async (request, response) => {
   try {
     const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
 
+    const fileBridgePaths=['/api/aethergrid/health','/api/aethergrid/domains/aviation/aircraft'];
+    if(['GET','OPTIONS'].includes(request.method) && request.headers.origin==='null' && ['127.0.0.1','localhost','[::1]'].includes(url.hostname) && fileBridgePaths.includes(url.pathname)){
+      response.setHeader('access-control-allow-origin','null');response.setHeader('vary','Origin');
+      response.setHeader('access-control-allow-methods','GET, OPTIONS');response.setHeader('access-control-allow-private-network','true');
+      if(request.method==='OPTIONS'){response.writeHead(204);response.end();return;}
+    }
     const authPrefix = '/api/aethergrid/auth/';
     response.setHeader('cache-control','no-store');
     if (url.pathname.startsWith('/api/aethergrid/') && !['GET','HEAD'].includes(request.method)) {
@@ -1037,6 +1046,18 @@ const server = http.createServer(async (request, response) => {
         200,
         providerRegistry.redactor.redactValue(createPublicConfig(providerRegistry.config)),
       );
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/domains/aviation/aircraft') {
+      try {
+        const scope=url.searchParams.get('scope') || 'global';
+        const result=await liveMapRuntime.aviation({scope,latitude:url.searchParams.get('latitude'),longitude:url.searchParams.get('longitude'),radiusKm:url.searchParams.get('radiusKm') ?? 250});
+        return json(response,200,result);
+      } catch(error) {return json(response,String(error.message).startsWith('Invalid')?400:503,{error:'aviation_unavailable',message:error.message,live:false});}
+    }
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/weather/radar') {
+      try {return json(response,200,await liveMapRuntime.radar());}
+      catch(error) {return json(response,503,{error:'radar_unavailable',message:error.message,live:false});}
     }
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/weather/current') {

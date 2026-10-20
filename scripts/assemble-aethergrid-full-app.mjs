@@ -41,6 +41,7 @@ const REQUIRED_RUNTIME_FILES = Object.freeze([
   'security/secret-redactor.mjs',
   'security/url-policy.mjs',
   'providers/provider-registry.mjs',
+  'providers/live-map-runtime.mjs',
   'providers/provider-health.mjs',
   'providers/provider-executor.mjs',
   'providers/provider-receipt.mjs',
@@ -69,6 +70,7 @@ const REQUIRED_RUNTIME_FILES = Object.freeze([
 ]);
 
 const PRIVATE_BROWSER_ENV_NAMES = Object.freeze([
+  'AETHERGRID_OPENSKY_CLIENT_SECRET',
   'AETHERGRID_IBM_QUANTUM_API_KEY',
   'AETHERGRID_IBM_QUANTUM_SERVICE_CRN',
   'AETHERGRID_DWAVE_API_TOKEN',

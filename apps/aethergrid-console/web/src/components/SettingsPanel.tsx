@@ -1,3 +1,4 @@
+import {LiveConnections} from './LiveConnections';
 import { useState } from 'react';
 
 import type {
@@ -93,6 +94,7 @@ export function SettingsPanel({ appearance }: SettingsPanelProps) {
               are never rendered in this client.
             </p>
           </div>
+          <LiveConnections />
           <RuntimeDiagnosticsPanel />
         </div>
       )}

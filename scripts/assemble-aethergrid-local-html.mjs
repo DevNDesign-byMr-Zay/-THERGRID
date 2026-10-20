@@ -118,7 +118,7 @@ const bootstrap = `globalThis.__AETHERGRID_ASSETS__=${JSON.stringify(assets)};gl
 (function(){const modules=${JSON.stringify(modules)},urls=globalThis.__AETHERGRID_ASSETS__;for(const key of Object.keys(modules))urls[key]=URL.createObjectURL(new Blob([modules[key]],{type:'text/javascript'}));})();`;
 const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="ÆTHERGRID spatial intelligence workspace. Direct-open local interface with 4D controls.">
+<meta name="description" content="ÆTHERGRID spatial intelligence workspace. Direct-open 3D cities, 4D controls and public weather radar. Air traffic requires the connected runtime.">
 <meta name="theme-color" content="#07090f"><title>ÆTHERGRID · Local workspace</title>
 <style>${css.replaceAll('</style', '<\\/style')}
 #local-boot{position:fixed;inset:0;display:grid;place-content:center;background:#07090f;color:#b9e7ee;font:16px system-ui;letter-spacing:.25em;z-index:9999;text-align:center}

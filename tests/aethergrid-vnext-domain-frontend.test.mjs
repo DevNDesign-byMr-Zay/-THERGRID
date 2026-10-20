@@ -73,7 +73,16 @@ test('vNext aviation uses the canonical provider path and the existing Cesium ov
   assert.match(overlay, /\| 'aircraft'/u);
   assert.match(cesiumLayer, /eventType === 'aircraft'/u);
   assert.match(cesiumLayer, /ModelGraphics/u);
-  assert.match(cesiumLayer, /aethergrid-aircraft\.gltf/u);
+  assert.match(cesiumLayer, /uri: aircraftModelUri/u);
+  const inlineModel = await text(
+    'apps/aethergrid-console/web/src/renderer/cesium/aircraft-model.ts',
+  );
+  const encoded = inlineModel.match(/base64,([^"]+)/u)?.[1];
+  assert.ok(encoded);
+  assert.deepEqual(
+    JSON.parse(Buffer.from(encoded, 'base64').toString('utf8')),
+    JSON.parse(await text('apps/aethergrid-console/web/public/models/aethergrid-aircraft.gltf')),
+  );
   assert.match(cesiumLayer, /node\.properties\?\.render3d === true/u);
   assert.match(cesiumLayer, /eventType !== 'aircraft-history'/u);
 });

@@ -1,9 +1,11 @@
+import {createLiveMapRuntime} from '../../../providers/live-map-runtime.mjs';
 type Snapshot = { city: { id: string; name?: string; lat: number; lon: number }; source: { snapshot?: boolean; fetchedAt?: string }; buildings: unknown[] };
 
 // Public local read adapter. Private provider calls are never synthesized or sent with keys.
 export function installStandaloneRuntime() {
   if (location.protocol !== 'file:') return;
   const nativeFetch = globalThis.fetch.bind(globalThis);
+  const liveMaps=createLiveMapRuntime({fetchImpl:nativeFetch});
   const snapshots = (globalThis as typeof globalThis & { __AETHERGRID_CITIES__?: Record<string, Snapshot> }).__AETHERGRID_CITIES__ ?? {};
   const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json' } });
   globalThis.fetch = async (input, init) => {
@@ -25,6 +27,19 @@ export function installStandaloneRuntime() {
     if (route.startsWith('geospatial/city/')) {
       const id = decodeURIComponent(route.slice('geospatial/city/'.length));
       return snapshots[id] ? json(snapshots[id]) : json({ error: 'No bundled map exists for this location.' }, 404);
+    }
+    if (route === 'domains/aviation/aircraft') {
+      const scope=url.searchParams.get('scope');
+      if(scope!=='city' && scope!=='global')return json({error:'Invalid aviation scope'},400);
+      try {
+        const response=await nativeFetch(`http://127.0.0.1:8090${url.pathname}${url.search}`,{signal:AbortSignal.any([AbortSignal.timeout(15000),...(init?.signal?[init.signal]:[])]),headers:{accept:'application/json'}});
+        if(response.ok)return json(await response.json());
+        return json({error:response.status===401?'Sign in through the connected workspace to enable aircraft feeds.':'The local aircraft service is unavailable.'},response.status);
+      } catch{return json({error:'Aircraft providers require the connected runtime because their browser policy blocks file-origin requests. Start START-AETHERGRID.cmd, then open the connected workspace.'},503);}
+    }
+    if (route === 'weather/radar') {
+      try{return json(await liveMaps.radar());}
+      catch(error){return json({error:error instanceof Error?error.message:'Radar provider unavailable.'},503);}
     }
     if (route === 'history') return json({ observations: [] });
     if (route === 'global-live') {

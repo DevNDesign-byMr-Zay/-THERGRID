@@ -25,6 +25,7 @@ function text(value: unknown): string | null {
 }
 
 function finite(value: unknown): number | null {
+  if(value == null || value === '') return null;
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : null;
 }
@@ -42,7 +43,7 @@ function aircraftFromRow(value: unknown, stale: boolean): AviationAircraft | nul
   const longitude = finite(row.longitude ?? row.lon);
   const observedAt =
     text(row.observedAt ?? row.observed_at ?? row.timestamp) ?? null;
-  if (latitude == null || longitude == null || !observedAt) return null;
+  if (latitude == null || longitude == null || Math.abs(latitude)>90 || Math.abs(longitude)>180 || !observedAt || !Number.isFinite(Date.parse(observedAt))) return null;
 
   const icaoHex = text(row.icaoHex ?? row.icao_hex ?? row.hex);
   const registration = text(row.registration ?? row.reg);
@@ -163,6 +164,9 @@ export async function loadAviationSnapshot(
     stale,
     fallback: receipt.fallback === true || data.fallback === true,
     attribution: text(receipt.attribution ?? data.attribution),
+    totalAircraft:finite(data.totalAircraft) ?? rows.length,
+    displayedAircraft:finite(data.displayedAircraft) ?? rows.length,
+    upstreamRefreshMs:finite(data.upstreamRefreshMs) ?? null,
     aircraft: rows
       .map((row) => aircraftFromRow(row, stale))
       .filter((row): row is AviationAircraft => Boolean(row)),

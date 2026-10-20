@@ -80,6 +80,10 @@ export const envSchema = z.object({
   AETHERGRID_ENVIRONMENT_PROVIDER: z.string().optional().default('open-meteo'),
   AETHERGRID_OPEN_METEO_URL: defaultUrl('https://api.open-meteo.com/v1/forecast'),
 
+  // Live map observations: private OpenSky OAuth is optional.
+  AETHERGRID_OPENSKY_CLIENT_ID: optionalString,
+  AETHERGRID_OPENSKY_CLIENT_SECRET: optionalString,
+
   // Air Quality
   AETHERGRID_AIR_QUALITY_PROVIDER: z.string().optional().default('open-meteo'),
   AETHERGRID_AIR_QUALITY_URL: defaultUrl('https://air-quality-api.open-meteo.com/v1/air-quality'),

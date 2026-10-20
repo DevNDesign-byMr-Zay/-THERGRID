@@ -1,3 +1,4 @@
+import {RadarWeatherLayer} from './radar-weather-layer';
 import type {
   AirQualityOverlaySnapshot,
   AtmosphericOverlaySnapshot
@@ -87,6 +88,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   #cameraJourney: CameraJourneyController | null = null;
   #visualController: VisualModeController | null = null;
   #weather: WeatherAtmosphereLayer | null = null;
+  #radar: RadarWeatherLayer|null=null;
   #airQuality: AirQualityLayer | null = null;
   #solarLighting: SolarLightingController | null = null;
   #overlays = new Map<string, NetworkOverlayLayer>();
@@ -211,6 +213,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
       realityEnabled: config.realityEnabled
     });
     this.#weather = new WeatherAtmosphereLayer(this.#viewer);
+    this.#radar=new RadarWeatherLayer(this.#viewer);
     this.#airQuality = new AirQualityLayer(this.#viewer);
     this.#solarLighting = new SolarLightingController(this.#viewer);
 
@@ -297,6 +300,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#grid?.setTime(time.iso);
     for (const overlay of this.#overlays.values()) overlay.setTime(time);
     this.#weather?.setTime(time);
+    this.#radar?.setTime(time);
     this.#airQuality?.setTime(time);
     viewer.scene.requestRender();
   }
@@ -345,6 +349,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
   applyOverlay(snapshot: SpatialOverlaySnapshot): void {
     const viewer = this.#requireViewer();
+    if(snapshot.layerId==='weather-radar' && snapshot.raster){this.#radar?.apply(snapshot.raster);if(this.#time)this.#radar?.setTime(this.#time);this.#radar?.setVisible(this.#layerVisible('weather-radar',true),this.#layers.get('weather-radar')?.opacity ?? .68);return;}
     let overlay = this.#overlays.get(snapshot.layerId);
     if (!overlay) {
       overlay = new NetworkOverlayLayer(viewer);
@@ -369,6 +374,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   }
 
   clearOverlay(layerId: string): void {
+    if(layerId==='weather-radar'){this.#radar?.setVisible(false);return;}
     const overlay = this.#overlays.get(layerId);
     if (!overlay) return;
     overlay.destroy();
@@ -381,6 +387,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
   applyAtmosphere(snapshot: AtmosphericOverlaySnapshot): void {
     this.#weather?.apply(snapshot);
+    this.#radar?.setVisible(this.#layerVisible('weather-radar',true),this.#layers.get('weather-radar')?.opacity ?? .68);
     this.#weather?.setVisible(this.#layerVisible('weather', true));
   }
 
@@ -530,6 +537,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#cameraJourney?.cancel();
     this.#cameraJourney = null;
     this.#visualController = null;
+    this.#radar?.destroy();this.#radar=null;
     this.#weather?.destroy();
     this.#weather = null;
     this.#airQuality?.destroy();
@@ -626,6 +634,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#visualController?.setOpacity(this.#layers.get('buildings')?.opacity ?? 1);
     this.#grid?.setVisible(this.#layerVisible('grid', true));
     this.#grid?.setOpacity(this.#layers.get('grid')?.opacity ?? 1);
+    this.#radar?.setVisible(this.#layerVisible('weather-radar',true),this.#layers.get('weather-radar')?.opacity ?? .68);
     this.#weather?.setVisible(this.#layerVisible('weather', true));
     this.#airQuality?.setVisible(this.#layerVisible('air', true));
     for (const [layerId, overlay] of this.#overlays) {
