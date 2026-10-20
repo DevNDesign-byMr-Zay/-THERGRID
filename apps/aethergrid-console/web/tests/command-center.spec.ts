@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 
 const profiles = new WeakMap();
 test.beforeEach(async ({ page }) => {
+  if (process.env.AETHERGRID_TEST_REDUCED_MOTION === '1') await page.emulateMedia({ reducedMotion: 'reduce' });
   if (process.env.AETHERGRID_TEST_PROFILE !== '1') return;
   const session = await page.context().newCDPSession(page);
   await session.send('Profiler.enable');
