@@ -112,3 +112,39 @@ test('public spatial tokens persist as browser configuration and reject private-
     (globalThis as any).localStorage = previous;
   }
 });
+
+test('distant aircraft retain markers while 3D models load only on camera approach', async () => {
+  const path = '../src/renderer/cesium/network-overlay-layer';
+  const { NetworkOverlayLayer } = await import(path);
+  const primitives = new PrimitiveCollection();
+  const dataSources = new DataSourceCollection();
+  const camera = { positionWC: Cartesian3.fromDegrees(-74, 40, 30000000) };
+  const layer = new NetworkOverlayLayer({
+    camera, dataSources, scene: { primitives, requestRender() {} },
+  } as any);
+  await Promise.resolve();
+  const time = '2026-10-20T08:00:00Z';
+  layer.apply({
+    id: time, layerId: 'aviation', eventTime: time, sourceTime: time, fetchedAt: time,
+    live: true, stale: false, fallback: false, edges: [],
+    nodes: [{
+      id: 'lod-aircraft', kind: 'aircraft',
+      position: { latitude: 40, longitude: -74, heightMeters: 3000 },
+      properties: { eventType: 'aircraft', render3d: true, trackDegrees: 90, truthState: 'observed', observedAt: time },
+    }],
+  } as any);
+  const entity = dataSources.get(0).entities.getById('lod-aircraft');
+  const modelVisible = () => entity.model.show?.getValue(JulianDate.now()) ?? true;
+  try {
+    expect(modelVisible()).toBe(false);
+    expect(entity.show).toBe(true);
+    expect(entity.point).toBeDefined();
+    camera.positionWC = Cartesian3.fromDegrees(-74, 40, 10000);
+    expect(modelVisible()).toBe(true);
+    camera.positionWC = Cartesian3.fromDegrees(-74, 40, 30000000);
+    expect(modelVisible()).toBe(false);
+    expect(entity.show).toBe(true);
+  } finally {
+    layer.destroy(); dataSources.destroy(); primitives.destroy();
+  }
+});
