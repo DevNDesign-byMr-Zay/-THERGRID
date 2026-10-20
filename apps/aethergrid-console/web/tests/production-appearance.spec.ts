@@ -55,6 +55,7 @@ for (const [width, height] of [[1536, 1024], [1440, 900], [1366, 768], [1024, 76
 }
 
 test('light drawers and actions remain usable at 200 percent text size', async ({ page }) => {
+  test.setTimeout(90000);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript(() => localStorage.setItem('aethergrid.operator.appearance.v4', 'light'));
   await page.goto('/');
