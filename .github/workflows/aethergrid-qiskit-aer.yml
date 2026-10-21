@@ -1,0 +1,35 @@
+name: aethergrid/qiskit-aer
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/aethergrid-qiskit-aer.yml"
+      - "apps/aethergrid-console/qiskit-aer-bridge.py"
+      - "apps/aethergrid-console/qiskit-aer-runtime.mjs"
+      - "apps/aethergrid-console/requirements-qiskit.txt"
+      - "tests/test_qiskit_aer_bridge.py"
+      - "tests/aethergrid-qiskit-bridge.test.mjs"
+      - "apps/aethergrid-console/server.mjs"
+      - "apps/aethergrid-console/web/src/components/QuantumPanel.tsx"
+      - "apps/aethergrid-console/web/src/services/quantum-client.ts"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-aer-simulator:
+    name: real-aer-simulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+
+      - name: Use Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Execute actual Aer bridge tests
+        run: python -m unittest discover -s tests -p 'test_qiskit_aer_bridge.py' -v
