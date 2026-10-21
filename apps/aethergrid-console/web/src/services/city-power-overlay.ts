@@ -30,6 +30,7 @@ interface CityBuilding {
   buildingColor?: string | null;
   roofShape?: string | null;
   roofHeightM?: number | null;
+  roofHeightSource?: string | null;
   roofMaterial?: string | null;
   roofColor?: string | null;
   footprint?: readonly (readonly [number, number])[];
@@ -314,6 +315,7 @@ function cityMeshToBuildingOverlay(
           roofDirection: building.roofDirection ?? '',
           roofShape: building.roofShape ?? '',
           roofHeightM: building.roofHeightM ?? 0,
+          roofHeightSource: building.roofHeightSource ?? 'unknown',
           roofMaterial: building.roofMaterial ?? '',
           roofColor: building.roofColor ?? '',
           centroidLatitude: envelopeCenter?.latitude ?? null,
@@ -788,5 +790,34 @@ export async function loadCoordinateSpatialBundle(
     'coordinate spatial bundle request',
     signal
   );
+  return cityMeshToSpatialBundle(mesh);
+}
+
+
+/**
+ * Fetch a single 450m radius camera tile through the existing authenticated
+ * geospatial point endpoint. Never admit synthetic fallback geometry.
+ */
+export async function loadCameraCityTile(
+  latitude: number,
+  longitude: number,
+  signal?: AbortSignal
+): Promise<CitySpatialBundle> {
+  const query = new URLSearchParams({
+    lat: String(latitude),
+    lon: String(longitude),
+    name: 'Camera Tile',
+    radiusM: '450',
+    spatial: '1',
+    tile: '1'
+  });
+  const mesh = await cityMeshRequest(
+    `/api/aethergrid/geospatial/point?${query.toString()}`,
+    'camera city tile request',
+    signal
+  );
+  if (mesh.source?.live !== true || mesh.source?.provider === 'local-fallback') {
+    throw new Error('Live mapped city tile unavailable; fallback withheld');
+  }
   return cityMeshToSpatialBundle(mesh);
 }

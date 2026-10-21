@@ -90,7 +90,7 @@ function computeBuildingGeometry(area: SpatialOverlayArea): BuildingGeometry | n
   const validRoofHeight = !holes.length && Number.isFinite(roofHeightM) && roofHeightM > 0 && roofHeightM < topM - baseM;
   const refine = validRoofHeight && shape === 'pyramidal' && convex && Number.isFinite(roofHeightM) && roofHeightM > 0 && roofHeightM < topM - baseM;
   const rectangularFaces = validRoofHeight ? rectangularRoof(ring, shape, topM - roofHeightM, topM, area.properties?.roofOrientation) : [];
-  const directional = validRoofHeight && shape === 'skillion'
+  const directional = validRoofHeight && shape === 'skillion' && area.properties?.roofHeightSource === 'roof:height'
     ? skillionRoof(ring, topM - roofHeightM, topM, area.properties?.roofDirection)
     : null;
   const wallTopM = refine || rectangularFaces.length || directional ? topM - roofHeightM : topM;

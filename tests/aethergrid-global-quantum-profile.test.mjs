@@ -260,6 +260,7 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
   assert.equal(directionalRoof?.roofDirection, 'E');
   assert.equal(directionalRoof?.roofShape, 'skillion');
   assert.equal(directionalRoof?.roofHeightM, 3);
+  assert.equal(directionalRoof?.roofHeightSource, 'roof:height');
   assert.equal(skylineTower.roofShape, 'pyramidal');
   assert.equal(skylineTower.roofHeightM, 20);
   assert.equal(skylineTower.buildingMaterial, 'glass');

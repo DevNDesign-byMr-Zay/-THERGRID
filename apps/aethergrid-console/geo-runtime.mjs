@@ -130,6 +130,13 @@ function numericRoofHeight(tags = {}) {
   return 0;
 }
 
+function roofHeightSource(tags = {}) {
+  const explicit = parseMetricHeight(tags['roof:height']);
+  if (Number.isFinite(explicit) && explicit >= 0) return 'roof:height';
+  const levels = Number.parseFloat(String(tags['roof:levels'] || ''));
+  return Number.isFinite(levels) && levels > 0 ? 'roof:levels' : 'inferred';
+}
+
 function numericVoltage(value) {
   const candidates = String(value || '')
     .split(';')
@@ -559,6 +566,7 @@ function parseOverpassBuildings(payload, city) {
         roofDirection: String(element.tags?.['roof:direction'] || ''),
         roofShape: String(element.tags?.['roof:shape'] || ''),
         roofHeightM: numericRoofHeight(element.tags),
+        roofHeightSource: roofHeightSource(element.tags),
         roofLevels: Number(element.tags?.['roof:levels']) || null,
         roofMaterial: String(element.tags?.['roof:material'] || ''),
         roofColor: String(element.tags?.['roof:colour'] || ''),

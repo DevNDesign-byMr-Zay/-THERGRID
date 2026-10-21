@@ -138,6 +138,14 @@ This is a source-backed digital-twin representation, not photogrammetry. Where o
 Live OpenStreetMap buildings with `roof:shape=skillion`, a supported `roof:direction` azimuth (degrees clockwise from north or a cardinal direction), and a valid `roof:height` now render a single sloping roof with closed upper wall faces. Those are reconstructed from the mapped footprint and tags, not surveyed roof meshes. Unsupported or absent direction/height, or footprints with courtyards, retain labeled simple massing rather than guessing a slope. Previously bundled district snapshots remain unchanged; they will need a separate OpenStreetMap refresh and repackaging before this new tag can appear in the offline HTML.
 
 Settings now include **Dark**, **Light**, and **System** appearance modes. The selected mode persists locally and changes the semantic UI plus WebGL scene palette.
+## Camera-driven live city streaming
+
+In LIVE city mode with the authenticated local backend, ÆTHERGRID preserves the central city snapshot while sampling camera-adjacent OpenStreetMap geometry. This is a bounded progressive district expansion, **not** a whole-city one-to-one surveyed twin.
+
+Camera positions snap to 650m cells, no farther than 2.6km from the selected district origin and only below 4km altitude. Two stable samples trigger a 450m-radius request using the existing authenticated `/api/aethergrid/geospatial/point?spatial=1` endpoint. At most four adjacent tiles stay loaded; source feature identities and power-line segments are deduplicated, and per-feature tile provenance is retained. Failure backs off for 30 seconds and never substitutes synthetic buildings.
+
+The `file://` ZIP view makes **no** progressive backend requests and continues to render the original bundled datasets. Non-live time modes do not fetch fresh city geometry. Returning to the global view cancels any in-flight camera tile request.
+
 ## v2.7 live city animation and operational context
 
 The GLOBAL workspace now animates current source context instead of applying the same ambient motion to every city.

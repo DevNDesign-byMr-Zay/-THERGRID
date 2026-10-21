@@ -50,15 +50,22 @@ export function skillionRoof(
     const fraction = t <= 1e-10 ? 0 : t >= 1 - 1e-10 ? 1 : t;
     return { ...point, heightMeters: baseOfRoofM + fraction * (apexM - baseOfRoofM) };
   });
-  const wallFaces = roof.flatMap((first, index) => {
-    const second = roof[(index + 1) % roof.length];
+  // WallGeometry preserves input order and culls back faces. Exterior walls
+  // must run counterclockwise even when the mapped footprint runs clockwise.
+  const twiceArea = ring.reduce((sum, point, index) => {
+    const next = ring[(index + 1) % ring.length];
+    return sum + point.longitude * next.latitude - next.longitude * point.latitude;
+  }, 0);
+  const wallRing = twiceArea < 0 ? [...roof].reverse() : roof;
+  const wallFaces = wallRing.flatMap((first, index) => {
+    const second = wallRing[(index + 1) % wallRing.length];
     if (
       first.heightMeters <= baseOfRoofM + 1e-6 &&
       second.heightMeters <= baseOfRoofM + 1e-6
     ) return [];
     return [[
-      { ...ring[index], heightMeters: baseOfRoofM },
-      { ...ring[(index + 1) % ring.length], heightMeters: baseOfRoofM },
+      { ...first, heightMeters: baseOfRoofM },
+      { ...second, heightMeters: baseOfRoofM },
       second,
       first
     ]];

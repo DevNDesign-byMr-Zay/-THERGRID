@@ -2,11 +2,11 @@ import { expect, test } from '@playwright/test';
 import { buildingGeometry, buildingEdges } from '../src/renderer/overlays/building-geometry';
 import { cityMeshToSpatialBundle } from '../src/services/city-power-overlay';
 import { NetworkOverlayLayer } from '../src/renderer/cesium/network-overlay-layer';
-import { DataSourceCollection, PolygonGeometry, PrimitiveCollection, WallGeometry } from 'cesium';
+import { Cartesian3, DataSourceCollection, PolygonGeometry, PrimitiveCollection, WallGeometry } from 'cesium';
 
 const rectangle = [[0,0],[.002,0],[.002,.001],[0,.001]].map(([longitude, latitude]) => ({longitude, latitude}));
 const area = (roofShape: string) => ({id: 'mapped-roof', kind: 'building' as const, positions: rectangle,
-  properties: {heightM: 30, minHeightM: 4, heightSource: 'height', roofShape, roofHeightM: 6}});
+  properties: {heightM: 30, minHeightM: 4, heightSource: 'height', roofShape, roofHeightM: 6, roofHeightSource: 'roof:height'}});
 
 for (const roofShape of ['gabled', 'hipped']) {
   test(`${roofShape} mapped rectangular roofs preserve height and a closed surface`, () => {
@@ -118,7 +118,7 @@ test('mapped skillion roof uses observed east-facing slope and seals rising wall
   const mesh = {city: {id: 'sloped-district', lat: 40, lon: -74}, buildings: [{
     id: 'slope-with-evidence', heightM: 30, minHeightM: 4, heightSource: 'height',
     footprint: [[0,0],[100,0],[100,50],[0,50]],
-    roofShape: 'skillion', roofHeightM: 6, roofDirection: 'E', roofMaterial: 'metal'
+    roofShape: 'skillion', roofHeightM: 6, roofHeightSource: 'roof:height', roofDirection: 'E', roofMaterial: 'metal'
   }]};
   const mapped = cityMeshToSpatialBundle(mesh).semantics.find(s => s.layerId === 'buildings')!;
   expect(mapped.areas![0].properties?.roofDirection).toBe('E');
@@ -165,4 +165,43 @@ test('directional skillion preserves north-south fall and rejects courtyard reco
   expect(courtyard.holes).toHaveLength(1);
   expect(courtyard.roofFaces).toHaveLength(0);
   expect(courtyard.wallTopM).toBe(30);
+});
+
+
+test('skillion upper facades face outside for either footprint winding', async () => {
+  for (const positions of [rectangle, [...rectangle].reverse()]) {
+    const primitives = new PrimitiveCollection(), sources = new DataSourceCollection();
+    const layer = new NetworkOverlayLayer({ dataSources: sources, scene: { primitives, requestRender() {} } } as any);
+    await Promise.resolve();
+    try {
+      layer.apply({ id: 'winding', layerId: 'buildings', eventTime: '2026-10-21T00:00:00Z', nodes: [], edges: [],
+        areas: [{ ...area('skillion'), positions, properties: { ...area('skillion').properties, roofDirection: 'E' } }] });
+      const center = Cartesian3.fromDegrees(.001, .0005, 27);
+      for (const wall of primitives.get(0).geometryInstances.slice(2)) {
+        const geometry = WallGeometry.createGeometry(wall.geometry)!;
+        const normal = Cartesian3.fromArray(geometry.attributes.normal.values);
+        const vertex = Cartesian3.fromArray(geometry.attributes.position.values);
+        expect(Cartesian3.dot(normal, Cartesian3.subtract(vertex, center, new Cartesian3())),
+          'closed primitives must keep exterior-facing upper facades').toBeGreaterThan(0);
+      }
+    } finally { layer.destroy(); sources.destroy(); primitives.destroy(); }
+  }
+});
+
+test('skillion refinement requires explicit roof-height provenance', () => {
+  for (const roofHeightSource of ['roof:levels', 'inferred', undefined]) {
+    const geometry = buildingGeometry({ ...area('skillion'), properties: {
+      ...area('skillion').properties, roofDirection: 'E', roofHeightSource
+    } })!;
+    expect(geometry.roofRefinement).toBe('simple-massing');
+    expect(geometry.wallTopM).toBe(30);
+    expect(geometry.limitation).toContain('unsupported');
+  }
+  const mapped = cityMeshToSpatialBundle({ city: { id: 'height-provenance', lat: 40, lon: -74 }, buildings: [{
+    id: 'levels-only', footprint: [[0,0],[100,0],[100,50],[0,50]], heightM: 30, heightSource: 'height',
+    roofShape: 'skillion', roofHeightM: 3.2, roofHeightSource: 'roof:levels', roofDirection: 'E'
+  }] } as any);
+  const mappedArea = mapped.semantics.find(s => s.layerId === 'buildings')!.areas![0];
+  expect(mappedArea.properties?.roofHeightSource).toBe('roof:levels');
+  expect(buildingGeometry(mappedArea)!.roofRefinement).toBe('simple-massing');
 });

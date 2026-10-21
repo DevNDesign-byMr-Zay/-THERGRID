@@ -1409,19 +1409,22 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
     }
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/geospatial/point') {
+      const backgroundTile = url.searchParams.get('tile') === '1';
       const baseMesh = await geoRuntime.pointMesh(
         {
           lat: url.searchParams.get('lat'),
           lon: url.searchParams.get('lon'),
           name: url.searchParams.get('name') || 'Coordinate Explorer',
-          radiusM: url.searchParams.get('radiusM') || 900,
+          radiusM: backgroundTile ? 450 : url.searchParams.get('radiusM') || 900,
         },
         {
           force: url.searchParams.get('force') === '1',
         },
       );
       if (url.searchParams.get('spatial') === '1') {
-        activeCityMesh = baseMesh;
+        // Streaming requests are observational and must not change the
+        // operator's selected city or its downstream analysis context.
+        if (!backgroundTile) activeCityMesh = baseMesh;
         return json(response, 200, baseMesh);
       }
       const [terrain, environment, liveContext] = await Promise.all([
