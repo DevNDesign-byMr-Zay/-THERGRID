@@ -11,7 +11,10 @@ test('local optimization HTTP endpoint computes actual CPU reference without clo
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         linear: [-2, -1],
-        quadratic: [[0, 3], [0, 0]],
+        quadratic: [
+          [0, 3],
+          [0, 0],
+        ],
         iterations: 200,
         seed: 42,
       }),
