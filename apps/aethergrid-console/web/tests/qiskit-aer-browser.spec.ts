@@ -7,6 +7,11 @@ test('compiled Quantum workspace truthfully presents optional Qiskit Aer and kee
     .getByRole('button', { name: 'QUANTUM', exact: true }).click();
   await page.getByRole('button', { name: 'QISKIT AER', exact: true }).click();
 
+  const header = page.locator('.quantum-panel .quantum-head');
+  await expect(header.locator('strong')).toHaveText('QISKIT AER SIMULATION');
+  await expect(header.locator('em')).toContainText('SIMULATOR');
+  await expect(header).not.toContainText('D-WAVE ANNEALING');
+
   const area = page.locator('.aer-workspace');
   await expect(area).toContainText('CPU CIRCUIT SIMULATION');
   await expect(area).toContainText('not proof of optimality');
