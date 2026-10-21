@@ -119,7 +119,15 @@ test('portable local annealing remains compatible with repository baseline witho
 test('all exact states reproduce their returned objective with independent QUBO evaluator', () => {
   const cases = [
     { linear: [2], seed: 0 },
-    { linear: [-3, 2, -1], quadratic: [[0, 3, -2], [0, 0, 4], [0, 0, 0]], seed: 12 },
+    {
+      linear: [-3, 2, -1],
+      quadratic: [
+        [0, 3, -2],
+        [0, 0, 4],
+        [0, 0, 0],
+      ],
+      seed: 12,
+    },
     { linear: [0, 0, 0, 0], seed: 123 },
     { linear: [-1, -1, -1, -1, -1], seed: 11 },
   ];
