@@ -4,7 +4,10 @@ import { runLocalQuboComparison } from '../apps/aethergrid-console/local-optimiz
 
 const small = {
   linear: [-2, -1],
-  quadratic: [[0, 3], [0, 0]],
+  quadratic: [
+    [0, 3],
+    [0, 0],
+  ],
   seed: 42,
   iterations: 200,
 };
@@ -36,7 +39,11 @@ test('identical input and seed produce identical results and receipts', () => {
 test('ties use stable all-zero exact solution, including zero objective', () => {
   const result = runLocalQuboComparison({
     linear: [0, 0, 0],
-    quadratic: [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+    quadratic: [
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0],
+    ],
     seed: 7,
     iterations: 10,
   });
@@ -60,27 +67,37 @@ test('exact reference is explicitly skipped beyond safe bound without claiming o
 
 test('invalid, ambiguous, unbounded and non-finite QUBO inputs are rejected', () => {
   const invalid = [
-    {linear: []},
-    {linear: [Number.NaN]},
-    {linear: Array(65).fill(0)},
-    {linear: [1, 2], quadratic: [[0, 0], [4, 0]]},
-    {linear: [1], quadratic: [[2]]},
-    {linear: [1], quadratic: [[Number.POSITIVE_INFINITY]]},
-    {linear: [1, 2], quadratic: [[0, 1]]},
-    {linear: [1], iterations: 0},
-    {linear: [1], iterations: 10001},
-    {linear: [1], seed: 1.5},
-    {linear: [1], seed: -1},
-    {linear: [1], seed: 4294967296},
+    { linear: [] },
+    { linear: [Number.NaN] },
+    { linear: Array(65).fill(0) },
+    {
+      linear: [1, 2],
+      quadratic: [
+        [0, 0],
+        [4, 0],
+      ],
+    },
+    { linear: [1], quadratic: [[2]] },
+    { linear: [1], quadratic: [[Number.POSITIVE_INFINITY]] },
+    { linear: [1, 2], quadratic: [[0, 1]] },
+    { linear: [1], iterations: 0 },
+    { linear: [1], iterations: 10001 },
+    { linear: [1], seed: 1.5 },
+    { linear: [1], seed: -1 },
+    { linear: [1], seed: 4294967296 },
   ];
   for (const input of invalid) {
-    assert.throws(() => runLocalQuboComparison(input), {name: 'TypeError'}, JSON.stringify(input));
+    assert.throws(
+      () => runLocalQuboComparison(input),
+      { name: 'TypeError' },
+      JSON.stringify(input),
+    );
   }
 });
 
 test('objective receipts differ when the mathematical problem changes', () => {
-  const a = runLocalQuboComparison({linear: [-2, 1],seed: 1,iterations: 20});
-  const b = runLocalQuboComparison({linear: [-2, 2],seed: 1,iterations: 20});
-  assert.notEqual(a.inputReceipt,b.inputReceipt);
-  assert.notEqual(a.receipt,b.receipt);
+  const a = runLocalQuboComparison({ linear: [-2, 1], seed: 1, iterations: 20 });
+  const b = runLocalQuboComparison({ linear: [-2, 2], seed: 1, iterations: 20 });
+  assert.notEqual(a.inputReceipt, b.inputReceipt);
+  assert.notEqual(a.receipt, b.receipt);
 });
