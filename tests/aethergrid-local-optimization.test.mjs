@@ -115,3 +115,48 @@ test('portable local annealing remains compatible with repository baseline witho
   assert.deepEqual(result.annealing.bits, [...reference.bits]);
   assert.equal(result.annealing.objective, reference.objective);
 });
+
+test('all exact states reproduce their returned objective with independent QUBO evaluator', () => {
+  const cases = [
+    { linear: [2], seed: 0 },
+    { linear: [-3, 2, -1], quadratic: [[0, 3, -2], [0, 0, 4], [0, 0, 0]], seed: 12 },
+    { linear: [0, 0, 0, 0], seed: 123 },
+    { linear: [-1, -1, -1, -1, -1], seed: 11 },
+  ];
+  for (const problem of cases) {
+    const result = runLocalQuboComparison(problem);
+    const size = problem.linear.length;
+    const quadratic =
+      problem.quadratic ?? Array.from({ length: size }, () => Array(size).fill(0));
+    let lowest = Infinity;
+    for (let mask = 0; mask < 2 ** size; mask += 1) {
+      const bits = problem.linear.map((_, index) => (mask >>> index) & 1);
+      let candidate = 0;
+      for (let i = 0; i < size; i += 1) {
+        candidate += problem.linear[i] * bits[i];
+        for (let j = i + 1; j < size; j += 1) {
+          candidate += quadratic[i][j] * bits[i] * bits[j];
+        }
+      }
+      lowest = Math.min(lowest, candidate);
+    }
+    assert.equal(result.exact.objective, lowest);
+    assert.ok(result.annealing.objective >= lowest);
+    assert.equal(result.exact.statesEvaluated, 2 ** size);
+  }
+});
+
+test('receipt fingerprints include problem seed, solver iterations, and classical-execution boundary', () => {
+  const seedChange = runLocalQuboComparison({ ...small, seed: 43 });
+  const iterationChange = runLocalQuboComparison({ ...small, iterations: 201 });
+  const original = runLocalQuboComparison(small);
+  assert.notEqual(original.inputReceipt, seedChange.inputReceipt);
+  assert.notEqual(original.inputReceipt, iterationChange.inputReceipt);
+  assert.notEqual(original.receipt, seedChange.receipt);
+  assert.notEqual(original.receipt, iterationChange.receipt);
+  for (const result of [original, seedChange, iterationChange]) {
+    assert.equal(result.executionType, 'classical-cpu');
+    assert.equal(result.hardwareSubmitted, false);
+    assert.equal(result.hardwareExecuted, false);
+  }
+});
