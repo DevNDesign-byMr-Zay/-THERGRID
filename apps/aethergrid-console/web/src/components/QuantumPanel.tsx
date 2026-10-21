@@ -10,18 +10,20 @@ import {
   loadQuantumJobs,
   loadQuantumRuntime,
   submitBellSampler,
+  runLocalQuboComparison,
   submitDwaveJob,
   type DwaveDiscovery,
   type DwaveJobState,
   type DwaveProblemType,
   type DwaveReceipt,
   type DwaveSolver,
+  type LocalQuboResult,
   type QuantumBackend,
   type QuantumJob,
   type QuantumRuntimeSummary
 } from '../services/quantum-client';
 
-type QuantumWorkspace = 'gate-model' | 'annealing';
+type QuantumWorkspace = 'gate-model' | 'annealing' | 'local-optimization';
 
 interface JsonObjectParse {
   value: Record<string, unknown> | null;
@@ -73,6 +75,10 @@ export function QuantumPanel() {
   const [backend, setBackend] = useState('');
   const [activeJob, setActiveJob] = useState<QuantumJob | null>(null);
   const [running, setRunning] = useState(false);
+  const [localProblemJson, setLocalProblemJson] = useState(JSON.stringify({ linear: [-2, -1], quadratic: [[0, 3], [0, 0]], seed: 42, iterations: 500 }, null, 2));
+  const [localResult, setLocalResult] = useState<LocalQuboResult | null>(null);
+  const [localRunning, setLocalRunning] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
 
@@ -107,6 +113,7 @@ export function QuantumPanel() {
       ) ?? null,
     [dwaveSolvers, dwaveSolver]
   );
+  const localProblem = useMemo(() => parseJsonObject(localProblemJson, false), [localProblemJson]);
   const parsedProblem = useMemo(
     () => parseJsonObject(dwaveProblemJson, false),
     [dwaveProblemJson]
@@ -288,6 +295,20 @@ export function QuantumPanel() {
     }
   };
 
+  const runLocalComparison = async () => {
+    if (!localProblem.value || localRunning) return;
+    setLocalRunning(true);
+    setLocalError(null);
+    setLocalResult(null);
+    try {
+      setLocalResult(await runLocalQuboComparison(localProblem.value));
+    } catch (runError) {
+      setLocalError(runError instanceof Error ? runError.message : String(runError));
+    } finally {
+      setLocalRunning(false);
+    }
+  };
+
   const submitAnnealingProblem = async () => {
     if (!canSubmitDwave || !parsedProblem.value || !parsedParameters.value) {
       return;
@@ -330,13 +351,17 @@ export function QuantumPanel() {
           <strong>
             {workspace === 'gate-model'
               ? runtime?.provider?.toUpperCase() || 'LOADING'
-              : 'D-WAVE ANNEALING'}
+              : workspace === 'local-optimization'
+                ? 'LOCAL QUBO OPTIMIZATION'
+                : 'D-WAVE ANNEALING'}
           </strong>
         </span>
         {workspace === 'gate-model' ? (
           <em className={hardware && configured ? 'hardware' : 'simulator'}>
             {hardware && configured ? 'QPU READY' : 'SIMULATOR'}
           </em>
+        ) : workspace === 'local-optimization' ? (
+          <em className="simulator">CPU · FREE</em>
         ) : (
           <em className={dwaveConfigured ? 'hardware' : 'simulator'}>
             {dwaveConfigured ? 'SAPI CONNECTED' : 'UNCONFIGURED'}
@@ -358,6 +383,13 @@ export function QuantumPanel() {
           onClick={() => setWorkspace('annealing')}
         >
           ANNEAL / D-WAVE
+        </button>
+        <button
+          type="button"
+          className={workspace === 'local-optimization' ? 'active' : ''}
+          onClick={() => setWorkspace('local-optimization')}
+        >
+          LOCAL OPTIMIZE
         </button>
       </div>
 
@@ -461,6 +493,50 @@ export function QuantumPanel() {
             )}
           </details>
         </>
+      ) : workspace === 'local-optimization' ? (
+        <fieldset className="dwave-workspace local-qubo-workspace">
+          <legend>ZERO-COST QUBO · NOT QUANTUM HARDWARE</legend>
+          <p className="dwave-boundary">
+            Run deterministic simulated annealing against an independent EXACT CPU REFERENCE
+            for up to 16 binary variables. Larger bounded problems keep the classical result
+            but make no optimality claim. This does not submit any cloud or hardware jobs.
+          </p>
+          <label className="dwave-json-field">
+            <span>UPPER-TRIANGLE QUBO INPUT</span>
+            <textarea
+              value={localProblemJson}
+              onChange={(event) => setLocalProblemJson(event.currentTarget.value)}
+              rows={8}
+              spellCheck={false}
+            />
+            <small className={localProblem.error ? 'invalid' : 'valid'}>
+              {localProblem.error || 'VALID JSON · CPU-ONLY PROBLEM INPUT'}
+            </small>
+          </label>
+          <button
+            className="quantum-run"
+            type="button"
+            disabled={localRunning || !localProblem.value}
+            onClick={() => void runLocalComparison()}
+          >
+            {localRunning ? 'SOLVING LOCALLY…' : 'COMPARE LOCAL QUBO SOLVERS'}
+          </button>
+          {localError ? <div className="agent-error" role="alert">{localError}</div> : null}
+          {localResult ? (
+            <div className="quantum-job-state" data-local-qubo-result="complete">
+              <span>SIMULATED ANNEALING · {localResult.annealing.backend}</span>
+              <strong>{localResult.annealing.objective}</strong>
+              <small>SEED {localResult.annealing.seed} · {localResult.annealing.iterations} ITERATIONS</small>
+              <span>EXACT CPU REFERENCE</span>
+              <strong>{localResult.exact?.objective ?? 'NOT EVALUATED'}</strong>
+              <small>{localResult.exact?.optimalityProven ? 'OPTIMUM PROVEN' : 'OPTIMALITY NOT PROVEN'}</small>
+              <small>OBJECTIVE GAP · {localResult.objectiveGap ?? 'UNKNOWN'}</small>
+              <small>INPUT EVIDENCE · {localResult.inputReceipt.slice(0, 16)}</small>
+              <code>RESULT RECEIPT · {localResult.receipt}</code>
+              <small>CLASSICAL CPU · NO QUANTUM HARDWARE SUBMITTED OR EXECUTED</small>
+            </div>
+          ) : null}
+        </fieldset>
       ) : (
         <fieldset className="dwave-workspace" disabled={DWAVE_ON_HOLD}>
           <legend>D-WAVE ON HOLD · NON-EXECUTABLE</legend>
