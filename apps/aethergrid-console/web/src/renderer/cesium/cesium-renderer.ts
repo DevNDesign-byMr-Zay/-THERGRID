@@ -75,7 +75,17 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
   cameraSnapshot(): SpatialCameraSnapshot | null {
     if (!this.#viewer || !this.#ready) return null;
     const camera = this.#viewer.camera, position = camera.positionCartographic;
-    return { projection: 'geocentric', latitude: CesiumMath.toDegrees(position.latitude), longitude: CesiumMath.toDegrees(position.longitude),
+    const canvas = this.#viewer.canvas;
+    const ground = (x: number, y: number) => {
+      const cartesian = camera.pickEllipsoid(new Cartesian2(x, y), this.#viewer!.scene.globe.ellipsoid);
+      if (!cartesian) return null;
+      const point = this.#viewer!.scene.globe.ellipsoid.cartesianToCartographic(cartesian);
+      return {latitude: CesiumMath.toDegrees(point.latitude), longitude: CesiumMath.toDegrees(point.longitude)};
+    };
+    const focus = ground(canvas.clientWidth / 2, canvas.clientHeight / 2);
+    const corners = [[0,0], [canvas.clientWidth,0], [canvas.clientWidth,canvas.clientHeight], [0,canvas.clientHeight]]
+      .map(([x,y]) => ground(x,y));
+    return { projection: 'geocentric', focus: focus ?? undefined, footprint: corners.every(Boolean) ? corners as NonNullable<typeof focus>[] : undefined, latitude: CesiumMath.toDegrees(position.latitude), longitude: CesiumMath.toDegrees(position.longitude),
       heightMeters: position.height, headingDegrees: CesiumMath.toDegrees(camera.heading), pitchDegrees: CesiumMath.toDegrees(camera.pitch), rollDegrees: CesiumMath.toDegrees(camera.roll) };
   }
 

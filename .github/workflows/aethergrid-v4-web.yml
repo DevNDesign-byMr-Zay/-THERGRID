@@ -3,9 +3,9 @@ name: aethergrid/v4-web
 on:
   pull_request:
     paths:
-      - "apps/aethergrid-console/web/**"
-      - "tests/aethergrid-v4-web-foundation.test.mjs"
-      - ".github/workflows/aethergrid-v4-web.yml"
+      - 'apps/aethergrid-console/web/**'
+      - 'tests/aethergrid-v4-web-foundation.test.mjs'
+      - '.github/workflows/aethergrid-v4-web.yml'
   workflow_dispatch:
 
 permissions:
@@ -17,7 +17,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [offline, operator, appearance, city-live-maps, temporal, tools, specialists, local-runtime]
+        suite:
+          [
+            offline,
+            operator,
+            appearance,
+            city-live-maps,
+            temporal,
+            tools,
+            specialists,
+            local-runtime,
+          ]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     defaults:
@@ -58,67 +68,67 @@ jobs:
       - name: Verify authenticated operator sessions and recorded playback
         if: matrix.suite == 'operator'
         env:
-          AETHERGRID_TEST_CANONICAL: "1"
+          AETHERGRID_TEST_CANONICAL: '1'
         run: npx playwright test tests/session-history.spec.ts --workers=1 --reporter=line
 
       - name: Verify credential-free globe and 3D city mesh
         if: matrix.suite == 'operator'
         env:
-          AETHERGRID_TEST_CANONICAL: "1"
+          AETHERGRID_TEST_CANONICAL: '1'
         run: npx playwright test tests/tokenless-spatial.spec.ts --workers=1 --reporter=line
 
       - name: Verify compact navigation drawer focus and keyboard containment
         if: matrix.suite == 'operator'
         env:
-          AETHERGRID_TEST_CANONICAL: "1"
+          AETHERGRID_TEST_CANONICAL: '1'
         run: npx playwright test tests/command-center.spec.ts --grep "compact drawers contain focus and switch exclusively" --output=test-results/drawer-focus --workers=1 --reporter=line
 
       - name: Verify production shell, appearance and source truth
         if: matrix.suite == 'appearance'
         env:
-          AETHERGRID_TEST_CANONICAL: "1"
+          AETHERGRID_TEST_CANONICAL: '1'
         run: npx playwright test 'tests/production-.*\.spec\.ts' --output=test-results/production-shell --workers=1 --reporter=line
 
       - name: Verify source geometry and renderer fallback contracts
         if: matrix.suite == 'city-live-maps'
         env:
-          AETHERGRID_TEST_CANONICAL: "1"
-        run: npx playwright test tests/city-geometry.spec.ts tests/city-fidelity.spec.ts tests/live-maps.spec.ts --grep-invert compiled --output=test-results/city-contracts --workers=1 --reporter=line
+          AETHERGRID_TEST_CANONICAL: '1'
+        run: npx playwright test tests/city-geometry.spec.ts tests/city-fidelity.spec.ts tests/live-maps.spec.ts tests/city-tile-stream.spec.ts tests/city-viewport-stream.spec.ts --grep-invert compiled --output=test-results/city-contracts --workers=1 --reporter=line
 
       - name: Verify compiled city picking and native renderer fallback
         if: matrix.suite == 'city-live-maps'
         env:
-          AETHERGRID_TEST_CANONICAL: "1"
-        run: npx playwright test tests/city-geometry.spec.ts tests/live-map-browser.spec.ts --grep compiled --output=test-results/city-geometry --workers=1 --reporter=line
+          AETHERGRID_TEST_CANONICAL: '1'
+        run: npx playwright test tests/city-geometry.spec.ts tests/live-map-browser.spec.ts tests/city-viewport-browser.spec.ts --grep compiled --output=test-results/city-geometry --workers=1 --reporter=line
 
       - name: Verify source-valid timeline and unavailable history
         if: matrix.suite == 'temporal'
         env:
-          AETHERGRID_TEST_CANONICAL: "1"
+          AETHERGRID_TEST_CANONICAL: '1'
         run: npx playwright test tests/operational-timeline.spec.ts tests/forecast-frames.spec.ts tests/operational-timeline-browser.spec.ts --output=test-results/operational-timeline --workers=1 --reporter=line
 
       - name: Verify spatial presentations, modeled replay, area and scene contracts
         if: matrix.suite == 'temporal'
         env:
-          AETHERGRID_TEST_CANONICAL: "1"
+          AETHERGRID_TEST_CANONICAL: '1'
         run: npx playwright test tests/spatial-presentations.spec.ts tests/modeled-replay.spec.ts tests/spatial-area.spec.ts tests/spatial-scene.spec.ts tests/surface-picking.spec.ts tests/native-selection.spec.ts tests/renderer-transition.spec.ts tests/render-frame.spec.ts --output=test-results/spatial-contracts --workers=1 --reporter=line
 
       - name: Verify idle GPU rendering and camera input under reduced motion
         if: matrix.suite == 'temporal'
         env:
-          AETHERGRID_TEST_CANONICAL: "1"
+          AETHERGRID_TEST_CANONICAL: '1'
         run: npx playwright test tests/renderer-demand-browser.spec.ts --output=test-results/renderer-demand --workers=1 --reporter=line
 
       - name: Verify compiled spatial tools and source comparisons
         if: matrix.suite == 'tools'
         env:
-          AETHERGRID_TEST_CANONICAL: "1"
+          AETHERGRID_TEST_CANONICAL: '1'
         run: npx playwright test tests/spatial-tools-browser.spec.ts --output=test-results/spatial-tools --workers=1 --reporter=line
 
       - name: Verify specialist receipts, D-Wave hold and reduced-motion contracts
         if: matrix.suite == 'specialists'
         env:
-          AETHERGRID_TEST_CANONICAL: "1"
+          AETHERGRID_TEST_CANONICAL: '1'
         run: npx playwright test tests/specialist-integration.spec.ts tests/specialist-workflow.spec.ts tests/quantum-hold.spec.ts tests/weather-motion.spec.ts --output=test-results/specialist-contracts --workers=1 --reporter=line
 
       - name: Verify compiled specialists, operational pilot and responsive disclosures
@@ -130,8 +140,8 @@ jobs:
       - name: Verify actual local TEAM runtime and offline recovery
         if: matrix.suite == 'local-runtime'
         env:
-          AETHERGRID_TEST_CANONICAL: "1"
-          AETHERGRID_AI_PROVIDER: "local"
+          AETHERGRID_TEST_CANONICAL: '1'
+          AETHERGRID_AI_PROVIDER: 'local'
         run: |
           npx playwright test tests/merged-runtime-browser.spec.ts --output=test-results/merged-runtime --workers=1 --reporter=line
           npx playwright test tests/command-center.spec.ts --grep "TEAM retains real|specialist conversations" --output=test-results/existing-runtime --workers=1 --reporter=line
@@ -216,8 +226,8 @@ jobs:
 
       - name: Verify actual fifteen-minute modeled replay
         env:
-          AETHERGRID_TEST_CANONICAL: "1"
-          AETHERGRID_LONG_ACCEPTANCE: "1"
+          AETHERGRID_TEST_CANONICAL: '1'
+          AETHERGRID_LONG_ACCEPTANCE: '1'
         run: |
           export AETHERGRID_TEST_CHROMIUM="$(node --input-type=module -e 'import { chromium } from "@playwright/test"; process.stdout.write(chromium.executablePath());')"
           npx playwright test tests/sustained-replay.spec.ts --output=test-results/sustained-replay --workers=1 --reporter=line

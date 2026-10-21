@@ -6144,7 +6144,15 @@ button {
 
 .dwave-workspace {
   display: grid;
+  min-inline-size: 0;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
+}
+
+.local-qubo-workspace .quantum-job-state {
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .dwave-json-field {
