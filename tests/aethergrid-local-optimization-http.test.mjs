@@ -41,6 +41,13 @@ test('local optimization HTTP endpoint computes actual CPU reference without clo
     const error = await bad.json();
     assert.equal(error.error, 'invalid_qubo_problem');
     assert.match(error.message, /upper-triangle|diagonal/u);
+    const malformed = await fetch(origin + '/api/aethergrid/quantum/optimization/local', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{',
+    });
+    assert.equal(malformed.status, 400);
+    assert.equal((await malformed.json()).error, 'invalid_qubo_problem');
   } finally {
     await new Promise((resolve, reject) =>
       server.close((error) => (error ? reject(error) : resolve())),
