@@ -16,6 +16,9 @@ test('compiled city camera streams source tiles, preserves context across resize
   tiles.push({latitude,longitude});return route.fulfill({json:mesh(`${latitude}-${longitude}`,latitude,longitude)});
  });
  await page.goto('/');
+ // The initial status is an unready native-webgl placeholder. Wait for the
+ // actual renderer to finish initialization, then assert Cesium was selected.
+ await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer-ready','true',{timeout:30000});
  await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer','cesium');
  await page.getByRole('button',{name:'Navigation and layers'}).click();
  await page.getByRole('navigation',{name:'City targets'}).getByRole('button',{name:/NEW YORK/}).click();
