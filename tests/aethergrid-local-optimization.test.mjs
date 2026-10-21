@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { runLocalQuboComparison } from '../apps/aethergrid-console/local-optimization-runtime.mjs';
+import { solveQubo } from '../packages/optimization-engine/quantum-inspired.js';
 
 const small = {
   linear: [-2, -1],
@@ -100,4 +102,16 @@ test('objective receipts differ when the mathematical problem changes', () => {
   const b = runLocalQuboComparison({ linear: [-2, 2], seed: 1, iterations: 20 });
   assert.notEqual(a.inputReceipt, b.inputReceipt);
   assert.notEqual(a.receipt, b.receipt);
+});
+
+test('portable local annealing remains compatible with repository baseline without importing unbundled packages', async () => {
+  const source = await readFile(
+    new URL('../apps/aethergrid-console/local-optimization-runtime.mjs', import.meta.url),
+    'utf8',
+  );
+  assert.doesNotMatch(source, /\.\.\/\.\.\/packages\//u);
+  const result = runLocalQuboComparison(small);
+  const reference = solveQubo(small);
+  assert.deepEqual(result.annealing.bits, [...reference.bits]);
+  assert.equal(result.annealing.objective, reference.objective);
 });
