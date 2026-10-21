@@ -1,8 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { isolateBackgroundFeeds } from './helpers/isolate-background-feeds';
 
 test('Connection Center preserves unknown provider states and marks failed refresh stale', async ({ page }) => {
-  await isolateBackgroundFeeds(page);
   let fail = false;
   await page.route('**/api/aethergrid/runtime', (route) => route.fulfill({ json: {} }));
   await page.route('**/api/aethergrid/runtime/providers', (route) => route.fulfill(fail
@@ -23,7 +21,6 @@ test('Connection Center preserves unknown provider states and marks failed refre
 
 test('late unmounted registry response cannot replace a newer mount', async ({ page }) => {
   test.setTimeout(90_000);
-  await isolateBackgroundFeeds(page);
   await page.addInitScript(() => {
     const original = window.fetch.bind(window);
     let calls = 0;

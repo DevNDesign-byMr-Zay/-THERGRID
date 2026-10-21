@@ -1,5 +1,4 @@
 import { expect, test } from '@playwright/test';
-import { isolateBackgroundFeeds } from './helpers/isolate-background-feeds';
 
 const requireCloudAI = process.env.AETHERGRID_TEST_REQUIRE_CLOUD_AI === '1';
 function verifyCloudRuntime(runtime: { provider: string; model: string; fallbackUsed: boolean }) {
@@ -94,7 +93,6 @@ test('spatial handoff exits the active secondary inspector', async ({ page }) =>
 });
 
 test('TEAM retains real specialist contributions and provider truth', async ({ page }) => {
-  await isolateBackgroundFeeds(page);
   test.setTimeout(90_000);
   if (requireCloudAI) test.setTimeout(120_000);
   await page.setViewportSize({ width: 1536, height: 1024 });
@@ -133,7 +131,6 @@ test('global renderer remains usable with explicit engine provenance', async ({ 
 });
 
 test('specialist conversations consume the actual runtime contract', async ({ page }) => {
-  await isolateBackgroundFeeds(page);
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1536, height: 1024 });
   await page.goto('/');

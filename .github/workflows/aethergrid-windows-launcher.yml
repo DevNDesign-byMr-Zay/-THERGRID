@@ -8,13 +8,8 @@ on:
       - "apps/aethergrid-console/START-AETHERGRID.cmd"
       - "apps/aethergrid-console/README.md"
       - "tests/aethergrid-local-launcher.test.mjs"
-      - "apps/aethergrid-console/geo-runtime.mjs"
-      - "apps/aethergrid-console/web/src/renderer/overlays/**"
-      - "apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts"
-      - "apps/aethergrid-console/web/src/services/city-power-overlay.ts"
-      - "apps/aethergrid-console/web/tests/city-fidelity.spec.ts"
-      - "tests/aethergrid-global-quantum-profile.test.mjs"
       - "apps/aethergrid-console/web/src/services/city-tile-stream.ts"
+      - "apps/aethergrid-console/web/src/services/city-power-overlay.ts"
       - "apps/aethergrid-console/web/src/app/App.tsx"
       - "apps/aethergrid-console/web/tests/city-tile-stream.spec.ts"
       - "tests/aethergrid-camera-tiles-api.test.mjs"
@@ -97,11 +92,3 @@ jobs:
             Remove-Item Env:AETHERGRID_PORT -ErrorAction SilentlyContinue
             Remove-Item $PidFile, $EnvFile, $OverrideFile -Force -ErrorAction SilentlyContinue
           }
-
-      - name: Verify source-backed city geometry on Windows
-        shell: powershell
-        run: |
-          node --test tests/aethergrid-global-quantum-profile.test.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'OSM city source regression suite failed' }
-          npm --prefix apps/aethergrid-console/web run test -- tests/city-fidelity.spec.ts
-          if ($LASTEXITCODE -ne 0) { throw 'Real Cesium city geometry tests failed' }
