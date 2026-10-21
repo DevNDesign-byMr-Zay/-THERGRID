@@ -56,7 +56,10 @@ test('optional Qiskit Aer HTTP boundary reports truth and never creates a hardwa
     assert.equal(result.backend, 'aer-simulator-cpu');
     assert.equal(result.hardwareExecuted, false);
     assert.equal(result.hardwareSubmitted, false);
-    assert.equal(Object.values(result.counts).reduce((sum, value) => sum + value, 0), 128);
+    assert.equal(
+      Object.values(result.counts).reduce((sum, value) => sum + value, 0),
+      128,
+    );
     assert.deepEqual(Object.keys(result.counts).sort(), ['00', '11']);
   } finally {
     await new Promise((resolve, reject) =>

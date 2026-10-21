@@ -3,22 +3,24 @@ name: aethergrid/windows-launcher
 on:
   pull_request:
     paths:
-      - ".github/workflows/aethergrid-windows-launcher.yml"
-      - "apps/aethergrid-console/START-AETHERGRID.ps1"
-      - "apps/aethergrid-console/START-AETHERGRID.cmd"
-      - "apps/aethergrid-console/README.md"
-      - "tests/aethergrid-local-launcher.test.mjs"
-      - "apps/aethergrid-console/geo-runtime.mjs"
-      - "apps/aethergrid-console/web/src/renderer/overlays/**"
-      - "apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts"
-      - "apps/aethergrid-console/web/src/services/city-power-overlay.ts"
-      - "apps/aethergrid-console/web/tests/city-fidelity.spec.ts"
-      - "tests/aethergrid-global-quantum-profile.test.mjs"
-      - "apps/aethergrid-console/web/src/services/city-tile-stream.ts"
-      - "apps/aethergrid-console/web/src/app/App.tsx"
-      - "apps/aethergrid-console/web/tests/city-tile-stream.spec.ts"
-      - "tests/aethergrid-camera-tiles-api.test.mjs"
-      - "apps/aethergrid-console/server.mjs"
+      - '.github/workflows/aethergrid-windows-launcher.yml'
+      - 'apps/aethergrid-console/START-AETHERGRID.ps1'
+      - 'apps/aethergrid-console/START-AETHERGRID.cmd'
+      - 'apps/aethergrid-console/README.md'
+      - 'tests/aethergrid-local-launcher.test.mjs'
+      - 'apps/aethergrid-console/geo-runtime.mjs'
+      - 'apps/aethergrid-console/web/src/renderer/overlays/**'
+      - 'apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'
+      - 'apps/aethergrid-console/web/src/services/city-power-overlay.ts'
+      - 'apps/aethergrid-console/web/tests/city-fidelity.spec.ts'
+      - 'tests/aethergrid-global-quantum-profile.test.mjs'
+      - 'apps/aethergrid-console/web/src/services/city-tile-stream.ts'
+      - 'apps/aethergrid-console/web/src/services/city-viewport-stream.ts'
+      - 'apps/aethergrid-console/web/tests/city-viewport-stream.spec.ts'
+      - 'apps/aethergrid-console/web/src/app/App.tsx'
+      - 'apps/aethergrid-console/web/tests/city-tile-stream.spec.ts'
+      - 'tests/aethergrid-camera-tiles-api.test.mjs'
+      - 'apps/aethergrid-console/server.mjs'
   workflow_dispatch:
 
 permissions:
@@ -36,7 +38,7 @@ jobs:
       - name: Install Node 22
         uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: '22'
           cache: npm
 
       - name: Install locked runtime and compile canonical React application
@@ -48,7 +50,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Web dependency install failed' }
           npm --prefix apps/aethergrid-console/web run build
           if ($LASTEXITCODE -ne 0) { throw 'Canonical web build failed' }
-          npm --prefix apps/aethergrid-console/web run test -- tests/city-tile-stream.spec.ts
+          npm --prefix apps/aethergrid-console/web run test -- tests/city-tile-stream.spec.ts tests/city-viewport-stream.spec.ts
           if ($LASTEXITCODE -ne 0) { throw 'Camera tile stream regression tests failed' }
           node --test tests/aethergrid-camera-tiles-api.test.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Active operator city isolation test failed' }
@@ -56,8 +58,8 @@ jobs:
       - name: Verify PowerShell 5.1 startup, port precedence and live health
         shell: powershell
         env:
-          AETHERGRID_NO_BROWSER: "1"
-          AETHERGRID_LAUNCH_DIAGNOSTICS: "1"
+          AETHERGRID_NO_BROWSER: '1'
+          AETHERGRID_LAUNCH_DIAGNOSTICS: '1'
         run: |
           $ErrorActionPreference = "Stop"
           $Root = Join-Path (Get-Location).Path "apps/aethergrid-console"

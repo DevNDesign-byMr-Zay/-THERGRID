@@ -9,6 +9,7 @@ on:
       - "apps/aethergrid-console/requirements-qiskit.txt"
       - "tests/test_qiskit_aer_bridge.py"
       - "tests/aethergrid-qiskit-bridge.test.mjs"
+      - "tests/aethergrid-qiskit-http.test.mjs"
       - "apps/aethergrid-console/server.mjs"
       - "apps/aethergrid-console/web/src/components/QuantumPanel.tsx"
       - "apps/aethergrid-console/web/src/services/quantum-client.ts"

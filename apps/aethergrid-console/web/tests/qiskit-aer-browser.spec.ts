@@ -17,7 +17,8 @@ test('compiled Quantum workspace truthfully presents optional Qiskit Aer and kee
   await expect(area.locator('textarea')).toHaveValue(/bell/u);
 
   const provider = await page.request.get('/api/aethergrid/quantum/qiskit/status');
-  if (provider.ok()) {
+  expect(provider.ok(), 'Optional simulator status must return an honest capability response').toBe(true);
+  {
     const status = await provider.json();
     if (!status.available) {
       await expect(area.locator('[data-aer-availability="unavailable"]')).toBeVisible();
@@ -27,6 +28,15 @@ test('compiled Quantum workspace truthfully presents optional Qiskit Aer and kee
       const results = area.locator('[data-aer-circuit-result="complete"]');
       await expect(results).toContainText('MEASUREMENT COUNTS');
       await expect(results).toContainText('NOT QUANTUM HARDWARE');
+      for (const [width, height] of [[1366, 900], [768, 1024], [390, 844]]) {
+        await page.setViewportSize({ width, height });
+        const drawer = (await page.locator('.intel-rail').boundingBox())!;
+        for (const detail of await results.locator('small').all()) {
+          const bounds = (await detail.boundingBox())!;
+          expect(bounds.x + bounds.width, `Simulator evidence must fit the ${width}px drawer`).toBeLessThanOrEqual(drawer.x + drawer.width);
+        }
+        await page.screenshot({ path: `test-results/specialist-acceptance/qiskit-aer-${width}.png` });
+      }
     }
   }
 
