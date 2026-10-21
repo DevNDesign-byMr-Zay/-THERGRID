@@ -116,6 +116,46 @@ export async function submitBellSampler(
 }
 
 
+export interface LocalQuboResult {
+  schemaVersion: string;
+  problemType: 'qubo';
+  provider: 'aethergrid-local-cpu';
+  executionType: 'classical-cpu';
+  hardwareSubmitted: false;
+  hardwareExecuted: false;
+  advisoryOnly: true;
+  dimension: number;
+  inputReceipt: string;
+  receipt: string;
+  objectiveGap: number | null;
+  exactUnavailableReason: string | null;
+  annealing: {
+    backend: string;
+    algorithm: string;
+    seed: number;
+    iterations: number;
+    bits: number[];
+    objective: number;
+    optimalityProven: false;
+  };
+  exact: {
+    backend: string;
+    algorithm: string;
+    bits: number[];
+    objective: number;
+    statesEvaluated: number;
+    optimalityProven: true;
+  } | null;
+}
+
+export async function runLocalQuboComparison(problem: unknown): Promise<LocalQuboResult> {
+  const response = await jsonRequest<{ result: LocalQuboResult }>(
+    '/api/aethergrid/quantum/optimization/local',
+    { method: 'POST', body: JSON.stringify(problem) },
+  );
+  return response.result;
+}
+
 export interface DwaveReceipt {
   provider?: string;
   capability?: string;
