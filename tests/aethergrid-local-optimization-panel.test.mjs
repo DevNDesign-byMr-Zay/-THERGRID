@@ -3,8 +3,14 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 test('quantum panel exposes free local CPU QUBO comparison without touching D-Wave hold', async () => {
-  const panel = await readFile(new URL('../apps/aethergrid-console/web/src/components/QuantumPanel.tsx', import.meta.url), 'utf8');
-  const client = await readFile(new URL('../apps/aethergrid-console/web/src/services/quantum-client.ts', import.meta.url), 'utf8');
+  const panel = await readFile(
+    new URL('../apps/aethergrid-console/web/src/components/QuantumPanel.tsx', import.meta.url),
+    'utf8',
+  );
+  const client = await readFile(
+    new URL('../apps/aethergrid-console/web/src/services/quantum-client.ts', import.meta.url),
+    'utf8',
+  );
   assert.match(panel, /LOCAL OPTIMIZE/u);
   assert.match(panel, /runLocalQuboComparison/u);
   assert.match(panel, /EXACT CPU REFERENCE/u);
