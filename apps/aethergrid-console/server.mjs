@@ -25,6 +25,7 @@ import { createCityLiveRuntime } from './city-live-runtime.mjs';
 import { createGeoRuntime } from './geo-runtime.mjs';
 import { createProfileStore } from './profile-store.mjs';
 import { createQuantumRuntime } from './quantum-runtime.mjs';
+import { runLocalQuboComparison } from './local-optimization-runtime.mjs';
 import { createTerrainRuntime } from './terrain-runtime.mjs';
 import { createCanonicalWebRuntime } from './web-runtime.mjs';
 
@@ -1608,6 +1609,22 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/terrain/runtime') {
       return json(response, 200, terrainRuntime.summary());
+    }
+
+    if (
+      request.method === 'POST' &&
+      url.pathname === '/api/aethergrid/quantum/optimization/local'
+    ) {
+      const input = await body(request);
+      try {
+        return json(response, 200, { result: runLocalQuboComparison(input) });
+      } catch (error) {
+        if (!(error instanceof TypeError)) throw error;
+        return json(response, 400, {
+          error: 'invalid_qubo_problem',
+          message: error.message,
+        });
+      }
     }
 
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/quantum/runtime') {
