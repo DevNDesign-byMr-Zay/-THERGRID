@@ -353,6 +353,44 @@ The result contains the seeded classical simulated-annealing answer and, **for 1
 
 The portable Node runtime is self-contained so both the extracted Windows launcher and Docker deployment can use the optimization endpoint without accessing source-tree-only packages. The standalone `file://` HTML does **not** start backend services; it requires the launcher for server-side optimization. D-Wave cloud submission remains held; IBM Quantum hardware access remains a separate, explicitly authorized provider path.
 
+## Optional Qiskit Aer circuit simulation
+
+The **QISKIT AER** Quantum tab runs actual **locally simulated quantum circuits**; it does not submit hardware jobs or require cloud credentials. Its optional Python sidecar supports seeded, measured Bell states and a single-layer, fixed-angle QAOA **trial circuit** for a small upper-triangular QUBO. It reports measurement counts, simulated expectation, best *observed* QUBO bitstrings, explicit ideal-noiseless CPU provenance, and SHA-256 reproducibility receipts. It makes **no quantum advantage or optimum guarantee**.
+
+This feature is **not installed by default** and will not affect local HTML, Windows startup, Node services, or Docker health when Python is unavailable. To enable it, install Python 3.12 locally and create a private virtual environment:
+
+```sh
+python3 -m venv .venv-qiskit
+.venv-qiskit/bin/python -m pip install -r requirements-qiskit.txt
+```
+
+On Windows, a user-level Python installation avoids administrator permissions:
+
+```powershell
+py -3.12 -m venv .venv-qiskit
+.\.venv-qiskit\Scripts\python.exe -m pip install -r requirements-qiskit.txt
+```
+
+Point the backend at that interpreter through the ignored local `.env.aethergrid` file (use the platform-specific executable path):
+
+```text
+AETHERGRID_QISKIT_PYTHON=.venv-qiskit/bin/python
+```
+
+Restart the local launcher. `GET /api/aethergrid/quantum/qiskit/status` reports whether the optional simulator really imports; `POST /api/aethergrid/quantum/qiskit/run` accepts one of:
+
+```json
+{"experiment":"bell","shots":1024,"seed":42}
+```
+
+```json
+{"experiment":"qubo-qaoa","linear":[-2,-1],"quadratic":[[0,3],[0,0]],"gamma":0.45,"beta":0.7,"shots":1024,"seed":42}
+```
+
+QAOA trials are limited to **1–8 qubits**, at most **4096 shots**, and bounded finite coefficients. The fixed angles `gamma` and `beta` are chosen by the operator; the workflow **does not run a classical variational angle optimizer**. Qiskit Aer uses ideal statevector simulation on the local CPU. Subprocesses have a maximum 15-second budget and never inherit provider secrets. Server-side imports are lazy, triggered only for these operator-requested status/circuit endpoints. Standalone `file://` HTML cannot start Python and presents an unavailable state unless the local Node backend is started.
+
+Installation is optional because Qiskit Aer introduces substantial Python dependencies; the separate local QUBO optimizer and IBM hardware adapter continue as independent paths. The open-source Qiskit/Aer release pair is pinned in `requirements-qiskit.txt`. No QPU execution is asserted by this simulator.
+
 ## Global grid intelligence v2
 
 The GLOBAL workspace now goes beyond preset city descent.
