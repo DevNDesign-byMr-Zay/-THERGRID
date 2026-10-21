@@ -44,6 +44,9 @@ export interface SpatialCameraSnapshot {
   pitchDegrees: number;
   rollDegrees: number;
   target?: SpatialTarget;
+  /** Ellipsoid ground rays used for streaming; never surveyed terrain. */
+  focus?: { latitude: number; longitude: number };
+  footprint?: readonly { latitude: number; longitude: number }[];
 }
 
 export interface SpatialScenarioVisual {
