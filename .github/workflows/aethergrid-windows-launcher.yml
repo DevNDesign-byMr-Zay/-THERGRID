@@ -11,6 +11,8 @@ on:
       - 'apps/aethergrid-console/geo-runtime.mjs'
       - 'apps/aethergrid-console/web/src/renderer/overlays/**'
       - 'apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'
+      - 'apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'
+      - 'apps/aethergrid-console/web/tests/local-file.spec.ts'
       - 'apps/aethergrid-console/web/src/services/city-power-overlay.ts'
       - 'apps/aethergrid-console/web/tests/city-fidelity.spec.ts'
       - 'tests/aethergrid-global-quantum-profile.test.mjs'
