@@ -105,13 +105,12 @@ test('standalone Cesium remains interactive while its optional Earth texture req
   await page.addInitScript(() => {
     const createBitmap = window.createImageBitmap?.bind(window);
     if (createBitmap) {
-      window.createImageBitmap = (...args) => {
-        const image = args[0];
+      window.createImageBitmap = ((image: ImageBitmapSource, ...args: unknown[]) => {
         if (image instanceof Blob && image.type === 'image/jpeg') {
           return new Promise<ImageBitmap>(() => undefined);
         }
-        return createBitmap(...args);
-      };
+        return Reflect.apply(createBitmap, window, [image, ...args]) as Promise<ImageBitmap>;
+      }) as typeof window.createImageBitmap;
     }
   });
   await page.route('**/*earth-natural-earth*', async route => {
