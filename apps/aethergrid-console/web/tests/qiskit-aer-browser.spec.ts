@@ -40,8 +40,18 @@ test('compiled Quantum workspace truthfully presents optional Qiskit Aer and kee
     }
   }
 
-  await page.getByRole('button', { name: 'LOCAL OPTIMIZE', exact: true }).click();
-  await expect(page.locator('.local-qubo-workspace')).toBeVisible();
-  await page.getByRole('button', { name: 'ANNEAL / D-WAVE', exact: true }).click();
+  // After resizing to a compact viewport the Intelligence rail is a modal
+  // drawer, which may be closed by responsive state changes. Reopen it through
+  // the actual operator control instead of clicking an inert/hidden tab.
+  const intelligence = page.locator('#aethergrid-intelligence-rail');
+  if (await intelligence.getAttribute('inert') !== null) {
+    await page.getByRole('button', { name: 'INTEL', exact: true }).click();
+  }
+  await expect(intelligence).toBeVisible();
+  await expect(intelligence).not.toHaveAttribute('inert', '');
+  await expect(intelligence).toHaveAttribute('data-workspace', 'quantum');
+  await intelligence.getByRole('button', { name: 'LOCAL OPTIMIZE', exact: true }).click();
+  await expect(intelligence.locator('.local-qubo-workspace')).toBeVisible();
+  await intelligence.getByRole('button', { name: 'ANNEAL / D-WAVE', exact: true }).click();
   await expect(page.getByRole('button', { name: 'SUBMIT CONFIRMED D-WAVE PROBLEM' })).toBeDisabled();
 });
