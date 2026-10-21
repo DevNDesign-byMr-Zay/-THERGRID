@@ -96,7 +96,8 @@ import {
   type CitySpatialBundle,
   type CityIdentitySummary
 } from '../services/city-power-overlay';
-import { CameraTileStream, mergeCitySpatialTiles } from '../services/city-tile-stream';
+import { mergeCitySpatialTiles } from '../services/city-tile-stream';
+import { ViewportCityStream, MAX_CITY_VIEW_TILES } from '../services/city-viewport-stream';
 import {
   measureSpatialPoints,
   measurementToOverlay,
@@ -720,13 +721,13 @@ export function App() {
   // are optional and cannot replace it, or run from the standalone HTML.
   useEffect(() => {
     if (scope !== 'city' || temporal.mode !== 'live' || window.location.protocol === 'file:') return;
-    const stream = new CameraTileStream({
+    const stream = new ViewportCityStream({
       center: {id:city.id, latitude:city.latitude, longitude:city.longitude},
       load: (tile, signal) => loadCameraCityTile(tile.latitude,tile.longitude,signal),
       onChange: (loaded) => {
         const base = baseSpatialRef.current;
         if (!base) return;
-        const merged = mergeCitySpatialTiles(base,loaded);
+        const merged = mergeCitySpatialTiles(base,loaded,{maxTiles:MAX_CITY_VIEW_TILES});
         setPowerOverlay(merged.power);
         setSemanticOverlays(merged.semantics);
         setIlluminationOverlay(merged.illumination);
@@ -2273,8 +2274,8 @@ export function App() {
           </details>
 
           {scope === 'city' && streamingState.count > 0 ? (
-            <div className="city-load-status" role="status" data-live-city-tiles={streamingState.count}>
-              LIVE DISTRICT STREAM · {streamingState.count} ADJACENT TILE{streamingState.count === 1 ? '' : 'S'} · SOURCE-BACKED
+            <div className="city-stream-status" role="status" data-live-city-tiles={streamingState.count}>
+              LIVE CITY STREAM · {streamingState.count} VISIBLE TILE{streamingState.count === 1 ? '' : 'S'} · SOURCE-BACKED
             </div>
           ) : null}
           {scope === 'city' && streamingState.error && !cityLoad.spatial ? (

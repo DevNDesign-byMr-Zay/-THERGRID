@@ -18,6 +18,7 @@ const METERS_PER_DEGREE = 111_320;
 export const CITY_TILE_STEP_M = 650;
 export const CITY_TILE_RADIUS_M = 450;
 export const MAX_STREAMED_TILES = 4;
+export const MAX_CITY_CACHE_TILES = 12;
 const MAX_STREAM_DISTANCE_M = 2_600;
 const MAX_CAMERA_HEIGHT_M = 4_000;
 const wrapLongitude = (longitude: number) => ((longitude + 540) % 360 + 360) % 360 - 180;
@@ -111,7 +112,7 @@ function admissible(bundle: CitySpatialBundle): boolean {
 }
 
 /**
- * Combine a central district with at most four already validated live tiles.
+ * Combine a central district with a bounded set of already validated live tiles.
  * Base data wins duplicate source identities; provenance for every new feature
  * remains attached. No synthetic fallback is ever promoted into the map.
  */
@@ -120,7 +121,7 @@ export function mergeCitySpatialTiles(
   tiles: readonly LoadedCityTile[],
   { maxTiles = MAX_STREAMED_TILES }: { maxTiles?: number } = {}
 ): CitySpatialBundle {
-  const cap = Number.isFinite(maxTiles) ? Math.max(0, Math.min(MAX_STREAMED_TILES,Math.floor(maxTiles))) : MAX_STREAMED_TILES;
+  const cap = Number.isFinite(maxTiles) ? Math.max(0, Math.min(MAX_CITY_CACHE_TILES,Math.floor(maxTiles))) : MAX_STREAMED_TILES;
   const accepted = tiles.filter(({bundle}) => admissible(bundle)).slice(-cap || tiles.length);
   if (!cap || !accepted.length) return base;
   const cityId = base.identity.cityId;
