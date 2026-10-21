@@ -334,6 +334,27 @@ AETHERGRID_IBM_QUANTUM_BACKEND=<backend name>
 
 The browser never receives the API key or IAM bearer token. Submitting a job is not treated as proof that QPU execution completed; the evidence record distinguishes submission from completed hardware execution.
 
+## Free, reproducible local QUBO optimization
+
+The Quantum workspace now includes **LOCAL OPTIMIZE**, a zero-license-cost, server-side CPU optimization capability. This is distinct from the small analytic Bell Sampler/Estimator demo and does not require D-Wave Leap, IBM credentials, Python, or an external network.
+
+The `POST /api/aethergrid/quantum/optimization/local` endpoint accepts a bounded upper-triangular QUBO, for example:
+
+```json
+{
+  "linear": [-2, -1],
+  "quadratic": [[0, 3], [0, 0]],
+  "seed": 42,
+  "iterations": 500
+}
+```
+
+The objective is `sum(linear[i] * x[i]) + sum(quadratic[i][j] * x[i] * x[j])` for `i < j`. The diagonal and lower triangle must be zero. The server rejects invalid or nonfinite coefficients, restricts the problem to 1–64 bits and 1–10,000 iterations, and uses a bounded deterministic pseudo-random stream.
+
+The result contains the seeded classical simulated-annealing answer and, **for 16 or fewer variables**, an independently enumerated exact minimum and the resulting objective gap. Larger inputs have `exact: null` and **no optimality claim**. SHA-256 input/result receipts allow reproducibility checks; these hashes are **not digital signatures** or proof of external execution. Each response states `executionType: classical-cpu`, `hardwareSubmitted: false`, and `hardwareExecuted: false`.
+
+The portable Node runtime is self-contained so both the extracted Windows launcher and Docker deployment can use the optimization endpoint without accessing source-tree-only packages. The standalone `file://` HTML does **not** start backend services; it requires the launcher for server-side optimization. D-Wave cloud submission remains held; IBM Quantum hardware access remains a separate, explicitly authorized provider path.
+
 ## Global grid intelligence v2
 
 The GLOBAL workspace now goes beyond preset city descent.

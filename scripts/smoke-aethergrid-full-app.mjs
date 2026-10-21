@@ -139,6 +139,31 @@ try {
   assert(/id=["']root["']/u.test(html), 'packaged server did not serve the React root');
   assert(!/<canvas id="spatialGrid"/u.test(html), 'packaged server served the legacy v3 root');
 
+  // Exercise the actual executable CPU optimizer from the extracted ZIP.
+  const optimized = await fetch(`${baseUrl}/api/aethergrid/quantum/optimization/local`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      linear: [-2, -1],
+      quadratic: [
+        [0, 3],
+        [0, 0],
+      ],
+      seed: 42,
+      iterations: 100,
+    }),
+  });
+  assert(optimized.status === 200, 'packaged local CPU optimizer must remain operational');
+  const comparison = (await optimized.json()).result;
+  assert(
+    comparison.exact?.objective === -2,
+    'packaged local CPU exact reference must solve the QUBO',
+  );
+  assert(
+    comparison.hardwareExecuted === false,
+    'packaged CPU results must never claim QPU execution',
+  );
+
   const legacyScript = await fetch(`${baseUrl}/app.js`);
   assert(
     legacyScript.status === 404,

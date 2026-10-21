@@ -35,6 +35,7 @@ const REQUIRED_RUNTIME_FILES = Object.freeze([
   'city-live-runtime.mjs',
   'terrain-runtime.mjs',
   'quantum-runtime.mjs',
+  'local-optimization-runtime.mjs',
   'config/env-schema.mjs',
   'config/provider-config.mjs',
   'config/public-config.mjs',
