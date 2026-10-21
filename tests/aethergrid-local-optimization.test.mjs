@@ -134,8 +134,7 @@ test('all exact states reproduce their returned objective with independent QUBO 
   for (const problem of cases) {
     const result = runLocalQuboComparison(problem);
     const size = problem.linear.length;
-    const quadratic =
-      problem.quadratic ?? Array.from({ length: size }, () => Array(size).fill(0));
+    const quadratic = problem.quadratic ?? Array.from({ length: size }, () => Array(size).fill(0));
     let lowest = Infinity;
     for (let mask = 0; mask < 2 ** size; mask += 1) {
       const bits = problem.linear.map((_, index) => (mask >>> index) & 1);
