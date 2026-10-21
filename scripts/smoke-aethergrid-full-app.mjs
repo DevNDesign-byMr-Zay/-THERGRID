@@ -150,6 +150,14 @@ try {
   assert(comparison.exact?.objective === -2, 'packaged local CPU exact reference must solve the QUBO');
   assert(comparison.hardwareExecuted === false, 'packaged CPU results must never claim QPU execution');
 
+  // An extracted app must remain healthy even when Python and Qiskit are absent.
+  const aerResponse = await fetch(`${baseUrl}/api/aethergrid/quantum/qiskit/status`);
+  assert(aerResponse.status === 200, 'optional Aer capability endpoint must remain available');
+  const aerStatus = await aerResponse.json();
+  assert(aerStatus.provider === 'qiskit-aer', 'status must identify the optional simulator');
+  assert(aerStatus.hardwareSubmitted === false, 'Aer must not claim hardware submission');
+  assert(aerStatus.hardwareExecuted === false, 'Aer must not claim hardware execution');
+
   const legacyScript = await fetch(`${baseUrl}/app.js`);
   assert(
     legacyScript.status === 404,
