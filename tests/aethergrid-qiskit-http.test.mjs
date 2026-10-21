@@ -37,7 +37,11 @@ test('optional Qiskit Aer HTTP boundary reports truth and never creates a hardwa
         body: JSON.stringify({ experiment: 'bell', shots: 128, seed: 17 }),
       });
       assert.equal(unavailable.status, 503);
-      assert.equal((await unavailable.json()).error, 'qiskit-aer-not-installed');
+      const responseBody = await unavailable.json();
+      assert.ok(
+        ['qiskit-aer-not-installed', 'python-unavailable'].includes(responseBody.error),
+        'missing Python or Aer must never silently substitute synthetic quantum counts',
+      );
       t.diagnostic('Aer not installed: verified truthful optional 503 response');
       return;
     }
