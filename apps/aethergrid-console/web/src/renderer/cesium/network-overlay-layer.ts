@@ -30,7 +30,8 @@ import {
   Transforms,
   VerticalOrigin,
   Viewer,
-  WallGraphics
+  WallGraphics,
+  WallGeometry
 } from 'cesium';
 
 import { buildingEdges, buildingGeometry } from '../overlays/building-geometry';
@@ -929,7 +930,28 @@ export class NetworkOverlayLayer {
           this.#fillStyles.push({ id: roofId, value: instance.attributes.color.value, base });
           return instance;
         });
-        return [body, ...roofs];
+        // A single-plane roof is not a floating sheet: fill the upper facade
+        // between the common eave height and the mapped per-vertex roof heights.
+        const roofWalls = massing.roofWallFaces.map((face, index) => {
+          const wallId = { ...id, geometryPart: `roof-wall:${index}` };
+          const wallColor = buildingAreaColor(area, 1);
+          const wall = new GeometryInstance({
+            id: wallId,
+            geometry: new WallGeometry({
+              positions: [
+                Cartesian3.fromDegrees(face[0].longitude, face[0].latitude),
+                Cartesian3.fromDegrees(face[1].longitude, face[1].latitude)
+              ],
+              minimumHeights: [face[0].heightMeters!, face[1].heightMeters!],
+              maximumHeights: [face[3].heightMeters!, face[2].heightMeters!],
+              vertexFormat: PerInstanceColorAppearance.VERTEX_FORMAT
+            }),
+            attributes: { color: ColorGeometryInstanceAttribute.fromColor(wallColor) }
+          });
+          this.#fillStyles.push({ id: wallId, value: wall.attributes.color.value, base: wallColor });
+          return wall;
+        });
+        return [body, ...roofs, ...roofWalls];
       });
 
     if (!instances.length) return;

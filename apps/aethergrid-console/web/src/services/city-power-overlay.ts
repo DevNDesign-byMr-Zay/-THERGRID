@@ -17,6 +17,7 @@ interface CityDescriptor {
 interface CityBuilding {
   holes?: readonly (readonly (readonly [number, number])[])[];
   roofOrientation?: string | null;
+  roofDirection?: string | null;
   id: string;
   name?: string;
   heightM?: number | null;
@@ -29,6 +30,7 @@ interface CityBuilding {
   buildingColor?: string | null;
   roofShape?: string | null;
   roofHeightM?: number | null;
+  roofHeightSource?: string | null;
   roofMaterial?: string | null;
   roofColor?: string | null;
   footprint?: readonly (readonly [number, number])[];
@@ -310,8 +312,10 @@ function cityMeshToBuildingOverlay(
           buildingMaterial: building.buildingMaterial ?? '',
           buildingColor: building.buildingColor ?? '',
           roofOrientation: building.roofOrientation ?? '',
+          roofDirection: building.roofDirection ?? '',
           roofShape: building.roofShape ?? '',
           roofHeightM: building.roofHeightM ?? 0,
+          roofHeightSource: building.roofHeightSource ?? 'unknown',
           roofMaterial: building.roofMaterial ?? '',
           roofColor: building.roofColor ?? '',
           centroidLatitude: envelopeCenter?.latitude ?? null,

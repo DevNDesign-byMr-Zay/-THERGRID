@@ -130,6 +130,13 @@ function numericRoofHeight(tags = {}) {
   return 0;
 }
 
+function roofHeightSource(tags = {}) {
+  const explicit = parseMetricHeight(tags['roof:height']);
+  if (Number.isFinite(explicit) && explicit >= 0) return 'roof:height';
+  const levels = Number.parseFloat(String(tags['roof:levels'] || ''));
+  return Number.isFinite(levels) && levels > 0 ? 'roof:levels' : 'inferred';
+}
+
 function numericVoltage(value) {
   const candidates = String(value || '')
     .split(';')
@@ -556,8 +563,10 @@ function parseOverpassBuildings(payload, city) {
         buildingMaterial: String(element.tags?.['building:material'] || ''),
         buildingColor: String(element.tags?.['building:colour'] || ''),
         roofOrientation: String(element.tags?.['roof:orientation'] || ''),
+        roofDirection: String(element.tags?.['roof:direction'] || ''),
         roofShape: String(element.tags?.['roof:shape'] || ''),
         roofHeightM: numericRoofHeight(element.tags),
+        roofHeightSource: roofHeightSource(element.tags),
         roofLevels: Number(element.tags?.['roof:levels']) || null,
         roofMaterial: String(element.tags?.['roof:material'] || ''),
         roofColor: String(element.tags?.['roof:colour'] || ''),
@@ -766,7 +775,7 @@ export function createGeoRuntime({
         'coastline',
         'green-areas',
       ],
-      skylineFields: ['height', 'est_height', 'building:levels', 'min_height', 'building:min_level', 'roof:shape', 'roof:height', 'roof:levels', 'building:material', 'building:colour', 'roof:material', 'roof:colour'],
+      skylineFields: ['height', 'est_height', 'building:levels', 'min_height', 'building:min_level', 'roof:shape', 'roof:direction', 'roof:height', 'roof:levels', 'building:material', 'building:colour', 'roof:material', 'roof:colour'],
       upstreamFreshness: 'OpenStreetMap replication-backed upstream state when queried',
     };
   }

@@ -1,4 +1,5 @@
 import { rectangularRoof } from './rectangular-roof';
+import { skillionRoof } from './skillion-roof';
 import type { OverlayCoordinate, SpatialOverlayArea } from './spatial-overlay';
 
 export type BuildingHeightCategory = 'explicit-tag' | 'estimated-tag' | 'levels-derived' | 'modeled';
@@ -10,6 +11,7 @@ export interface BuildingGeometry {
   topM: number;
   wallTopM: number;
   roofFaces: readonly (readonly OverlayCoordinate[])[];
+  roofWallFaces: readonly (readonly OverlayCoordinate[])[];
   heightCategory: BuildingHeightCategory;
   limitation: string | null;
 }
@@ -88,13 +90,17 @@ function computeBuildingGeometry(area: SpatialOverlayArea): BuildingGeometry | n
   const validRoofHeight = !holes.length && Number.isFinite(roofHeightM) && roofHeightM > 0 && roofHeightM < topM - baseM;
   const refine = validRoofHeight && shape === 'pyramidal' && convex && Number.isFinite(roofHeightM) && roofHeightM > 0 && roofHeightM < topM - baseM;
   const rectangularFaces = validRoofHeight ? rectangularRoof(ring, shape, topM - roofHeightM, topM, area.properties?.roofOrientation) : [];
-  const wallTopM = refine || rectangularFaces.length ? topM - roofHeightM : topM;
+  const directional = validRoofHeight && shape === 'skillion' && area.properties?.roofHeightSource === 'roof:height'
+    ? skillionRoof(ring, topM - roofHeightM, topM, area.properties?.roofDirection)
+    : null;
+  const wallTopM = refine || rectangularFaces.length || directional ? topM - roofHeightM : topM;
   const apex = { longitude: ring.reduce((n, p) => n + p.longitude, 0) / ring.length, latitude: ring.reduce((n, p) => n + p.latitude, 0) / ring.length, heightMeters: topM };
   const roofFaces = refine ? ring.map((p, i) => [
     { ...p, heightMeters: wallTopM },
     { ...ring[(i + 1) % ring.length], heightMeters: wallTopM }, apex
-  ]) : rectangularFaces;
-  return { ring, holes, roofRefinement: roofFaces.length ? `source-tagged-${shape}` : 'simple-massing', baseM, topM, wallTopM, roofFaces, heightCategory,
+  ]) : rectangularFaces.length ? rectangularFaces : (directional?.roofFaces ?? []);
+  const roofWallFaces = directional?.wallFaces ?? [];
+  return { ring, holes, roofRefinement: roofFaces.length ? `source-tagged-${shape}` : 'simple-massing', baseM, topM, wallTopM, roofFaces, roofWallFaces, heightCategory,
     limitation: roofFaces.length || !shape || shape === 'flat' ? null : 'Roof refinement unsupported for this shape, footprint or source dimensions; simple massing retained.' };
 }
 
@@ -118,6 +124,13 @@ export function buildingEdges(area: SpatialOverlayArea): readonly (readonly [Ove
     if (a.longitude === b.longitude && a.latitude === b.latitude && a.heightMeters === b.heightMeters) continue;
     const key = [JSON.stringify(a), JSON.stringify(b)].sort().join('|');
     if (!seen.has(key)) { edges.push([a,b]); seen.add(key); }
+  }
+  if (geometry.roofRefinement === 'source-tagged-skillion') {
+    for (const point of geometry.roofFaces[0] ?? []) {
+      if ((point.heightMeters ?? geometry.wallTopM) > geometry.wallTopM + 1e-6) {
+        edges.push([{ ...point, heightMeters: geometry.wallTopM }, point]);
+      }
+    }
   }
   edgeCache.set(area, edges);
   return edges;
