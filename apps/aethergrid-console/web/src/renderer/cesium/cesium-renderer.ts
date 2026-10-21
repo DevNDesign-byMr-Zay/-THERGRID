@@ -193,7 +193,22 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     }
     if (!ionEnabled) {
       if (location.protocol === 'file:') {
-        this.#viewer.imageryLayers.addImageryProvider(await SingleTileImageryProvider.fromUrl(earthTexture));
+        // An offline image decode can be slow or fail under file:// sandboxing.
+        // Do not block actual Cesium initialization, source-backed geometry,
+        // or camera controls on this presentation-only texture.
+        const viewer = this.#viewer;
+        void SingleTileImageryProvider.fromUrl(earthTexture)
+          .then(provider => {
+            // Renderer transitions can destroy the old Viewer while the
+            // image is pending; never install imagery on a stale scene.
+            if (this.#viewer !== viewer || viewer.isDestroyed()) return;
+            viewer.imageryLayers.addImageryProvider(provider);
+            viewer.scene.requestRender();
+          })
+          .catch(() => {
+            // Keep the real Cesium ellipsoid and overlays operational.
+            // Missing imagery must not be misreported as a missing renderer.
+          });
       } else {
       try {
         const osmLayer = this.#viewer.imageryLayers.addImageryProvider(
