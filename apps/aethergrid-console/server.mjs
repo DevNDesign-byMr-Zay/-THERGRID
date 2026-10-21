@@ -1615,11 +1615,11 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
       request.method === 'POST' &&
       url.pathname === '/api/aethergrid/quantum/optimization/local'
     ) {
-      const input = await body(request);
       try {
+        const input = await body(request);
         return json(response, 200, { result: runLocalQuboComparison(input) });
       } catch (error) {
-        if (!(error instanceof TypeError)) throw error;
+        if (!(error instanceof TypeError) && !(error instanceof SyntaxError)) throw error;
         return json(response, 400, {
           error: 'invalid_qubo_problem',
           message: error.message,
