@@ -92,8 +92,11 @@ import {
 import {
   loadCitySpatialBundle,
   loadCoordinateSpatialBundle,
+  loadCameraCityTile,
+  type CitySpatialBundle,
   type CityIdentitySummary
 } from '../services/city-power-overlay';
+import { CameraTileStream, mergeCitySpatialTiles } from '../services/city-tile-stream';
 import {
   measureSpatialPoints,
   measurementToOverlay,
@@ -307,6 +310,7 @@ export function App() {
     return location.protocol === 'file:' ? 180 - (now.getUTCHours() + now.getUTCMinutes() / 60) * 15 : 0;
   });
   const viewportRef = useRef<SpatialViewportHandle>(null);
+  const baseSpatialRef = useRef<CitySpatialBundle | null>(null);
   const { clock, state: temporal } = useTemporalClock();
   const [temporalRailHeight, setTemporalRailHeight] = useState(140);
   const appearance = useAppearance();
@@ -344,6 +348,7 @@ export function App() {
     useState<SpatialOverlaySnapshot | null>(null);
   const [semanticOverlays, setSemanticOverlays] = useState<readonly SpatialOverlaySnapshot[]>([]);
   const [cityIdentity, setCityIdentity] = useState<CityIdentitySummary | null>(null);
+  const [streamingState, setStreamingState] = useState<{count:number;error:string|null}>({count:0,error:null});
   const [powerOverlayError, setPowerOverlayError] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState('');
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -629,6 +634,8 @@ export function App() {
 
   useEffect(() => {
     const controller = new AbortController();
+    baseSpatialRef.current = null;
+    setStreamingState({count:0,error:null});
     setPowerOverlay(null);
     setIlluminationOverlay(null);
     setSemanticOverlays([]);
@@ -662,9 +669,11 @@ export function App() {
 
     void spatialRequest
       .then((bundle) => {
+        if (controller.signal.aborted) return;
         if (bundle.power.fallback || bundle.identity.sourceProvider === 'local-fallback') {
           throw new Error('Mapped city geometry unavailable · modeled fallback withheld.');
         }
+        baseSpatialRef.current = bundle;
         setPowerOverlay(bundle.power);
         setIlluminationOverlay(bundle.illumination);
         setSemanticOverlays(bundle.semantics);
@@ -706,6 +715,47 @@ export function App() {
 
     return () => controller.abort();
   }, [city.id, city.latitude, city.longitude]);
+
+  // The bundled/core district is always the first scene. Adjacent live tiles
+  // are optional and cannot replace it, or run from the standalone HTML.
+  useEffect(() => {
+    if (scope !== 'city' || temporal.mode !== 'live' || window.location.protocol === 'file:') return;
+    const stream = new CameraTileStream({
+      center: {id:city.id, latitude:city.latitude, longitude:city.longitude},
+      load: (tile, signal) => loadCameraCityTile(tile.latitude,tile.longitude,signal),
+      onChange: (loaded) => {
+        const base = baseSpatialRef.current;
+        if (!base) return;
+        const merged = mergeCitySpatialTiles(base,loaded);
+        setPowerOverlay(merged.power);
+        setSemanticOverlays(merged.semantics);
+        setIlluminationOverlay(merged.illumination);
+        setCityIdentity(merged.identity);
+        setStreamingState({count:loaded.length,error:null});
+      },
+      onError: (message) => {
+        setStreamingState(current=>({...current,error:message}));
+      }
+    });
+    const sample = () => {
+      if (!baseSpatialRef.current) return;
+      const current = viewportRef.current?.cameraSnapshot();
+      if (current) void stream.sample(current);
+    };
+    const interval = globalThis.setInterval(sample,1_300);
+    return () => {
+      globalThis.clearInterval(interval);
+      stream.dispose();
+      const base = baseSpatialRef.current;
+      if (base) {
+        setPowerOverlay(base.power);
+        setSemanticOverlays(base.semantics);
+        setIlluminationOverlay(base.illumination);
+        setCityIdentity(base.identity);
+      }
+      setStreamingState({count:0,error:null});
+    };
+  }, [scope, city.id, city.latitude, city.longitude, temporal.mode]);
 
   useEffect(() => {
     const syncBindings = () => {
@@ -2114,6 +2164,7 @@ export function App() {
 
         <section
           className="world-stage"
+          data-stream-tiles={streamingState.count}
           data-spatial-scope={scope}
           data-source-building-count={sourceBuildingCount}
           inert={navigationDrawer.compact && (navOpen || intelOpen)}
@@ -2221,6 +2272,16 @@ export function App() {
 
           </details>
 
+          {scope === 'city' && streamingState.count > 0 ? (
+            <div className="city-load-status" role="status" data-live-city-tiles={streamingState.count}>
+              LIVE DISTRICT STREAM · {streamingState.count} ADJACENT TILE{streamingState.count === 1 ? '' : 'S'} · SOURCE-BACKED
+            </div>
+          ) : null}
+          {scope === 'city' && streamingState.error && !cityLoad.spatial ? (
+            <div className="city-load-status" data-live-city-stream="degraded">
+              ADJACENT CITY DATA UNAVAILABLE · CORE GEOMETRY PRESERVED
+            </div>
+          ) : null}
           {scope === 'city' && Object.values(cityLoad).some(Boolean) ? (
             <div className="city-load-status" aria-live="polite">
               <div>
