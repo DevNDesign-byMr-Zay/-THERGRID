@@ -12,9 +12,9 @@ test('compiled Quantum workspace truthfully presents optional Qiskit Aer and kee
   await expect(area).toContainText('not proof of optimality');
   await expect(area.getByRole('button', { name: 'BELL CIRCUIT' })).toBeVisible();
   await area.getByRole('button', { name: 'QAOA QUBO TRIAL' }).click();
-  await expect(area.locator('textarea')).toContainText('qubo-qaoa');
+  await expect(area.locator('textarea')).toHaveValue(/qubo-qaoa/u);
   await area.getByRole('button', { name: 'BELL CIRCUIT' }).click();
-  await expect(area.locator('textarea')).toContainText('bell');
+  await expect(area.locator('textarea')).toHaveValue(/bell/u);
 
   const provider = await page.request.get('/api/aethergrid/quantum/qiskit/status');
   if (provider.ok()) {
