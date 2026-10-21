@@ -398,7 +398,9 @@ export function QuantumPanel() {
               ? runtime?.provider?.toUpperCase() || 'LOADING'
               : workspace === 'local-optimization'
                 ? 'LOCAL QUBO OPTIMIZATION'
-                : 'D-WAVE ANNEALING'}
+                : workspace === 'qiskit-aer'
+                  ? 'QISKIT AER SIMULATION'
+                  : 'D-WAVE ANNEALING'}
           </strong>
         </span>
         {workspace === 'gate-model' ? (
@@ -407,6 +409,10 @@ export function QuantumPanel() {
           </em>
         ) : workspace === 'local-optimization' ? (
           <em className="simulator">CPU · FREE</em>
+        ) : workspace === 'qiskit-aer' ? (
+          <em className="simulator">
+            {aerStatus?.available ? 'CPU SIMULATOR' : 'OPTIONAL SIMULATOR'}
+          </em>
         ) : (
           <em className={dwaveConfigured ? 'hardware' : 'simulator'}>
             {dwaveConfigured ? 'SAPI CONNECTED' : 'UNCONFIGURED'}
