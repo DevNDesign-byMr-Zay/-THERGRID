@@ -125,7 +125,7 @@ jobs:
         if: matrix.suite == 'specialists'
         env:
           AETHERGRID_TEST_CANONICAL: "1"
-        run: npx playwright test tests/specialist-browser.spec.ts tests/specialist-workflow-browser.spec.ts tests/operational-pilot-browser.spec.ts tests/quantum-hold-browser.spec.ts tests/local-optimization-browser.spec.ts tests/final-visual-browser.spec.ts --output=test-results/specialist-acceptance --workers=1 --reporter=line
+        run: npx playwright test tests/specialist-browser.spec.ts tests/specialist-workflow-browser.spec.ts tests/operational-pilot-browser.spec.ts tests/quantum-hold-browser.spec.ts tests/local-optimization-browser.spec.ts tests/qiskit-aer-browser.spec.ts tests/final-visual-browser.spec.ts --output=test-results/specialist-acceptance --workers=1 --reporter=line
 
       - name: Verify actual local TEAM runtime and offline recovery
         if: matrix.suite == 'local-runtime'
