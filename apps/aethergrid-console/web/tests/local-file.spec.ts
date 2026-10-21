@@ -96,3 +96,27 @@ test('every bundled city renders its own mapped district without a server', asyn
   }
   expect(errors).toEqual([]);
 });
+
+test('standalone Cesium remains interactive while its optional Earth texture request is delayed', async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  let slowTextureRequest = false;
+  await page.route('**/*earth-natural-earth*', async route => {
+    slowTextureRequest = true;
+    await new Promise(resolve => setTimeout(resolve, 12_000));
+    await route.abort();
+  });
+  await page.route('http://**/*', route => route.abort());
+  await page.route('https://**/*', route => route.abort());
+  await page.goto(pathToFileURL(process.env.AETHERGRID_LOCAL_HTML || resolve('local-dist/index.html')).href);
+  await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer-ready', 'true', { timeout: 8_000 });
+  await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer', 'cesium');
+  expect(slowTextureRequest, 'the offline renderer must actually request the bundled Earth image').toBe(true);
+  await page.getByRole('button', { name: 'Navigation and layers' }).click();
+  await page.getByRole('navigation', { name: 'City targets' }).getByRole('button', { name: /NEW YORK/ }).click();
+  await expect.poll(
+    async () => Number(await page.locator('.world-stage').getAttribute('data-source-building-count')),
+    { timeout: 45_000 }
+  ).toBeGreaterThan(100);
+  await expect(page.locator('.cesium-widget-errorPanel')).toHaveCount(0);
+});
