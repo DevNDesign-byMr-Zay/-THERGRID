@@ -1,5 +1,63 @@
 import { createHash } from 'node:crypto';
-import { evaluateQubo, solveQubo } from '../../packages/optimization-engine/quantum-inspired.js';
+// This adapter is intentionally self-contained. The standalone ZIP puts
+// server.mjs at its archive root and cannot resolve ../../packages imports.
+// Regression tests cross-check it against the maintained reference optimizer.
+function evaluateQubo(linear, quadratic, bits) {
+  let objective = 0;
+  for (let index = 0; index < bits.length; index += 1) {
+    objective += linear[index] * bits[index];
+  }
+  for (let i = 0; i < bits.length; i += 1) {
+    for (let j = i + 1; j < bits.length; j += 1) {
+      objective += quadratic[i][j] * bits[i] * bits[j];
+    }
+  }
+  return objective;
+}
+
+function seededRng(seed) {
+  let state = (Number(seed) >>> 0) || 0x9e3779b9;
+  return () => {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    state >>>= 0;
+    return state / 0x100000000;
+  };
+}
+
+function solveQubo({ linear, quadratic, seed, iterations }) {
+  const random = seededRng(seed);
+  const bits = linear.map(() => (random() < 0.5 ? 0 : 1));
+  let objective = evaluateQubo(linear, quadratic, bits);
+  let bestBits = [...bits];
+  let bestObjective = objective;
+  for (let step = 0; step < iterations; step += 1) {
+    const index = Math.floor(random() * bits.length);
+    const previous = bits[index];
+    bits[index] = previous === 0 ? 1 : 0;
+    const candidate = evaluateQubo(linear, quadratic, bits);
+    const temperature = Math.max(0.01, 1 - step / iterations);
+    const accept = candidate <= objective || random() < Math.exp((objective - candidate) / temperature);
+    if (accept) {
+      objective = candidate;
+      if (objective < bestObjective) {
+        bestObjective = objective;
+        bestBits = [...bits];
+      }
+    } else {
+      bits[index] = previous;
+    }
+  }
+  return {
+    backend: 'aethergrid-portable-cpu-annealer-v1',
+    algorithm: 'deterministic-simulated-annealing-qubo',
+    seed,
+    iterations,
+    bits: bestBits,
+    objective: Number(bestObjective),
+  };
+}
 
 const MAX_VARIABLES = 64;
 const MAX_EXACT_VARIABLES = 16;
