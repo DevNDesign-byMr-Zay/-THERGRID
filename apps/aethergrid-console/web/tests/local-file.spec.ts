@@ -77,11 +77,14 @@ test('standalone public weather uses provider data while historical and private 
   expect(results.privateAction).toBe(503);
 });
 
-// The canonical test suite runs with a single Playwright worker after hundreds
-// of browser checks. Isolate each actual city/mode matrix in a fresh page so
-// WebGL contexts, transient overlays and queued renders cannot accumulate
-// across eight unrelated districts. Keep every city and all seven mode checks.
-for (const name of ['NEW YORK','LONDON','TOKYO','DUBAI','SINGAPORE','SÃO PAULO','LAGOS','SYDNEY']) {
+// Each city retains all seven live Cesium mode assertions. Playwright's
+// parallel describe mode launches a fresh worker/browser process for each
+// city, even with --workers=1 (one at a time). A new BrowserContext alone
+// is insufficient on CI: a reused WebGL browser process eventually failed
+// Browser.setDownloadBehavior before Singapore's assertions could begin.
+test.describe('isolated offline city and visual-mode acceptance', () => {
+  test.describe.configure({ mode: 'parallel' });
+  for (const name of ['NEW YORK','LONDON','TOKYO','DUBAI','SINGAPORE','SÃO PAULO','LAGOS','SYDNEY']) {
   test(`bundled ${name} retains mapped Cesium geometry in every visual mode without a server`, async ({ page }) => {
     test.setTimeout(120_000);
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -123,7 +126,8 @@ for (const name of ['NEW YORK','LONDON','TOKYO','DUBAI','SINGAPORE','SÃO PAULO'
     await page.screenshot({ path: `test-results/local-district-${name.replaceAll(' ', '-')}.png` });
     expect(errors, `${name} must not emit uncaught browser errors`).toEqual([]);
   });
-}
+  }
+});
 
 test('standalone Cesium remains interactive while its optional Earth texture request is delayed', async ({ page }) => {
   test.setTimeout(90_000);

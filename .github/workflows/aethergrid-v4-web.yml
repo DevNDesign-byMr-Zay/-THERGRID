@@ -5,6 +5,9 @@ on:
     paths:
       - 'apps/aethergrid-console/web/**'
       - 'tests/aethergrid-v4-web-foundation.test.mjs'
+      - 'tests/aethergrid-canonical-live-gate.test.mjs'
+      - 'scripts/aethergrid-canonical-provider-smoke.mjs'
+      - 'scripts/lib/canonical-acceptance.mjs'
       - '.github/workflows/aethergrid-v4-web.yml'
   workflow_dispatch:
 
@@ -198,6 +201,12 @@ jobs:
 
   sustained-replay:
     runs-on: ubuntu-latest
+    # Match the @playwright/test version locked in web/package-lock.json.
+    # The image supplies Chromium and native libraries without relying on
+    # Ubuntu apt mirrors, which previously blocked setup until job cancellation.
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
+      options: --user 1001
     timeout-minutes: 35
     defaults:
       run:
@@ -221,8 +230,9 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: npm ci --ignore-scripts
 
-      - name: Install maintained Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Verify preinstalled version-matched Chromium
+        run: |
+          node --input-type=module -e 'import { chromium } from "@playwright/test"; import { accessSync } from "node:fs"; accessSync(chromium.executablePath());'
 
       - name: Verify actual fifteen-minute modeled replay
         env:
