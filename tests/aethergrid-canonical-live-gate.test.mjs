@@ -190,6 +190,68 @@ test('scheduled realtime acceptance requires records during service hours but pe
   assert.equal(staleAfterHours.verified, false);
 });
 
+test('canonical GTFS freshness is checked after retrieval, not at the start of other provider calls', () => {
+  const smoke = readFileSync('scripts/aethergrid-canonical-provider-smoke.mjs', 'utf8');
+  const ferryTask = smoke.split("await check('nyc-ferry-GTFS'")[1]?.split('const ibmPrerequisites')[0];
+  assert.ok(ferryTask, 'NYC Ferry canonical task is maintained');
+  assert.match(ferryTask, /const observedAt = new Date\(\)/u);
+  assert.match(ferryTask, /runAt: observedAt/u);
+  assert.doesNotMatch(ferryTask, /runAt: report\.runAt/u);
+
+  // Regression from protected live acceptance: the smoke began 71 seconds
+  // before the valid source timestamp, but the actual feed was retrieved 3s
+  // after that source update. This must NOT be classified as clock skew.
+  const feedTime = Date.parse('2026-10-22T08:03:04Z') / 1000;
+  const payload = {
+    receipt: {
+      provider: 'gtfs-rt-registry',
+      dataset: 'transit-trip-updates',
+      live: true,
+      fallback: false,
+      stale: false,
+      retrievedAt: '2026-10-22T08:03:07Z',
+    },
+    data: { stale: false, feedHeaderTimestamp: feedTime },
+  };
+  const options = {
+    records: 0,
+    expectedDataset: 'transit-trip-updates',
+    sourceTimestamp: feedTime,
+    timeZone: 'America/New_York',
+    serviceStartHour: 6,
+    serviceEndHour: 22,
+  };
+  const wrongStart = summarizeScheduledRealtime(payload, 'gtfs-rt-registry', {
+    ...options, runAt: '2026-10-22T08:01:53Z',
+  });
+  assert.equal(wrongStart.sourceAgeSeconds, -71);
+  assert.equal(wrongStart.verified, false);
+  const correctlyTimed = summarizeScheduledRealtime(payload, 'gtfs-rt-registry', {
+    ...options, runAt: '2026-10-22T08:03:07Z',
+  });
+  assert.equal(correctlyTimed.sourceAgeSeconds, 3);
+  assert.equal(correctlyTimed.serviceWindow.withinServiceHours, false);
+  assert.equal(correctlyTimed.verified, true);
+  assert.equal(correctlyTimed.acceptanceState, 'live-empty-outside-service-hours');
+
+  // Preserve the original security rules: an empty in-service feed, a stale
+  // upstream source, or an implausibly future timestamp cannot pass.
+  const inService = summarizeScheduledRealtime(payload, 'gtfs-rt-registry', {
+    ...options, runAt: '2026-10-22T15:03:07Z',
+    sourceTimestamp: Date.parse('2026-10-22T15:03:04Z') / 1000,
+  });
+  assert.equal(inService.verified, false);
+  const future = summarizeScheduledRealtime(payload, 'gtfs-rt-registry', {
+    ...options, runAt: '2026-10-22T08:03:07Z',
+    sourceTimestamp: Date.parse('2026-10-22T08:05:07Z') / 1000,
+  });
+  assert.equal(future.verified, false);
+  const stale = summarizeScheduledRealtime(payload, 'gtfs-rt-registry', {
+    ...options, runAt: '2026-10-22T08:14:07Z',
+  });
+  assert.equal(stale.verified, false);
+});
+
 test('IBM canonical discovery requires authenticated configured runtime and at least one backend without submitting hardware', () => {
   const summary = {
     apiVersion: '2026-04-15',
