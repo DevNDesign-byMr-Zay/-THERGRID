@@ -62,6 +62,7 @@ const REQUIRED_RUNTIME_FILES = Object.freeze([
   'ui.json',
   'README.md',
   '.env.example',
+  '.env.secrets.example',
   'START-AETHERGRID.ps1',
   'STOP-AETHERGRID.ps1',
   'START-AETHERGRID.cmd',
@@ -234,8 +235,11 @@ for (const absolute of await collectFiles(APP_ROOT)) {
     relativePath === '.aethergrid-data' ||
     relativePath.startsWith('.aethergrid-data/') ||
     relativePath === '.aethergrid.pid' ||
+    relativePath === '.aethergrid-runtime' ||
+    relativePath.startsWith('.aethergrid-runtime/') ||
     ((relativePath === '.env' || relativePath.startsWith('.env.')) &&
-      relativePath !== '.env.example') ||
+      relativePath !== '.env.example' &&
+      relativePath !== '.env.secrets.example') ||
     relativePath.startsWith('web/node_modules/') ||
     relativePath === '.venv-qiskit' ||
     relativePath.startsWith('.venv-qiskit/') ||
