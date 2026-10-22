@@ -351,6 +351,7 @@ export function App() {
   const [cityIdentity, setCityIdentity] = useState<CityIdentitySummary | null>(null);
   const [streamingState, setStreamingState] = useState<{count:number;error:string|null}>({count:0,error:null});
   const [powerOverlayError, setPowerOverlayError] = useState<string | null>(null);
+  const [cityReloadId, setCityReloadId] = useState(0);
   const [searchValue, setSearchValue] = useState('');
   const [searchError, setSearchError] = useState<string | null>(null);
   const [intelOpen, setIntelOpen] = useState(false);
@@ -715,7 +716,7 @@ export function App() {
       });
 
     return () => controller.abort();
-  }, [city.id, city.latitude, city.longitude]);
+  }, [city.id, city.latitude, city.longitude, cityReloadId]);
 
   // The bundled/core district is always the first scene. Adjacent live tiles
   // are optional and cannot replace it, or run from the standalone HTML.
@@ -2500,6 +2501,17 @@ export function App() {
                   ? `${sourceBuildingCount.toLocaleString()} MAPPED BUILDINGS · ${cityIdentity.sourceBackedHeightCoveragePercent.toFixed(1)}% MAPPED HEIGHT TAGS`
                   : powerOverlayError ? 'CITY GEOMETRY UNAVAILABLE' : 'SOURCE-BACKED CITY GEOMETRY LOADING'}
             </em>
+            {scope === 'city' && powerOverlayError ? (
+              <button
+                type="button"
+                className="city-retry-button"
+                title={powerOverlayError}
+                aria-label="Retry mapped city geometry"
+                onClick={() => setCityReloadId((current) => current + 1)}
+              >
+                RETRY 3D CITY
+              </button>
+            ) : null}
           </div>
         </section>
 
