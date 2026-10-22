@@ -17,9 +17,18 @@ for (const width of [1366, 390]) test(`opening the packaged index file without a
   await expect(page.getByRole('status').filter({ hasText: 'Local file' })).toBeVisible();
   await expect(page.locator('#local-boot')).toHaveCount(0);
   if(width===390){await expect(page.locator('.live-scene-controls')).not.toHaveAttribute('open','');await expect(page.getByText('LIVE WEATHER & AIR TRAFFIC',{exact:true})).toBeVisible();}
-  const logo = page.locator('img').first();
+  const logo = page.getByRole('img', { name: 'ÆTHERGRID', exact: true });
   await expect(logo).toBeVisible();
-  await expect.poll(() => logo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  // The direct-open archive embeds its actual logo as WebP data, not a network URL.
+  // Request image decoding explicitly: the Cesium viewport can become interactive
+  // before Chromium decodes the bundled logo under GPU-heavy CI workloads.
+  // A missing, corrupt, or undecodable logo still fails this assertion.
+  await expect(logo).toHaveAttribute('src', /^data:image\/webp;base64,/);
+  await expect.poll(async () => logo.evaluate(async (image: HTMLImageElement) => {
+    if (image.naturalWidth > 0) return image.naturalWidth;
+    try { await image.decode(); } catch { return 0; }
+    return image.naturalWidth;
+  }), { timeout: 20_000, message: 'Direct-open logo must decode to a real image' }).toBeGreaterThan(0);
   await page.getByRole('button', { name: 'Navigation and layers' }).click();
   await expect(page.getByRole('navigation', { name: 'Navigation workspace' })).toBeVisible();
   await page.getByRole('button', { name: 'Close navigation drawer' }).click();
