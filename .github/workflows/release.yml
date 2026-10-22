@@ -164,7 +164,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${{ steps.release_tag.outputs.tag }}" \
-            sbom.cdx.json release-commit.txt release-artifacts.sha256 release-manifest.json dist/aethergrid-functional-app.zip \
+            sbom.cdx.json release-commit.txt release-artifacts.sha256 release-manifest.json \
+            dist/aethergrid-functional-app.zip dist/aethergrid-operator-console.zip \
             --target "$GITHUB_SHA" \
             --title "${{ steps.release_tag.outputs.tag }}" \
             --generate-notes
