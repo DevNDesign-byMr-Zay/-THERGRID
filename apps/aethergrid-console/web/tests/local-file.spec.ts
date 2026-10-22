@@ -2,6 +2,30 @@ import { test, expect } from '@playwright/test';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+test('direct-open internal city API works with Windows-drive file paths', async ({ page }) => {
+  await page.route('http://**/*', route => route.abort());
+  await page.route('https://**/*', route => route.abort());
+  await page.goto(pathToFileURL(process.env.AETHERGRID_LOCAL_HTML || resolve('local-dist/index.html')).href);
+  const result = await page.evaluate(async () => {
+    const requestPath = '/api/aethergrid/geospatial/city/new-york?spatial=1';
+    const windows = new URL(requestPath, 'file:///C:/Users/Operator/AETHERGRID/index.html');
+    const response = await fetch(requestPath);
+    const city = await response.json();
+    return {
+      windowsPath: windows.pathname,
+      status: response.status,
+      source: city.source?.provider,
+      snapshot: city.source?.snapshot,
+      count: city.buildings?.length ?? 0,
+    };
+  });
+  expect(result.windowsPath).toMatch(/^\/C:\/api\/aethergrid\//u);
+  expect(result.status).toBe(200);
+  expect(result.source).toBe('bundled-openstreetmap');
+  expect(result.snapshot).toBe(true);
+  expect(result.count).toBeGreaterThan(100);
+});
+
 for (const width of [1366, 390]) test(`opening the packaged index file without a server renders the workspace at ${width}`, async ({ page }) => {
   await page.setViewportSize({ width, height: 800 });
   // The standalone WebGL globe is exercised below; keep drawer interaction
