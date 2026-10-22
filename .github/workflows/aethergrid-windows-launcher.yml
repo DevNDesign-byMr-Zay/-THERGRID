@@ -175,6 +175,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: aethergrid-windows-direct-open-${{ github.sha }}
-          path: apps/aethergrid-console/web/test-results/local-district-NEW-YORK.png
+          path: |
+            apps/aethergrid-console/web/test-results/local-district-NEW-YORK.png
+            apps/aethergrid-console/web/test-results/local-failure-NEW-YORK.png
+            apps/aethergrid-console/web/test-results/**/error-context.md
           if-no-files-found: warn
           retention-days: 14
