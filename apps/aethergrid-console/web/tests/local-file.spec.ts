@@ -4,6 +4,9 @@ import { pathToFileURL } from 'node:url';
 
 for (const width of [1366, 390]) test(`opening the packaged index file without a server renders the workspace at ${width}`, async ({ page }) => {
   await page.setViewportSize({ width, height: 800 });
+  // The standalone WebGL globe is exercised below; keep drawer interaction
+  // deterministic on constrained CI GPUs without disabling its assertions.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   test.setTimeout(180000);
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
