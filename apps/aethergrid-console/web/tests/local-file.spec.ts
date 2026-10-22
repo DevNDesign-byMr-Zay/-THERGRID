@@ -65,37 +65,53 @@ test('standalone public weather uses provider data while historical and private 
   expect(results.privateAction).toBe(503);
 });
 
-test('every bundled city renders its own mapped district without a server', async ({ page }) => {
-  test.setTimeout(360000);
-  await page.emulateMedia({reducedMotion:'reduce'});
-  const errors: string[] = [];
-  page.on('pageerror', e => errors.push(e.message));
-  await page.route('http://**/*', route => route.abort());
-  await page.route('https://**/*', route => route.abort());
-  await page.goto(pathToFileURL(process.env.AETHERGRID_LOCAL_HTML || resolve('local-dist/index.html')).href);
-  await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer-ready', 'true');
-  for (const name of ['NEW YORK','LONDON','TOKYO','DUBAI','SINGAPORE','SÃO PAULO','LAGOS','SYDNEY']) {
-    await page.getByRole('button', { name: 'Navigation and layers' }).click();
-    await page.getByRole('navigation', { name: 'City targets' }).getByRole('button', { name: new RegExp(name) }).click();
-    await page.getByRole('button', { name: 'Close navigation drawer' }).click();
-    await expect.poll(async () => Number(await page.locator('.world-stage').getAttribute('data-source-building-count'))).toBeGreaterThan(100);
-    await expect(page.locator('.journey-status')).toHaveCount(0, {timeout:45000});
-    await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer','cesium');
-    await expect(page.locator('.cesium-widget-errorPanel')).toHaveCount(0);
+// The canonical test suite runs with a single Playwright worker after hundreds
+// of browser checks. Isolate each actual city/mode matrix in a fresh page so
+// WebGL contexts, transient overlays and queued renders cannot accumulate
+// across eight unrelated districts. Keep every city and all seven mode checks.
+for (const name of ['NEW YORK','LONDON','TOKYO','DUBAI','SINGAPORE','SÃO PAULO','LAGOS','SYDNEY']) {
+  test(`bundled ${name} retains mapped Cesium geometry in every visual mode without a server`, async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.route('http://**/*', route => route.abort());
+    await page.route('https://**/*', route => route.abort());
+    await page.goto(pathToFileURL(process.env.AETHERGRID_LOCAL_HTML || resolve('local-dist/index.html')).href);
+    await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer-ready', 'true', { timeout: 30_000 });
+    await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer', 'cesium');
+    await test.step(`Select real bundled district: ${name}`, async () => {
+      await page.getByRole('button', { name: 'Navigation and layers' }).click();
+      await page.getByRole('navigation', { name: 'City targets' })
+        .getByRole('button', { name: new RegExp(name) }).click();
+      await page.getByRole('button', { name: 'Close navigation drawer' }).click();
+      await expect.poll(
+        async () => Number(await page.locator('.world-stage').getAttribute('data-source-building-count')),
+        { timeout: 45_000, message: `${name} must expose more than 100 source-backed mapped buildings` },
+      ).toBeGreaterThan(100);
+      await expect(page.locator('.journey-status')).toHaveCount(0, { timeout: 45_000 });
+      await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer', 'cesium');
+      await expect(page.locator('.cesium-widget-errorPanel')).toHaveCount(0);
+    });
     const count = await page.locator('.world-stage').getAttribute('data-source-building-count');
     for (const mode of ['SOLID','WIREFRAME','HOLOGRAPHIC','XRAY','GRID','OPERATIONS','REALITY']) {
-      const control = page.getByRole('group', {name:'Visual mode'}).getByRole('button', {name:mode,exact:true});
-      await control.click();
-      await expect(control).toHaveAttribute('aria-pressed','true');
-      await expect(page.locator('.world-stage')).toHaveAttribute('data-source-building-count',count!);
-      await page.waitForTimeout(80);
-      await expect(page.locator('.cesium-widget-errorPanel')).toHaveCount(0);
+      await test.step(`${name}: interactive ${mode} rendering`, async () => {
+        const control = page.getByRole('group', { name: 'Visual mode' })
+          .getByRole('button', { name: mode, exact: true });
+        await control.click();
+        await expect(control).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator('.world-stage')).toHaveAttribute('data-source-building-count', count!);
+        await page.waitForTimeout(80);
+        await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer', 'cesium');
+        await expect(page.locator('.cesium-widget-errorPanel')).toHaveCount(0);
+      });
     }
-    await page.getByRole('group', {name:'Visual mode'}).getByRole('button', {name:'SOLID',exact:true}).click();
-    await page.screenshot({ path: `test-results/local-district-${name.replaceAll(' ','-')}.png` });
-  }
-  expect(errors).toEqual([]);
-});
+    await page.getByRole('group', { name: 'Visual mode' })
+      .getByRole('button', { name: 'SOLID', exact: true }).click();
+    await page.screenshot({ path: `test-results/local-district-${name.replaceAll(' ', '-')}.png` });
+    expect(errors, `${name} must not emit uncaught browser errors`).toEqual([]);
+  });
+}
 
 test('standalone Cesium remains interactive while its optional Earth texture request is delayed', async ({ page }) => {
   test.setTimeout(90_000);
