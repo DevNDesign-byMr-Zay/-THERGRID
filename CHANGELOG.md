@@ -1,6 +1,17 @@
 # Changelog
 
-## Unreleased — 0.3.0
+## Unreleased — 0.3.1
+
+### Post-release local operation and Windows compatibility
+
+- Fix Windows drive-letter `file://` paths bypassing the in-browser virtual API and suppressing the bundled OpenStreetMap city geometry. Validate direct-open city snapshots and all seven visual modes in Windows Edge.
+- Prefer dated, source-backed bundled OSM city snapshots when live Overpass services cannot answer; never misrepresent cached geography as real-time data or substitute synthetic buildings as real geography.
+- Enable an app-contained, no-administrator Windows startup path using locally installed Node 22 or a SHA-256-verified portable Node distribution. Require real local health before browser handoff, and keep launch errors visible.
+- Load private local `.env.secrets` only at the backend, and support single-key Groq configuration for all replaceable AI agents while preserving explicit overrides. Credentials are never bundled or published.
+- Preserve current city data attribution, model/provider execution receipts, and bounds on public aviation/weather sources. Offline file mode transparently distinguishes features requiring a connected runtime.
+- Add regression tests for Windows file origins, portable startup, connected-city recovery, source-backed offline fallback, and secret hygiene. All release verification gates remain binding; **do not publish until the exact-main protected acceptance succeeds**.
+
+## 0.3.0 — 2026-10-22
 
 ### Capability and stabilization candidate
 
@@ -8,7 +19,7 @@
 - Add the local zero-cost CPU QUBO optimizer and exact small-problem reference to the existing application and maintain deterministic solver evidence.
 - Prepare the optional Qiskit Aer CPU circuit simulator, with genuine Bell/QAOA sample counts, no required Python installation for default startup, and no claim of quantum hardware execution.
 - Correct offline `file://` Cesium initialization so presentation-only Earth imagery cannot block the geographic scene.
-- Preserve reviewed browser, security, Windows, container, package, and canonical-live release gates. These changes are **not released** until independently verified on the exact integrated main commit and published through the existing manual workflow.
+- Preserved reviewed browser, security, Windows, container, package, and canonical-live release gates. The v0.3.0 release passed its protected acceptance and was published on 2026-10-22.
 
 ## 0.2.1 — 2026-10-11
 
