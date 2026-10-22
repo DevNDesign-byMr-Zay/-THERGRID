@@ -299,7 +299,8 @@ assert(
   ![...payload.keys()].some(
     (path) =>
       (path === '.env' || path.startsWith('.env.') || /\/\.env(?:\..*)?$/u.test(path)) &&
-      !path.endsWith('.env.example'),
+      !path.endsWith('.env.example') &&
+      !path.endsWith('.env.secrets.example'),
   ),
   'populated .env or .env.* files must never be included in the distributable ZIP',
 );
