@@ -1222,17 +1222,35 @@ test('offline city WebGL matrices use independent browser workers and keep all a
     text('apps/aethergrid-console/web/tests/local-file.spec.ts'),
     text('.github/workflows/aethergrid-v4-web.yml'),
   ]);
-  const cities = suite.split("test.describe('isolated offline city and visual-mode acceptance'")[1]
+  const cities = suite
+    .split("test.describe('isolated offline city and visual-mode acceptance'")[1]
     ?.split("test('standalone Cesium remains interactive")[0];
   assert.ok(cities, 'the offline city acceptance matrix remains present');
   assert.match(cities, /test\.describe\.configure\(\{ mode: 'parallel' \}\)/u);
   assert.match(cities, /test\.setTimeout\(120_000\)/u);
   assert.match(cities, /toBeGreaterThan\(100\)/u);
   assert.match(cities, /toHaveAttribute\('data-renderer', 'cesium'\)/u);
-  for (const city of ['NEW YORK', 'LONDON', 'TOKYO', 'DUBAI', 'SINGAPORE', 'SÃO PAULO', 'LAGOS', 'SYDNEY']) {
+  for (const city of [
+    'NEW YORK',
+    'LONDON',
+    'TOKYO',
+    'DUBAI',
+    'SINGAPORE',
+    'SÃO PAULO',
+    'LAGOS',
+    'SYDNEY',
+  ]) {
     assert.ok(cities.includes(city), `${city} offline acceptance is retained`);
   }
-  for (const mode of ['SOLID', 'WIREFRAME', 'HOLOGRAPHIC', 'XRAY', 'GRID', 'OPERATIONS', 'REALITY']) {
+  for (const mode of [
+    'SOLID',
+    'WIREFRAME',
+    'HOLOGRAPHIC',
+    'XRAY',
+    'GRID',
+    'OPERATIONS',
+    'REALITY',
+  ]) {
     assert.ok(cities.includes(mode), `${mode} visual assertion is retained`);
   }
   assert.match(workflow, /--config playwright\.local\.config\.ts --workers=1/u);
