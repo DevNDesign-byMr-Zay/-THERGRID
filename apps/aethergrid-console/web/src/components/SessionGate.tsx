@@ -33,7 +33,7 @@ function LocalRuntimeStatus() {
    return ()=>controller.abort();
  },[]);
  return <div className="local-file-status" role="status">
-   Offline HTML · eight bundled 3D cities. Live AI and aircraft need the included local service.
+   Local file · offline HTML with eight bundled 3D cities. Live AI and aircraft need the included local service.
    {' '}Open <strong>START-AETHERGRID.cmd</strong> from your extracted app folder to start it in one click.
    {reachable?<a href="http://127.0.0.1:8090/">Connected workspace ready</a>:null}
  </div>;
