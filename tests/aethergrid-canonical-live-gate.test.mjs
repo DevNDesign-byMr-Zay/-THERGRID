@@ -247,7 +247,8 @@ test('canonical GTFS freshness is checked after retrieval, not at the start of o
   });
   assert.equal(inService.verified, false);
   const future = summarizeScheduledRealtime(payload, 'gtfs-rt-registry', {
-    ...options, runAt: '2026-10-22T08:03:07Z',
+    ...options,
+    runAt: '2026-10-22T08:03:07Z',
     sourceTimestamp: Date.parse('2026-10-22T08:05:07Z') / 1000,
   });
   assert.equal(future.verified, false);
