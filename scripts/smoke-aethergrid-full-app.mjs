@@ -111,7 +111,9 @@ try {
   }
   assert(
     !extracted.some(
-      (entry) => /\/\.env(?:\..*)?$/u.test(entry) && !entry.endsWith('/.env.example') &&
+      (entry) =>
+        /\/\.env(?:\..*)?$/u.test(entry) &&
+        !entry.endsWith('/.env.example') &&
         !entry.endsWith('/.env.secrets.example'),
     ),
     'package must not contain populated .env or .env.* files',
