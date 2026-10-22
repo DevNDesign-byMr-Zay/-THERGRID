@@ -5,6 +5,9 @@ on:
     paths:
       - 'apps/aethergrid-console/web/**'
       - 'tests/aethergrid-v4-web-foundation.test.mjs'
+      - 'tests/aethergrid-canonical-live-gate.test.mjs'
+      - 'scripts/aethergrid-canonical-provider-smoke.mjs'
+      - 'scripts/lib/canonical-acceptance.mjs'
       - '.github/workflows/aethergrid-v4-web.yml'
   workflow_dispatch:
 
