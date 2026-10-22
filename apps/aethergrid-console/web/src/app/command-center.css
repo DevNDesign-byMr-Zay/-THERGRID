@@ -643,3 +643,30 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 @media (max-width: 720px) {
   .immersive-spatial .city-stream-status { left: 8px; }
 }
+
+/* Light operator controls use dark ink on their pale surfaces.
+   Preserve the dark glass styling and 3D scene lighting in dark mode. */
+:root[data-theme='light'] .immersive-spatial .visual-modes button {
+  color: #315063;
+}
+:root[data-theme='light'] .immersive-spatial .visual-modes button.active {
+  color: #194052;
+  border-color: rgba(5, 111, 155, 0.42);
+  background: rgba(5, 142, 180, 0.14);
+}
+:root[data-theme='light'] .immersive-spatial .temporal-modes button,
+:root[data-theme='light'] .immersive-spatial .temporal-rail .transport-button {
+  color: #37536b;
+}
+:root[data-theme='light'] .immersive-spatial .temporal-modes button.active,
+:root[data-theme='light'] .immersive-spatial .temporal-rail .live-button {
+  color: #194052;
+  border-color: rgba(5, 111, 155, 0.42);
+  background: rgba(5, 142, 180, 0.14);
+}
+:root[data-theme='light'] .immersive-spatial .time-readout strong {
+  color: #235166;
+}
+:root[data-theme='light'] .immersive-spatial .time-readout span {
+  color: #37536b;
+}
