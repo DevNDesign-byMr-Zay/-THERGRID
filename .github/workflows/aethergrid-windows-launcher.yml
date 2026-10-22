@@ -102,6 +102,39 @@ jobs:
             Remove-Item $PidFile, $EnvFile, $OverrideFile -Force -ErrorAction SilentlyContinue
           }
 
+      - name: Verify unprivileged portable Node fallback and secrets port precedence
+        shell: powershell
+        env:
+          AETHERGRID_NO_BROWSER: '1'
+        run: |
+          $ErrorActionPreference = "Stop"
+          $Root = Join-Path (Get-Location).Path "apps/aethergrid-console"
+          $PortableDir = Join-Path $Root ".aethergrid-runtime"
+          $PortableNode = Join-Path $PortableDir "node.exe"
+          $Secrets = Join-Path $Root ".env.secrets"
+          $PidFile = Join-Path $Root ".aethergrid.pid"
+          $SavedPath = $env:Path
+          $StartedId = 0
+          try {
+            New-Item -ItemType Directory -Force -Path $PortableDir | Out-Null
+            Copy-Item -Path (Get-Command node).Source -Destination $PortableNode -Force
+            Set-Content -Path $Secrets -Value "AETHERGRID_PORT=8094"
+            # Hide installed Node from PATH to exercise the real portable startup.
+            $env:Path = "$env:SystemRoot\System32;$env:SystemRoot\System32\WindowsPowerShell\v1.0"
+            & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root "START-AETHERGRID.ps1")
+            if ($LASTEXITCODE -ne 0) { throw "Portable launcher failed" }
+            $Health = Invoke-RestMethod -Uri "http://127.0.0.1:8094/api/aethergrid/health" -TimeoutSec 5
+            if ($Health.ok -ne $true -or $Health.product -ne (([char]0x00C6) + "THERGRID")) {
+              throw "Portable runtime did not serve actual AETHERGRID health"
+            }
+            $StartedId = [int](Get-Content $PidFile)
+          } finally {
+            $env:Path = $SavedPath
+            if ($StartedId -gt 0) { Stop-Process -Id $StartedId -Force -ErrorAction SilentlyContinue }
+            Remove-Item $PidFile, $Secrets -Force -ErrorAction SilentlyContinue
+            Remove-Item $PortableDir -Recurse -Force -ErrorAction SilentlyContinue
+          }
+
       - name: Verify source-backed city geometry on Windows
         shell: powershell
         run: |
