@@ -1,7 +1,12 @@
 import { expect, test } from '@playwright/test';
+import { isolateBackgroundFeeds } from './helpers/isolate-background-feeds';
 
 test('compiled Quantum workspace truthfully presents optional Qiskit Aer and keeps CPU fallback', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  // Use the maintained focused-UI isolation policy, while every Aer request
+  // still reaches the actual optional Python/Node simulator boundary.
+  await isolateBackgroundFeeds(page);
+  await page.route('**/api/aethergrid/quantum/qiskit/**', route => route.continue());
   await page.goto('/');
   await page.getByRole('navigation', { name: 'Product modes' })
     .getByRole('button', { name: 'QUANTUM', exact: true }).click();
