@@ -274,3 +274,26 @@ test('canonical acceptance starts after clean main CodeQL and retains exact-SHA 
   assert.match(workflow, /\['engineering\/ci', '\.github\/workflows\/ci\.yml'\]/u);
   assert.match(workflow, /\['security\/codeql', '\.github\/workflows\/codeql\.yml'\]/u);
 });
+
+test('credentialed canonical acceptance cannot run before every isolated browser workload succeeds', () => {
+  const workflow = readFileSync('.github/workflows/aethergrid-canonical-live.yml', 'utf8');
+  const browser = workflow.split('\n  browser:\n')[1].split('\n  canonical-live:\n')[0];
+  const credentialed = workflow.split('\n  canonical-live:\n')[1];
+  assert.match(browser, /needs: prepare/u);
+  assert.match(browser, /fail-fast: false/u);
+  assert.match(browser, /workload: \['1\/4', '2\/4', '3\/4', '4\/4', offline\]/u);
+  assert.match(
+    browser,
+    /--config playwright\.canonical\.config\.ts --shard="\$WORKLOAD" --workers=1/u,
+  );
+  assert.match(browser, /--config playwright\.canonical-offline\.config\.ts --workers=1/u);
+  assert.doesNotMatch(browser, /secrets\.|continue-on-error/u);
+  assert.match(credentialed, /needs: \[prepare, browser\]/u);
+  assert.match(credentialed, /BROWSER_RESULT: \$\{\{ needs\.browser\.result \}\}/u);
+  assert.match(credentialed, /run: test "\$BROWSER_RESULT" = success/u);
+  assert.ok(
+    credentialed.indexOf('Require every canonical browser workload') <
+      credentialed.indexOf('Credentialed canonical API and Cesium acceptance'),
+  );
+  assert.doesNotMatch(credentialed, /continue-on-error/u);
+});
