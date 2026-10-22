@@ -67,6 +67,10 @@ for (const [width, height] of resolutions) {
 }
 
 test('exclusive workspaces and source truth survive mode changes', async ({ page }) => {
+  // This checks operator panel exclusivity, not live provider or map-feed volume.
+  // Exercise the full workspace contract without unrelated feed/GPU animation churn.
+  await isolateBackgroundFeeds(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1536, height: 1024 });
   await page.goto('/');
   await page.getByRole('navigation', { name: 'Product modes' }).getByRole('button', { name: 'QUANTUM', exact: true }).click();
