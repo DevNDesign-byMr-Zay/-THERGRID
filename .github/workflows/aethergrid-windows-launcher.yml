@@ -142,3 +142,39 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'OSM city source regression suite failed' }
           npm --prefix apps/aethergrid-console/web run test -- tests/city-fidelity.spec.ts
           if ($LASTEXITCODE -ne 0) { throw 'Real Cesium city geometry tests failed' }
+
+      - name: Verify real direct-open NYC Cesium scene in Windows Edge
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          Push-Location "apps/aethergrid-console/web"
+          try {
+            npx vite build --config vite.local.config.ts
+            if ($LASTEXITCODE -ne 0) { throw "Direct-open Vite build failed" }
+          } finally { Pop-Location }
+          node scripts/assemble-aethergrid-local-html.mjs
+          if ($LASTEXITCODE -ne 0) { throw "Direct-open snapshot assembly failed" }
+          Push-Location "apps/aethergrid-console/web"
+          try {
+            $Edge = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+            if (Test-Path $Edge) {
+              $env:AETHERGRID_TEST_CHROMIUM = $Edge
+            } else {
+              npx playwright install chromium
+              if ($LASTEXITCODE -ne 0) { throw "Chromium install failed" }
+            }
+            npx playwright test --config playwright.local.config.ts --grep "bundled NEW YORK retains mapped Cesium geometry" --workers=1 --reporter=line
+            if ($LASTEXITCODE -ne 0) { throw "Windows direct-open NYC 3D and 7 visual modes failed" }
+          } finally {
+            Remove-Item Env:AETHERGRID_TEST_CHROMIUM -ErrorAction SilentlyContinue
+            Pop-Location
+          }
+
+      - name: Retain Windows local 3D scene evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: aethergrid-windows-direct-open-${{ github.sha }}
+          path: apps/aethergrid-console/web/test-results/local-district-NEW-YORK.png
+          if-no-files-found: warn
+          retention-days: 14
