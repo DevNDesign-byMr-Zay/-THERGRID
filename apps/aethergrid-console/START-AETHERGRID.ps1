@@ -22,6 +22,19 @@ if ($NodeCommand) {
     $NodeMajor = 0
   }
 }
+if ($NodeMajor -ne 22 -and (Test-Path $PortableNode)) {
+  try {
+    $PortableVersion = (& $PortableNode --version).TrimStart("v")
+    $PortableMajor = 0
+    if ([int]::TryParse(($PortableVersion -split "\.")[0], [ref]$PortableMajor) -and $PortableMajor -eq 22) {
+      $NodeCommand = @{ Source = $PortableNode }
+      $NodeVersion = $PortableVersion
+      $NodeMajor = $PortableMajor
+    }
+  } catch {
+    # An invalid or blocked cached binary is replaced using the pinned archive.
+  }
+}
 if ($NodeMajor -ne 22) {
   if (-not [Environment]::Is64BitOperatingSystem) {
     Write-Host "$ProductName needs 64-bit Windows or a previously installed Node.js 22." -ForegroundColor Red
