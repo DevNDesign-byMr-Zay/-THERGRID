@@ -130,6 +130,10 @@ try {
   });
   await check('nyc-ferry-GTFS', async () => {
     const result = await request('/api/aethergrid/transit/realtime?cityId=new-york');
+    // Freshness is measured when this feed has actually been fetched, not when
+    // the multi-provider smoke began (AI and weather checks can take minutes).
+    // Keep the original report.runAt as the overall audit start timestamp.
+    const observedAt = new Date();
     const tripUpdates = Array.isArray(result.data?.tripUpdates)
       ? result.data.tripUpdates.length
       : 0;
@@ -137,7 +141,7 @@ try {
       ...summarizeScheduledRealtime(result, 'gtfs-rt-registry', {
         records: tripUpdates,
         expectedDataset: 'transit-trip-updates',
-        runAt: report.runAt,
+        runAt: observedAt,
         sourceTimestamp: result.data?.feedHeaderTimestamp,
         timeZone: 'America/New_York',
         serviceStartHour: 6,
