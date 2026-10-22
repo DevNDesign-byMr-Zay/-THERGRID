@@ -9,8 +9,13 @@ export function installStandaloneRuntime() {
   const snapshots = (globalThis as typeof globalThis & { __AETHERGRID_CITIES__?: Record<string, Snapshot> }).__AETHERGRID_CITIES__ ?? {};
   const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json' } });
   globalThis.fetch = async (input, init) => {
-    const url = new URL(input instanceof Request ? input.url : String(input), location.href);
-    if (url.protocol !== 'file:' || !url.pathname.startsWith('/api/aethergrid/')) return nativeFetch(input, init);
+    // On Windows, resolving a root-relative /api path against file:///C:/...
+    // yields file:///C:/api/... (pathname /C:/api/...), NOT /api/...
+    // Match the original relative request before URL resolution instead.
+    // This also prevents interception of absolute external HTTP(S) URLs.
+    const requestPath = input instanceof Request ? input.url : String(input);
+    if (!requestPath.startsWith('/api/aethergrid/')) return nativeFetch(input, init);
+    const url = new URL(requestPath, 'https://local.aethergrid.invalid');
     const method = init?.method ?? (input instanceof Request ? input.method : 'GET');
     const route = url.pathname.slice('/api/aethergrid/'.length);
     if (route === 'profile') {
