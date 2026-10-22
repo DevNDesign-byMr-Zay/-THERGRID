@@ -24,7 +24,10 @@ test('Windows launcher preserves unprivileged double-click startup and Node 22 c
 
 test('launcher resolves browser port using the same env-file ordering as Node and rejects unsafe ports', async () => {
   const launcher = await readFile(launcherPath, 'utf8');
-  assert.match(launcher, /foreach \(\$FileName in @\("\.env", "\.env\.aethergrid", "\.env\.secrets"\)\)/u);
+  assert.match(
+    launcher,
+    /foreach \(\$FileName in @\("\.env", "\.env\.aethergrid", "\.env\.secrets"\)\)/u,
+  );
   assert.match(launcher, /\$env:AETHERGRID_PORT/u);
   assert.match(launcher, /int\]::TryParse/u);
   assert.match(launcher, /\$Resolved -lt 1/u);
