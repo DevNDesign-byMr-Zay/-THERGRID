@@ -1,5 +1,7 @@
 import { buildingPolygons } from './building-rings.mjs';
 import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { gunzipSync } from 'node:zlib';
 
 const DEFAULT_OVERPASS_ENDPOINTS = Object.freeze([
   'https://overpass.kumi.systems/api/interpreter',
@@ -716,6 +718,33 @@ function normalizeCustomCity(input = {}) {
   };
 }
 
+/**
+ * The published app includes eight dated OpenStreetMap snapshots. When a
+ * live Overpass request fails, prefer their REAL footprints over synthetic
+ * fallback buildings. The snapshot remains explicitly non-live/stale.
+ */
+async function bundledCitySnapshot(city) {
+  if (city.custom || !CITY_PRESETS.some((preset) => preset.id === city.id)) return null;
+  try {
+    const compressed = await readFile(new URL(`./assets/cities/${city.id}.json.gz`, import.meta.url));
+    const snapshot = JSON.parse(gunzipSync(compressed, { maxOutputLength: 32 * 1024 * 1024 }).toString('utf8'));
+    if (
+      snapshot.city?.id !== city.id ||
+      snapshot.source?.provider !== 'bundled-openstreetmap' ||
+      snapshot.source?.snapshot !== true ||
+      snapshot.source?.live === true ||
+      !Array.isArray(snapshot.buildings) ||
+      snapshot.buildings.length < 100 ||
+      snapshot.buildings.some((building) => String(building.id || '').startsWith('fallback-'))
+    ) {
+      throw new Error('Bundled city snapshot failed provenance validation');
+    }
+    return snapshot;
+  } catch {
+    return null;
+  }
+}
+
 export function createGeoRuntime({
   env = process.env,
   fetchImpl = fetch,
@@ -859,6 +888,11 @@ export function createGeoRuntime({
     if (!force && cached && now() - cached.cachedAt < cacheTtlMs) return cached.value;
 
     if (provider !== 'osm-overpass') {
+      const bundled = await bundledCitySnapshot(city);
+      if (bundled) {
+        cache.set(cacheKey, { cachedAt: now(), value: bundled });
+        return bundled;
+      }
       const power = fallbackPower(city);
       const buildings = seededFallback(city);
       const source = { provider: 'local-fallback', live: false, attribution: null };
@@ -969,6 +1003,11 @@ export function createGeoRuntime({
       cache.set(cacheKey, { cachedAt: now(), value });
       return value;
     } catch (error) {
+      const bundled = await bundledCitySnapshot(city);
+      if (bundled) {
+        cache.set(cacheKey, { cachedAt: now(), value: bundled });
+        return bundled;
+      }
       const power = fallbackPower(city);
       const buildings = seededFallback(city);
       const source = {
