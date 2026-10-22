@@ -12,6 +12,10 @@ const resolutions = [[1536, 1024], [1440, 900], [1366, 768], [1024, 768], [768, 
 
 for (const [width, height] of resolutions) {
   test(`viewport command center ${width}×${height}`, async ({ page }) => {
+    // This is a viewport/navigation contract, not a live feed or Cesium integration check.
+    // Keep unrelated third-party background traffic from starving UI interactions on CI runners.
+    // Live map, native renderer, and provider integration remain covered by their own suites.
+    await isolateBackgroundFeeds(page);
     await page.setViewportSize({ width, height });
     await page.goto('/');
     await expect(page.getByRole('img', { name: 'ÆTHERGRID', exact: true })).toBeVisible();
