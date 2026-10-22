@@ -88,3 +88,61 @@ test('light drawers and actions remain usable at 200 percent text size', async (
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.screenshot({ path: 'test-results/production-light-navigation-enlarged.png' });
 });
+
+test('light operator mode labels and live clock meet normal text contrast', async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addInitScript(() => localStorage.setItem('aethergrid.operator.appearance.v4', 'light'));
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer-ready', 'true', { timeout: 30_000 });
+
+  const selectors = [
+    '.visual-modes button.active',
+    '.visual-modes button:not(.active)',
+    '.temporal-modes button.active',
+    '.temporal-modes button:not(.active)',
+    '.time-readout strong',
+    '.time-readout span',
+  ];
+  for (const selector of selectors) {
+    await expect(page.locator(selector).first()).toBeVisible();
+  }
+
+  const readings = await page.evaluate((targets) => {
+    const rgba = (value: string): [number, number, number, number] => {
+      const numbers = (value.match(/[0-9.]+/g) ?? []).map(Number);
+      if (numbers.length < 3) throw new Error(`Unsupported computed color: ${value}`);
+      return [numbers[0], numbers[1], numbers[2], numbers[3] ?? 1];
+    };
+    const luminance = (color: number[]) => color
+      .slice(0, 3)
+      .map((value) => {
+        const channel = value / 255;
+        return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+      })
+      .reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+
+    return targets.map((selector) => {
+      const element = document.querySelector<HTMLElement>(selector);
+      if (!element) throw new Error(`Missing contrast target: ${selector}`);
+      const foreground = rgba(getComputedStyle(element).color);
+      const ancestors: HTMLElement[] = [];
+      for (let node: HTMLElement | null = element; node; node = node.parentElement) ancestors.push(node);
+      // Composite the translucent control surfaces over the dark spatial viewport.
+      // This is conservative for pale light-mode surfaces behind the labels.
+      let background: number[] = [2, 5, 10];
+      for (const node of ancestors.reverse()) {
+        const [r, g, b, alpha] = rgba(getComputedStyle(node).backgroundColor);
+        background = [r, g, b].map((channel, index) => channel * alpha + background[index] * (1 - alpha));
+      }
+      const fg = luminance(foreground);
+      const bg = luminance(background);
+      return { selector, ratio: (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05) };
+    });
+  }, selectors);
+
+  for (const { selector, ratio } of readings) {
+    expect(ratio, `${selector} requires at least 4.5:1 text contrast`).toBeGreaterThanOrEqual(4.5);
+  }
+});
