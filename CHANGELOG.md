@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased — 0.2.1
+## Unreleased — 0.3.0
+
+### Capability and stabilization candidate
+
+- Integrate real camera-prioritized geographic streaming with verified source-backed Cesium scene geometry; preserve existing roof direction, wireframe connectors and source provenance.
+- Add the local zero-cost CPU QUBO optimizer and exact small-problem reference to the existing application and maintain deterministic solver evidence.
+- Prepare the optional Qiskit Aer CPU circuit simulator, with genuine Bell/QAOA sample counts, no required Python installation for default startup, and no claim of quantum hardware execution.
+- Correct offline `file://` Cesium initialization so presentation-only Earth imagery cannot block the geographic scene.
+- Preserve reviewed browser, security, Windows, container, package, and canonical-live release gates. These changes are **not released** until independently verified on the exact integrated main commit and published through the existing manual workflow.
+
+## 0.2.1 — 2026-10-11
 
 ### Release coordination
 
@@ -139,7 +149,7 @@
 
 - Integrated the draft v4 React/Cesium operator lane with the merged production provider foundation: safe provider Connection Center, normalized Tomorrow forecast compatibility, source-backed NWS alert boundaries, decoded GTFS-Realtime vehicle positions, coordinate-bound NOAA NWPS gauge visualization, source-unit-preserving EIA fuel-mix presentation, and an explicitly confirmed D-Wave annealing workflow with genuine job/result polling.
 - Preserved truth boundaries throughout the integration: no inferred GTFS route geometry, no guessed hydrology locations, no invented EIA region polygons, no cross-provider weather-code equivalence, and no hardware-executed quantum claim before a provider-completed result.
-- Current package candidate: `0.2.1`. The `v0.2.0` release is the latest hosted milestone (from an earlier commit and legacy ZIP); this candidate is not published until the gated manual release workflow publishes it.
+- Current package candidate: `0.3.0`. The `v0.2.1` release is the latest hosted milestone; this candidate is not published until the gated manual release workflow publishes it.
 
 ## 0.1.1 — 2026-09-24 — post-release hardening
 
