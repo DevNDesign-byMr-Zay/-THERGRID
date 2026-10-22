@@ -96,3 +96,37 @@ test('every bundled city renders its own mapped district without a server', asyn
   }
   expect(errors).toEqual([]);
 });
+
+test('standalone Cesium remains interactive while its optional Earth texture request is delayed', async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  // A local library-mode bundle may inline imagery as data: URIs rather than
+  // issuing separate file requests. Delay either supported loading path.
+  await page.addInitScript(() => {
+    const createBitmap = window.createImageBitmap?.bind(window);
+    if (createBitmap) {
+      window.createImageBitmap = ((image: ImageBitmapSource, ...args: unknown[]) => {
+        if (image instanceof Blob && image.type === 'image/jpeg') {
+          return new Promise<ImageBitmap>(() => undefined);
+        }
+        return Reflect.apply(createBitmap, window, [image, ...args]) as Promise<ImageBitmap>;
+      }) as typeof window.createImageBitmap;
+    }
+  });
+  await page.route('**/*earth-natural-earth*', async route => {
+    await new Promise(resolve => setTimeout(resolve, 12_000));
+    await route.abort();
+  });
+  await page.route('http://**/*', route => route.abort());
+  await page.route('https://**/*', route => route.abort());
+  await page.goto(pathToFileURL(process.env.AETHERGRID_LOCAL_HTML || resolve('local-dist/index.html')).href);
+  await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer-ready', 'true', { timeout: 8_000 });
+  await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer', 'cesium');
+  await page.getByRole('button', { name: 'Navigation and layers' }).click();
+  await page.getByRole('navigation', { name: 'City targets' }).getByRole('button', { name: /NEW YORK/ }).click();
+  await expect.poll(
+    async () => Number(await page.locator('.world-stage').getAttribute('data-source-building-count')),
+    { timeout: 45_000 }
+  ).toBeGreaterThan(100);
+  await expect(page.locator('.cesium-widget-errorPanel')).toHaveCount(0);
+});
