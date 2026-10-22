@@ -1197,3 +1197,22 @@ test('vNext light mode separates light-surface text from intentionally dark over
     /:root\[data-theme='light'\][\s\S]*\.intel-card[\s\S]*color:\s*var\(--text-primary\)/u,
   );
 });
+
+test('sustained replay uses the matching maintained browser image without a blocking apt install', async () => {
+  const [workflow, packageJson] = await Promise.all([
+    text('.github/workflows/aethergrid-v4-web.yml'),
+    text('apps/aethergrid-console/web/package.json'),
+  ]);
+  const version = JSON.parse(packageJson).devDependencies['@playwright/test'];
+  const replay = workflow.split('  sustained-replay:')[1];
+  assert.ok(replay, 'the sustained replay remains a required workflow job');
+  assert.ok(
+    replay.includes(`image: mcr.microsoft.com/playwright:v${version}-noble`),
+    'the bundled Chromium and dependencies must match the locked Playwright version',
+  );
+  assert.match(replay, /timeout-minutes: 35/u);
+  assert.match(replay, /Verify actual fifteen-minute modeled replay/u);
+  assert.match(replay, /AETHERGRID_LONG_ACCEPTANCE: '1'/u);
+  assert.match(replay, /tests\/sustained-replay\.spec\.ts/u);
+  assert.doesNotMatch(replay, /playwright install --with-deps/u);
+});
