@@ -111,7 +111,7 @@ test('light operator mode labels and live clock meet normal text contrast', asyn
 
   const readings = await page.evaluate((targets) => {
     const rgba = (value: string): [number, number, number, number] => {
-      const numbers = (value.match(/[\\d.]+/g) ?? []).map(Number);
+      const numbers = (value.match(/[0-9.]+/g) ?? []).map(Number);
       if (numbers.length < 3) throw new Error(`Unsupported computed color: ${value}`);
       return [numbers[0], numbers[1], numbers[2], numbers[3] ?? 1];
     };
