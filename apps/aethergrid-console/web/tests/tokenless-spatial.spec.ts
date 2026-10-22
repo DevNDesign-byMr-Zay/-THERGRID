@@ -27,6 +27,10 @@ test('credential-free globe and real city mesh stay visible', async ({ page }) =
 
   await expect(stage).toHaveAttribute('data-spatial-scope', 'city');
 
+  // View-prioritized streaming can clear intermediate, high-altitude tiles during
+  // descent. Verify the settled city rather than an ephemeral arrival snapshot.
+  await expect(page.locator('.journey-status')).toHaveCount(0, { timeout: 90_000 });
+
   await expect
     .poll(
       async () => Number(
@@ -41,7 +45,8 @@ test('credential-free globe and real city mesh stay visible', async ({ page }) =
 
   await expect(shell).toHaveAttribute(
     'data-building-mode',
-    /^(source-extruded|hybrid|cesium-osm)$/
+    /^(source-extruded|hybrid|cesium-osm)$/,
+    { timeout: 30_000 }
   );
   await expect(page.locator('.scene-caption')).toContainText('MAPPED BUILDINGS');
   await expect(shell).toHaveAttribute('data-renderer', 'cesium');

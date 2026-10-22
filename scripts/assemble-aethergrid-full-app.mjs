@@ -36,6 +36,9 @@ const REQUIRED_RUNTIME_FILES = Object.freeze([
   'terrain-runtime.mjs',
   'quantum-runtime.mjs',
   'local-optimization-runtime.mjs',
+  'qiskit-aer-runtime.mjs',
+  'qiskit-aer-bridge.py',
+  'requirements-qiskit.txt',
   'config/env-schema.mjs',
   'config/provider-config.mjs',
   'config/public-config.mjs',
@@ -234,6 +237,10 @@ for (const absolute of await collectFiles(APP_ROOT)) {
     ((relativePath === '.env' || relativePath.startsWith('.env.')) &&
       relativePath !== '.env.example') ||
     relativePath.startsWith('web/node_modules/') ||
+    relativePath === '.venv-qiskit' ||
+    relativePath.startsWith('.venv-qiskit/') ||
+    relativePath === '.venv' ||
+    relativePath.startsWith('.venv/') ||
     relativePath.startsWith('web/dist/') ||
     relativePath.startsWith('web/local-dist/') ||
     relativePath.startsWith('web/src/') ||
@@ -295,6 +302,12 @@ assert(
 assert(
   ![...payload.keys()].some((path) => path.startsWith('web/node_modules/')),
   'web development dependencies must not be included in the distributable ZIP',
+);
+assert(
+  ![...payload.keys()].some(
+    (path) => path.startsWith('.venv-qiskit/') || path.startsWith('.venv/'),
+  ),
+  'optional local Python virtual environments must not be packaged',
 );
 
 const appManifest = JSON.parse(payload.get('app.json').toString('utf8'));

@@ -9,6 +9,8 @@ import {
   loadQuantumJob,
   loadQuantumJobs,
   loadQuantumRuntime,
+  loadQiskitAerStatus,
+  runQiskitAerCircuit,
   submitBellSampler,
   runLocalQuboComparison,
   submitDwaveJob,
@@ -18,12 +20,14 @@ import {
   type DwaveReceipt,
   type DwaveSolver,
   type LocalQuboResult,
+  type AerCircuitResult,
+  type AerSimulatorStatus,
   type QuantumBackend,
   type QuantumJob,
   type QuantumRuntimeSummary
 } from '../services/quantum-client';
 
-type QuantumWorkspace = 'gate-model' | 'annealing' | 'local-optimization';
+type QuantumWorkspace = 'gate-model' | 'annealing' | 'local-optimization' | 'qiskit-aer';
 
 interface JsonObjectParse {
   value: Record<string, unknown> | null;
@@ -79,6 +83,11 @@ export function QuantumPanel() {
   const [localResult, setLocalResult] = useState<LocalQuboResult | null>(null);
   const [localRunning, setLocalRunning] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [aerStatus, setAerStatus] = useState<AerSimulatorStatus | null>(null);
+  const [aerCircuitJson, setAerCircuitJson] = useState(JSON.stringify({ experiment: 'bell', shots: 1024, seed: 42 }, null, 2));
+  const [aerResult, setAerResult] = useState<AerCircuitResult | null>(null);
+  const [aerRunning, setAerRunning] = useState(false);
+  const [aerError, setAerError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
 
@@ -97,6 +106,27 @@ export function QuantumPanel() {
   const [dwaveError, setDwaveError] = useState<string | null>(null);
   const dwavePollRef = useRef<number | null>(null);
 
+  useEffect(() => {
+    if (workspace !== 'qiskit-aer') return;
+    let cancelled = false;
+    setAerStatus(null);
+    void loadQiskitAerStatus()
+      .then((status) => {
+        if (!cancelled) setAerStatus(status);
+      })
+      .catch(() => {
+        if (!cancelled) setAerStatus({
+          available: false,
+          provider: 'qiskit-aer',
+          executionType: 'quantum-circuit-simulation',
+          reason: 'backend-unreachable',
+          hardwareSubmitted: false,
+          hardwareExecuted: false
+        });
+      });
+    return () => { cancelled = true; };
+  }, [workspace]);
+
   const hardware = runtime?.hardwareExecution === true;
   const configured = runtime?.configured === true;
 
@@ -114,6 +144,7 @@ export function QuantumPanel() {
     [dwaveSolvers, dwaveSolver]
   );
   const localProblem = useMemo(() => parseJsonObject(localProblemJson, false), [localProblemJson]);
+  const aerCircuit = useMemo(() => parseJsonObject(aerCircuitJson, false), [aerCircuitJson]);
   const parsedProblem = useMemo(
     () => parseJsonObject(dwaveProblemJson, false),
     [dwaveProblemJson]
@@ -309,6 +340,20 @@ export function QuantumPanel() {
     }
   };
 
+  const runAerCircuit = async () => {
+    if (!aerCircuit.value || !aerStatus?.available || aerRunning) return;
+    setAerRunning(true);
+    setAerError(null);
+    setAerResult(null);
+    try {
+      setAerResult(await runQiskitAerCircuit(aerCircuit.value));
+    } catch (runError) {
+      setAerError(runError instanceof Error ? runError.message : String(runError));
+    } finally {
+      setAerRunning(false);
+    }
+  };
+
   const submitAnnealingProblem = async () => {
     if (!canSubmitDwave || !parsedProblem.value || !parsedParameters.value) {
       return;
@@ -353,7 +398,9 @@ export function QuantumPanel() {
               ? runtime?.provider?.toUpperCase() || 'LOADING'
               : workspace === 'local-optimization'
                 ? 'LOCAL QUBO OPTIMIZATION'
-                : 'D-WAVE ANNEALING'}
+                : workspace === 'qiskit-aer'
+                  ? 'QISKIT AER SIMULATION'
+                  : 'D-WAVE ANNEALING'}
           </strong>
         </span>
         {workspace === 'gate-model' ? (
@@ -362,6 +409,10 @@ export function QuantumPanel() {
           </em>
         ) : workspace === 'local-optimization' ? (
           <em className="simulator">CPU · FREE</em>
+        ) : workspace === 'qiskit-aer' ? (
+          <em className="simulator">
+            {aerStatus?.available ? 'CPU SIMULATOR' : 'OPTIONAL SIMULATOR'}
+          </em>
         ) : (
           <em className={dwaveConfigured ? 'hardware' : 'simulator'}>
             {dwaveConfigured ? 'SAPI CONNECTED' : 'UNCONFIGURED'}
@@ -390,6 +441,13 @@ export function QuantumPanel() {
           onClick={() => setWorkspace('local-optimization')}
         >
           LOCAL OPTIMIZE
+        </button>
+        <button
+          type="button"
+          className={workspace === 'qiskit-aer' ? 'active' : ''}
+          onClick={() => setWorkspace('qiskit-aer')}
+        >
+          QISKIT AER
         </button>
       </div>
 
@@ -493,6 +551,77 @@ export function QuantumPanel() {
             )}
           </details>
         </>
+      ) : workspace === 'qiskit-aer' ? (
+        <fieldset className="dwave-workspace aer-workspace">
+          <legend>QISKIT AER · CPU CIRCUIT SIMULATION</legend>
+          <p className="dwave-boundary">
+            Run actual local quantum circuits without a QPU. Bell-state sampling and
+            single-layer QAOA trials use a seeded CPU simulator. Results are sampled
+            circuit outcomes, not proof of optimality or hardware quantum advantage.
+          </p>
+          <div className="quantum-runtime-grid" role="status">
+            <span><small>PROVIDER</small><strong>QISKIT AER</strong></span>
+            <span>
+              <small>STATUS</small>
+              <strong>{aerStatus === null ? 'CHECKING' : aerStatus.available ? 'LOCAL READY' : 'NOT INSTALLED'}</strong>
+            </span>
+            <span><small>EXECUTION</small><strong>CPU SIMULATION</strong></span>
+          </div>
+          {!aerStatus?.available ? (
+            <p className="dwave-boundary" data-aer-availability="unavailable">
+              Optional Qiskit Aer is unavailable. Install the local Python requirements
+              separately; ÆTHERGRID and LOCAL OPTIMIZE remain operational.
+              {aerStatus?.reason ? ` · ${aerStatus.reason}` : ''}
+            </p>
+          ) : null}
+          <div className="quantum-backend-meta">
+            <button type="button" onClick={() => setAerCircuitJson(JSON.stringify({
+              experiment: 'bell', shots: 1024, seed: 42
+            }, null, 2))}>BELL CIRCUIT</button>
+            <button type="button" onClick={() => setAerCircuitJson(JSON.stringify({
+              experiment: 'qubo-qaoa', linear: [-2, -1], quadratic: [[0, 3], [0, 0]],
+              gamma: 0.45, beta: 0.7, shots: 1024, seed: 42
+            }, null, 2))}>QAOA QUBO TRIAL</button>
+          </div>
+          <label className="dwave-json-field">
+            <span>BOUNDED CIRCUIT INPUT</span>
+            <textarea
+              value={aerCircuitJson}
+              onChange={(event) => setAerCircuitJson(event.currentTarget.value)}
+              rows={8}
+              spellCheck={false}
+            />
+            <small className={aerCircuit.error ? 'invalid' : 'valid'}>
+              {aerCircuit.error || 'VALID JSON · LOCAL CIRCUIT ONLY'}
+            </small>
+          </label>
+          <button
+            type="button"
+            className="quantum-run"
+            disabled={!aerStatus?.available || !aerCircuit.value || aerRunning}
+            onClick={() => void runAerCircuit()}
+          >
+            {aerRunning ? 'SIMULATING QUANTUM CIRCUIT…' : 'RUN QISKIT AER SIMULATOR'}
+          </button>
+          {aerError ? <div className="agent-error" role="alert">{aerError}</div> : null}
+          {aerResult ? (
+            <div className="quantum-job-state" data-aer-circuit-result="complete">
+              <span>REAL CIRCUIT SIMULATION · {aerResult.backend}</span>
+              <strong>{aerResult.experiment.toUpperCase()} · {aerResult.qubits} QUBITS</strong>
+              <small>{aerResult.shots} SHOTS · SEED {aerResult.seed}</small>
+              <span>MEASUREMENT COUNTS</span>
+              <pre>{JSON.stringify(aerResult.counts, null, 2)}</pre>
+              {aerResult.expectationObjective != null ? (
+                <>
+                  <small>EXPECTED QUBO OBJECTIVE · {aerResult.expectationObjective.toFixed(4)}</small>
+                  <small>BEST OBSERVED · {aerResult.bestObservedObjective}</small>
+                </>
+              ) : null}
+              <small>RESULT EVIDENCE · {aerResult.receipt}</small>
+              <small>CPU CIRCUIT SIMULATION · NOT QUANTUM HARDWARE</small>
+            </div>
+          ) : null}
+        </fieldset>
       ) : workspace === 'local-optimization' ? (
         <fieldset className="dwave-workspace local-qubo-workspace">
           <legend>ZERO-COST QUBO · NOT QUANTUM HARDWARE</legend>

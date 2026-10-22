@@ -6149,7 +6149,8 @@ button {
   gap: 8px;
 }
 
-.local-qubo-workspace .quantum-job-state {
+.local-qubo-workspace .quantum-job-state,
+.aer-workspace .quantum-job-state {
   grid-template-columns: minmax(0, 1fr);
   min-width: 0;
   overflow-wrap: anywhere;

@@ -101,6 +101,9 @@ try {
     'aethergrid-functional-app/legacy/index.html',
     'aethergrid-functional-app/legacy/standalone.html',
     'aethergrid-functional-app/node_modules/zod/package.json',
+    'aethergrid-functional-app/qiskit-aer-runtime.mjs',
+    'aethergrid-functional-app/qiskit-aer-bridge.py',
+    'aethergrid-functional-app/requirements-qiskit.txt',
     'aethergrid-functional-app/PACKAGE_CONTENTS.json',
   ]) {
     assert(extracted.includes(required), `packaged smoke artifact missing ${required}`);
@@ -110,6 +113,10 @@ try {
       (entry) => /\/\.env(?:\..*)?$/u.test(entry) && !entry.endsWith('/.env.example'),
     ),
     'package must not contain populated .env or .env.* files',
+  );
+  assert(
+    !extracted.some((path) => path.includes('/.venv-qiskit/') || path.includes('/.venv/')),
+    'optional private Python environments must never be included in the ZIP',
   );
 
   const port = await reservePort();
@@ -163,6 +170,14 @@ try {
     comparison.hardwareExecuted === false,
     'packaged CPU results must never claim QPU execution',
   );
+
+  // An extracted app must remain healthy even when Python and Qiskit are absent.
+  const aerResponse = await fetch(`${baseUrl}/api/aethergrid/quantum/qiskit/status`);
+  assert(aerResponse.status === 200, 'optional Aer capability endpoint must remain available');
+  const aerStatus = await aerResponse.json();
+  assert(aerStatus.provider === 'qiskit-aer', 'status must identify the optional simulator');
+  assert(aerStatus.hardwareSubmitted === false, 'Aer must not claim hardware submission');
+  assert(aerStatus.hardwareExecuted === false, 'Aer must not claim hardware execution');
 
   const legacyScript = await fetch(`${baseUrl}/app.js`);
   assert(

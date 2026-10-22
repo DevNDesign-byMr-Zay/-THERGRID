@@ -1,0 +1,4 @@
+# Optional local quantum circuit simulation only. Core Node application does not install Python.
+# These tested releases match the Aer ecosystem compatibility matrix.
+qiskit==2.5.0
+qiskit-aer==0.17.2

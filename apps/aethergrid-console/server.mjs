@@ -26,6 +26,7 @@ import { createGeoRuntime } from './geo-runtime.mjs';
 import { createProfileStore } from './profile-store.mjs';
 import { createQuantumRuntime } from './quantum-runtime.mjs';
 import { runLocalQuboComparison } from './local-optimization-runtime.mjs';
+import { AerBridgeError, probeQiskitAer, runQiskitAer } from './qiskit-aer-runtime.mjs';
 import { createTerrainRuntime } from './terrain-runtime.mjs';
 import { createCanonicalWebRuntime } from './web-runtime.mjs';
 
@@ -1624,6 +1625,28 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
           error: 'invalid_qubo_problem',
           message: error.message,
         });
+      }
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/quantum/qiskit/status') {
+      return json(response, 200, await probeQiskitAer());
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/aethergrid/quantum/qiskit/run') {
+      try {
+        const input = await body(request);
+        return json(response, 200, { result: await runQiskitAer(input) });
+      } catch (error) {
+        if (error instanceof AerBridgeError) {
+          return json(response, error.status, { error: error.code, message: error.message });
+        }
+        if (error instanceof SyntaxError) {
+          return json(response, 400, {
+            error: 'invalid-circuit-input',
+            message: 'Circuit request must be valid JSON',
+          });
+        }
+        throw error;
       }
     }
 

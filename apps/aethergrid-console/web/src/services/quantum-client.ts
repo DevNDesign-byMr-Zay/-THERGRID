@@ -156,6 +156,50 @@ export async function runLocalQuboComparison(problem: unknown): Promise<LocalQub
   return response.result;
 }
 
+export interface AerSimulatorStatus {
+  available: boolean;
+  provider: 'qiskit-aer';
+  executionType: 'quantum-circuit-simulation';
+  backend?: string;
+  reason: string | null;
+  hardwareSubmitted: false;
+  hardwareExecuted: false;
+}
+
+export interface AerCircuitResult {
+  provider: 'qiskit-aer';
+  backend: 'aer-simulator-cpu';
+  executionType: 'quantum-circuit-simulation';
+  simulationMethod: string;
+  noiseModel: string;
+  experiment: 'bell' | 'qubo-qaoa';
+  qubits: number;
+  shots: number;
+  seed: number;
+  counts: Readonly<Record<string, number>>;
+  probabilities: Readonly<Record<string, number>>;
+  inputReceipt: string;
+  receipt: string;
+  hardwareSubmitted: false;
+  hardwareExecuted: false;
+  optimalityProven: false;
+  expectationObjective?: number;
+  bestObservedObjective?: number;
+  bestObservedBitstrings?: string[];
+}
+
+export function loadQiskitAerStatus(): Promise<AerSimulatorStatus> {
+  return jsonRequest('/api/aethergrid/quantum/qiskit/status');
+}
+
+export async function runQiskitAerCircuit(problem: unknown): Promise<AerCircuitResult> {
+  const payload = await jsonRequest<{ result: AerCircuitResult }>(
+    '/api/aethergrid/quantum/qiskit/run',
+    { method: 'POST', body: JSON.stringify(problem) },
+  );
+  return payload.result;
+}
+
 export interface DwaveReceipt {
   provider?: string;
   capability?: string;
