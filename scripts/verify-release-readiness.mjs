@@ -624,12 +624,33 @@ async function main() {
     'ÆTHERGRID agent configuration must preserve replaceable provider and per-agent model wiring',
   );
   assert(
-    /async function callOpenAiCompatible/u.test(aethergridAiRuntime) &&
-      /async function callOllama/u.test(aethergridAiRuntime) &&
+    /chat\/completions/u.test(aethergridAiRuntime) &&
+      /api\/chat/u.test(aethergridAiRuntime) &&
+      /agent\.provider === 'ollama'/u.test(aethergridAiRuntime) &&
       /async function runTeam/u.test(aethergridAiRuntime) &&
       /Promise\.all/u.test(aethergridAiRuntime) &&
       /fallbackUsed/u.test(aethergridAiRuntime),
     'ÆTHERGRID AI runtime must keep real provider adapters, team orchestration, and fallback evidence',
+  );
+  const { createAgentRuntime } = await import('../apps/aethergrid-console/ai-runtime.mjs');
+  const agentProbe = createAgentRuntime({ env: {} });
+  const teamProbe = await agentProbe.runTeam({ message: 'Check local provider contract' });
+  assert(
+    teamProbe.contributions.length === 3 &&
+      ['VÆLON', 'AUREN', 'SOLVÆR'].every((id) =>
+        teamProbe.contributions.some(
+          (item) =>
+            item.agent === id &&
+            item.runtime.provider === 'local' &&
+            /^[a-f0-9]{64}$/.test(item.receipt),
+        ),
+      ) &&
+      teamProbe.runtime.advisoryOnly === true &&
+      /^[a-f0-9]{64}$/.test(teamProbe.receipt) &&
+      teamProbe.actions.length === 0 &&
+      agentProbe.summary().supportedProviders.includes('ollama') &&
+      agentProbe.summary().supportedProviders.includes('openai-compatible'),
+    'ÆTHERGRID runtime must execute all specialists and TEAM locally with receipts and no infrastructure actions',
   );
   assert(
     /operator-profile\.json/u.test(aethergridProfileStore) &&
@@ -795,7 +816,7 @@ async function main() {
     'ÆTHERGRID Windows launcher must verify Node 22 and launch the packaged backend',
   );
   assert(
-    /AETHERGRID_AI_PROVIDER=local/u.test(aethergridAppEnv) &&
+    /^AETHERGRID_AI_PROVIDER=$/mu.test(aethergridAppEnv) &&
       /AETHERGRID_OPENAI_API_KEY=/u.test(aethergridAppEnv) &&
       /AETHERGRID_OLLAMA_BASE_URL=/u.test(aethergridAppEnv) &&
       /AETHERGRID_GEO_PROVIDER=osm-overpass/u.test(aethergridAppEnv) &&

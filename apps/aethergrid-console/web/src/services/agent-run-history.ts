@@ -37,6 +37,9 @@ export function appendAgentRun(runs: readonly AgentRunRecord[], record: AgentRun
 }
 
 export function agentResponseState(response: Pick<AgentResponse, 'runtime'>): string {
+  if (response.runtime.executionStatus === 'partial-failure') return 'PARTIAL FAILURE';
+  if (response.runtime.executionStatus === 'cooldown') return 'PROVIDER COOLDOWN';
+  if (response.runtime.executionStatus === 'failed') return 'PROVIDER FAILED';
   if (response.runtime.fallbackUsed || response.runtime.provider === 'local') return 'LOCAL FALLBACK';
   return response.runtime.provider && response.runtime.provider !== 'unknown' && response.runtime.model ? 'PROVIDER RESPONSE' : 'UNVERIFIED RESPONSE';
 }

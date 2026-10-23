@@ -1,0 +1,39 @@
+# Groq specialist agents and grid skills
+
+ÆTHERGRID keeps VÆLON (optimization), AUREN (spatial interpretation), SOLVÆR (simulation/evidence), and TEAM independently executable. All four may use the same model with different roles; this is not a claim of four different foundation models.
+
+## Secure local connection
+
+The existing Windows launcher loads `.env`, `.env.aethergrid`, then `.env.secrets`; process environment settings take precedence. Copy `apps/aethergrid-console/.env.secrets.example` to the untracked `.env.secrets` beside the extracted launcher and privately set `AETHERGRID_GROQ_API_KEY`. No existing provider override is needed. Launch `START-AETHERGRID.cmd` once; the server calls Groq and the browser never receives the key. Existing `AETHERGRID_OPENAI_API_KEY` + explicit Groq endpoint configuration remains supported. Encrypted GitHub secrets stay in GitHub and are never distributed in ZIPs. Root direct-open HTML cannot start Node or perform private inference by itself.
+
+Default: `openai/gpt-oss-20b` at `https://api.groq.com/openai/v1`. To independently replace a specialist model, set `AETHERGRID_VAELON_MODEL`, `AETHERGRID_AUREN_MODEL`, `AETHERGRID_SOLVAER_MODEL`, or `AETHERGRID_TEAM_MODEL` server-side. Corresponding `_PROVIDER`, `_BASE_URL`, `_API_KEY` and `_TIMEOUT_MS` overrides retain precedence. Ollama and explicitly labeled local fallback remain supported.
+
+## Skills
+
+| Skill | Effect |
+|---|---|
+| `inspect_context` | Inspect current city, selected entity, view, layers and time as operator-supplied context. |
+| `read_observations` | Read bounded server-recorded observations with source receipts; empty means no evidence. |
+| `set_view` | Select solid, wireframe, grid, xray, holographic, operations or reality rendering. |
+| `set_layer` | Show/hide a named existing map layer, including mapped grid, weather, radar, aviation or transit. |
+| `focus_location` | Focus the map at bounded latitude/longitude. |
+| `set_time` | Return live, or select an explicit historical/forecast UTC time. Existing data-availability rules remain. |
+| `compare_scenario` | Compute an explicit local generation/load balance comparison; this is arithmetic with declared assumptions, not measured electrical flow or a validated power-network simulation. |
+
+Model-selected actions are allowlisted on the server and checked again in the React client. A fresh completed request applies valid visualization changes and offers Undo. Reviewing history, stopping a request, fallback, partial TEAM failure, malformed actions and unsupported fields do not execute changes. TEAM applies only the synthesizer's actions; specialist proposals remain contribution evidence. No tool runs shell commands, fetches arbitrary URLs, edits credentials, actuates physical infrastructure or submits paid quantum hardware jobs.
+
+Try: “AUREN, switch to grid view and show the grid and energy layers.” Or: “VÆLON, compare a modeled 2500 MW load and 2300 MW generation with load reduced 10% and generation increased 5%.” Ask SOLVÆR to explain the assumptions and missing observations.
+
+## Free plan and quotas
+
+Use a Groq Free organization/project with a key authorized for that plan. Application code cannot enforce the upstream billing plan of an already-paid account. There is no automatic switch to a paid provider or different model. As checked October 23, 2026, Groq lists GPT-OSS 20B and 120B on Free with 30 requests/minute, 1,000 requests/day, 8,000 tokens/minute and 200,000 tokens/day; account limits are authoritative and may change. All specialists sharing credentials consume the same upstream organization quota; TEAM includes three specialist calls plus synthesis, and tools add roundtrips.
+
+The runtime bounds tool rounds/calls, uses conservative completion budgets, serializes requests sharing credentials, reports returned rate-limit headers, and honors `429`/`Retry-After` through a shared cooldown. It does not repeatedly retry, rotate keys, or conceal fallback. Configuration is labeled unverified until actual successful inference. Connection status distinguishes latest execution, last successful execution, partial TEAM response and cooldown.
+
+## Verification and release boundary
+
+Baseline main `7558309a648fd5fd59633b2636ebfa78a96890fe`, release v0.3.1, has protected Groq execution evidence for all three specialists and TEAM in [canonical run 39892894560](https://github.com/DevNDesign-byMr-Zay/-THERGRID/actions/runs/39892894560). That evidence predates these skills and does not verify the changed code.
+
+The maintained protected canonical provider script now requires each specialist to choose `set_view`, return a valid grid action, and supply an authenticated request identifier and execution receipt. TEAM must supply three successful distinct contributions plus a real synthesis that selects and completes its own grid-view tool call. No secret is available in this development workspace, so local tests verify provider/tool protocol with controlled HTTP servers; live skill acceptance must pass against the final protected main candidate before a v0.4.0 release claim.
+
+Sources: [Groq supported models](https://console.groq.com/docs/models), [rate limits](https://console.groq.com/docs/rate-limits), [local function calling](https://console.groq.com/docs/tool-use/local-tool-calling). This change is the agent batch of the larger v0.4.0 mission; the capability audit records remaining spatial/UI/mobility work.

@@ -1,3 +1,4 @@
+import {GRID_VIEWS,validateGridActions,gridActionDescription,type GridAction} from '../services/agent-grid-actions';
 import {loadWeatherRadar,radarOverlay,type RadarManifest} from '../services/weather-radar';
 import {RadarControls} from '../components/RadarControls';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
@@ -1102,6 +1103,8 @@ export function App() {
     () => ({
       region: scope === 'world' ? 'Global' : city.name,
       view: visualMode,
+      layers: layers.map(({id,visible})=>({id,visible})),
+      availableViews: GRID_VIEWS,
       temporalMode: temporal.mode,
       temporalCursor: temporal.cursorIso,
       useCase: activeUseCase,
@@ -1227,6 +1230,7 @@ export function App() {
       city,
       scope,
       visualMode,
+      layers,
       temporal.mode,
       temporal.cursorIso,
       activeUseCase,
@@ -1944,6 +1948,35 @@ export function App() {
         layer.id === id ? { ...layer, visible: !layer.visible } : layer
       )
     );
+  };
+
+  const applyAgentActions = (incoming:readonly GridAction[]) => {
+    const actions=validateGridActions(incoming);
+    if(!actions?.length)return null;
+    const previous={city,scope,visualMode,layers,activeUseCase,aircraftTarget,temporal:clock.snapshot()};
+    const changed=new Set(actions.map(action=>action.type));
+    for(const action of actions){
+      if(action.type==='set_view'){setVisualMode(action.view);setActiveUseCase(null);}
+      else if(action.type==='set_layer'){setLayers(current=>current.map(layer=>layer.id===action.layer?{...layer,visible:action.enabled}:layer));setActiveUseCase(null);}
+      else if(action.type==='focus_location'){
+        const mapped=CITY_TARGETS.find(target=>Math.abs(target.latitude-action.latitude)<.01&&Math.abs(target.longitude-action.longitude)<.01);
+        setAircraftTarget(null);
+        setCity(mapped??{id:`coord-${action.latitude.toFixed(5)}-${action.longitude.toFixed(5)}`,name:action.label??'COORDINATE',district:`${action.latitude.toFixed(5)}°, ${action.longitude.toFixed(5)}°`,latitude:action.latitude,longitude:action.longitude,rangeMeters:5200,pitchDegrees:-35,custom:true});
+        setScope('city');
+      }else if(action.mode==='live')clock.goLive();
+      else clock.scrub(action.at,action.mode);
+    }
+    return {effects:actions.map(gridActionDescription),undo:()=>{
+      if(changed.has('set_view'))setVisualMode(previous.visualMode);
+      if(changed.has('set_layer'))setLayers(previous.layers);
+      if(changed.has('set_view')||changed.has('set_layer'))setActiveUseCase(previous.activeUseCase);
+      if(changed.has('focus_location')){setCity(previous.city);setScope(previous.scope);setAircraftTarget(previous.aircraftTarget);}
+      if(changed.has('set_time')){
+        const time=previous.temporal;
+        if(time.mode==='live')clock.goLive();
+        else {clock.setMode(time.mode,time.scenarioId);clock.scrub(time.cursorIso,time.mode);if(time.mode==='forecast'||time.mode==='historical')clock.restorePlaybackRange(time.playbackRange??null);}
+      }
+    }};
   };
 
   return (
@@ -2880,7 +2913,7 @@ export function App() {
             })}>EXPORT SCENE JSON</button>
           </div>
           <div className="intel-workspace intel-ai">
-            <AgentDock context={agentContext} handoff={agentHandoff} active={intelWorkspace === 'ai'} onEvidence={(id) => { setSelectedEvidence(null); setEvidenceRequest((previous) => ({id, generation: (previous?.generation ?? 0) + 1})); showIntelligence('evidence'); }} onComparison={() => showIntelligence('analysis')} />
+            <AgentDock context={agentContext} handoff={agentHandoff} onActions={applyAgentActions} active={intelWorkspace === 'ai'} onEvidence={(id) => { setSelectedEvidence(null); setEvidenceRequest((previous) => ({id, generation: (previous?.generation ?? 0) + 1})); showIntelligence('evidence'); }} onComparison={() => showIntelligence('analysis')} />
           </div>
           <div className="intel-workspace intel-scenario">
             <ScenarioPanel

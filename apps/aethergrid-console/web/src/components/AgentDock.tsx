@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AGENT_ROLES, BRAND } from './brand';
 import { AgentModelPanel } from './AgentModelPanel';
+import {validateGridActions,type GridAction} from '../services/agent-grid-actions';
 
 import {
   runAgent,
@@ -24,9 +25,10 @@ interface AgentDockProps {
   handoff?: AgentHandoffRequest | null;
   onEvidence?(id: string): void;
   onComparison?(): void;
+  onActions?(actions:readonly GridAction[]):{effects:readonly string[];undo:()=>void}|null;
 }
 
-export function AgentDock({ context, active = true, handoff = null, onEvidence, onComparison }: AgentDockProps) {
+export function AgentDock({ context, active = true, handoff = null, onEvidence, onComparison, onActions }: AgentDockProps) {
   const [agent, setAgent] = useState<AgentId>('TEAM');
   const [draft, setDraft] = useState('');
   const [histories, setHistories] = useState<Record<AgentId, AgentHistoryItem[]>>({
@@ -39,9 +41,12 @@ export function AgentDock({ context, active = true, handoff = null, onEvidence, 
   const [reviewedId, setReviewedId] = useState<string | null>(null);
   const lastRecord = runs[agent].find(record => record.id === reviewedId) ?? runs[agent].at(-1);
   const lastRun = lastRecord?.response ?? null;
+  const [actionEffects,setActionEffects]=useState<{recordId:string;effects:readonly string[];undo:(()=>void)|null;undone:boolean}|null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
+  const actionsHandlerRef=useRef(onActions);
+  actionsHandlerRef.current=onActions;
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const requestRef = useRef<{agent: AgentId; prompt: string; context: AgentSpatialContext; startedAt: string} | null>(null);
   const retain = (record: AgentRunRecord) => {
@@ -94,6 +99,11 @@ export function AgentDock({ context, active = true, handoff = null, onEvidence, 
       if (controller.signal.aborted || controllerRef.current !== controller) return;
       const record = createAgentRunRecord(agent, message, requestedContext, result, startedAt, new Date().toISOString());
       retain(record);
+      const actions=validateGridActions(result.actions??[]);
+      if(actions?.length && result.runtime.executionStatus==='succeeded' && !result.runtime.fallbackUsed && result.runtime.provider!=='local'){
+        const applied=actionsHandlerRef.current?.(actions);
+        if(applied)setActionEffects({recordId:record.id,...applied,undone:false});
+      }
       setHistories((current) => ({
         ...current,
         [agent]: [
@@ -188,8 +198,12 @@ export function AgentDock({ context, active = true, handoff = null, onEvidence, 
           <span className={agentResponseState(lastRun) === 'LOCAL FALLBACK' ? 'fallback' : agentResponseState(lastRun) === 'PROVIDER RESPONSE' ? 'verified' : 'unknown'}>
             {agentResponseState(lastRun)}
           </span>
+          {lastRun.runtime.executionStatus?<span>Execution · {lastRun.runtime.executionStatus}</span>:null}
+          {lastRun.runtime.retryAfterSeconds!=null?<p>Provider cooldown · retry after {lastRun.runtime.retryAfterSeconds} seconds. No automatic retry.</p>:null}
+          {Object.entries(lastRun.runtime.rateLimit??{}).map(([name,value])=><small key={name}>{name}: {value}</small>)}
+          {lastRun.actionsRejected?<p>Grid changes rejected: malformed action batch.</p>:null}
           <code>{lastRun.receipt || 'NO RECEIPT'}</code>
-          {lastRun.toolResults?.map((tool)=><p key={tool.tool}>{tool.tool} · read only · {tool.count} observations</p>)}
+          {lastRun.toolResults?.map((tool)=><p key={tool.tool}>{tool.tool} · {tool.readOnly?'read only':'visualization skill'} · {tool.count} results</p>)}
           {lastRun.citations?.map((citation)=><p key={citation.receipt}><a href={citation.href} target="_blank" rel="noreferrer">{citation.kind} · {citation.observedAt}</a><code>{citation.receipt}</code></p>)}
         </div>
       ) : null}
@@ -216,6 +230,11 @@ export function AgentDock({ context, active = true, handoff = null, onEvidence, 
         </div>
       </> : null}
 
+      {actionEffects && actionEffects.recordId===lastRecord?.id?<section aria-label="Grid action effects" className="agent-grid-effects">
+        <strong>{actionEffects.undone?'Grid changes undone':'Grid visualization changes applied'}</strong>
+        <ul>{actionEffects.effects.map((effect,index)=><li key={index}>{effect}</li>)}</ul>
+        {actionEffects.undo?<button type="button" onClick={()=>{actionEffects.undo?.();setActionEffects(current=>current?{...current,undo:null,undone:true}:null);}}>Undo grid changes</button>:null}
+      </section>:null}
       {error ? <div className="agent-error">{error}</div> : null}
 
       {lastRun?.contributions?.length ? (

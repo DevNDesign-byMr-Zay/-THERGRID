@@ -33,6 +33,41 @@ export function summarizeAgent(result, agent) {
   };
 }
 
+/** Proves that an authenticated reply selected and completed the expected app skill. */
+export function summarizeGridSkill(result, agent, expectedAction) {
+  const inference = summarizeAgent(result, agent);
+  const action =
+    Array.isArray(result?.actions) &&
+    result.actions.find(
+      (item) => item && Object.entries(expectedAction).every(([key, value]) => item[key] === value),
+    );
+  const toolCompleted =
+    Array.isArray(result?.toolResults) &&
+    result.toolResults.some(
+      (item) =>
+        item.tool === expectedAction.type &&
+        item.readOnly === false &&
+        item.count > 0 &&
+        item.ok === true &&
+        item.modelSelected === true &&
+        Object.entries(expectedAction).every(([key, value]) => item.action?.[key] === value),
+    );
+  const validReceipt = /^[a-f0-9]{64}$/.test(String(result?.receipt || ''));
+  const requestId =
+    typeof result?.runtime?.providerRequestId === 'string' &&
+    result.runtime.providerRequestId.trim();
+  return {
+    ...inference,
+    verified: Boolean(inference.verified && validReceipt && requestId && action && toolCompleted),
+    skill: expectedAction.type,
+    action: action ? expectedAction : null,
+    providerRequestId: requestId || null,
+    toolCompleted,
+    appVisualizationOnly: true,
+    physicalActuation: false,
+  };
+}
+
 export function summarizeProvider(result, provider, { records = 1 } = {}) {
   const receipt = result?.receipt || {};
   return {
