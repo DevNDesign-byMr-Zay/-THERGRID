@@ -110,7 +110,7 @@ for (const name of workerNames) {
   if (
     name === 'createGeometry' &&
     (!output.includes('Unbundled geometry factory') ||
-      /import\\(\\s*[`'"]?\\.\\/create/u.test(output))
+      /\bimport\s*\(/u.test(output))
   ) {
     throw new Error('Cesium createGeometry worker retains unbundled dynamic geometry imports');
   }
