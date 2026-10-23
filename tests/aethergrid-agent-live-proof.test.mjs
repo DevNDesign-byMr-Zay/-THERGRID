@@ -76,3 +76,52 @@ test('protected TEAM skill proof requires synthesis action and every distinct su
     false,
   );
 });
+
+test('failed TEAM proof retains bounded failure categories for each contribution without raw errors', () => {
+  const failed = {
+    ...response,
+    runtime: {
+      ...response.runtime,
+      fallbackUsed: true,
+      executionStatus: 'cooldown',
+      error: 'provider returned HTTP 429',
+      retryAfterSeconds: 17,
+      rateLimit: { 'x-ratelimit-remaining-tokens': '25' },
+    },
+  };
+  const result = acceptance.summarizeGridSkill(
+    {
+      ...failed,
+      contributions: ['VÆLON', 'AUREN', 'SOLVÆR'].map((agent) => ({ ...failed, agent })),
+    },
+    'TEAM',
+    { type: 'set_view', view: 'grid' },
+  );
+  assert.equal(result.verified, false);
+  for (const item of [result, ...result.contributions]) {
+    assert.equal(item.executionStatus, 'cooldown');
+    assert.equal(item.failureCategory, 'provider-http');
+    assert.equal(item.providerStatus, 429);
+    assert.equal(item.retryAfterSeconds, 17);
+    assert.equal(item.remainingTokens, 25);
+    assert.equal(Object.hasOwn(item, 'error'), false);
+  }
+  const unsafe = acceptance.summarizeAgent(
+    {
+      ...failed,
+      runtime: {
+        ...failed.runtime,
+        executionStatus: 'private-value',
+        error: 'private-upstream-value',
+        retryAfterSeconds: Infinity,
+        rateLimit: { 'x-ratelimit-remaining-tokens': 'private-header' },
+      },
+    },
+    'AUREN',
+  );
+  assert.equal(unsafe.failureCategory, 'runtime-error');
+  assert.equal(unsafe.executionStatus, 'unknown');
+  assert.equal(unsafe.retryAfterSeconds, null);
+  assert.equal(unsafe.remainingTokens, null);
+  assert.doesNotMatch(JSON.stringify(unsafe), /private-/);
+});
