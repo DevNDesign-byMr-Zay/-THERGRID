@@ -1,5 +1,44 @@
 import { createSecretRedactor } from '../../apps/aethergrid-console/security/secret-redactor.mjs';
 
+function agentDiagnostic(runtime) {
+  const statuses = ['succeeded', 'failed', 'cooldown', 'partial-failure', 'local-fallback'];
+  const knownFailures = {
+    'Shared provider quota cooldown is active': 'shared-quota-cooldown',
+    'model request timed out': 'timeout',
+    'provider returned no assistant text': 'empty-response',
+    'provider returned no assistant message': 'empty-response',
+    'Model prompt budget limit exceeded': 'prompt-budget',
+    'Model tool round or call limit exceeded': 'tool-budget',
+    'Model tool round limit exceeded': 'tool-budget',
+    'Malformed provider tool call': 'invalid-tool-call',
+    'Model selected invalid grid skill arguments; no actions were applied': 'invalid-tool-call',
+  };
+  const status = /^provider returned HTTP ([1-5]\d{2})$/.exec(String(runtime.error || ''));
+  const number = (value) =>
+    value != null &&
+    String(value).trim() !== '' &&
+    Number.isFinite(Number(value)) &&
+    Number(value) >= 0 &&
+    Number(value) <= 1e9
+      ? Number(value)
+      : null;
+  return {
+    executionStatus: statuses.includes(runtime.executionStatus)
+      ? runtime.executionStatus
+      : 'unknown',
+    failureCategory: status
+      ? 'provider-http'
+      : runtime.error
+        ? Object.hasOwn(knownFailures, runtime.error)
+          ? knownFailures[runtime.error]
+          : 'runtime-error'
+        : null,
+    providerStatus: status ? Number(status[1]) : null,
+    retryAfterSeconds: number(runtime.retryAfterSeconds),
+    remainingTokens: number(runtime.rateLimit?.['x-ratelimit-remaining-tokens']),
+  };
+}
+
 export function summarizeAgent(result, agent) {
   const runtime = result?.runtime || {};
   const verified =
@@ -15,6 +54,7 @@ export function summarizeAgent(result, agent) {
     model: runtime.model || null,
     fallbackUsed: runtime.fallbackUsed !== false,
     receipt: result?.receipt || null,
+    ...agentDiagnostic(runtime),
   };
   if (agent !== 'TEAM') return summary;
   const contributions = (result.contributions || []).map((item) =>
