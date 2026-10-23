@@ -402,6 +402,110 @@ test('shared provider key cooldown honors retry-after without retry storms and e
   );
 });
 
+test('TEAM retries a short upstream cooldown once without repeating a completed grid tool', async () => {
+  await withSkillServer(
+    (body, response, count) => {
+      if (count === 4)
+        sendCompletion(response, {
+          role: 'assistant',
+          content: null,
+          tool_calls: [toolCall('set_view', { view: 'grid' })],
+        });
+      else if (count === 5) {
+        response.statusCode = 429;
+        response.setHeader('retry-after', '1');
+        response.end('{}');
+      } else sendCompletion(response, { role: 'assistant', content: 'READY' });
+    },
+    async ({ env, requests }) => {
+      const result = await createAgentRuntime({ env }).runTeam({
+        message: 'Confirm readiness and select grid.',
+      });
+      assert.equal(result.runtime.executionStatus, 'succeeded');
+      assert.ok(result.contributions.every((item) => item.runtime.executionStatus === 'succeeded'));
+      assert.equal(requests.length, 6);
+      assert.deepEqual(requests[4], requests[5]);
+      assert.deepEqual(result.actions, [{ type: 'set_view', view: 'grid' }]);
+      assert.equal(result.toolResults.filter((item) => item.modelSelected).length, 1);
+    },
+  );
+});
+
+test('persistent short quota retries stop after one resend and other agents honor the shared cooldown', async () => {
+  await withSkillServer(
+    (_body, response) => {
+      response.statusCode = 429;
+      response.setHeader('retry-after', '1');
+      response.end('{}');
+    },
+    async ({ env, requests }) => {
+      const runtime = createAgentRuntime({ env });
+      const first = await runtime.runAgent('VÆLON', { message: 'Ready?' });
+      assert.equal(first.runtime.executionStatus, 'cooldown');
+      assert.equal(requests.length, 2);
+      const second = await runtime.runAgent('AUREN', { message: 'Ready?' });
+      assert.equal(second.runtime.executionStatus, 'cooldown');
+      assert.equal(requests.length, 2);
+      assert.deepEqual(first.actions, []);
+      assert.deepEqual(second.actions, []);
+    },
+  );
+});
+
+test('the single retry allowance covers the entire completion across tool rounds', async () => {
+  await withSkillServer(
+    (_body, response, count) => {
+      if (count === 2)
+        sendCompletion(response, {
+          role: 'assistant',
+          content: null,
+          tool_calls: [toolCall('set_view', { view: 'grid' })],
+        });
+      else {
+        response.statusCode = 429;
+        response.setHeader('retry-after', '1');
+        response.end('{}');
+      }
+    },
+    async ({ env, requests }) => {
+      const result = await createAgentRuntime({ env }).runAgent('AUREN', {
+        message: 'Select grid.',
+      });
+      assert.equal(result.runtime.executionStatus, 'cooldown');
+      assert.equal(requests.length, 3);
+      assert.deepEqual(result.actions, []);
+      assert.equal(result.toolResults.filter((item) => item.modelSelected).length, 1);
+    },
+  );
+});
+
+test('an agent deadline cancels its cooldown wait and discards pending visualization actions', async () => {
+  await withSkillServer(
+    (_body, response, count) => {
+      if (count === 1)
+        sendCompletion(response, {
+          role: 'assistant',
+          content: null,
+          tool_calls: [toolCall('set_view', { view: 'grid' })],
+        });
+      else {
+        response.statusCode = 429;
+        response.setHeader('retry-after', '1');
+        response.end('{}');
+      }
+    },
+    async ({ env, requests }) => {
+      const result = await createAgentRuntime({
+        env: { ...env, AETHERGRID_AI_TIMEOUT_MS: '300' },
+      }).runAgent('AUREN', { message: 'Select grid.' });
+      assert.equal(result.runtime.fallbackUsed, true);
+      assert.deepEqual(result.actions, []);
+      assert.equal(requests.length, 2);
+      assert.match(result.runtime.error, /abort/iu);
+    },
+  );
+});
+
 test('TEAM synthesizes independently executed specialists and exposes partial failures', async () => {
   await withSkillServer(
     (body, response) => {
