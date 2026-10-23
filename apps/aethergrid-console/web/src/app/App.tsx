@@ -351,6 +351,7 @@ export function App() {
   const [cityIdentity, setCityIdentity] = useState<CityIdentitySummary | null>(null);
   const [streamingState, setStreamingState] = useState<{count:number;error:string|null}>({count:0,error:null});
   const [powerOverlayError, setPowerOverlayError] = useState<string | null>(null);
+  const [cityReloadId, setCityReloadId] = useState(0);
   const [searchValue, setSearchValue] = useState('');
   const [searchError, setSearchError] = useState<string | null>(null);
   const [intelOpen, setIntelOpen] = useState(false);
@@ -715,7 +716,7 @@ export function App() {
       });
 
     return () => controller.abort();
-  }, [city.id, city.latitude, city.longitude]);
+  }, [city.id, city.latitude, city.longitude, cityReloadId]);
 
   // The bundled/core district is always the first scene. Adjacent live tiles
   // are optional and cannot replace it, or run from the standalone HTML.
@@ -2258,7 +2259,9 @@ export function App() {
             >
               <span>AIR TRAFFIC</span>
               {aviationState?.aircraft.length ? <><select aria-label="Focus observed aircraft" value="" onChange={event=>{const aircraft=aviationState.aircraft.find(a=>a.id===event.target.value);if(aircraft)setAircraftTarget({latitude:aircraft.latitude,longitude:aircraft.longitude,heightMeters:aircraft.geometricAltitudeMeters ?? aircraft.barometricAltitudeMeters ?? 0,rangeMeters:1800,pitchDegrees:-25,headingDegrees:aircraft.trackDegrees ?? 0,journey:'direct'});}}><option value="">Focus an aircraft (first 100)</option>{aviationState.aircraft.slice(0,100).map(a=><option key={a.id} value={a.id}>{a.callsign ?? a.icaoHex ?? a.id}</option>)}</select>{aircraftTarget?<button type="button" onClick={()=>setAircraftTarget(null)}>RETURN TO VIEW</button>:null}</> : null}
-              {location.protocol==='file:' && aviationError ? <a href="http://127.0.0.1:8090/" target="_blank" rel="noreferrer">Open connected workspace</a> : null}
+              {location.protocol==='file:' && aviationError ? (
+                <small>Live aircraft need the local service. Double-click START-AETHERGRID.cmd in the extracted app folder.</small>
+              ) : null}
               <strong>
                 {aviationError
                   ? 'PROVIDER UNAVAILABLE'
@@ -2500,6 +2503,17 @@ export function App() {
                   ? `${sourceBuildingCount.toLocaleString()} MAPPED BUILDINGS · ${cityIdentity.sourceBackedHeightCoveragePercent.toFixed(1)}% MAPPED HEIGHT TAGS`
                   : powerOverlayError ? 'CITY GEOMETRY UNAVAILABLE' : 'SOURCE-BACKED CITY GEOMETRY LOADING'}
             </em>
+            {scope === 'city' && powerOverlayError ? (
+              <button
+                type="button"
+                className="city-retry-button"
+                title={powerOverlayError}
+                aria-label="Retry mapped city geometry"
+                onClick={() => setCityReloadId((current) => current + 1)}
+              >
+                RETRY 3D CITY
+              </button>
+            ) : null}
           </div>
         </section>
 

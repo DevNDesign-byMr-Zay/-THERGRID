@@ -101,6 +101,7 @@ try {
     'aethergrid-functional-app/legacy/index.html',
     'aethergrid-functional-app/legacy/standalone.html',
     'aethergrid-functional-app/node_modules/zod/package.json',
+    'aethergrid-functional-app/.env.secrets.example',
     'aethergrid-functional-app/qiskit-aer-runtime.mjs',
     'aethergrid-functional-app/qiskit-aer-bridge.py',
     'aethergrid-functional-app/requirements-qiskit.txt',
@@ -110,7 +111,10 @@ try {
   }
   assert(
     !extracted.some(
-      (entry) => /\/\.env(?:\..*)?$/u.test(entry) && !entry.endsWith('/.env.example'),
+      (entry) =>
+        /\/\.env(?:\..*)?$/u.test(entry) &&
+        !entry.endsWith('/.env.example') &&
+        !entry.endsWith('/.env.secrets.example'),
     ),
     'package must not contain populated .env or .env.* files',
   );

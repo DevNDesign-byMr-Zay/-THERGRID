@@ -25,6 +25,8 @@ dist/
 # ÆTHERGRID local runtime persistence
 .aethergrid-data/
 apps/aethergrid-console/.aethergrid-data/
+.aethergrid-runtime/
+apps/aethergrid-console/.aethergrid-runtime/
 
 # Explicit local secret material
 .env.secrets

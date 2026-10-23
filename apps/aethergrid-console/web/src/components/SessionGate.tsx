@@ -13,6 +13,31 @@ globalThis.fetch = (input,init) => {
  }
  return originalFetch(input,init);
 };
+function LocalRuntimeStatus() {
+ const [reachable,setReachable]=useState(false);
+ useEffect(()=>{
+   const controller=new AbortController();
+   // A file:// document has an opaque origin; only probe the explicit loopback
+   // health endpoint, never forward credentials from this origin.
+   originalFetch('http://127.0.0.1:8090/api/aethergrid/health',{signal:controller.signal})
+     .then(async response=>response.ok?response.json():null)
+     .then(health=>{
+       if(controller.signal.aborted)return;
+       if(health?.ok===true && health?.product==='ÆTHERGRID'){
+         setReachable(true);
+         // Prefer the fully connected workspace when the user's own local
+         // service is already running. Do not open a dead localhost tab.
+         location.replace('http://127.0.0.1:8090/');
+       }
+     }).catch(()=>{});
+   return ()=>controller.abort();
+ },[]);
+ return <div className="local-file-status" role="status">
+   Local file · offline HTML with eight bundled 3D cities. Live AI and aircraft need the included local service.
+   {' '}Open <strong>START-AETHERGRID.cmd</strong> from your extracted app folder to start it in one click.
+   {reachable?<a href="http://127.0.0.1:8090/">Connected workspace ready</a>:null}
+ </div>;
+}
 export function SessionGate({children}:{children:ReactNode}) {
  const [session,setSession]=useState<Session|null>(null);
  const [error,setError]=useState('');
@@ -29,5 +54,5 @@ export function SessionGate({children}:{children:ReactNode}) {
  }
  if(!session) return <main className="session-gate" aria-busy="true">ÆTHERGRID · {error || 'Connecting'}</main>;
  if(session.enabled && !session.user) return <main className="session-gate"><form onSubmit={login}><h1>ÆTHERGRID</h1><p>Operator sign-in</p><label>Username<input name="username" autoComplete="username" required /></label><label>Password<input name="password" type="password" autoComplete="current-password" required /></label><p role="alert">{error}</p><button disabled={busy}>{busy ? 'Connecting…' : 'Sign in'}</button></form></main>;
- return <>{children}{location.protocol==='file:' && <div className="local-file-status" role="status">Local file · globe + 8 mapped cities. Public weather/seismic when online; AI/sign-in require runtime.<a href="http://127.0.0.1:8090">Open connected workspace</a></div>}{session.user && <div className="session-status"><span>{session.user.username} · {session.user.role}</span><button onClick={async()=>{const response=await fetch('/api/aethergrid/auth/logout',{method:'POST'});if(response.ok){csrf=null;setSession({enabled:true,user:null,csrf:null});}}}>Sign out</button></div>}</>;
+ return <>{children}{location.protocol==='file:' && <LocalRuntimeStatus />}{session.user && <div className="session-status"><span>{session.user.username} · {session.user.role}</span><button onClick={async()=>{const response=await fetch('/api/aethergrid/auth/logout',{method:'POST'});if(response.ok){csrf=null;setSession({enabled:true,user:null,csrf:null});}}}>Sign out</button></div>}</>;
 }

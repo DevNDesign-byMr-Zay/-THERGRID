@@ -74,13 +74,16 @@ for (const name of workerNames) {
       {
         name: 'local-geometry-factories',
         transform(code, id) {
-          if (id.endsWith('/Core/ApproximateTerrainHeights.js')) {
+          // Rolldown may hand plugins Windows backslash module ids. Normalize
+          // before detecting the Cesium worker we must make self-contained.
+          const normalizedId = id.replaceAll('\\', '/');
+          if (normalizedId.endsWith('/Core/ApproximateTerrainHeights.js')) {
             return code.replace(
               /initPromise = Resource\.fetchJson\([\s\S]*?\)\.then/u,
               `initPromise = Promise.resolve(${approximateHeights}).then`,
             );
           }
-          if (!id.endsWith('/Workers/createGeometry.js')) return;
+          if (!normalizedId.endsWith('/Workers/createGeometry.js')) return;
           const imports = geometryNames
             .map((file, index) => `import geometry${index} from './${file}';`)
             .join('\n');
@@ -99,7 +102,18 @@ for (const name of workerNames) {
     ],
     output: { format: 'iife', name: 'CesiumLocalWorker', codeSplitting: false, minify: true },
   });
-  modules[`Workers/${name}.js`] = bundled.output.find((item) => item.type === 'chunk').code;
+  const output = bundled.output.find((item) => item.type === 'chunk')?.code;
+  if (!output) throw new Error(`Missing embedded Cesium worker bundle: ${name}`);
+  // A file:// page cannot dynamically import ./createGroundPolylineGeometry.js.
+  // On Windows a missed plugin id check silently produced a broken "bundled"
+  // worker. Fail package creation instead of shipping an unusable city UI.
+  if (
+    name === 'createGeometry' &&
+    (!output.includes('Unbundled geometry factory') || /\bimport\s*\(/u.test(output))
+  ) {
+    throw new Error('Cesium createGeometry worker retains unbundled dynamic geometry imports');
+  }
+  modules[`Workers/${name}.js`] = output;
 }
 const cities = {};
 const cityRoot = fileURLToPath(new URL('../../assets/cities/', directory));

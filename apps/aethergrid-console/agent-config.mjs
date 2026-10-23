@@ -45,8 +45,21 @@ function numberFromEnv(value, fallback) {
 }
 
 export function resolveAgentConfig(env = process.env) {
-  const sharedProvider = normalizeProvider(env.AETHERGRID_AI_PROVIDER || DEFAULTS.provider);
-  const sharedModel = env.AETHERGRID_AI_MODEL || '';
+  // A server-only Groq key is sufficient for the first connected experience.
+  // Explicit provider/model/base URL settings always take priority.
+  const groqKey = env.AETHERGRID_GROQ_API_KEY || env.GROQ_API_KEY || '';
+  const autoGroq = Boolean(
+    groqKey &&
+      !env.AETHERGRID_AI_PROVIDER &&
+      !env.AETHERGRID_OPENAI_API_KEY &&
+      !env.AETHERGRID_AI_API_KEY &&
+      !env.AETHERGRID_OPENAI_BASE_URL &&
+      !env.AETHERGRID_AI_BASE_URL
+  );
+  const sharedProvider = normalizeProvider(
+    env.AETHERGRID_AI_PROVIDER || (autoGroq ? 'openai-compatible' : DEFAULTS.provider)
+  );
+  const sharedModel = env.AETHERGRID_AI_MODEL || (autoGroq ? 'openai/gpt-oss-20b' : '');
   const sharedTimeout = numberFromEnv(env.AETHERGRID_AI_TIMEOUT_MS, DEFAULTS.timeoutMs);
 
   return Object.fromEntries(
@@ -70,12 +83,12 @@ export function resolveAgentConfig(env = process.env) {
             env[`${prefix}_BASE_URL`] ||
             env.AETHERGRID_OPENAI_BASE_URL ||
             env.AETHERGRID_AI_BASE_URL ||
-            DEFAULTS.openAiBaseUrl,
+            (autoGroq ? 'https://api.groq.com/openai/v1' : DEFAULTS.openAiBaseUrl),
           openAiApiKey:
             env[`${prefix}_API_KEY`] ||
             env.AETHERGRID_OPENAI_API_KEY ||
             env.AETHERGRID_AI_API_KEY ||
-            '',
+            (autoGroq ? groqKey : ''),
           ollamaBaseUrl:
             env[`${prefix}_OLLAMA_URL`] ||
             env.AETHERGRID_OLLAMA_BASE_URL ||

@@ -282,7 +282,7 @@ test('live geospatial runtime converts and caches Overpass city geometry', async
   assert.ok(queries.some((query) => /nwr\["leisure"/u.test(query)));
 });
 
-test('geospatial provider failure degrades explicitly to local fallback geometry', async () => {
+test('failed live OSM service uses real dated city snapshots rather than fabricated geometry', async () => {
   const runtime = createGeoRuntime({
     env: {
       AETHERGRID_GEO_PROVIDER: 'osm-overpass',
@@ -290,19 +290,34 @@ test('geospatial provider failure degrades explicitly to local fallback geometry
     },
     fetchImpl: async () => new Response('unavailable', { status: 503 }),
   });
-  const mesh = await runtime.cityMesh('tokyo');
-  assert.equal(mesh.source.live, false);
-  assert.equal(mesh.source.provider, 'local-fallback');
+  for (const id of [
+    'new-york',
+    'london',
+    'tokyo',
+    'dubai',
+    'singapore',
+    'sao-paulo',
+    'lagos',
+    'sydney',
+  ]) {
+    const mesh = await runtime.cityMesh(id);
+    assert.equal(mesh.source.live, false, `${id} must not claim live upstream data`);
+    assert.equal(mesh.source.snapshot, true, `${id} must disclose dated snapshot provenance`);
+    assert.equal(mesh.source.provider, 'bundled-openstreetmap');
+    assert.equal(mesh.city.id, id);
+    assert.ok(mesh.buildings.length >= 100);
+    assert.ok(mesh.buildings.every((building) => !String(building.id).startsWith('fallback-')));
+    assert.equal(mesh.skylineProfile.live, false);
+    assert.ok(mesh.source.fetchedAt);
+  }
+});
+
+test('configured offline geometry provider also uses a real known city snapshot', async () => {
+  const runtime = createGeoRuntime({ env: { AETHERGRID_GEO_PROVIDER: 'local-fallback' } });
+  const mesh = await runtime.cityMesh('new-york');
+  assert.equal(mesh.source.provider, 'bundled-openstreetmap');
+  assert.equal(mesh.source.snapshot, true);
   assert.ok(mesh.buildings.length >= 100);
-  assert.ok(mesh.roads.length >= 10);
-  assert.ok(mesh.powerLines.length >= 5);
-  assert.ok(mesh.powerAssets.length >= 5);
-  assert.equal(mesh.waterAreas.length, 0);
-  assert.equal(mesh.waterways.length, 0);
-  assert.equal(mesh.coastlines.length, 0);
-  assert.equal(mesh.greenAreas.length, 0);
-  assert.equal(mesh.skylineProfile.live, false);
-  assert.equal(mesh.skylineProfile.sourceBackedHeightCoveragePercent, 0);
 });
 
 test('geospatial coordinate explorer supports arbitrary valid world coordinates', async () => {

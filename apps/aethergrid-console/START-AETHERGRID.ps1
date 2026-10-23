@@ -4,24 +4,78 @@ Set-Location $Root
 # PowerShell 5.1 can misdecode UTF-8 scripts without a BOM; assemble the brand name safely.
 $ProductName = ([char]0x00C6) + "THERGRID"
 
+# Use an existing Node 22 runtime, or bootstrap the official portable binary
+# into this extracted app folder without administrator rights.
 $NodeCommand = Get-Command node -ErrorAction SilentlyContinue
-if (-not $NodeCommand) {
-  Write-Host "Node.js 22 is required for the live $ProductName services. The root index.html can still open without Node." -ForegroundColor Red
-  exit 1
+$LocalRuntime = Join-Path $Root ".aethergrid-runtime"
+$PortableNode = Join-Path $LocalRuntime "node.exe"
+if (-not $NodeCommand -and (Test-Path $PortableNode)) {
+  $NodeCommand = @{ Source = $PortableNode }
 }
-
-$NodeVersion = (& $NodeCommand.Source --version).TrimStart("v")
 $NodeMajor = 0
-if (-not [int]::TryParse(($NodeVersion -split "\.")[0], [ref]$NodeMajor) -or $NodeMajor -ne 22) {
-  Write-Host "$ProductName requires Node.js 22. Current version: v$NodeVersion" -ForegroundColor Red
-  exit 1
+$NodeVersion = ""
+if ($NodeCommand) {
+  try {
+    $NodeVersion = (& $NodeCommand.Source --version).TrimStart("v")
+    [void][int]::TryParse(($NodeVersion -split "\.")[0], [ref]$NodeMajor)
+  } catch {
+    $NodeMajor = 0
+  }
+}
+if ($NodeMajor -ne 22 -and (Test-Path $PortableNode)) {
+  try {
+    $PortableVersion = (& $PortableNode --version).TrimStart("v")
+    $PortableMajor = 0
+    if ([int]::TryParse(($PortableVersion -split "\.")[0], [ref]$PortableMajor) -and $PortableMajor -eq 22) {
+      $NodeCommand = @{ Source = $PortableNode }
+      $NodeVersion = $PortableVersion
+      $NodeMajor = $PortableMajor
+    }
+  } catch {
+    # An invalid or blocked cached binary is replaced using the pinned archive.
+  }
+}
+if ($NodeMajor -ne 22) {
+  if (-not [Environment]::Is64BitOperatingSystem) {
+    Write-Host "$ProductName needs 64-bit Windows or a previously installed Node.js 22." -ForegroundColor Red
+    exit 1
+  }
+  $Version = "22.23.4"
+  $ArchiveName = "node-v$Version-win-x64.zip"
+  $ExpectedSha256 = "cbc74b5e0982c9dbb41525fd8fb5dcd32fbee237863f7829072f4639a1ce5f20"
+  $TempArchive = Join-Path $env:TEMP ("aethergrid-node-" + [guid]::NewGuid().ToString("N") + ".zip")
+  $TempExtract = Join-Path $env:TEMP ("aethergrid-node-" + [guid]::NewGuid().ToString("N"))
+  Write-Host "$ProductName needs Node.js 22. Installing a verified portable runtime into this app folder (no administrator rights)..." -ForegroundColor Cyan
+  try {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    Invoke-WebRequest -UseBasicParsing -Uri "https://nodejs.org/dist/v$Version/$ArchiveName" -OutFile $TempArchive
+    $ActualHash = (Get-FileHash -Path $TempArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($ActualHash -ne $ExpectedSha256) { throw "Downloaded Node archive failed SHA-256 verification." }
+    Expand-Archive -Path $TempArchive -DestinationPath $TempExtract -Force
+    $ExtractedNode = Join-Path $TempExtract "node-v$Version-win-x64\node.exe"
+    if (-not (Test-Path $ExtractedNode)) { throw "The verified archive is missing node.exe." }
+    New-Item -ItemType Directory -Force -Path $LocalRuntime | Out-Null
+    Copy-Item -Path $ExtractedNode -Destination $PortableNode -Force
+    $NodeCommand = @{ Source = $PortableNode }
+    $NodeVersion = (& $NodeCommand.Source --version).TrimStart("v")
+    $NodeMajor = 0
+    [void][int]::TryParse(($NodeVersion -split "\.")[0], [ref]$NodeMajor)
+    if ($NodeMajor -ne 22) { throw "Portable Node version validation failed." }
+  } catch {
+    Write-Host "Local runtime setup failed: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Your device or network may restrict downloading or running executables. The offline map still works from index.html, but live AI requires a backend process." -ForegroundColor Yellow
+    exit 1
+  } finally {
+    Remove-Item -Force $TempArchive -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force $TempExtract -ErrorAction SilentlyContinue
+  }
 }
 
 # Node loads the later env file last, but inherited process variables take precedence.
 # Resolve the same effective port before opening the browser.
 function Get-ConfiguredPort {
   $Value = "8090"
-  foreach ($FileName in @(".env", ".env.aethergrid")) {
+  foreach ($FileName in @(".env", ".env.aethergrid", ".env.secrets")) {
     $FilePath = Join-Path $Root $FileName
     if (-not (Test-Path $FilePath)) { continue }
     foreach ($Line in (Get-Content $FilePath)) {
@@ -89,6 +143,9 @@ if (Test-Path (Join-Path $Root ".env")) {
 }
 if (Test-Path (Join-Path $Root ".env.aethergrid")) {
   $Arguments += "--env-file=.env.aethergrid"
+}
+if (Test-Path (Join-Path $Root ".env.secrets")) {
+  $Arguments += "--env-file=.env.secrets"
 }
 $Arguments += "server.mjs"
 

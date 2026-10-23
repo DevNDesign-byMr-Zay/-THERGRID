@@ -1445,6 +1445,25 @@ button {
   letter-spacing: 0.08em;
 }
 
+.scene-caption .city-retry-button {
+  pointer-events: auto;
+  cursor: pointer;
+  margin-top: 5px;
+  padding: 6px 10px;
+  border: 1px solid var(--cyan);
+  border-radius: 6px;
+  background: rgba(5, 24, 32, 0.92);
+  color: #b4f5ff;
+  font: 600 10px ui-monospace, Consolas, monospace;
+  letter-spacing: 0.06em;
+}
+
+.scene-caption .city-retry-button:hover,
+.scene-caption .city-retry-button:focus-visible {
+  background: rgba(19, 69, 80, 0.95);
+  outline-offset: 2px;
+}
+
 .intel-rail {
   display: grid;
   align-content: start;

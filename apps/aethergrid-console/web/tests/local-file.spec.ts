@@ -2,6 +2,32 @@ import { test, expect } from '@playwright/test';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+test('direct-open internal city API works with Windows-drive file paths', async ({ page }) => {
+  await page.route('http://**/*', route => route.abort());
+  await page.route('https://**/*', route => route.abort());
+  await page.goto(pathToFileURL(process.env.AETHERGRID_LOCAL_HTML || resolve('local-dist/index.html')).href);
+  const result = await page.evaluate(async () => {
+    const requestPath = '/api/aethergrid/geospatial/city/new-york?spatial=1';
+    const windows = new URL(requestPath, 'file:///C:/Users/Operator/AETHERGRID/index.html');
+    const response = await fetch(requestPath);
+    const city = await response.json();
+    return {
+      windowsPath: windows.pathname,
+      status: response.status,
+      source: city.source?.provider,
+      snapshot: city.source?.snapshot,
+      count: city.buildings?.length ?? 0,
+    };
+  });
+  // Root-relative URLs do not retain the Windows drive letter in Chromium.
+  // Exercise the actual virtual fetch result rather than a false pathname assumption.
+  expect(result.windowsPath).toMatch(/^\/api\/aethergrid\//u);
+  expect(result.status).toBe(200);
+  expect(result.source).toBe('bundled-openstreetmap');
+  expect(result.snapshot).toBe(true);
+  expect(result.count).toBeGreaterThan(100);
+});
+
 for (const width of [1366, 390]) test(`opening the packaged index file without a server renders the workspace at ${width}`, async ({ page }) => {
   await page.setViewportSize({ width, height: 800 });
   // The standalone WebGL globe is exercised below; keep drawer interaction
@@ -100,10 +126,29 @@ test.describe('isolated offline city and visual-mode acceptance', () => {
       await page.getByRole('navigation', { name: 'City targets' })
         .getByRole('button', { name: new RegExp(name) }).click();
       await page.getByRole('button', { name: 'Close navigation drawer' }).click();
-      await expect.poll(
-        async () => Number(await page.locator('.world-stage').getAttribute('data-source-building-count')),
-        { timeout: 45_000, message: `${name} must expose more than 100 source-backed mapped buildings` },
-      ).toBeGreaterThan(100);
+      try {
+        await expect.poll(
+          async () => Number(await page.locator('.world-stage').getAttribute('data-source-building-count')),
+          { timeout: 45_000, message: `${name} must expose more than 100 source-backed mapped buildings` },
+        ).toBeGreaterThan(100);
+      } catch (error) {
+        // Windows Edge / managed-device diagnostics must never weaken the
+        // city contract: capture source count and actual client-side failure.
+        const diagnostic = await page.evaluate(() => ({
+          renderer: document.querySelector('.spatial-shell')?.getAttribute('data-renderer'),
+          rendererReady: document.querySelector('.spatial-shell')?.getAttribute('data-renderer-ready'),
+          cityCount: document.querySelector('.world-stage')?.getAttribute('data-source-building-count'),
+          caption: document.querySelector('.scene-caption')?.textContent?.slice(-900),
+          sourceStatus: [...document.querySelectorAll('.source-badge')]
+            .map(node => node.textContent?.slice(0,300)).slice(0,6),
+          bundledCities: Object.entries(
+            (globalThis as typeof globalThis & { __AETHERGRID_CITIES__?: Record<string, {buildings?:unknown[]}> }).__AETHERGRID_CITIES__ ?? {}
+          ).map(([id, value]) => ({id, buildings: value.buildings?.length ?? 0})),
+        }));
+        console.error('AETHERGRID_OFFLINE_CITY_FAILURE', JSON.stringify({ name, diagnostic, errors }));
+        await page.screenshot({ path: `test-results/local-failure-${name.replaceAll(' ', '-')}.png` });
+        throw error;
+      }
       await expect(page.locator('.journey-status')).toHaveCount(0, { timeout: 45_000 });
       await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer', 'cesium');
       await expect(page.locator('.cesium-widget-errorPanel')).toHaveCount(0);

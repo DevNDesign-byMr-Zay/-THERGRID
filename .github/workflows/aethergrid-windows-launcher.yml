@@ -102,6 +102,39 @@ jobs:
             Remove-Item $PidFile, $EnvFile, $OverrideFile -Force -ErrorAction SilentlyContinue
           }
 
+      - name: Verify unprivileged portable Node fallback and secrets port precedence
+        shell: powershell
+        env:
+          AETHERGRID_NO_BROWSER: '1'
+        run: |
+          $ErrorActionPreference = "Stop"
+          $Root = Join-Path (Get-Location).Path "apps/aethergrid-console"
+          $PortableDir = Join-Path $Root ".aethergrid-runtime"
+          $PortableNode = Join-Path $PortableDir "node.exe"
+          $Secrets = Join-Path $Root ".env.secrets"
+          $PidFile = Join-Path $Root ".aethergrid.pid"
+          $SavedPath = $env:Path
+          $StartedId = 0
+          try {
+            New-Item -ItemType Directory -Force -Path $PortableDir | Out-Null
+            Copy-Item -Path (Get-Command node).Source -Destination $PortableNode -Force
+            Set-Content -Path $Secrets -Value "AETHERGRID_PORT=8094"
+            # Hide installed Node from PATH to exercise the real portable startup.
+            $env:Path = "$env:SystemRoot\System32;$env:SystemRoot\System32\WindowsPowerShell\v1.0"
+            & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root "START-AETHERGRID.ps1")
+            if ($LASTEXITCODE -ne 0) { throw "Portable launcher failed" }
+            $Health = Invoke-RestMethod -Uri "http://127.0.0.1:8094/api/aethergrid/health" -TimeoutSec 5
+            if ($Health.ok -ne $true -or $Health.product -ne (([char]0x00C6) + "THERGRID")) {
+              throw "Portable runtime did not serve actual AETHERGRID health"
+            }
+            $StartedId = [int](Get-Content $PidFile)
+          } finally {
+            $env:Path = $SavedPath
+            if ($StartedId -gt 0) { Stop-Process -Id $StartedId -Force -ErrorAction SilentlyContinue }
+            Remove-Item $PidFile, $Secrets -Force -ErrorAction SilentlyContinue
+            Remove-Item $PortableDir -Recurse -Force -ErrorAction SilentlyContinue
+          }
+
       - name: Verify source-backed city geometry on Windows
         shell: powershell
         run: |
@@ -109,3 +142,42 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'OSM city source regression suite failed' }
           npm --prefix apps/aethergrid-console/web run test -- tests/city-fidelity.spec.ts
           if ($LASTEXITCODE -ne 0) { throw 'Real Cesium city geometry tests failed' }
+
+      - name: Verify real direct-open NYC Cesium scene in Windows Edge
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          Push-Location "apps/aethergrid-console/web"
+          try {
+            npx vite build --config vite.local.config.ts
+            if ($LASTEXITCODE -ne 0) { throw "Direct-open Vite build failed" }
+          } finally { Pop-Location }
+          node scripts/assemble-aethergrid-local-html.mjs
+          if ($LASTEXITCODE -ne 0) { throw "Direct-open snapshot assembly failed" }
+          Push-Location "apps/aethergrid-console/web"
+          try {
+            $Edge = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+            if (Test-Path $Edge) {
+              $env:AETHERGRID_TEST_CHROMIUM = $Edge
+            } else {
+              npx playwright install chromium
+              if ($LASTEXITCODE -ne 0) { throw "Chromium install failed" }
+            }
+            npx playwright test --config playwright.local.config.ts --grep "bundled NEW YORK retains mapped Cesium geometry" --workers=1 --reporter=line
+            if ($LASTEXITCODE -ne 0) { throw "Windows direct-open NYC 3D and 7 visual modes failed" }
+          } finally {
+            Remove-Item Env:AETHERGRID_TEST_CHROMIUM -ErrorAction SilentlyContinue
+            Pop-Location
+          }
+
+      - name: Retain Windows local 3D scene evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: aethergrid-windows-direct-open-${{ github.sha }}
+          path: |
+            apps/aethergrid-console/web/test-results/local-district-NEW-YORK.png
+            apps/aethergrid-console/web/test-results/local-failure-NEW-YORK.png
+            apps/aethergrid-console/web/test-results/**/error-context.md
+          if-no-files-found: warn
+          retention-days: 14

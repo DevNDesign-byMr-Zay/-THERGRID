@@ -3,6 +3,7 @@ import http from 'node:http';
 import test from 'node:test';
 
 import { createAgentRuntime } from '../apps/aethergrid-console/ai-runtime.mjs';
+import { resolveAgentConfig, safeAgentConfig } from '../apps/aethergrid-console/agent-config.mjs';
 
 async function withFakeModelServer(run) {
   const requests = [];
@@ -178,4 +179,23 @@ test('specialists execute trusted read-only tools and TEAM retains citations', a
   const team = await runtime.runTeam({ message: 'Compare' });
   assert.equal(team.citations[0].receipt, 'a'.repeat(64));
   assert.ok(team.contributions.every((c) => c.citations.length === 1));
+});
+
+test('one private Groq key configures four real agents without exposing credentials', () => {
+  const config = resolveAgentConfig({ AETHERGRID_GROQ_API_KEY: 'test-only-private-key' });
+  for (const agent of ['TEAM', 'VÆLON', 'AUREN', 'SOLVÆR']) {
+    assert.equal(config[agent].provider, 'openai-compatible');
+    assert.equal(config[agent].model, 'openai/gpt-oss-20b');
+    assert.equal(config[agent].openAiBaseUrl, 'https://api.groq.com/openai/v1');
+    assert.equal(config[agent].openAiApiKey, 'test-only-private-key');
+    assert.equal(safeAgentConfig(config)[agent].status, 'configured');
+  }
+  assert.doesNotMatch(JSON.stringify(safeAgentConfig(config)), /test-only-private-key/u);
+  assert.equal(
+    resolveAgentConfig({
+      AETHERGRID_AI_PROVIDER: 'local',
+      AETHERGRID_GROQ_API_KEY: 'test-only-private-key',
+    }).AUREN.provider,
+    'local',
+  );
 });
