@@ -109,8 +109,7 @@ for (const name of workerNames) {
   // worker. Fail package creation instead of shipping an unusable city UI.
   if (
     name === 'createGeometry' &&
-    (!output.includes('Unbundled geometry factory') ||
-      /\bimport\s*\(/u.test(output))
+    (!output.includes('Unbundled geometry factory') || /\bimport\s*\(/u.test(output))
   ) {
     throw new Error('Cesium createGeometry worker retains unbundled dynamic geometry imports');
   }
