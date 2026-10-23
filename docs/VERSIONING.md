@@ -4,8 +4,8 @@ Repository release semver and product generations identify different contracts. 
 
 | Surface | Version | Meaning |
 | --- | --- | --- |
-| Root `package.json` and `package-lock.json` | `0.3.0` | Current unreleased repository/package candidate; release tags must match this source of truth |
-| Latest published GitHub release | `v0.2.1` | Published October 11, 2026; remains the most recent release until a new exact-main gated publication |
+| Root `package.json` and `package-lock.json` | `0.3.2` | Current unreleased repository/package candidate; release tags must match this source of truth |
+| Latest published GitHub release | `v0.3.1` | Published October 23, 2026; remains the most recent release until a new exact-main gated publication |
 | ÆTHERGRID product generation | `v4` | React/Cesium command-center generation and its provider runtime work |
 | Canonical `apps/aethergrid-console/web/` workspace | `4.0.0-alpha.1` | React/Cesium product-generation version; not the repository release semver |
 | Canonical `apps/aethergrid-console/app.json` and `ui.json` | `4.0.0-alpha.1` | Application/UI contract version aligned to the promoted v4 web workspace |
@@ -15,9 +15,9 @@ Repository release semver and product generations identify different contracts. 
 
 ## Next repository release decision
 
-The repository/package candidate is **0.3.0**. The existing `v0.2.1` tag is published and immutable. The new minor version is reserved for the verified combined geographic-streaming, free local CPU optimization, optional Aer simulation, and offline-renderer startup improvements. These features are not declared shipped solely by preparing this version metadata.
+The repository/package candidate is **0.3.2**. The existing `v0.3.1` tag is published and immutable. This patch release candidate includes verified Groq multi-agent grid skills, TEAM quota-cooldown recovery and a Zod security upgrade. The prior exact-main protected acceptance at `990e5a7` passed, but this new version must pass all exact-main gates before publication.
 
-Root package, lockfile, earlier evidence-console manifest and changelog must remain aligned at `0.3.0`. Canonical React/Cesium `app.json`, `ui.json` and web workspace retain their independent product-generation version `4.0.0-alpha.1`; manifest schema versions remain independent of release semver.
+Root package, lockfile, earlier evidence-console manifest and changelog must remain aligned at `0.3.2`. Canonical React/Cesium `app.json`, `ui.json` and web workspace retain their independent product-generation version `4.0.0-alpha.1`; manifest schema versions remain independent of release semver.
 
 The next release must pass the maintained engineering, security, full browser/sustained-replay, Windows, fresh-extracted ZIP, container and exact-main canonical-live gates on the **same integrated commit**. D-Wave hardware remains unavailable, Qiskit Aer is local circuit simulation only, and any IBM Quantum QPU job requires explicit separate authorization. An unsigned iOS project is not an installable IPA. Preparation creates no release tag or published artifact.
 
