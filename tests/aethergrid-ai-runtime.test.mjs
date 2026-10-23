@@ -5,6 +5,84 @@ import test from 'node:test';
 import { createAgentRuntime } from '../apps/aethergrid-console/ai-runtime.mjs';
 import { resolveAgentConfig, safeAgentConfig } from '../apps/aethergrid-console/agent-config.mjs';
 
+test('Groq GPT-OSS uses low reasoning within existing token caps so TEAM can finish visible replies and tools', async (t) => {
+  const requests = [];
+  t.mock.method(globalThis, 'fetch', async (_url, options) => {
+    const body = JSON.parse(options.body);
+    requests.push(body);
+    const team = body.messages[0].content.includes('team synthesizer');
+    const message =
+      body.reasoning_effort !== 'low'
+        ? { role: 'assistant', content: '', reasoning: 'Reasoning consumed the completion budget.' }
+        : team && !body.messages.some((item) => item.role === 'tool')
+          ? {
+              role: 'assistant',
+              content: null,
+              tool_calls: [
+                {
+                  id: 'set-grid',
+                  type: 'function',
+                  function: { name: 'set_view', arguments: '{"view":"grid"}' },
+                },
+              ],
+            }
+          : { role: 'assistant', content: 'READY' };
+    return new Response(
+      JSON.stringify({
+        id: `request-${requests.length}`,
+        choices: [{ message, finish_reason: body.reasoning_effort === 'low' ? 'stop' : 'length' }],
+      }),
+      { headers: { 'content-type': 'application/json' } },
+    );
+  });
+  const runtime = createAgentRuntime({ env: { AETHERGRID_GROQ_API_KEY: 'mock-groq-low-budget' } });
+  const result = await runtime.runTeam({
+    message: 'Specialists confirm readiness. Synthesizer select grid with set_view.',
+  });
+  assert.equal(result.runtime.executionStatus, 'succeeded');
+  assert.ok(result.contributions.every((item) => item.runtime.executionStatus === 'succeeded'));
+  assert.deepEqual(result.actions, [{ type: 'set_view', view: 'grid' }]);
+  assert.equal(requests.length, 5);
+  assert.ok(requests.every((item) => item.reasoning_effort === 'low'));
+  assert.ok(
+    requests.every(
+      (item) =>
+        item.max_tokens === (item.messages[0].content.includes('team synthesizer') ? 768 : 512),
+    ),
+  );
+});
+
+test('Groq reasoning setting never changes unrelated models or compatible endpoints', async (t) => {
+  const requests = [];
+  t.mock.method(globalThis, 'fetch', async (_url, options) => {
+    requests.push(JSON.parse(options.body));
+    return new Response(
+      JSON.stringify({ choices: [{ message: { role: 'assistant', content: 'READY' } }] }),
+    );
+  });
+  for (const [model, base] of [
+    ['other-model', 'https://api.groq.com/openai/v1'],
+    ['openai/gpt-oss-20b', 'https://compatible.example/v1'],
+    ['openai/gpt-oss-120b', 'https://api.groq.com/openai/v1'],
+  ]) {
+    const runtime = createAgentRuntime({
+      env: {
+        AETHERGRID_AI_PROVIDER: 'openai-compatible',
+        AETHERGRID_AI_MODEL: model,
+        AETHERGRID_OPENAI_API_KEY: 'mock-scope-budget',
+        AETHERGRID_OPENAI_BASE_URL: base,
+      },
+    });
+    assert.equal(
+      (await runtime.runAgent('AUREN', { message: 'Ready?' })).runtime.executionStatus,
+      'succeeded',
+    );
+  }
+  assert.equal(Object.hasOwn(requests[0], 'reasoning_effort'), false);
+  assert.equal(Object.hasOwn(requests[1], 'reasoning_effort'), false);
+  assert.equal(requests[2].reasoning_effort, 'low');
+});
+
 async function withFakeModelServer(run) {
   const requests = [];
   const server = http.createServer(async (request, response) => {

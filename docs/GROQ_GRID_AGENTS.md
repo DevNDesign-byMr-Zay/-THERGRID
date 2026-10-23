@@ -8,17 +8,19 @@ The existing Windows launcher loads `.env`, `.env.aethergrid`, then `.env.secret
 
 Default: `openai/gpt-oss-20b` at `https://api.groq.com/openai/v1`. To independently replace a specialist model, set `AETHERGRID_VAELON_MODEL`, `AETHERGRID_AUREN_MODEL`, `AETHERGRID_SOLVAER_MODEL`, or `AETHERGRID_TEAM_MODEL` server-side. Corresponding `_PROVIDER`, `_BASE_URL`, `_API_KEY` and `_TIMEOUT_MS` overrides retain precedence. Ollama and explicitly labeled local fallback remain supported.
 
+Groq-hosted GPT-OSS 20B/120B requests explicitly select low reasoning effort within the existing 512-token specialist and 768-token synthesis caps. Other models and compatible endpoints keep their existing request parameters. This bounds reasoning overhead; a successful visible response is still required, and an empty response is never accepted as success.
+
 ## Skills
 
-| Skill | Effect |
-|---|---|
-| `inspect_context` | Inspect current city, selected entity, view, layers and time as operator-supplied context. |
-| `read_observations` | Read bounded server-recorded observations with source receipts; empty means no evidence. |
-| `set_view` | Select solid, wireframe, grid, xray, holographic, operations or reality rendering. |
-| `set_layer` | Show/hide a named existing map layer, including mapped grid, weather, radar, aviation or transit. |
-| `focus_location` | Focus the map at bounded latitude/longitude. |
-| `set_time` | Return live, or select an explicit historical/forecast UTC time. Existing data-availability rules remain. |
-| `compare_scenario` | Compute an explicit local generation/load balance comparison; this is arithmetic with declared assumptions, not measured electrical flow or a validated power-network simulation. |
+| Skill               | Effect                                                                                                                                                                            |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `inspect_context`   | Inspect current city, selected entity, view, layers and time as operator-supplied context.                                                                                        |
+| `read_observations` | Read bounded server-recorded observations with source receipts; empty means no evidence.                                                                                          |
+| `set_view`          | Select solid, wireframe, grid, xray, holographic, operations or reality rendering.                                                                                                |
+| `set_layer`         | Show/hide a named existing map layer, including mapped grid, weather, radar, aviation or transit.                                                                                 |
+| `focus_location`    | Focus the map at bounded latitude/longitude.                                                                                                                                      |
+| `set_time`          | Return live, or select an explicit historical/forecast UTC time. Existing data-availability rules remain.                                                                         |
+| `compare_scenario`  | Compute an explicit local generation/load balance comparison; this is arithmetic with declared assumptions, not measured electrical flow or a validated power-network simulation. |
 
 Model-selected actions are allowlisted on the server and checked again in the React client. A fresh completed request applies valid visualization changes and offers Undo. Reviewing history, stopping a request, fallback, partial TEAM failure, malformed actions and unsupported fields do not execute changes. TEAM applies only the synthesizer's actions; specialist proposals remain contribution evidence. No tool runs shell commands, fetches arbitrary URLs, edits credentials, actuates physical infrastructure or submits paid quantum hardware jobs.
 
@@ -37,3 +39,5 @@ Baseline main `7558309a648fd5fd59633b2636ebfa78a96890fe`, release v0.3.1, has pr
 The maintained protected canonical provider script now requires each specialist to choose `set_view`, return a valid grid action, and supply an authenticated request identifier and execution receipt. TEAM must supply three successful distinct contributions plus a real synthesis that selects and completes its own grid-view tool call. No secret is available in this development workspace, so local tests verify provider/tool protocol with controlled HTTP servers; live skill acceptance must pass against the final protected main candidate before a v0.4.0 release claim.
 
 Sources: [Groq supported models](https://console.groq.com/docs/models), [rate limits](https://console.groq.com/docs/rate-limits), [local function calling](https://console.groq.com/docs/tool-use/local-tool-calling). This change is the agent batch of the larger v0.4.0 mission; the capability audit records remaining spatial/UI/mobility work.
+
+Post-merge check: [run 40000105171](https://github.com/DevNDesign-byMr-Zay/-THERGRID/actions/runs/40000105171), main `4ac8ae2382e1c68c22df572f1686afe366177db8`, verified real grid tool calls from all three specialists. TEAM was partial: VÆLON and SOLVÆR returned empty assistant content during contribution requests, while AUREN and the synthesizer responded. Safe diagnostics reported no HTTP 429 or cooldown for those failures. The low-reasoning change is a candidate fix awaiting protected live acceptance. See [Groq reasoning options](https://console.groq.com/docs/reasoning).

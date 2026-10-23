@@ -301,6 +301,9 @@ export function createAgentRuntime({ env = process.env, now = () => Date.now(), 
             messages,
             temperature: 0.2,
             max_tokens: agent.id === 'TEAM' ? 768 : 512,
+            ...(base.hostname === 'api.groq.com' && /^openai\/gpt-oss-(20b|120b)$/.test(agent.model)
+              ? { reasoning_effort: 'low' }
+              : {}),
             tools: GRID_SKILL_TOOLS,
             tool_choice: allowTools ? 'auto' : 'none',
             parallel_tool_calls: false,
