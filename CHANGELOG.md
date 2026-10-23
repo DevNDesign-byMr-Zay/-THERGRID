@@ -1,8 +1,20 @@
 # Changelog
 
-## Unreleased — 0.3.1
+## Unreleased — 0.3.2
 
-Current package candidate: `0.3.1`. This candidate is not published until the gated manual release workflow publishes it.
+Current package candidate: `0.3.2`. This candidate is not published until the gated manual release workflow publishes it.
+
+### Verified Groq agent-control milestone
+
+- Connect VÆLON, AUREN, SOLVÆR and TEAM to the configured server-side Groq OpenAI-compatible GPT-OSS runtime; retain per-agent receipts and bounded, validated application-only grid/view/layer/location/time skills with Undo.
+- Recover short upstream Groq quota cooldowns without replaying already executed local tools, duplicating state changes, or concealing failed responses.
+- Patch Zod to the verified 4.6.6 dependency and preserve audited locked installs and unchanged test thresholds.
+- Require exact-main Engineering CI, CodeQL, five canonical browser workloads and credentialed Groq/Cesium acceptance before publication. The protected verification at commit `990e5a717983261647838c355a8b070ee525acd1` passed; this version bump requires fresh exact-head gates.
+- Do not interpret verified IBM backend discovery as actual QPU execution; D-Wave remains unconfigured.
+
+## 0.3.1 — 2026-10-23
+
+Published release of one-click connected local operation and Windows compatibility.
 
 ### Post-release local operation and Windows compatibility
 
