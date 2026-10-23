@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { resolveAgentConfig, safeAgentConfig } from './agent-config.mjs';
 
@@ -321,6 +322,7 @@ export function createAgentRuntime({ env = process.env, now = () => Date.now(), 
           state.until = now() + retryAfterSeconds * 1000;
         }
         throw Object.assign(new Error(`provider returned HTTP ${response.status}`), {
+          providerStatus: response.status,
           executionStatus: response.status === 429 ? 'cooldown' : 'failed',
           retryAfterSeconds,
           rateLimit,
@@ -366,13 +368,24 @@ export function createAgentRuntime({ env = process.env, now = () => Date.now(), 
     }
     const actions = [];
     let calls = 0;
+    let retried = false;
     for (let round = 0; round < MAX_ROUNDS; round++) {
-      const result = await exchange(
+      const request = () => exchange(
         agent,
         messages,
         signal,
         round < MAX_ROUNDS - 1 && calls < MAX_TOOLS,
       );
+      let result;
+      try {
+        result = await request();
+      } catch (error) {
+        if (retried || error.providerStatus !== 429 ||
+          !(error.retryAfterSeconds > 0 && error.retryAfterSeconds <= 10)) throw error;
+        retried = true;
+        await delay(error.retryAfterSeconds * 1000 + 100, undefined, { signal });
+        result = await request();
+      }
       const assistant = result.message;
       if (!assistant || typeof assistant !== 'object')
         throw new Error('provider returned no assistant message');
