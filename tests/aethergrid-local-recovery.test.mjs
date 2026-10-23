@@ -27,3 +27,16 @@ test('failed mapped city geometry can be retried without replacing source-backed
   assert.match(css, /\.scene-caption \.city-retry-button/u);
   assert.match(css, /pointer-events: auto/u);
 });
+
+test('standalone Cesium workers normalize Windows ids and reject late dynamic module imports', async () => {
+  const [assembler, config] = await Promise.all([
+    read('scripts/assemble-aethergrid-local-html.mjs'),
+    read('apps/aethergrid-console/web/vite.local.config.ts'),
+  ]);
+  assert.match(assembler, /const normalizedId = id\.replaceAll/u);
+  assert.match(assembler, /normalizedId\.endsWith\('\/Workers\/createGeometry\.js'\)/u);
+  assert.match(assembler, /Unbundled geometry factory/u);
+  assert.match(assembler, /output\.includes\('Unbundled geometry factory'\)/u);
+  assert.match(config, /id\.replaceAll/u);
+  assert.match(config, /importer\?\.replaceAll/u);
+});
