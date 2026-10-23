@@ -11,12 +11,15 @@ export default defineConfig({
     name: 'embedded-cesium-module-urls',
     enforce: 'pre',
     resolveId(source, importer) {
-      if (source.endsWith('buildModuleUrl.js') && importer?.includes('/@cesium/engine/')) {
+      if (
+        source.endsWith('buildModuleUrl.js') &&
+        importer?.replaceAll('\\', '/').includes('/@cesium/engine/')
+      ) {
         return path.join(directory, 'src/standalone/cesium-module-url.ts');
       }
     },
     transform(code, id) {
-      if (id.endsWith('/Core/TaskProcessor.js')) {
+      if (id.replaceAll('\\', '/').endsWith('/Core/TaskProcessor.js')) {
         return code.replace('function createWorker(url) {', `function createWorker(url) {
           const embedded = globalThis.__AETHERGRID_ASSETS__;
           const key = 'Workers/' + url.replace(/\\.js$/, '') + '.js';
