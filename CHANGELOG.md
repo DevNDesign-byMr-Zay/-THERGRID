@@ -2,6 +2,8 @@
 
 ## Unreleased — 0.3.1
 
+Current package candidate: `0.3.1`. This candidate is not published until the gated manual release workflow publishes it.
+
 ### Post-release local operation and Windows compatibility
 
 - Fix Windows drive-letter `file://` paths bypassing the in-browser virtual API and suppressing the bundled OpenStreetMap city geometry. Validate direct-open city snapshots and all seven visual modes in Windows Edge.
