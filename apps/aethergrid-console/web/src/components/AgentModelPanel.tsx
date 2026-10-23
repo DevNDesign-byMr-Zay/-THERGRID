@@ -31,7 +31,16 @@ export function AgentModelPanel({agent,active}:{agent:AgentId;active:boolean}) {
   return <section className="agent-model-panel" aria-label="Backend model configuration">
     <div><strong>Model configuration</strong><button type="button" onClick={()=>void refresh()} disabled={loading}>Refresh model configuration</button></div>
     <small role="status">{error?(checkedAt?'STALE':'UNAVAILABLE'):loading?'CHECKING':'BACKEND CONFIGURATION'}{checkedAt?` · Last checked ${checkedAt}`:''}</small>
-    {visible.map(row=><p key={row.agent}><strong>{row.agent}</strong> · {row.provider??'PROVIDER NOT PROVIDED'} · {row.model??'MODEL NOT PROVIDED'} · {row.status}</p>)}
+    {visible.map(row=><div className="agent-model-evidence" key={row.agent}>
+      <p><strong>{row.agent}</strong> · {row.provider??'PROVIDER NOT PROVIDED'} · {row.model??'MODEL NOT PROVIDED'} · {row.status}</p>
+      <small>Skills · {row.skills?.length?row.skills.join(' · '):'NOT REPORTED'}</small>
+      <p>Last execution · {row.lastExecution?`${row.lastExecution.executionStatus??'unverified'} · ${row.lastExecution.provider??'PROVIDER NOT PROVIDED'} · ${row.lastExecution.model??'MODEL NOT PROVIDED'} · ${row.lastExecution.completedAt??'TIME NOT PROVIDED'}${row.lastExecution.fallbackUsed?' · LOCAL FALLBACK':''}`:'UNVERIFIED · no execution receipt'}</p>
+      {row.lastExecution?.receipt?<code>{row.lastExecution.receipt}</code>:null}
+      {row.lastSuccessfulExecution?.receipt?<p>Last successful provider execution · {row.lastSuccessfulExecution.completedAt??'TIME NOT PROVIDED'} · {row.lastSuccessfulExecution.provider??'PROVIDER NOT PROVIDED'} · {row.lastSuccessfulExecution.model??'MODEL NOT PROVIDED'}<code>{row.lastSuccessfulExecution.receipt}</code></p>:null}
+      {row.executionStatus?<small>Current execution state · {row.executionStatus}</small>:null}
+      {row.retryAfterSeconds!=null?<small>Provider cooldown · retry after {row.retryAfterSeconds} seconds. No automatic retry.</small>:null}
+      {Object.entries(row.rateLimit??{}).map(([name,value])=><small key={name}>{name}: {value}</small>)}
+    </div>)}
     <small>Configuration does not verify an execution. Completed tasks show backend-reported model receipts and fallback status.</small>
     {error?<small>{error}</small>:null}
   </section>;

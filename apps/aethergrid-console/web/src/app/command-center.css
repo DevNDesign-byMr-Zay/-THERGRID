@@ -670,3 +670,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 :root[data-theme='light'] .immersive-spatial .time-readout span {
   color: #37536b;
 }
+
+.agent-model-panel > .agent-model-evidence { display: grid; justify-content: stretch; gap: 6px; }
+.agent-model-evidence code, .agent-grid-effects { overflow-wrap: anywhere; }
+.agent-grid-effects { display: grid; gap: 8px; margin: 12px 0; padding: 12px; border: 1px solid var(--line-strong); border-radius: 8px; }
+.agent-grid-effects ul { margin: 0; padding-inline-start: 18px; font-size: 12px; }
+.agent-grid-effects button { justify-self: start; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--panel-strong); color: var(--cyan); font: inherit; cursor: pointer; }

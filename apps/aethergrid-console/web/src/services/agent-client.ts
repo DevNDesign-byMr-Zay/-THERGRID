@@ -1,3 +1,4 @@
+import {validateGridActions,type GridAction} from './agent-grid-actions';
 export type AgentId = 'TEAM' | 'VÆLON' | 'AUREN' | 'SOLVÆR';
 
 export interface AgentHistoryItem {
@@ -11,6 +12,9 @@ export interface AgentRuntimeReceipt {
   model: string | null;
   fallbackUsed: boolean;
   error?: string | null;
+  executionStatus?: string;
+  rateLimit?: Record<string,string>;
+  retryAfterSeconds?: number | null;
   latencyMs: number;
   advisoryOnly: boolean;
 }
@@ -25,6 +29,8 @@ export interface AgentContribution {
 export interface AgentCitation { receipt:string;kind:string;observedAt:string;href:string; }
 
 export interface AgentResponse {
+  actions?: GridAction[];
+  actionsRejected?: boolean;
   citations?: AgentCitation[];
   toolResults?: {tool:string;readOnly:boolean;count:number}[];
   reply: string;
@@ -43,6 +49,8 @@ export interface AgentResponse {
 }
 
 export interface AgentSpatialContext {
+  layers?: readonly {id:string;visible:boolean}[];
+  availableViews?: readonly string[];
   region: string;
   view: string;
   temporalMode: string;
@@ -98,11 +106,14 @@ export async function runAgent(
 
   return {
     reply,
+    actions: payload.runtime?.executionStatus === 'succeeded' && payload.runtime?.provider && !['local','unknown'].includes(payload.runtime.provider) && payload.runtime?.model && payload.runtime?.fallbackUsed === false && typeof payload.receipt === 'string' && /^[a-f0-9]{64}$/.test(payload.receipt) ? validateGridActions(payload.actions ?? []) ?? [] : [],
+    actionsRejected: payload.actions !== undefined && validateGridActions(payload.actions) === null,
     citations: Array.isArray(payload.citations) ? payload.citations.filter(item=>/^[a-f0-9]{64}$/.test(item.receipt) && item.href.startsWith('/api/aethergrid/history?')) : [],
     toolResults: Array.isArray(payload.toolResults) ? payload.toolResults : [],
     synthesis: payload.synthesis,
     receipt: String(payload.receipt || ''),
     runtime: {
+      ...agentRuntimeMetadata(payload.runtime),
       agent: String(payload.runtime?.agent || agent),
       provider: String(payload.runtime?.provider || 'unknown'),
       model: payload.runtime?.model ? String(payload.runtime.model) : null,
@@ -114,7 +125,7 @@ export async function runAgent(
     contributions: Array.isArray(payload.contributions)
       ? payload.contributions.filter((item) => item && typeof item.agent === 'string' && typeof item.reply === 'string').map((item) => ({
         agent: item.agent, reply: item.reply, receipt: typeof item.receipt === 'string' ? item.receipt : '',
-        runtime: { agent: item.agent, provider: typeof item.runtime?.provider === 'string' ? item.runtime.provider : 'unknown',
+        runtime: { ...agentRuntimeMetadata(item.runtime), agent: item.agent, provider: typeof item.runtime?.provider === 'string' ? item.runtime.provider : 'unknown',
           model: typeof item.runtime?.model === 'string' ? item.runtime.model : null,
           fallbackUsed: item.runtime?.fallbackUsed === true, advisoryOnly: true,
           latencyMs: Number.isFinite(item.runtime?.latencyMs) ? item.runtime.latencyMs : 0 }
@@ -125,4 +136,13 @@ export async function runAgent(
       ? Object.fromEntries(Object.entries(payload.evidence).filter(([key,value]) => ['id','receipt','title','type','status'].includes(key) && typeof value === 'string'))
       : undefined
   };
+}
+
+const EXECUTION_STATES=['unverified','succeeded','failed','local-fallback','partial-failure','cooldown'];
+export function agentRuntimeMetadata(value:unknown):Pick<AgentRuntimeReceipt,'executionStatus'|'rateLimit'|'retryAfterSeconds'> {
+  const row=value&&typeof value==='object'?value as Record<string,unknown>:{};
+  const rate=row.rateLimit&&typeof row.rateLimit==='object'&&!Array.isArray(row.rateLimit)?row.rateLimit as Record<string,unknown>:{};
+  const headers=['x-ratelimit-limit-requests','x-ratelimit-limit-tokens','x-ratelimit-remaining-requests','x-ratelimit-remaining-tokens','x-ratelimit-reset-requests','x-ratelimit-reset-tokens','retry-after'];
+  const rateLimit=Object.fromEntries(Object.entries(rate).filter(([key,value])=>headers.includes(key)&&typeof value==='string'&&value.length<=100));
+  return {...(typeof row.executionStatus==='string'&&EXECUTION_STATES.includes(row.executionStatus)?{executionStatus:row.executionStatus}:{}),...(Object.keys(rateLimit).length?{rateLimit:rateLimit as Record<string,string>}:{}),...(typeof row.retryAfterSeconds==='number'&&Number.isFinite(row.retryAfterSeconds)&&row.retryAfterSeconds>=0?{retryAfterSeconds:Math.min(86400,row.retryAfterSeconds)}:{})};
 }

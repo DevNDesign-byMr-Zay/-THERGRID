@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import {
-  summarizeAgent,
+  summarizeGridSkill,
   summarizeProvider,
   summarizeObservation,
   summarizeScheduledRealtime,
@@ -71,26 +71,30 @@ try {
   }
   if (!ready) throw new Error('canonical React production root did not become ready');
   for (const agent of ['VÆLON', 'AUREN', 'SOLVÆR']) {
-    await check(`groq-${agent}`, async () =>
-      summarizeAgent(
-        await request(`/api/aethergrid/agents/${encodeURIComponent(agent)}`, {
-          message: 'Reply briefly with READY and confirm advisory-only operation.',
-          context: {},
-        }),
-        agent,
-      ),
-    );
+    await check(`groq-${agent}`, async () => {
+      const result = await request(`/api/aethergrid/agents/${encodeURIComponent(agent)}`, {
+        message:
+          'Use the set_view tool to select grid. Then reply READY in at most 15 words. This changes only the app visualization.',
+        context: {
+          region: 'New York',
+          view: 'solid',
+          coordinate: { latitude: 40.7128, longitude: -74.006 },
+        },
+      });
+      return summarizeGridSkill(result, agent, { type: 'set_view', view: 'grid' });
+    });
+    // Tool roundtrips consume the same organization token bucket. No retry storms.
+    await delay(30000);
   }
-  // Give the account's token bucket time to refill before four TEAM model calls.
-  await delay(30000);
   await check('groq-TEAM', async () =>
-    summarizeAgent(
+    summarizeGridSkill(
       await request('/api/aethergrid/team', {
         message:
-          'Give a very brief readiness synthesis. Each contribution must stay under 20 words; preserve advisory-only operation.',
+          'Specialists: confirm readiness without tools in at most 15 words each. TEAM synthesizer: use set_view to select grid, then synthesize the completed contributions in at most 30 words. Preserve advisory-only operation.',
         context: {},
       }),
       'TEAM',
+      { type: 'set_view', view: 'grid' },
     ),
   );
   const coordinates = 'lat=40.7128&lon=-74.006';

@@ -860,12 +860,32 @@ function agentContext(input = {}) {
     scenario: input.scenario || state.system.scenario,
     view: input.view || state.system.view,
     metrics: input.metrics || state.metrics,
+    metricsBasis: input.metrics ? 'operator-supplied-unverified' : 'illustrative-local-model',
+    observationsRequiredForLiveClaims: true,
     externalContext: {
       geospatial: state.externalContext.geospatial,
       quantum: state.externalContext.quantum,
     },
     authority: 'advisory-only',
   };
+}
+
+function validateAgentRequest(input, id = 'TEAM') {
+  if (!['TEAM', 'VÆLON', 'AUREN', 'SOLVÆR'].includes(id) ||
+      !input || typeof input !== 'object' ||
+      typeof input.message !== 'string' || !input.message.trim() ||
+      input.message.length > 12000 ||
+      (input.context != null && (typeof input.context !== 'object' || Array.isArray(input.context)))) {
+    const error = new Error('A known agent, nonempty message (at most 12000 characters), and object context are required');
+    error.status = 400;
+    throw error;
+  }
+}
+
+function agentEvidenceStatus(result) {
+  if (result.runtime.provider === 'local' || result.runtime.fallbackUsed || result.runtime.error) return 'LOCAL_FALLBACK';
+  if (result.contributions?.some(item => item.runtime.provider === 'local' || item.runtime.fallbackUsed || item.runtime.error)) return 'PARTIAL';
+  return 'VERIFIED';
 }
 
 function telemetryTick() {
@@ -2043,9 +2063,11 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
       const input = await body(request);
       const encodedId = url.pathname.slice('/api/aethergrid/agents/'.length);
       const agentId = decodeURIComponent(encodedId);
+      validateAgentRequest(input, agentId);
+      const requestedContext = agentContext(input.context);
       const result = await agentRuntime.runAgent(agentId, {
         message: input.message,
-        context: agentContext(input.context),
+        context: requestedContext,
         history: Array.isArray(input.history) ? input.history : [],
       });
       activity(
@@ -2057,7 +2079,7 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
         title: `${agentId} Advisory Analysis`,
         type: 'AI_AGENT',
         age: 'just now',
-        status: 'VERIFIED',
+        status: agentEvidenceStatus(result),
         receipt: result.receipt,
         details: {
           agent: agentId,
@@ -2065,8 +2087,11 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
           model: result.runtime.model,
           fallbackUsed: result.runtime.fallbackUsed,
           latencyMs: result.runtime.latencyMs,
-          region: state.system.region,
-          scenario: state.system.scenario,
+          region: requestedContext.region,
+          scenario: requestedContext.scenario,
+          temporalMode: requestedContext.temporalMode || 'live',
+          temporalCursor: requestedContext.temporalCursor || null,
+          selectedEntityId: requestedContext.selectedEntity?.id || null,
           advisoryOnly: true,
         },
       };
@@ -2082,9 +2107,11 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
 
     if (request.method === 'POST' && url.pathname === '/api/aethergrid/team') {
       const input = await body(request);
+      validateAgentRequest(input);
+      const requestedContext = agentContext(input.context);
       const result = await agentRuntime.runTeam({
         message: input.message,
-        context: agentContext(input.context),
+        context: requestedContext,
         history: Array.isArray(input.history) ? input.history : [],
       });
       activity(
@@ -2096,7 +2123,7 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
         title: 'ÆTHERGRID Multi-Agent Synthesis',
         type: 'AI_TEAM',
         age: 'just now',
-        status: 'VERIFIED',
+        status: agentEvidenceStatus(result),
         receipt: result.receipt,
         details: {
           provider: result.runtime.provider,
@@ -2108,8 +2135,11 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
             provider: item.runtime.provider,
             model: item.runtime.model,
           })),
-          region: state.system.region,
-          scenario: state.system.scenario,
+          region: requestedContext.region,
+          scenario: requestedContext.scenario,
+          temporalMode: requestedContext.temporalMode || 'live',
+          temporalCursor: requestedContext.temporalCursor || null,
+          selectedEntityId: requestedContext.selectedEntity?.id || null,
           advisoryOnly: true,
         },
       };
@@ -2126,6 +2156,7 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
     if (request.method === 'POST' && url.pathname === '/api/aethergrid/chat') {
       const input = await body(request);
       const requestedAgent = String(input.agent || 'TEAM');
+      validateAgentRequest(input, requestedAgent);
       const result =
         requestedAgent === 'TEAM'
           ? await agentRuntime.runTeam({

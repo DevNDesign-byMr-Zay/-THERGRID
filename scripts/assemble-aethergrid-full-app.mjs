@@ -25,6 +25,8 @@ const REQUIRED_RUNTIME_FILES = Object.freeze([
   'server.mjs',
   'web-runtime.mjs',
   'agent-config.mjs',
+  'agent-grid-skills.mjs',
+  'GROQ-AGENT-SKILLS.md',
   'ai-runtime.mjs',
   'profile-store.mjs',
   'observation-store.mjs',
@@ -228,6 +230,7 @@ run(process.execPath, ['scripts/assemble-aethergrid-local-html.mjs'], REPO_ROOT)
 const payload = new Map();
 const legacySource = new Map();
 payload.set('index.html', await readFile(join(WEB_ROOT, 'local-dist', 'index.html')));
+payload.set('GROQ-AGENT-SKILLS.md', await readFile(join(REPO_ROOT, 'docs', 'GROQ_GRID_AGENTS.md')));
 
 for (const absolute of await collectFiles(APP_ROOT)) {
   const relativePath = normalizePath(relative(APP_ROOT, absolute));
