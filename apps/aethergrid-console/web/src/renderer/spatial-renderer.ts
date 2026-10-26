@@ -163,6 +163,8 @@ export interface SpatialRenderer {
   readonly engine: SpatialEngine;
 
   mount(container: HTMLElement): void;
+  /** Yield drawing while a modal owns the spatial workspace; retain source state. */
+  setRenderingActive(active: boolean): void;
   initialize(config?: SpatialRendererConfig): Promise<void>;
   flyTo(target: SpatialTarget): Promise<void>;
   setTime(time: TemporalInstant): void;

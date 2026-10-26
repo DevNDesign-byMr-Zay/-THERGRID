@@ -483,9 +483,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     width: auto;
     max-width: none;
     transform: translateY(110%);
-    /* Compact dialogs must become visible and own focus without waiting for
-       animation frames from the WebGL compositor on low-power renderers. */
-    transition: none;
   }
 
   .immersive-spatial .left-rail.open,

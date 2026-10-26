@@ -30,6 +30,7 @@ export class RendererManager {
   #time: TemporalInstant | null = null;
   #mode: VisualMode = 'solid';
   #performanceTier: SpatialPerformanceTier = 'balanced';
+  #renderingActive = true;
   #overlays = new Map<string, SpatialOverlaySnapshot>();
   #atmosphere: AtmosphericOverlaySnapshot | null = null;
   #airQuality: AirQualityOverlaySnapshot | null = null;
@@ -138,6 +139,12 @@ export class RendererManager {
     this.#current.setPerformanceTier(tier);
   }
 
+  setRenderingActive(active: boolean): void {
+    this.#renderingActive = active;
+    if (this.#disposed || this.#transitioning) return;
+    this.#current.setRenderingActive(active);
+  }
+
   applyOverlay(snapshot: SpatialOverlaySnapshot): void {
     this.#overlays.set(snapshot.layerId, snapshot);
     if (this.#transitioning) return;
@@ -222,11 +229,14 @@ export class RendererManager {
     if (this.#disposed) throw new Error('renderer manager is disposed');
     if (!this.#container) throw new Error('renderer manager is not mounted');
     renderer.mount(this.#container);
+    renderer.setRenderingActive(this.#renderingActive);
     await renderer.initialize(this.#config);
     if (this.#disposed) {
       renderer.destroy();
       throw new Error('renderer manager is disposed');
     }
+    // Activity may have changed while configuration/renderer initialization awaited.
+    renderer.setRenderingActive(this.#renderingActive);
     renderer.setLayers(this.#layers);
     renderer.setVisualMode(this.#mode);
     renderer.setPerformanceTier(this.#performanceTier);

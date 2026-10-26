@@ -190,6 +190,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
   #colorLocation = -1;
   #pointSizeLocation = -1;
   #ready = false;
+  #renderingActive = true;
   #degraded = false;
   #reason: string | null = null;
   #busy = false;
@@ -213,6 +214,11 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
 
   mount(container: HTMLElement): void {
     this.#container = container;
+  }
+
+  setRenderingActive(active: boolean): void {
+    this.#renderingActive = active;
+    if (active) this.#render();
   }
 
   async initialize(_config: SpatialRendererConfig = {}): Promise<void> {
@@ -257,7 +263,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     this.#animationFrame = null;
     const generation = ++this.#journeyGeneration;
     const start = { ...this.#target };
-    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (!this.#renderingActive || (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
       this.#target = { ...target };
       this.#busy = false;
       this.#journeyPhase = 'idle';
@@ -614,7 +620,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
   }
 
   #render(): void {
-    if (!this.#canvas || !this.#ready) return;
+    if (!this.#renderingActive || !this.#canvas || !this.#ready) return;
     this.#features = [];
 
     if (this.#gl && this.#program) this.#renderWebgl();

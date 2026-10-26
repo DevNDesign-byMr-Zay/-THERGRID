@@ -1,5 +1,58 @@
 import {expect,test} from '@playwright/test';
 import {RendererManager} from '../src/renderer/renderer-manager';
+import {CameraJourneyController} from '../src/renderer/cesium/camera-journey-controller';
+
+test('modal rendering activity survives delayed initialization and renderer replacement',async()=>{
+  let release!:()=>void;
+  const events:string[]=[];
+  const adapter=(engine:string,delayed=false):any=>new Proxy({
+    engine,
+    initialize:async()=>{if(delayed)await new Promise<void>(resolve=>release=resolve);},
+    setRenderingActive:(active:boolean)=>events.push(`${engine}:${active}`),
+    status:()=>({engine,ready:true,visualMode:'solid'})
+  },{get:(object,key)=>key in object?(object as any)[key]:()=>{}});
+  const manager=new RendererManager(adapter('cesium',true),adapter('native-webgl',true));
+  manager.mount({} as any);
+  const initializing=manager.initialize();
+  manager.setRenderingActive(false);
+  release();await initializing;
+  expect(events.at(-1)).toBe('cesium:false');
+  const switching=manager.use('native-webgl');
+  manager.setRenderingActive(true);
+  release();await switching;
+  expect(events.at(-1)).toBe('native-webgl:true');
+  manager.setRenderingActive(false);
+  expect(events.at(-1)).toBe('native-webgl:false');
+  manager.destroy();
+});
+
+test('a modal completes an in-flight camera journey without waiting for paused render ticks',async()=>{
+  let complete:(()=>void)|undefined;
+  const durations:number[]=[];
+  const ranges:number[]=[];
+  const camera:any={
+    cancelFlight:()=>complete?.(),
+    completeFlight:()=>complete?.(),
+    flyToBoundingSphere:(_sphere:any,options:any)=>{
+      durations.push(options.duration);ranges.push(options.offset.range);
+      complete=options.complete;
+      if(options.duration===0)options.complete();
+    }
+  };
+  const controller=new CameraJourneyController(camera);
+  const pending=controller.flyTo({latitude:40.75,longitude:-73.98,rangeMeters:4321});
+  expect(durations[0]).toBeGreaterThan(0);
+  controller.setRenderingActive(false);
+  await pending;
+  expect(durations.slice(1)).toEqual([0,0,0]);
+  expect(ranges.at(-1)).toBe(4321);
+  await controller.flyTo({latitude:51,longitude:0,rangeMeters:1234,journey:'direct'});
+  expect(durations.at(-1)).toBe(0);
+  controller.setRenderingActive(true);
+  const resumed=controller.flyTo({latitude:35,longitude:139,journey:'direct'});
+  expect(durations.at(-1)).toBeGreaterThan(0);
+  complete?.();await resumed;
+});
 
 test('frame and source updates during renderer activation never reach a destroyed adapter',async()=>{
   let release!:()=>void;

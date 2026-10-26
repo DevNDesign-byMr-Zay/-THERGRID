@@ -2262,6 +2262,7 @@ export function App() {
 
           <SpatialViewport
             ref={viewportRef}
+            renderingActive={!(navigationDrawer.compact && (navOpen || intelOpen))}
             target={sceneTarget}
             time={temporalInstant}
             layers={layers}

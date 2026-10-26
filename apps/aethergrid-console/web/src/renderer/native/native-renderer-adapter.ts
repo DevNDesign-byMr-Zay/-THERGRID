@@ -19,6 +19,7 @@ import type {
 } from '../spatial-renderer';
 
 export interface LegacyNativeSpatialBridge {
+  setRenderingActive?(active: boolean): void;
   initialize?(): Promise<void> | void;
   flyTo?(target: SpatialTarget): Promise<void> | void;
   setTime?(time: TemporalInstant): void;
@@ -56,6 +57,10 @@ export class NativeSpatialRendererAdapter implements SpatialRenderer {
 
   mount(container: HTMLElement): void {
     this.#container = container;
+  }
+
+  setRenderingActive(active: boolean): void {
+    this.#bridge.setRenderingActive?.(active);
   }
 
   async initialize(_config: SpatialRendererConfig = {}): Promise<void> {

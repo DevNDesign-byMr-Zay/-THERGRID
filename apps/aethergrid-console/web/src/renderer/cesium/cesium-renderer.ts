@@ -123,6 +123,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#viewer.scene.requestRender();
   };
   #ready = false;
+  #renderingActive = true;
   #degraded = false;
   #busy = false;
   #journeyPhase: SpatialJourneyPhase = 'idle';
@@ -139,6 +140,17 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     this.#container = container;
   }
 
+  setRenderingActive(active: boolean): void {
+    this.#renderingActive = active;
+    this.#cameraJourney?.setRenderingActive(active);
+    if (!this.#viewer) return;
+    this.#viewer.useDefaultRenderLoop = active;
+    if (active) {
+      this.#lastOrbitTime = 0;
+      this.#viewer.scene.requestRender();
+    }
+  }
+
   async initialize(config: SpatialRendererConfig = {}): Promise<void> {
     if (!this.#container) throw new Error('Cesium renderer must be mounted before initialization');
 
@@ -148,6 +160,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
 
     this.#motionQuery = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
     this.#viewer = new Viewer(this.#container, {
+      useDefaultRenderLoop: this.#renderingActive,
       requestRenderMode: this.#motionQuery?.matches === true,
       maximumRenderTimeChange: Number.POSITIVE_INFINITY,
       targetFrameRate: 30,
@@ -235,6 +248,7 @@ export class CesiumSpatialRenderer implements SpatialRenderer {
     }
     this.#grid = new GeodeticGridLayer(this.#viewer.scene);
     this.#cameraJourney = new CameraJourneyController(this.#viewer.camera);
+    this.#cameraJourney.setRenderingActive(this.#renderingActive);
     this.#visualController = new VisualModeController(this.#viewer, {
       realityEnabled: config.realityEnabled
     });
