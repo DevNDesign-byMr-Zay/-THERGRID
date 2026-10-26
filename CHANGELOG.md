@@ -6,6 +6,9 @@ Current package candidate: `0.3.2`. This candidate is not published until the ga
 
 ### Verification and onboarding
 
+- Extract geospatial height, roof and voltage parsing into a focused pure module while preserving existing behavior.
+- Document Overpass rotation, OSM map fallback, building-query radius and the optional CPU-only Qiskit Python executable.
+
 - Add credential-free geospatial runtime tests for height conversion and precedence, voltage parsing, deterministic non-live fallback geometry, invalid input rejection and explicit cache refresh.
 - Document the fresh-clone root test entrypoint and distinguish local fixture coverage from protected live-provider acceptance.
 
