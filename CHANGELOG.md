@@ -4,6 +4,11 @@
 
 Current package candidate: `0.3.2`. This candidate is not published until the gated manual release workflow publishes it.
 
+### Verification and onboarding
+
+- Add credential-free geospatial runtime tests for height conversion and precedence, voltage parsing, deterministic non-live fallback geometry, invalid input rejection and explicit cache refresh.
+- Document the fresh-clone root test entrypoint and distinguish local fixture coverage from protected live-provider acceptance.
+
 ### Verified Groq agent-control milestone
 
 - Connect VÆLON, AUREN, SOLVÆR and TEAM to the configured server-side Groq OpenAI-compatible GPT-OSS runtime; retain per-agent receipts and bounded, validated application-only grid/view/layer/location/time skills with Undo.
