@@ -53,6 +53,16 @@ Open the Vite URL (normally `http://localhost:5174`); its development API proxy 
 
 ## Verification and evidence
 
+From a fresh clone, install Node.js 22, run `npm ci --ignore-scripts` in the repository root, then run `npm test`. The default root suite requires no provider credentials and uses injected adapters, local fixtures and loopback HTTP servers. No paid quantum job or physical infrastructure action is part of this suite.
+
+For a focused example that exercises returned runtime data rather than matching source text:
+
+```powershell
+node --test tests/aethergrid-geo-runtime-behavior.test.mjs
+```
+
+These geospatial tests cover unit conversion and height precedence, voltage parsing, deterministic synthetic geometry with non-live provenance, input rejection before network access, and cache refresh using local provider fixtures. The full maintained verification path remains:
+
 ```powershell
 npm test
 npm run coverage
