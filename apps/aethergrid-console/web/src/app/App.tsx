@@ -39,11 +39,7 @@ import {
   DOMAIN_DEFINITIONS,
   type DomainId
 } from '../domains/domain-registry';
-import {
-  aviationOverlay as buildAviationOverlay,
-  mergeAviationSnapshot,
-  type AviationDomainState
-} from '../domains/aviation/aviation-domain';
+import { useAviationContext } from '../hooks/use-aviation-context';
 import { useOperatorShortcuts } from '../hooks/use-operator-shortcuts';
 import { useTemporalClock } from '../hooks/use-temporal-clock';
 import { forecastFrameInstants } from '../time/forecast-frames';
@@ -72,7 +68,6 @@ import {
   type AtmosphericForecastSeries
 } from '../services/city-environment';
 import type { ScenarioVisualState } from '../services/scenario-client';
-import { loadAviationSnapshot } from '../services/aviation-client';
 import {
   compareOperatorScenario,
   loadOperatorScenarios,
@@ -398,8 +393,10 @@ export function App() {
   const [radarFrame,setRadarFrame]=useState(0);
   const [radarPlaying,setRadarPlaying]=useState(()=>!window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const [radarCoverage,setRadarCoverage]=useState(false);
-  const [aviationState, setAviationState] = useState<AviationDomainState | null>(null);
-  const [aviationError, setAviationError] = useState<string | null>(null);
+  const aviationEnabled = layers.some(layer=>layer.id==='aviation' && layer.visible);
+  const { aviationState, aviationError, aviationOverlay } = useAviationContext({
+    scope, city, mode: temporal.mode, enabled: aviationEnabled
+  });
   const [operationalBindings, setOperationalBindings] =
     useState<OperationalSourceBindings>({
       gaugeId: null,
@@ -900,62 +897,6 @@ export function App() {
   },[radarPlaying,radarManifest,temporal.mode,radarEnabled]);
   const radarSnapshot=useMemo(()=>radarManifest && !radarError && radarEnabled && temporal.mode==='live'?radarOverlay(radarManifest,radarFrame,radarCoverage):null,[radarManifest,radarFrame,radarCoverage,radarError,radarEnabled,temporal.mode]);
 
-  const aviationEnabled = layers.some(layer=>layer.id==='aviation' && layer.visible);
-  useEffect(() => {
-    setAviationState(null);setAviationError(null);
-    if (!aviationEnabled || temporal.mode !== 'live') return;
-
-    const controller = new AbortController();
-    let timer: ReturnType<typeof globalThis.setTimeout> | null = null;
-
-    const schedule = (delayMs: number) => {
-      if (controller.signal.aborted) return;
-      timer = globalThis.setTimeout(refresh, delayMs);
-    };
-
-    const refresh = () => {
-      const query =
-        scope === 'world'
-          ? { scope: 'global' as const }
-          : {
-              scope: 'city' as const,
-              latitude: city.latitude,
-              longitude: city.longitude,
-              radiusKm: 250
-            };
-
-      void loadAviationSnapshot(query, controller.signal)
-        .then((incoming) => {
-          if (controller.signal.aborted) return;
-          setAviationState((previous) =>
-            mergeAviationSnapshot(previous, incoming)
-          );
-          setAviationError(null);
-          schedule(30_000);
-        })
-        .catch((error) => {
-          if (controller.signal.aborted) return;
-          setAviationError(
-            error instanceof Error ? error.message : String(error)
-          );
-          schedule(60_000);
-        });
-    };
-
-    refresh();
-    return () => {
-      controller.abort();
-      if (timer) globalThis.clearTimeout(timer);
-    };
-  }, [
-    scope,
-    city.id,
-    city.latitude,
-    city.longitude,
-    temporal.mode,
-    aviationEnabled
-  ]);
-
   useEffect(() => {
     if (temporal.mode !== 'forecast') {
       setForecastError(null);
@@ -1318,14 +1259,6 @@ export function App() {
         ? hydrologyContext.overlay
         : null,
     [scope, hydrologyContext, temporal.mode]
-  );
-
-  const aviationOverlay = useMemo(
-    () =>
-      aviationState
-        ? buildAviationOverlay(aviationState, temporal.mode)
-        : null,
-    [aviationState, temporal.mode]
   );
 
   const airQualityOverlay = useMemo(
