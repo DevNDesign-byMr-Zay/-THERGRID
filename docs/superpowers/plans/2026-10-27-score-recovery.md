@@ -71,3 +71,13 @@
 - [ ] Verify web `npm ci` and `npm run build`; verify web lockfile is unchanged.
 - [ ] Check branch diff and report platform/sandbox limitations honestly.
 - [ ] Publish as a reviewable change if repository permissions and authenticated transport allow it.
+
+### Task 4a: Security intervention discovered during verification
+
+**Ruling:** The web package's separate audit exposed one critical and one high advisory; remediation precedes final handoff because shipping the affected lockfile would undermine the score-recovery goal. Exact pinned Vite, a DOMPurify override and both CI audit gates are in scope.
+
+- [x] Capture the failing external web audit and write a failing locked-version regression test.
+- [x] Pin patched dependency versions and regenerate the web lockfile.
+- [x] Reinstall from scratch, build the web app and observe a zero-vulnerability web audit.
+- [x] Run the full root quality/package/smoke gate and supported Node 22 offline tests.
+- [ ] Verify browser UI acceptance in CI (local Chromium download was unavailable).

@@ -37,6 +37,8 @@ npm run dev
 
 Open the Vite URL (normally `http://localhost:5174`); its development API proxy connects to port 8090. See the [web workspace README](apps/aethergrid-console/web/README.md) for build and browser-test commands.
 
+The React workspace has a separate lockfile and its own dependency security gate. Run `npm audit --audit-level=moderate --prefix apps/aethergrid-console/web` from the repository root (or `npm audit --audit-level=moderate` from inside the web workspace). The engineering and v4 web CI workflows block on that audit; root-only `npm audit` does not cover the web dependency graph.
+
 `npm run package:aethergrid-app` builds and ships the same canonical React/Cesium application in `dist/aethergrid-functional-app.zip`; `npm run smoke:aethergrid-app` launches and probes that packaged runtime. Native v3 direct-open compatibility is explicitly packaged under `legacy/`. `npm start` runs the independent platform health service; `npm run operator-console` runs the earlier evidence console.
 
 ## Maintained repository surfaces
