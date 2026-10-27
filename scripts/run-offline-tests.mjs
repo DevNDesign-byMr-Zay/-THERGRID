@@ -6,20 +6,27 @@ import { join } from 'node:path';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const testsRoot = join(root, 'tests');
 const tests = [];
-for (const folder of [testsRoot, join(testsRoot, 'js')]) {
-  for (const entry of await readdir(folder)) {
-    if (entry.endsWith('.test.mjs')) tests.push(join(folder, entry));
+async function discoverTests(folder) {
+  for (const entry of await readdir(folder, { withFileTypes: true })) {
+    if (entry.isSymbolicLink() || entry.name === 'node_modules') continue;
+    const path = join(folder, entry.name);
+    if (entry.isDirectory()) {
+      await discoverTests(path);
+    } else if (entry.isFile() && entry.name.endsWith('.test.mjs')) {
+      tests.push(path);
+    }
   }
 }
+await discoverTests(testsRoot);
 tests.sort();
 
-const guard = fileURLToPath(new URL('./guard-offline-network.mjs', import.meta.url));
+const guard = new URL('./guard-offline-network.mjs', import.meta.url).href;
 const nodeOptions = [process.env.NODE_OPTIONS || '', `--import=${guard}`].filter(Boolean).join(' ');
 const env = { ...process.env, NODE_OPTIONS: nodeOptions, AETHERGRID_AI_PROVIDER: 'local' };
 
 for (const name of Object.keys(env)) {
   if (
-    /^AETHERGRID_.*(?:API_KEY|API_TOKEN|CLIENT_SECRET|CLIENT_ID|SERVICE_CRN|PASSWORD)$/u.test(name)
+    /(?:^|_)(?:TOKEN|KEY|SECRET|PASSWORD|CREDENTIALS?|CRN|CLIENT_ID|AUTH_USERS)(?:$|_)/u.test(name)
   ) {
     delete env[name];
   }

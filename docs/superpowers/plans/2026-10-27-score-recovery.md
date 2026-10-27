@@ -81,3 +81,11 @@
 - [x] Reinstall from scratch, build the web app and observe a zero-vulnerability web audit.
 - [x] Run the full root quality/package/smoke gate and supported Node 22 offline tests.
 - [ ] Verify browser UI acceptance in CI (local Chromium download was unavailable).
+
+### Final review rulings
+
+- Important: Offline `NODE_OPTIONS` was not portable for Windows/paths with spaces. Fixed using an ESM file URL, with a real nested runner integration test.
+- Important: Some provider aliases and Ion tokens survived credential scrubbing. Fixed by a generic credential-name policy and sentinel tests.
+- Important: Numeric-string TCP ports bypassed the network guard. Fixed and tested without dialing external hosts.
+- Minor: Hardcoded test subdirectories omitted deeper suites. Fixed with recursive discovery and a nested-suite witness.
+- Review limitation: Native Windows and browser CI must be observed after pushing the branch; neither is represented by this environment's Linux runner.

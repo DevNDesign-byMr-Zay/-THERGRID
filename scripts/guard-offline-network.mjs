@@ -13,7 +13,7 @@ function assertLoopback(host) {
 Socket.prototype.connect = function guardedConnect(...args) {
   let options = args[0];
   if (Array.isArray(options)) [options] = options;
-  if (typeof options === 'number') {
+  if (typeof options === 'number' || (typeof options === 'string' && /^\d+$/u.test(options))) {
     assertLoopback(typeof args[1] === 'string' ? args[1] : 'localhost');
   } else if (options && typeof options === 'object') {
     // Unix-domain sockets use `path` and do not leave the host.

@@ -23,6 +23,12 @@ on:
       - 'apps/aethergrid-console/web/tests/city-tile-stream.spec.ts'
       - 'tests/aethergrid-camera-tiles-api.test.mjs'
       - 'apps/aethergrid-console/server.mjs'
+      - 'scripts/check-syntax.mjs'
+      - 'scripts/guard-offline-network.mjs'
+      - 'scripts/run-offline-tests.mjs'
+      - 'tests/syntax-check.test.mjs'
+      - 'tests/aethergrid-offline-*.test.mjs'
+      - 'package.json'
   workflow_dispatch:
 
 permissions:
@@ -56,6 +62,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Camera tile stream regression tests failed' }
           node --test tests/aethergrid-camera-tiles-api.test.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Active operator city isolation test failed' }
+
+      - name: Verify portable syntax and offline-network test controls on Windows
+        shell: powershell
+        run: |
+          npm run syntax
+          if ($LASTEXITCODE -ne 0) { throw 'PowerShell syntax verification failed' }
+          node --test tests/syntax-check.test.mjs tests/aethergrid-offline-network.test.mjs tests/aethergrid-offline-overloads.test.mjs tests/aethergrid-offline-runner.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Windows offline-network control tests failed' }
 
       - name: Verify PowerShell 5.1 startup, port precedence and live health
         shell: powershell
