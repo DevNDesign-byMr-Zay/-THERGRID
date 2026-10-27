@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Extract aviation polling, abort/timer cleanup and overlay state into a dedicated React hook, preserving existing live-only activation, world/city queries, refresh intervals and aircraft UI.
+
 ## Unreleased — 0.3.2
 
 Current package candidate: `0.3.2`. This candidate is not published until the gated manual release workflow publishes it.
