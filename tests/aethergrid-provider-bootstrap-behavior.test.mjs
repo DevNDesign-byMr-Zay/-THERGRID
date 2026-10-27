@@ -43,9 +43,7 @@ test('bootstrap pipeline rejects unapproved destinations before fetch', async ()
       return { ok: true };
     },
   });
-  await assert.rejects(
-    boot.createPipelineFetch('nws')('http://127.0.0.1/private'),
-  );
+  await assert.rejects(boot.createPipelineFetch('nws')('http://127.0.0.1/private'));
   assert.equal(calls, 0);
   assert.equal(boot.providerRegistry.health.getProviderStatus('nws').requestCount, 0);
 });
