@@ -43,9 +43,7 @@ test('bootstrap pipeline rejects unapproved destinations before fetch', async ()
       return { ok: true };
     },
   });
-  await assert.rejects(
-    boot.createPipelineFetch('nws')('https://unapproved.example.test/private'),
-  );
+  await assert.rejects(boot.createPipelineFetch('nws')('https://unapproved.example.test/private'));
   assert.equal(calls, 0);
   assert.equal(boot.providerRegistry.health.getProviderStatus('nws').requestCount, 0);
 });
