@@ -47,6 +47,7 @@ const REQUIRED_RUNTIME_FILES = Object.freeze([
   'security/secret-redactor.mjs',
   'security/url-policy.mjs',
   'providers/provider-registry.mjs',
+  'providers/bootstrap.mjs',
   'providers/live-map-runtime.mjs',
   'providers/provider-health.mjs',
   'providers/provider-executor.mjs',
