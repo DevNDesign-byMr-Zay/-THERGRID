@@ -53,7 +53,7 @@ Open the Vite URL (normally `http://localhost:5174`); its development API proxy 
 
 ## Verification and evidence
 
-From a fresh clone, install Node.js 22, run `npm ci --ignore-scripts` in the repository root, then run `npm test`. The default root suite requires no provider credentials and uses injected adapters, local fixtures and loopback HTTP servers. No paid quantum job or physical infrastructure action is part of this suite.
+From a fresh clone, install Node.js 22, run `npm ci --ignore-scripts` in the repository root, then run `npm test`. The default root suite requires no provider credentials and uses injected adapters, local fixtures and loopback HTTP servers. No paid quantum job or physical infrastructure action is part of this suite. To prove the tests are independent of external provider access, run `npm run test:offline`; this clears provider credentials and rejects non-loopback TCP/TLS and `fetch` connections from the Node test processes, while allowing local fixture servers. It is an application-process guard, not a substitute for machine/container egress isolation.
 
 For a focused example that exercises returned runtime data rather than matching source text:
 
@@ -65,6 +65,7 @@ These geospatial tests cover unit conversion and height precedence, voltage pars
 
 ```powershell
 npm test
+npm run test:offline
 npm run coverage
 npm run syntax
 npm run lint
@@ -81,7 +82,7 @@ The final submission gate must run on one exact `main` SHA after canonical packa
 
 ## Environment configuration
 
-The root `.env.example` configures the health service without secrets. The application backend's [environment example](apps/aethergrid-console/.env.example) documents server-side provider configuration. Keep credentials in encrypted Actions secrets or an ignored deployment/runtime environment; never commit them. Public provider/runtime endpoints redact server credentials.
+The root `.env.example` configures the health service and mirrors the application's optional runtime variables without secrets. The application backend's [environment example](apps/aethergrid-console/.env.example) documents server-side provider configuration, legacy direct-provider overrides, and launcher controls. `AETHERGRID_SETUP_PASSWORD` is only for temporary account bootstrap and must never be saved with a value in a template or an on-disk runtime env file. Keep credentials in encrypted Actions secrets or an ignored deployment/runtime environment; never commit them. Public provider/runtime endpoints redact server credentials.
 
 ## Latest verified main evidence
 

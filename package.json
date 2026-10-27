@@ -9,6 +9,7 @@
   "scripts": {
     "start": "node src/platform-health-service.mjs",
     "test": "node --test tests/*.test.mjs tests/**/*.test.mjs",
+    "test:offline": "node scripts/run-offline-tests.mjs",
     "coverage": "node --test --experimental-test-coverage --test-coverage-lines=84 --test-coverage-branches=70 --test-coverage-functions=85 tests/*.test.mjs tests/**/*.test.mjs",
     "syntax": "node scripts/check-syntax.mjs",
     "demo": "node scripts/demo.mjs",

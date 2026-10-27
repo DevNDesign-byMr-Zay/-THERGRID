@@ -73,6 +73,8 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Run conventional tests
         run: npm test
+      - name: Prove tests run with no external TCP/TLS provider access
+        run: npm run test:offline
 
   coverage:
     name: coverage
