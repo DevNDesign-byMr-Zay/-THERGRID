@@ -30,6 +30,9 @@ const REQUIRED_FILES = Object.freeze([
   'apps/aethergrid-console/styles.css',
   'apps/aethergrid-console/app.js',
   'apps/aethergrid-console/server.mjs',
+  'apps/aethergrid-console/analysis/city-use-cases.mjs',
+  'apps/aethergrid-console/analysis/city-metrics.mjs',
+  'apps/aethergrid-console/analysis/city-planning.mjs',
   'apps/aethergrid-console/web-runtime.mjs',
   'apps/aethergrid-console/web/package.json',
   'apps/aethergrid-console/web/package-lock.json',
@@ -597,12 +600,24 @@ async function main() {
   );
   assert(
     /function agentContext\(input = \{\}\)/u.test(exactAethergridServer) &&
-      /function analyzeCityUseCase\(mesh, useCaseId\)/u.test(exactAethergridServer) &&
-      /CITY_USE_CASES/u.test(exactAethergridServer) &&
+      /import \{ analyzeCityUseCase \} from '\.\/analysis\/city-planning\.mjs'/u.test(
+        exactAethergridServer,
+      ) &&
+      /import \{ CITY_USE_CASES \} from '\.\/analysis\/city-use-cases\.mjs'/u.test(
+        exactAethergridServer,
+      ) &&
       /externalContext: \{/u.test(exactAethergridServer) &&
       /geospatial: state\.externalContext\.geospatial/u.test(exactAethergridServer) &&
       /quantum: state\.externalContext\.quantum/u.test(exactAethergridServer),
     'ÆTHERGRID agent requests must receive bounded geospatial and quantum runtime context',
+  );
+  const { analyzeCityUseCase } = await import(
+    '../apps/aethergrid-console/analysis/city-planning.mjs'
+  );
+  const { CITY_USE_CASES } = await import('../apps/aethergrid-console/analysis/city-use-cases.mjs');
+  assert(
+    typeof analyzeCityUseCase === 'function' && Object.keys(CITY_USE_CASES).length === 12,
+    'ÆTHERGRID extracted city analysis must retain the twelve supported planning operations',
   );
   const aethergridAgentConfig = await text('apps/aethergrid-console/agent-config.mjs');
   const aethergridAiRuntime = await text('apps/aethergrid-console/ai-runtime.mjs');
