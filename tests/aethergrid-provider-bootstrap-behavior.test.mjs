@@ -21,10 +21,10 @@ test('provider bootstrap constructs adapters without external requests', () => {
     'noaaNwpsProvider',
     'transitlandProvider',
     'dwaveProvider',
-    'transitRegistry',
   ]) {
     assert.equal(typeof boot[name].request, 'function', name);
   }
+  assert.equal(typeof boot.transitRegistry.adapter.request, 'function');
   assert.equal(calls, 0);
   assert.equal(boot.transitFeedConfig.metadata.enabledFeedCount, 0);
   const statuses = boot.providerRegistry.health.getAllStatuses();
