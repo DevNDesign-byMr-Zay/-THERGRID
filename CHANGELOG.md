@@ -6,6 +6,9 @@ Current package candidate: `0.3.2`. This candidate is not published until the ga
 
 ### Verification and onboarding
 
+- Isolate provider construction, transit-feed registration and outbound health tracking from the HTTP server in a dedicated bootstrap module.
+- Add behavioral bootstrap tests for no-I/O construction, destination-policy rejection, response/error identity, health counters, transit readiness and per-instance isolation.
+
 - Extract geospatial height, roof and voltage parsing into a focused pure module while preserving existing behavior.
 - Document Overpass rotation, OSM map fallback, building-query radius and the optional CPU-only Qiskit Python executable.
 
