@@ -8,7 +8,7 @@ Operators explore global and city views, compare scenarios, inspect source recei
 
 ## Implemented today
 
-- **Backend:** `apps/aethergrid-console/server.mjs` serves application APIs, provider readiness, agent conversations, profiles, spatial data and quantum runtime contracts. `src/` maintains the digital twin, simulation, health service and renderer-neutral evidence boundaries.
+- **Backend:** `apps/aethergrid-console/server.mjs` serves application APIs, provider readiness, agent conversations, profiles, spatial data and quantum runtime contracts. Pure city-use-case definitions, geometry metrics and planning analysis live in `apps/aethergrid-console/analysis/` and are independently testable. `src/` maintains the digital twin, simulation, health service and renderer-neutral evidence boundaries.
 - **Frontend:** `apps/aethergrid-console/web/` contains the React/TypeScript command center, Cesium globe/city rendering, temporal and layer controls, responsive workspaces, agent conversations and provider diagnostics.
 - **Real data adapters:** Cesium Ion terrain/imagery/buildings, OpenStreetMap, Tomorrow.io and Open-Meteo weather, EIA energy, NOAA NWPS hydrology, NWS hazards, Transitland discovery and configured GTFS-Realtime feeds. Each response retains source, freshness and fallback status; adapter availability is distinct from a successful live receipt.
 - **AI runtime:** replaceable server-side model configuration, individual VÆLON/AUREN/SOLVÆR threads, TEAM contributions and explicit provider/model/fallback provenance. Groq is supported through the OpenAI-compatible adapter.
@@ -37,6 +37,8 @@ npm run dev
 
 Open the Vite URL (normally `http://localhost:5174`); its development API proxy connects to port 8090. See the [web workspace README](apps/aethergrid-console/web/README.md) for build and browser-test commands.
 
+The React workspace has a separate lockfile and its own dependency security gate. Run `npm audit --audit-level=moderate --prefix apps/aethergrid-console/web` from the repository root (or `npm audit --audit-level=moderate` from inside the web workspace). The engineering and v4 web CI workflows block on that audit; root-only `npm audit` does not cover the web dependency graph.
+
 `npm run package:aethergrid-app` builds and ships the same canonical React/Cesium application in `dist/aethergrid-functional-app.zip`; `npm run smoke:aethergrid-app` launches and probes that packaged runtime. Native v3 direct-open compatibility is explicitly packaged under `legacy/`. `npm start` runs the independent platform health service; `npm run operator-console` runs the earlier evidence console.
 
 ## Maintained repository surfaces
@@ -53,7 +55,7 @@ Open the Vite URL (normally `http://localhost:5174`); its development API proxy 
 
 ## Verification and evidence
 
-From a fresh clone, install Node.js 22, run `npm ci --ignore-scripts` in the repository root, then run `npm test`. The default root suite requires no provider credentials and uses injected adapters, local fixtures and loopback HTTP servers. No paid quantum job or physical infrastructure action is part of this suite.
+From a fresh clone, install Node.js 22, run `npm ci --ignore-scripts` in the repository root, then run `npm test`. The default root suite requires no provider credentials and uses injected adapters, local fixtures and loopback HTTP servers. No paid quantum job or physical infrastructure action is part of this suite. To prove the tests are independent of external provider access, run `npm run test:offline`; this clears provider credentials and rejects non-loopback TCP/TLS and `fetch` connections from the Node test processes, while allowing local fixture servers. It is an application-process guard, not a substitute for machine/container egress isolation.
 
 For a focused example that exercises returned runtime data rather than matching source text:
 
@@ -65,12 +67,16 @@ These geospatial tests cover unit conversion and height precedence, voltage pars
 
 ```powershell
 npm test
+npm run test:offline
 npm run coverage
+npm run syntax
 npm run lint
 npm run typecheck
 npm run typecheck:strict-renderer
 npm run check
 ```
+
+`npm run syntax` is cross-platform: it uses Node.js to inspect maintained JavaScript/ESM source, so the same command works in Windows PowerShell and Linux CI without GNU `find` or `xargs`. It skips installed dependencies and generated build artifacts.
 
 [Engineering CI](.github/workflows/ci.yml), [v4 web CI](.github/workflows/aethergrid-v4-web.yml) and [CodeQL](.github/workflows/codeql.yml) bind results to tested commits. [Command-center acceptance evidence](docs/acceptance/aethergrid-command-center/README.md) distinguishes historical provider checks from final-main submission evidence. Credentialed tests are opt-in; an ordinary green test run is not proof of live provider or quantum hardware execution.
 
@@ -78,7 +84,7 @@ The final submission gate must run on one exact `main` SHA after canonical packa
 
 ## Environment configuration
 
-The root `.env.example` configures the health service without secrets. The application backend's [environment example](apps/aethergrid-console/.env.example) documents server-side provider configuration. Keep credentials in encrypted Actions secrets or an ignored deployment/runtime environment; never commit them. Public provider/runtime endpoints redact server credentials.
+The root `.env.example` configures the health service and mirrors the application's optional runtime variables without secrets. The application backend's [environment example](apps/aethergrid-console/.env.example) documents server-side provider configuration, legacy direct-provider overrides, and launcher controls. `AETHERGRID_SETUP_PASSWORD` is only for temporary account bootstrap and must never be saved with a value in a template or an on-disk runtime env file. Keep credentials in encrypted Actions secrets or an ignored deployment/runtime environment; never commit them. Public provider/runtime endpoints redact server credentials.
 
 ## Latest verified main evidence
 

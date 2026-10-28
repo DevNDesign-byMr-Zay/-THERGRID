@@ -43,3 +43,15 @@ The whole mission is not fully operational while these requirements remain unmet
 5. **Physical-device acceptance:** cloud Chromium/software GPU evidence does not certify this user's restricted Windows device or iOS installation/WebGL performance. Apple-signed iOS installation is not available from a ZIP.
 
 The rescore may evaluate the delivered application subset with these limitations accurately disclosed. A score, offer, or improvement to 80+ is not guaranteed. Full-project completion cannot be inferred from green CI alone.
+
+## October 27, 2026 engineering hardening candidate
+
+The later `2d0bc3c` main clone (not the October 14 verified-main candidate above) already contained 627 passing conventional Node tests, a committed root/web lockfile, a production web build and maintained CI. The October 27 `fix/high-impact-score-recovery` review branch adds independently verifiable improvements:
+
+- **Fresh-clone and PowerShell:** `npm run syntax` now invokes a portable Node ESM verifier instead of GNU `find`/`xargs`; explicit tests cover invalid nested files and generated-directory exclusions.
+- **Credential-free proof:** `npm run test:offline` runs the conventional suite with provider secrets removed from the child process and non-loopback Node TCP/TLS/fetch access blocked; CI runs it on pull requests and main. This is not host-level network isolation.
+- **Configuration parity:** Root and app `.env.example` now enumerate schema/runtime/launcher overrides with blank credential fields. One-time setup passwords must not be persisted.
+- **Cohesive city analysis:** The 500-plus-line pure city metrics/planning subsystem moved from `server.mjs` into three focused modules under `analysis/`, preserving the server exports and HTTP contract. Release verification and ZIP inventory were updated to require the modules.
+- **Web dependency remediation:** The separate web audit initially reported one critical DOMPurify and one high Vite vulnerability. `dompurify@3.4.17` and `vite@8.3.5` are locked, the audit now reports zero vulnerabilities locally, and engineering/v4 web CI each has an explicit web audit gate.
+
+The offline test suite passed **641/641 tests on supported Node 22.23.4**, including regression checks for Windows-compatible `file:` imports, credential aliases, nested test discovery and numeric-string TCP socket overloads identified by independent code review. The Windows launcher workflow now runs dedicated offline/portable checks on Windows. Root release packaging, ZIP startup smoke, lint, typechecks, formatting, coverage and demos passed in the final `npm run check` run; the patched web dependencies passed `npm ci`, `npm run build` and `npm audit --audit-level=moderate`. Chromium acceptance was attempted, but its browser download returned a truncated archive in this execution environment. The PR's browser and Windows CI results must be checked before merging or claiming equivalent browser acceptance. No independent external rescore has been performed for this candidate.

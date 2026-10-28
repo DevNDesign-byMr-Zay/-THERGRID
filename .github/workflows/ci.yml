@@ -73,6 +73,8 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Run conventional tests
         run: npm test
+      - name: Prove tests run with no external TCP/TLS provider access
+        run: npm run test:offline
 
   coverage:
     name: coverage
@@ -189,6 +191,8 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Dependency security audit
         run: npm audit --audit-level=moderate
+      - name: Audit separately locked web dependencies
+        run: npm audit --audit-level=moderate --prefix apps/aethergrid-console/web
       - name: Verify release-readiness contract
         run: npm run verify:release
       - name: Build verified ÆTHERGRID UI archive

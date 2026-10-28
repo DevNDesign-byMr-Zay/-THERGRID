@@ -48,6 +48,9 @@ jobs:
       - name: Install isolated web dependencies
         run: npm ci --ignore-scripts --include=optional --no-audit --no-fund
 
+      - name: Audit independently locked web dependencies
+        run: npm audit --audit-level=moderate
+
       - name: Type-check v4 spatial application
         run: npm run typecheck
 

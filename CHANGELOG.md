@@ -1,12 +1,20 @@
 # Changelog
 
-## Unreleased
+## Unreleased — 0.3.3
+
+Current package candidate: `0.3.3`. This candidate is not published until the gated manual release workflow publishes it. Its independently verified local startup, offline reproducibility, maintainability and web security changes require all exact-main gates and a new immutable `v0.3.3` tag.
 
 - Extract aviation polling, abort/timer cleanup and overlay state into a dedicated React hook, preserving existing live-only activation, world/city queries, refresh intervals and aircraft UI.
+- Replace POSIX-only syntax verification with a portable Node runner compatible with Windows PowerShell and fresh clones.
+- Run offline tests with external network access rejected and provider credentials removed; cover socket overloads, test discovery and absent secrets.
+- Document backend and provider environment variables without recording secrets.
+- Extract city-planning operations, geometry metrics and use-case definitions from the HTTP server into focused modules.
+- Patch locked web Vite and DOMPurify dependencies and gate both root and web dependency audits.
+- Preserve the full direct-open eight-city rendering assertions and retry a browser worker once only in CI if Chromium loses its context under prolonged GPU load.
 
-## Unreleased — 0.3.2
+## 0.3.2 — 2026-10-26
 
-Current package candidate: `0.3.2`. This candidate is not published until the gated manual release workflow publishes it.
+Published via the gated exact-main release workflow on October 26, 2026.
 
 ### Verification and onboarding
 
