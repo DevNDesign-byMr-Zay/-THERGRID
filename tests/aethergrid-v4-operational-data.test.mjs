@@ -52,10 +52,11 @@ test('v4 operational client uses provider receipts and withholds fallback metric
 });
 
 test('v4 OPS workspace exposes source readiness without synthetic telemetry', async () => {
-  const [panel, app, css] = await Promise.all([
+  const [panel, app, css, model] = await Promise.all([
     text('apps/aethergrid-console/web/src/components/OperationalDataPanel.tsx'),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
     text('apps/aethergrid-console/web/src/app/app.css'),
+    text('apps/aethergrid-console/web/src/services/operational-current-sources.ts'),
   ]);
 
   assert.match(panel, /OPERATIONAL DATA/u);
@@ -67,6 +68,9 @@ test('v4 OPS workspace exposes source readiness without synthetic telemetry', as
   assert.match(app, /\['operations', 'OPS'\]/u);
   assert.match(app, /className="intel-workspace intel-operations"/u);
   assert.match(app, /<OperationalDataPanel/u);
+  assert.match(app, /operationalCurrentSources/u);
+  assert.match(model, /weatherPhenomenon/u);
+  assert.match(model, /seismicCurrent/u);
   assert.match(app, /weatherCurrent=/u);
   assert.match(app, /airQualityCurrent=/u);
   assert.match(app, /seismicCurrent=/u);
