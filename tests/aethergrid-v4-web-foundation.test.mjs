@@ -905,15 +905,16 @@ test('v4 renderer switching is reversible and preserves safe fallback diagnostic
 });
 
 test('v4 temporal modes keep current-only feeds live-only while allowing source-backed forecast weather', async () => {
-  const [app, rail] = await Promise.all([
+  const [app, rail, counts] = await Promise.all([
     text('apps/aethergrid-console/web/src/app/App.tsx'),
     text('apps/aethergrid-console/web/src/components/TemporalRail.tsx'),
+    text('apps/aethergrid-console/web/src/app/layer-counts.ts'),
   ]);
 
   assert.match(app, /atmosphere=\{scope === 'city' \? activeAtmosphere : null\}/u);
   assert.match(app, /forecast: temporal\.mode === 'forecast'/u);
   assert.match(app, /liveContext:[\s\S]{0,180}temporal\.mode === 'live'/u);
-  assert.match(app, /temporal\.mode !== 'live'[\s\S]{0,120}\? 0/u);
+  assert.match(counts, /temporalMode !== 'live'[\s\S]{0,120}\? 0/u);
   assert.match(rail, /LIVE SOURCES/u);
   assert.match(rail, /STATIC MAP CONTEXT/u);
   assert.match(rail, /FORECAST \+ STATIC/u);
