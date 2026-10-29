@@ -73,7 +73,7 @@ test('untrusted objective weights are bounded and non-numeric weights use defaul
     baseline,
   );
   assert.equal(fallback.costWeight, 50);
-  assert.equal(fallback.emissionsWeight, 0);
+  assert.equal(fallback.emissionsWeight, 50);
 });
 
 test('custom scenarios are deterministic without modifying the operator scenario state', () => {
