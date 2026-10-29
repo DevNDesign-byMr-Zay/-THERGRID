@@ -277,11 +277,12 @@ test('v4 provenance UI separates source time from retrieval age', async () => {
 });
 
 test('v4 city-live context renders source-backed AQI and seismic events only in LIVE mode', async () => {
-  const [service, layer, app, palette] = await Promise.all([
+  const [service, layer, app, palette, composition] = await Promise.all([
     text('apps/aethergrid-console/web/src/services/city-live-context.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
     text('apps/aethergrid-console/web/src/renderer/overlays/color-mapping.ts'),
+    text('apps/aethergrid-console/web/src/app/spatial-overlay-composition.ts'),
   ]);
 
   assert.match(service, /\/api\/aethergrid\/city-live/u);
@@ -293,10 +294,7 @@ test('v4 city-live context renders source-backed AQI and seismic events only in 
   assert.match(palette, /#ff7b63/u);
   assert.match(app, /AIR QUALITY/u);
   assert.match(app, /AQI /u);
-  assert.match(
-    app,
-    /scope === 'city' && liveContext && temporal\.mode === 'live'[\s\S]*seismicToOverlay\(liveContext\)/u,
-  );
+  assert.match(composition, /current && liveContext \? seismicToOverlay\(liveContext\)/u);
   assert.match(app, /Current AQI and seismic context are hidden outside LIVE mode/u);
 });
 
@@ -570,12 +568,13 @@ test('v4 semantic overlays use camera-distance LOD while global nodes remain orb
 });
 
 test('v4 AIR toggle renders a source-driven AQI field only for live city context', async () => {
-  const [contract, service, layer, renderer, app] = await Promise.all([
+  const [contract, service, layer, renderer, app, composition] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/overlays/atmospheric-overlay.ts'),
     text('apps/aethergrid-console/web/src/services/city-live-context.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/air-quality-layer.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/app/spatial-overlay-composition.ts'),
   ]);
 
   assert.match(contract, /AirQualityOverlaySnapshot/u);
@@ -585,7 +584,7 @@ test('v4 AIR toggle renders a source-driven AQI field only for live city context
   assert.match(layer, /current\.pm25UgM3/u);
   assert.match(layer, /this\.#temporalMode === 'live'/u);
   assert.match(renderer, /this\.#layerVisible\('air', true\)/u);
-  assert.match(app, /scope === 'city' && liveContext && temporal\.mode === 'live'/u);
+  assert.match(composition, /current && liveContext/u);
   assert.match(app, /airQuality=\{airQualityOverlay\}/u);
 });
 
@@ -957,11 +956,12 @@ test('v4 thunderstorm presentation is source-bounded and explicitly synthetic in
 });
 
 test('v4 live wind field is source-backed spatial geometry shared by Cesium and native failover', async () => {
-  const [service, cesium, nativeRenderer, app] = await Promise.all([
+  const [service, cesium, nativeRenderer, app, composition] = await Promise.all([
     text('apps/aethergrid-console/web/src/services/city-environment.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
     text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/app/spatial-overlay-composition.ts'),
   ]);
 
   assert.match(service, /atmosphereToWindOverlay/u);
@@ -970,8 +970,9 @@ test('v4 live wind field is source-backed spatial geometry shared by Cesium and 
   assert.match(service, /meteorologicalFromDegrees/u);
   assert.match(service, /syntheticGeometry: true/u);
   assert.match(service, /layerId: 'weather'/u);
-  assert.match(app, /const windOverlay = useMemo/u);
-  assert.match(app, /powerOverlay,[\s\S]{0,120}windOverlay,[\s\S]{0,120}seismicOverlay/u);
+  assert.match(app, /deriveCityContextOverlays/u);
+  assert.match(composition, /atmosphereToWindOverlay/u);
+  assert.match(composition, /powerOverlay,[\s\S]{0,120}windOverlay,[\s\S]{0,120}seismicOverlay/u);
   assert.match(cesium, /windEdge/u);
   assert.match(cesium, /#7de9ff/u);
   assert.match(nativeRenderer, /windEdge/u);
