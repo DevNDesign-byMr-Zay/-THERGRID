@@ -15,6 +15,7 @@ import { DataSourceBadge } from '../components/DataSourceBadge';
 import { LiveSceneBadges } from '../components/LiveSceneBadges';
 import { StageToolbar } from '../components/StageToolbar';
 import { sourcePresentationState } from '../services/source-presentation';
+import { operationalCurrentSources } from '../services/operational-current-sources';
 import { EntityDossierPanel } from '../components/EntityDossierPanel';
 import { EvidencePanel } from '../components/EvidencePanel';
 import { OperationalDataPanel } from '../components/OperationalDataPanel';
@@ -1717,6 +1718,16 @@ export function App() {
     }};
   };
 
+  const currentOperationalSources = useMemo(
+    () =>
+      operationalCurrentSources({
+        temporalMode: temporal.mode,
+        atmosphere: activeAtmosphere,
+        liveContext
+      }),
+    [temporal.mode, activeAtmosphere, liveContext]
+  );
+
   return (
     <main className="aethergrid-app immersive-spatial" data-experience="spatial-first"
       style={{ '--temporal-rail-height': `${temporalRailHeight}px` } as CSSProperties}>
@@ -2393,63 +2404,9 @@ export function App() {
               cityId={city.id}
               temporalMode={temporal.mode}
               cursorIso={temporal.cursorIso}
-              weatherCurrent={
-                activeAtmosphere
-                  ? {
-                      live: temporal.mode === 'live' && activeAtmosphere.live && !activeAtmosphere.fallback && !activeAtmosphere.stale,
-                      state:
-                        temporal.mode === 'forecast'
-                          ? activeAtmosphere.stale
-                            ? 'stale'
-                            : activeAtmosphere.fallback
-                              ? 'fallback'
-                              : 'forecast'
-                          : activeAtmosphere.stale
-                            ? 'stale'
-                            : activeAtmosphere.fallback
-                              ? 'fallback'
-                              : undefined,
-                      provider: activeAtmosphere.attribution,
-                      sourceTime: activeAtmosphere.sourceTime,
-                      fetchedAt: activeAtmosphere.fetchedAt,
-                      attribution: activeAtmosphere.attribution,
-                      summary:
-                        temporal.mode === 'forecast'
-                          ? `${weatherPhenomenon(activeAtmosphere).toUpperCase()} FORECAST`
-                          : weatherPhenomenon(activeAtmosphere).toUpperCase()
-                    }
-                  : null
-              }
-              airQualityCurrent={
-                liveContext
-                  ? {
-                      live: liveContext.airQuality.source.live,
-                      provider: liveContext.airQuality.source.provider,
-                      sourceTime:
-                        liveContext.airQuality.source.modelTime ??
-                        liveContext.airQuality.current?.time ??
-                        null,
-                      fetchedAt: liveContext.airQuality.source.fetchedAt,
-                      attribution: liveContext.airQuality.source.attribution,
-                      summary:
-                        liveContext.airQuality.current?.usAqi != null
-                          ? `AQI ${liveContext.airQuality.current.usAqi.toFixed(0)}`
-                          : 'AIR QUALITY SOURCE'
-                    }
-                  : null
-              }
-              seismicCurrent={
-                liveContext
-                  ? {
-                      live: liveContext.seismic.source.live,
-                      provider: liveContext.seismic.source.provider,
-                      sourceTime: liveContext.seismic.source.generatedAt ?? null,
-                      fetchedAt: liveContext.seismic.source.fetchedAt,
-                      attribution: liveContext.seismic.source.attribution,
-                      summary: `${liveContext.seismic.eventCount} RECENT EVENTS`
-                    }
-                  : null
-              }
+              weatherCurrent={currentOperationalSources.weatherCurrent}
+              airQualityCurrent={currentOperationalSources.airQualityCurrent}
+              seismicCurrent={currentOperationalSources.seismicCurrent}
             />
           </div>
           <div className="intel-workspace intel-analysis">

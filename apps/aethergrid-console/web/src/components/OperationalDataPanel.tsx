@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import type { TemporalMode } from '../renderer/spatial-renderer';
+import type { ExistingCurrentSource } from '../services/operational-current-sources';
 import {
   loadOperationalSnapshot,
   type OperationalFuelMixRow,
@@ -19,16 +20,6 @@ import {
   type OperationalSourceId
 } from '../time/operational-temporal-capabilities';
 import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
-
-interface ExistingCurrentSource {
-  live: boolean;
-  state?: OperationalSourceSnapshot['state'];
-  provider: string | null;
-  sourceTime: string | null;
-  fetchedAt: string | null;
-  attribution: string | null;
-  summary: string;
-}
 
 interface OperationalDataPanelProps {
   latitude: number;
