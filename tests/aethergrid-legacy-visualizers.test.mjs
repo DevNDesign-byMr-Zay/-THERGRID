@@ -13,7 +13,9 @@ function renderers(settings = { reducedMotion: true, animationIntensity: 40 }) {
     devicePixelRatio: 1,
     performance: { now: () => 0 },
     addEventListener() {},
-    requestAnimationFrame(callback) { frameRequests.push(callback); }
+    requestAnimationFrame(callback) {
+      frameRequests.push(callback);
+    },
   };
   runInNewContext(source, context, { timeout: 1000 });
   const visualizers = context.AETHERGRID_LEGACY_VISUALIZERS({
@@ -22,7 +24,7 @@ function renderers(settings = { reducedMotion: true, animationIntensity: 40 }) {
     perspective: () => [],
     lookAt: () => [],
     isLightTheme: () => false,
-    getSettings: () => settings
+    getSettings: () => settings,
   });
   return { visualizers, frameRequests };
 }
@@ -30,22 +32,38 @@ function renderers(settings = { reducedMotion: true, animationIntensity: 40 }) {
 function canvas2d() {
   let strokes = 0;
   const drawing = {
-    setTransform() {}, clearRect() {}, save() {}, translate() {},
-    beginPath() {}, lineTo() {}, moveTo() {}, restore() {},
-    stroke() { strokes++; }
+    setTransform() {},
+    clearRect() {},
+    save() {},
+    translate() {},
+    beginPath() {},
+    lineTo() {},
+    moveTo() {},
+    restore() {},
+    stroke() {
+      strokes++;
+    },
   };
   const canvas = {
     clientWidth: 320,
     clientHeight: 180,
-    getContext(type) { return type === '2d' ? drawing : null; },
-    getBoundingClientRect() { return { width: 320, height: 180 }; }
+    getContext(type) {
+      return type === '2d' ? drawing : null;
+    },
+    getBoundingClientRect() {
+      return { width: 320, height: 180 };
+    },
   };
   return { canvas, strokes: () => strokes };
 }
 
 test('legacy visualizers publish the three named constructors without global operator secrets', () => {
   const { visualizers } = renderers();
-  assert.deepEqual(Object.keys(visualizers).sort(), ['GlobalGlobe3D', 'ScenarioChart', 'WaveSurface']);
+  assert.deepEqual(Object.keys(visualizers).sort(), [
+    'GlobalGlobe3D',
+    'ScenarioChart',
+    'WaveSurface',
+  ]);
   assert.equal(Object.isFrozen(visualizers), true);
   assert.doesNotMatch(source, /process\.env|API_KEY|api\.tomorrow\.io/u);
 });
@@ -88,11 +106,17 @@ test('direct-open and packaged legacy pages load visualizers after math and befo
     read('apps/aethergrid-console/index.html'),
     read('apps/aethergrid-console/sw.js'),
     read('scripts/assemble-aethergrid-full-app.mjs'),
-    read('apps/aethergrid-console/app.js')
+    read('apps/aethergrid-console/app.js'),
   ]);
-  const order = ['state.js', 'standalone-geo.js', 'spatial-math.js', 'legacy-visualizers.js', 'app.js'];
-  const at = order.map(file => html.indexOf('<script src="./' + file + '" defer></script>'));
-  assert.ok(at.every(index => index > 0));
+  const order = [
+    'state.js',
+    'standalone-geo.js',
+    'spatial-math.js',
+    'legacy-visualizers.js',
+    'app.js',
+  ];
+  const at = order.map((file) => html.indexOf('<script src="./' + file + '" defer></script>'));
+  assert.ok(at.every((index) => index > 0));
   assert.ok(at.every((index, i) => i === 0 || index > at[i - 1]));
   assert.match(sw, /legacy-visualizers\.js/u);
   assert.match(assembly, /legacyVisualizersJs/u);
