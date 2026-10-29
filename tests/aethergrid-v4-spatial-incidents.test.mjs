@@ -74,8 +74,10 @@ test('v4 incident UI supports create lifecycle notes locate workset sync AUREN r
 
 test('v4 app renders incidents in world and city scenes while incident navigation clears selection', async () => {
   const app = await text('apps/aethergrid-console/web/src/app/App.tsx');
+  const cityTargets = await text('apps/aethergrid-console/web/src/app/city-targets.ts');
 
-  assert.match(app, /\{ id: 'annotations', visible: true \}/u);
+  assert.match(app, /INITIAL_LAYERS/u);
+  assert.match(cityTargets, /\{ id: 'annotations', visible: true \}/u);
   assert.match(app, /spatialIncidentsToOverlay/u);
   assert.match(
     app,

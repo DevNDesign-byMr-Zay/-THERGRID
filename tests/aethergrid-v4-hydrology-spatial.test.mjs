@@ -36,10 +36,11 @@ test('v4 NOAA gauge state derives flood bands only from observed stage and provi
 });
 
 test('v4 NOAA gauge binding is coordinate-scoped and live-only in the scene', async () => {
-  const [bindings, panel, app] = await Promise.all([
+  const [bindings, panel, app, badges] = await Promise.all([
     text('apps/aethergrid-console/web/src/services/operational-source-bindings.ts'),
     text('apps/aethergrid-console/web/src/components/OperationalDataPanel.tsx'),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/components/LiveSceneBadges.tsx'),
   ]);
 
   assert.match(bindings, /OPERATIONAL_SOURCE_BINDINGS_EVENT/u);
@@ -55,8 +56,9 @@ test('v4 NOAA gauge binding is coordinate-scoped and live-only in the scene', as
   assert.match(app, /temporal\.mode !== 'live'/u);
   assert.match(app, /!operationalBindings\.gaugeId/u);
   assert.match(app, /hydrologyOverlay/u);
-  assert.match(app, /NOAA NWPS/u);
-  assert.match(app, /PARTIAL · METADATA SOURCE LIVE/u);
+  assert.match(app, /<LiveSceneBadges/u);
+  assert.match(badges, /NOAA NWPS/u);
+  assert.match(badges, /PARTIAL · METADATA SOURCE LIVE/u);
 });
 
 test('v4 NOAA hydrology layer is available to both renderer engines and operational presets', async () => {

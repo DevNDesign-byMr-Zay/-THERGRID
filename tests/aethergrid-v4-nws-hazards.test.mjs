@@ -233,8 +233,10 @@ test('v4 NWS hazards render consistently in Cesium and native failover', async (
 });
 
 test('v4 NWS hazard scene layer is live-only and excluded on fallback receipts', async () => {
-  const [app, presets] = await Promise.all([
+  const [app, badges, cityTargets, presets] = await Promise.all([
     text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/components/LiveSceneBadges.tsx'),
+    text('apps/aethergrid-console/web/src/app/city-targets.ts'),
     text('apps/aethergrid-console/web/src/app/use-case-presets.ts'),
   ]);
 
@@ -242,7 +244,8 @@ test('v4 NWS hazard scene layer is live-only and excluded on fallback receipts',
   assert.match(app, /temporal\.mode !== 'live'/u);
   assert.match(app, /globalThis\.setInterval\(refresh, 60_000\)/u);
   assert.match(app, /!hazardContext\.fallback/u);
-  assert.match(app, /NWS ACTIVE HAZARDS/u);
-  assert.match(app, /\{ id: 'hazards', visible: true \}/u);
+  assert.match(app, /<LiveSceneBadges/u);
+  assert.match(badges, /NWS ACTIVE HAZARDS/u);
+  assert.match(cityTargets, /\{ id: 'hazards', visible: true \}/u);
   assert.match(presets, /'hazards'/u);
 });

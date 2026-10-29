@@ -128,8 +128,10 @@ test('v4 VÆLON scenario handoff explicitly separates hypothetical model inputs 
 
 test('v4 scenario model overlay participates in both world and city rendering while remaining separately toggleable', async () => {
   const app = await text('apps/aethergrid-console/web/src/app/App.tsx');
+  const cityTargets = await text('apps/aethergrid-console/web/src/app/city-targets.ts');
 
-  assert.match(app, /\{ id: 'scenario-model', visible: true \}/u);
+  assert.match(app, /INITIAL_LAYERS/u);
+  assert.match(cityTargets, /\{ id: 'scenario-model', visible: true \}/u);
   assert.match(
     app,
     /worldOverlay,[\s\S]*incidentOverlay,[\s\S]*worksetGeometryOverlay,[\s\S]*operatorScenarioOverlay,[\s\S]*measurementOverlay/u,

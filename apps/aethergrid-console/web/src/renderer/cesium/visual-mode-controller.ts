@@ -7,6 +7,7 @@ import {
 
 import type { VisualMode } from '../spatial-renderer';
 import type { SolarPhase } from '../solar-position';
+import { solarTilePalette, tileModePalette } from './visual-mode-palette';
 
 export interface VisualModeResult {
   requested: VisualMode;
@@ -117,24 +118,11 @@ export class VisualModeController {
 
     if (mode === 'solid' || mode === 'wireframe') {
       this.#applySolid();
-    } else if (mode === 'xray') {
-      buildings.style = new Cesium3DTileStyle({
-        color: `color("#6bc7ff", ${.2 * this.#opacity})`
-      });
-      buildings.showOutline = true;
-      buildings.outlineColor = Color.fromCssColorString('#83ddff').withAlpha(0.85);
-    } else if (mode === 'holographic') {
-      buildings.style = new Cesium3DTileStyle({
-        color: `color("#46eaff", ${.12 * this.#opacity})`
-      });
-      buildings.showOutline = true;
-      buildings.outlineColor = Color.fromCssColorString('#58efff').withAlpha(0.96);
     } else {
-      buildings.style = new Cesium3DTileStyle({
-        color: `color("#6ca8c9", ${(mode === 'grid' ? .18 : .58) * this.#opacity})`
-      });
+      const palette = tileModePalette(mode, this.#opacity);
+      buildings.style = new Cesium3DTileStyle({ color: palette.colorExpression });
       buildings.showOutline = true;
-      buildings.outlineColor = Color.fromCssColorString('#88dcff').withAlpha(0.58);
+      buildings.outlineColor = Color.fromCssColorString(palette.outlineHex).withAlpha(palette.outlineAlpha);
     }
 
     viewer.scene.requestRender();
@@ -151,29 +139,12 @@ export class VisualModeController {
     this.#viewer.scene.globe.showGroundAtmosphere = true;
     this.#viewer.scene.highDynamicRange = true;
     if (buildings) {
-      if (this.#solarPhase === 'day') {
-        buildings.style = this.#opacity === 1 ? this.#mappedStyle : new Cesium3DTileStyle({ color: `(${this.#mappedColor}) * vec4(1.0, 1.0, 1.0, ${this.#opacity})` });
-      } else if (this.#solarPhase === 'golden-hour') {
-        buildings.style = new Cesium3DTileStyle({
-          color: `(${this.#mappedColor}) * color("#d8b18a", ${.94 * this.#opacity})`
-        });
-      } else if (this.#solarPhase === 'twilight') {
-        buildings.style = new Cesium3DTileStyle({
-          color: `(${this.#mappedColor}) * color("#59657a", ${.9 * this.#opacity})`
-        });
-      } else {
-        buildings.style = new Cesium3DTileStyle({
-          color: `(${this.#mappedColor}) * color("#273243", ${.88 * this.#opacity})`
-        });
-      }
-
+      const palette = solarTilePalette(this.#solarPhase, this.#opacity, this.#mappedColor);
+      buildings.style = palette.colorExpression == null
+        ? this.#mappedStyle
+        : new Cesium3DTileStyle({ color: palette.colorExpression });
       buildings.showOutline = true;
-      buildings.outlineColor =
-        this.#solarPhase === 'night'
-          ? Color.fromCssColorString('#e4a35b').withAlpha(0.34)
-          : this.#solarPhase === 'twilight'
-            ? Color.fromCssColorString('#a69bc7').withAlpha(0.28)
-            : Color.BLACK.withAlpha(0.45);
+      buildings.outlineColor = Color.fromCssColorString(palette.outlineHex).withAlpha(palette.outlineAlpha);
     }
     this.#viewer.scene.requestRender();
   }
