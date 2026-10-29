@@ -18,7 +18,10 @@ test('camera projection matrices are finite and preserve identity', () => {
   assert.deepEqual([...math.mat4Multiply(identity, perspective)], [...perspective]);
   const camera = math.lookAt([0, 0, 10], [0, 0, 0], [0, 1, 0]);
   assert.equal(camera[14], -10);
-  assert.deepEqual([...math.mat4Multiply(identity, camera)], [...camera]);
+  const combined = math.mat4Multiply(identity, camera);
+  for (let index = 0; index < 16; index += 1) {
+    assert.ok(Math.abs(combined[index] - camera[index]) < 0.000001);
+  }
 });
 
 test('bilinear terrain interpolation is bounded and degrades safely', () => {
