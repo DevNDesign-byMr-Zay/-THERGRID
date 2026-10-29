@@ -28,6 +28,7 @@ import { CITY_USE_CASES } from './analysis/city-use-cases.mjs';
 import { cityMeshMetrics } from './analysis/city-metrics.mjs';
 import { analyzeCityUseCase } from './analysis/city-planning.mjs';
 import { computeOperatorOptimization } from './analysis/operator-optimization.mjs';
+import { summarizeGeospatialContext } from './analysis/geospatial-context.mjs';
 
 const {
   providerRegistry,
@@ -646,53 +647,7 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
       ]);
       const mesh = { ...baseMesh, terrain, environment, liveContext };
       activeCityMesh = mesh;
-      state.externalContext.geospatial = {
-        cityId: mesh.city.id,
-        name: mesh.city.name,
-        lat: mesh.city.lat,
-        lon: mesh.city.lon,
-        radiusM: mesh.city.radiusM,
-        source: mesh.source.provider,
-        live: Boolean(mesh.source.live),
-        buildings: mesh.buildings.length,
-        roads: (mesh.roads || []).length,
-        powerLines: (mesh.powerLines || []).length,
-        powerAssets: (mesh.powerAssets || []).length,
-        skyline: mesh.skylineProfile || null,
-        terrain: {
-          provider: mesh.terrain?.source?.provider || null,
-          live: Boolean(mesh.terrain?.source?.live),
-          minElevationM: mesh.terrain?.minElevationM ?? null,
-          maxElevationM: mesh.terrain?.maxElevationM ?? null,
-        },
-        environment: {
-          provider: mesh.environment?.source?.provider || null,
-          live: Boolean(mesh.environment?.source?.live),
-          observedAt: mesh.environment?.source?.modelTime || mesh.environment?.current?.time || null,
-          temperatureC: mesh.environment?.current?.temperatureC ?? null,
-          cloudCoverPercent: mesh.environment?.current?.cloudCoverPercent ?? null,
-          precipitationMm: mesh.environment?.current?.precipitationMm ?? null,
-          isDay: mesh.environment?.current?.isDay ?? null,
-          windSpeedKph: mesh.environment?.current?.windSpeedKph ?? null,
-          windGustsKph: mesh.environment?.current?.windGustsKph ?? null,
-          shortwaveRadiationWm2: mesh.environment?.current?.shortwaveRadiationWm2 ?? null,
-          visibilityM: mesh.environment?.current?.visibilityM ?? null,
-          relativeHumidityPercent: mesh.environment?.current?.relativeHumidityPercent ?? null,
-          surfacePressureHpa: mesh.environment?.current?.surfacePressureHpa ?? null,
-          sunrise: mesh.environment?.solar?.sunrise ?? null,
-          sunset: mesh.environment?.solar?.sunset ?? null,
-        },
-        liveContext: {
-          airQualityProvider: mesh.liveContext?.airQuality?.source?.provider || null,
-          liveAirQuality: Boolean(mesh.liveContext?.airQuality?.source?.live),
-          usAqi: mesh.liveContext?.airQuality?.current?.usAqi ?? null,
-          pm25UgM3: mesh.liveContext?.airQuality?.current?.pm25UgM3 ?? null,
-          seismicProvider: mesh.liveContext?.seismic?.source?.provider || null,
-          liveSeismic: Boolean(mesh.liveContext?.seismic?.source?.live),
-          seismicEventCount: mesh.liveContext?.seismic?.eventCount ?? 0,
-          maxSeismicMagnitude: mesh.liveContext?.seismic?.maxMagnitude ?? null,
-        },
-      };
+      state.externalContext.geospatial = summarizeGeospatialContext(mesh);
       activity(
         `Geospatial city mesh loaded: ${mesh.city.name} via ${mesh.source.provider} (${mesh.buildings.length} buildings, ${(mesh.powerLines || []).length} power lines, ${(mesh.powerAssets || []).length} power assets).`,
         'geospatial',
@@ -743,53 +698,7 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
       ]);
       const mesh = { ...baseMesh, terrain, environment, liveContext };
       activeCityMesh = mesh;
-      state.externalContext.geospatial = {
-        cityId: mesh.city.id,
-        name: mesh.city.name,
-        lat: mesh.city.lat,
-        lon: mesh.city.lon,
-        radiusM: mesh.city.radiusM,
-        source: mesh.source.provider,
-        live: Boolean(mesh.source.live),
-        buildings: mesh.buildings.length,
-        roads: (mesh.roads || []).length,
-        powerLines: (mesh.powerLines || []).length,
-        powerAssets: (mesh.powerAssets || []).length,
-        skyline: mesh.skylineProfile || null,
-        terrain: {
-          provider: mesh.terrain?.source?.provider || null,
-          live: Boolean(mesh.terrain?.source?.live),
-          minElevationM: mesh.terrain?.minElevationM ?? null,
-          maxElevationM: mesh.terrain?.maxElevationM ?? null,
-        },
-        environment: {
-          provider: mesh.environment?.source?.provider || null,
-          live: Boolean(mesh.environment?.source?.live),
-          observedAt: mesh.environment?.source?.modelTime || mesh.environment?.current?.time || null,
-          temperatureC: mesh.environment?.current?.temperatureC ?? null,
-          cloudCoverPercent: mesh.environment?.current?.cloudCoverPercent ?? null,
-          precipitationMm: mesh.environment?.current?.precipitationMm ?? null,
-          isDay: mesh.environment?.current?.isDay ?? null,
-          windSpeedKph: mesh.environment?.current?.windSpeedKph ?? null,
-          windGustsKph: mesh.environment?.current?.windGustsKph ?? null,
-          shortwaveRadiationWm2: mesh.environment?.current?.shortwaveRadiationWm2 ?? null,
-          visibilityM: mesh.environment?.current?.visibilityM ?? null,
-          relativeHumidityPercent: mesh.environment?.current?.relativeHumidityPercent ?? null,
-          surfacePressureHpa: mesh.environment?.current?.surfacePressureHpa ?? null,
-          sunrise: mesh.environment?.solar?.sunrise ?? null,
-          sunset: mesh.environment?.solar?.sunset ?? null,
-        },
-        liveContext: {
-          airQualityProvider: mesh.liveContext?.airQuality?.source?.provider || null,
-          liveAirQuality: Boolean(mesh.liveContext?.airQuality?.source?.live),
-          usAqi: mesh.liveContext?.airQuality?.current?.usAqi ?? null,
-          pm25UgM3: mesh.liveContext?.airQuality?.current?.pm25UgM3 ?? null,
-          seismicProvider: mesh.liveContext?.seismic?.source?.provider || null,
-          liveSeismic: Boolean(mesh.liveContext?.seismic?.source?.live),
-          seismicEventCount: mesh.liveContext?.seismic?.eventCount ?? 0,
-          maxSeismicMagnitude: mesh.liveContext?.seismic?.maxMagnitude ?? null,
-        },
-      };
+      state.externalContext.geospatial = summarizeGeospatialContext(mesh);
       activity(
         `Coordinate mesh loaded: ${mesh.city.lat.toFixed(5)}, ${mesh.city.lon.toFixed(5)} via ${mesh.source.provider}.`,
         'geospatial',

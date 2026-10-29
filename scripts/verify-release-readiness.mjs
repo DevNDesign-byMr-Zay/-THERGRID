@@ -37,6 +37,7 @@ const REQUIRED_FILES = Object.freeze([
   'apps/aethergrid-console/analysis/city-metrics.mjs',
   'apps/aethergrid-console/analysis/city-planning.mjs',
   'apps/aethergrid-console/analysis/operator-optimization.mjs',
+  'apps/aethergrid-console/analysis/geospatial-context.mjs',
   'apps/aethergrid-console/web-runtime.mjs',
   'apps/aethergrid-console/web/package.json',
   'apps/aethergrid-console/web/package-lock.json',
@@ -94,6 +95,7 @@ const REQUIRED_FILES = Object.freeze([
   'scripts/assemble-aethergrid-package.mjs',
   'scripts/assemble-aethergrid-full-app.mjs',
   'scripts/smoke-aethergrid-full-app.mjs',
+  'scripts/run-reported-tests.mjs',
 ]);
 
 function assert(condition, message) {
