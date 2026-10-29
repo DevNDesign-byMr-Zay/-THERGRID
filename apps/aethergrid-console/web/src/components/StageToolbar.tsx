@@ -32,10 +32,11 @@ export function StageToolbar({
   const updateScrollEdges = () => {
     const controls = controlsRef.current;
     if (!controls) return;
-    setScrollEdges({
-      left: controls.scrollLeft > 1,
-      right: controls.scrollLeft + controls.clientWidth < controls.scrollWidth - 1
-    });
+    const left = controls.scrollLeft > 1;
+    const right = controls.scrollLeft + controls.clientWidth < controls.scrollWidth - 1;
+    setScrollEdges((previous) =>
+      previous.left === left && previous.right === right ? previous : { left, right }
+    );
   };
 
   useEffect(() => {
