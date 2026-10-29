@@ -1,43 +1,48 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
 import { Readable } from 'node:stream';
+import test from 'node:test';
 
 import { readRequestJson } from '../apps/aethergrid-console/security/request-body.mjs';
 
-test('empty requests retain empty-object behavior', async () => {
-  assert.deepEqual(await readRequestJson(Readable.from([])), {});
+test('empty requests return the default object', async () => {
+  const result = await readRequestJson(Readable.from([]));
+  assert.deepEqual(result, {});
 });
 
-test('segmented JSON parses without altering request values', async () => {
-  const input = Readable.from(['{"region":"New', ' York","active":true}']);
-  assert.deepEqual(await readRequestJson(input), { region: 'New York', active: true });
-  assert.deepEqual(await readRequestJson(Readable.from(['[1,2,3]'])), [1, 2, 3]);
+test('segmented JSON preserves the parsed value', async () => {
+  const chunks = ['{"region":"New', ' York","active":true}'];
+  const result = await readRequestJson(Readable.from(chunks));
+  assert.deepEqual(result, { region: 'New York', active: true });
+  const array = await readRequestJson(Readable.from(['[1,2,3]']));
+  assert.deepEqual(array, [1, 2, 3]);
 });
 
-test('malformed JSON preserves a safe client SyntaxError', async () => {
-  await assert.rejects(readRequestJson(Readable.from(['{token:"private"]'])), {
+test('invalid JSON raises a safe client syntax error', async () => {
+  const input = Readable.from(['{token:"private"]']);
+  await assert.rejects(readRequestJson(input), {
     name: 'SyntaxError',
     status: 400,
     message: 'invalid JSON request body',
   });
 });
 
-test('multibyte UTF-8 bytes count toward upload size limits', async () => {
-  const input = Buffer.from(JSON.stringify({ message: '🌎🌐' }), 'utf8');
+test('UTF-8 multibyte payloads are counted by bytes', async () => {
+  const input = Buffer.from(JSON.stringify({ message: '🌎🌐' }));
   assert.ok(input.byteLength > input.toString().length);
+  const short = Readable.from([input]);
   await assert.rejects(
-    readRequestJson(Readable.from([input]), { maxBytes: input.byteLength - 1 }),
+    readRequestJson(short, { maxBytes: input.byteLength - 1 }),
     { status: 413, message: 'payload too large' },
   );
-  assert.deepEqual(
-    await readRequestJson(Readable.from([input]), { maxBytes: input.byteLength }),
-    { message: '🌎🌐' },
-  );
+  const exact = Readable.from([input]);
+  const result = await readRequestJson(exact, { maxBytes: input.byteLength });
+  assert.deepEqual(result, { message: '🌎🌐' });
 });
 
-test('cumulative chunk overflow terminates early', async () => {
-  const chunks = [Buffer.alloc(120_000, 'a'), Buffer.alloc(120_001, 'b')];
-  await assert.rejects(readRequestJson(Readable.from(chunks), { maxBytes: 240_000 }), {
+test('cumulative request limit rejects oversized chunks', async () => {
+  const chunks = [Buffer.alloc(120_000), Buffer.alloc(120_001)];
+  const input = Readable.from(chunks);
+  await assert.rejects(readRequestJson(input, { maxBytes: 240_000 }), {
     status: 413,
   });
 });
