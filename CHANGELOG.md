@@ -2,6 +2,8 @@
 
 ## Unreleased — 0.3.3
 
+- Pace TEAM synthesis against the actual shared Groq token budget after successful specialist contributions, using bounded provider reset headers; preserve real authenticated tool receipts and rejection of quota fallback in canonical acceptance.
+
 - Extract offline-compatible globe, waveform and scenario-chart visualizers from the monolithic legacy application into two sub-500-line modules, retaining direct-open HTML/script ordering and executable canvas/package regressions.
 
 - Extract advisory agent spatial-context construction into a pure typed builder, with direct executable tests of city versus globe scope, bounded live feeds, temporal masking, and canonical entity identity.

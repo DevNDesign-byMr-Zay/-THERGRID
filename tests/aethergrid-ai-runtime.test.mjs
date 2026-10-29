@@ -2,8 +2,60 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import test from 'node:test';
 
-import { createAgentRuntime } from '../apps/aethergrid-console/ai-runtime.mjs';
+import { createAgentRuntime, tokenResetDelayMs } from '../apps/aethergrid-console/ai-runtime.mjs';
 import { resolveAgentConfig, safeAgentConfig } from '../apps/aethergrid-console/agent-config.mjs';
+
+test('Groq reset headers are parsed as bounded durations, not arbitrary input', () => {
+  assert.equal(tokenResetDelayMs('6s'), 6000);
+  assert.equal(tokenResetDelayMs('1m2.5s'), 62500);
+  assert.equal(tokenResetDelayMs('500ms'), 500);
+  assert.equal(tokenResetDelayMs('1h2m3s'), 3723000);
+  assert.equal(tokenResetDelayMs('bogus-header'), null);
+  assert.equal(tokenResetDelayMs(''), null);
+});
+
+test('TEAM paces a depleted shared Groq token bucket and still requires real tool and provider receipts', async (t) => {
+  const requests = [];
+  const waits = [];
+  t.mock.method(globalThis, 'fetch', async (_url, options) => {
+    const body = JSON.parse(options.body);
+    requests.push(body);
+    const isTeam = body.messages[0].content.includes('team synthesizer');
+    const message = isTeam && !body.messages.some((item) => item.role === 'tool')
+      ? {
+          role: 'assistant',
+          content: null,
+          tool_calls: [
+            {
+              id: 'team-grid',
+              type: 'function',
+              function: { name: 'set_view', arguments: '{"view":"grid"}' },
+            },
+          ],
+        }
+      : { role: 'assistant', content: 'READY' };
+    return new Response(JSON.stringify({ id: 'request-' + requests.length, choices: [{ message }] }), {
+      headers: {
+        'content-type': 'application/json',
+        'x-ratelimit-remaining-tokens': requests.length === 3 ? '2106' : '6000',
+        'x-ratelimit-reset-tokens': '6s',
+      },
+    });
+  });
+  const runtime = createAgentRuntime({
+    env: { AETHERGRID_GROQ_API_KEY: 'test-groq-token-budget-unique' },
+    sleep: async (ms) => { waits.push(ms); },
+  });
+  const result = await runtime.runTeam({ message: 'Set grid and prove TEAM synthesis.' });
+  assert.deepEqual(waits, [7000]);
+  assert.equal(requests.length, 5);
+  assert.equal(result.runtime.executionStatus, 'succeeded');
+  assert.equal(result.runtime.fallbackUsed, false);
+  assert.match(result.runtime.providerRequestId, /^request-/u);
+  assert.deepEqual(result.actions, [{ type: 'set_view', view: 'grid' }]);
+  assert.ok(result.toolResults.some((item) => item.modelSelected && item.ok && item.tool === 'set_view'));
+  assert.ok(result.contributions.every((item) => item.runtime.executionStatus === 'succeeded'));
+});
 
 test('Groq GPT-OSS uses low reasoning within existing token caps so TEAM can finish visible replies and tools', async (t) => {
   const requests = [];

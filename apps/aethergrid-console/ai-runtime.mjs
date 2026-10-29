@@ -203,6 +203,18 @@ function retrySeconds(value, clock) {
   return Number.isFinite(date) ? Math.max(1, Math.ceil((date - clock) / 1000)) : 60;
 }
 
+/** Groq returns durations such as 1m12.5s; never trust arbitrary provider headers as sleep values. */
+export function tokenResetDelayMs(header) {
+  const value = String(header || '').trim();
+  if (!value || !/^(?:\d+(?:\.\d+)?(?:ms|h|m|s))+$/.test(value)) return null;
+  const units = { h: 3_600_000, m: 60_000, s: 1000, ms: 1 };
+  let milliseconds = 0;
+  for (const match of value.matchAll(/(\d+(?:\.\d+)?)(ms|h|m|s)/g)) {
+    milliseconds += Number(match[1]) * units[match[2]];
+  }
+  return Number.isFinite(milliseconds) ? Math.ceil(milliseconds) : null;
+}
+
 function contextMessage(context) {
   return {
     role: 'user',
@@ -210,7 +222,7 @@ function contextMessage(context) {
   };
 }
 
-export function createAgentRuntime({ env = process.env, now = () => Date.now(), tools = {} } = {}) {
+export function createAgentRuntime({ env = process.env, now = () => Date.now(), tools = {}, sleep = delay } = {}) {
   let config = resolveAgentConfig(env);
   const executions = new Map();
   const successes = new Map();
@@ -658,6 +670,27 @@ export function createAgentRuntime({ env = process.env, now = () => Date.now(), 
         ...(await runAgent(id, { message, context, history })),
       })),
     );
+    // The three specialists and synthesizer share Groq's token bucket. A successful
+    // specialist batch can leave too few tokens for the actual TEAM tool roundtrip.
+    // Pace only when the provider reports low remaining tokens; do not accept a fallback.
+    const team = config.TEAM;
+    if (
+      team.provider === 'openai-compatible' &&
+      new URL(team.openAiBaseUrl).hostname === 'api.groq.com' &&
+      contributions.every((item) => item.runtime.executionStatus === 'succeeded')
+    ) {
+      const headers = quota(team).rateLimit;
+      const remaining = Number(headers['x-ratelimit-remaining-tokens']);
+      if (
+        headers['x-ratelimit-remaining-tokens'] != null &&
+        Number.isFinite(remaining) &&
+        remaining >= 0 &&
+        remaining < 3000
+      ) {
+        const reset = tokenResetDelayMs(headers['x-ratelimit-reset-tokens']);
+        await sleep(Math.min(65_000, Math.max(1500, (reset ?? 30_000) + 1000)));
+      }
+    }
     const synthesis = await execute('TEAM', { message, context, history: [], contributions });
     return {
       ...synthesis,
