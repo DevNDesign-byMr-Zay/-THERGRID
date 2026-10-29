@@ -2,6 +2,8 @@
 
 ## Unreleased — 0.3.3
 
+- Extract offline-compatible globe, waveform and scenario-chart visualizers from the monolithic legacy application, retain direct-open HTML/script ordering, and add executable canvas and package integrity regressions.
+
 - Extract advisory agent spatial-context construction into a pure typed builder, with direct executable tests of city versus globe scope, bounded live feeds, temporal masking, and canonical entity identity.
 
 - Extract context-aware city source gating and world/city overlay ordering into a pure typed module, with five direct tests for provider fallbacks, historical/forecast masking, wind geometry and layer precedence.
