@@ -2,6 +2,8 @@
 
 ## Unreleased — 0.3.3
 
+- Extract the deterministic operator baseline and 4D spatial-graph builder from the HTTP server into `operator-state.mjs`, with direct non-actuation and topology regressions.
+
 - Extract reproducible, explicitly synthetic geospatial fallback buildings/roads/power into `geo-fallback.mjs` with direct behavioral regression coverage, preserving the complete application archive and source-truth boundaries.
 
 Current package candidate: `0.3.3`. This candidate is not published until the gated manual release workflow publishes it. Its independently verified local startup, offline reproducibility, maintainability and web security changes require all exact-main gates and a new immutable `v0.3.3` tag.

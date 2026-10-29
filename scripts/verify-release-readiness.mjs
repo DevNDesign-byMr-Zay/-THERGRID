@@ -46,6 +46,7 @@ const REQUIRED_FILES = Object.freeze([
   'apps/aethergrid-console/profile-store.mjs',
   'apps/aethergrid-console/geo-runtime.mjs',
   'apps/aethergrid-console/geo-fallback.mjs',
+  'apps/aethergrid-console/operator-state.mjs',
   'apps/aethergrid-console/terrain-runtime.mjs',
   'apps/aethergrid-console/quantum-runtime.mjs',
   'apps/aethergrid-console/providers/coordinate-validator.mjs',
@@ -595,7 +596,7 @@ async function main() {
     );
   }
   assert(
-    /dimensions: \['x', 'y', 'z', 'time'\]/u.test(exactAethergridServer) &&
+    /dimensions: \['x', 'y', 'z', 'time'\]/u.test(await text('apps/aethergrid-console/operator-state.mjs')) &&
       /const spatialGraph = buildSpatialGraph\(\)/u.test(exactAethergridServer),
     'ÆTHERGRID backend must build a time-indexed spatial graph',
   );
