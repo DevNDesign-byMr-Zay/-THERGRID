@@ -2,6 +2,8 @@
 
 ## Unreleased — 0.3.3
 
+- Validate incoming JSON request sizes against actual UTF-8 bytes, reject oversized bodies with 413 and malformed JSON with 400, and execute multi-chunk security regressions without exposing request content.
+
 - Normalize public HTTP error status and redact unexpected provider/5xx exception details at the API boundary; preserve bounded client errors and add executable security regressions.
 
 - Extract deterministic advisory optimization scoring from the HTTP server into a pure, directly tested model; maintain route-level validation, receipts, history and no-physical-actuation boundaries.
