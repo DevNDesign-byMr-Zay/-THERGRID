@@ -71,8 +71,16 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci --ignore-scripts
-      - name: Run conventional tests
-        run: npm test
+      - name: Run the real Node suite and generate JUnit
+        run: npm run test:report
+      - name: Retain native Node JUnit test results even when tests fail
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: node-junit-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: test-results/junit/root-tests.xml
       - name: Prove tests run with no external TCP/TLS provider access
         run: npm run test:offline
 

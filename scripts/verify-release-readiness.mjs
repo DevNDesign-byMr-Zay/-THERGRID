@@ -93,6 +93,7 @@ const REQUIRED_FILES = Object.freeze([
   'scripts/assemble-aethergrid-package.mjs',
   'scripts/assemble-aethergrid-full-app.mjs',
   'scripts/smoke-aethergrid-full-app.mjs',
+  'scripts/run-reported-tests.mjs',
 ]);
 
 function assert(condition, message) {
