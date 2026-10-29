@@ -19,6 +19,7 @@ const LEGACY_FILES = new Set([
   'app.js',
   'state.js',
   'standalone-geo.js',
+  'spatial-math.js',
   'manifest.webmanifest',
   'sw.js',
 ]);
@@ -86,6 +87,7 @@ const REQUIRED_RUNTIME_FILES = Object.freeze([
   'legacy/app.js',
   'legacy/state.js',
   'legacy/standalone-geo.js',
+  'legacy/spatial-math.js',
   'node_modules/zod/package.json',
 ]);
 
@@ -358,13 +360,15 @@ const legacyCss = legacySource.get('styles.css')?.toString('utf8');
 const legacyJs = legacySource.get('app.js')?.toString('utf8');
 const legacyStateJs = legacySource.get('state.js')?.toString('utf8');
 const legacyGeoJs = legacySource.get('standalone-geo.js')?.toString('utf8');
-assert(legacyHtml && legacyCss && legacyJs && legacyStateJs && legacyGeoJs, 'legacy compatibility sources must remain available');
+const legacyMathJs = legacySource.get('spatial-math.js')?.toString('utf8');
+assert(legacyHtml && legacyCss && legacyJs && legacyStateJs && legacyGeoJs && legacyMathJs, 'legacy compatibility sources must remain available');
 
 let legacyStandalone = legacyHtml
   .replace(/\s*<link rel="manifest" href="\.\/manifest\.webmanifest" \/>\n?/u, '')
   .replace('<link rel="stylesheet" href="./styles.css" />', `<style>\n${legacyCss}\n</style>`)
   .replace('<script src="./state.js" defer></script>', `<script>\n${legacyStateJs}\n</script>`)
   .replace('<script src="./standalone-geo.js" defer></script>', `<script>\n${legacyGeoJs}\n</script>`)
+  .replace('<script src="./spatial-math.js" defer></script>', `<script>\n${legacyMathJs}\n</script>`)
   .replace('<script src="./app.js" defer></script>', `<script>\n${legacyJs}\n</script>`);
 
 for (const [path, mime] of [
