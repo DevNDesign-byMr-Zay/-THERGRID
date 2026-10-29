@@ -39,7 +39,10 @@ test('v4 forecast weather keeps Tomorrow and Open-Meteo shapes separate without 
 });
 
 test('v4 forecast cursor drives one active atmosphere through scene operations and AI context', async () => {
-  const app = await text('apps/aethergrid-console/web/src/app/App.tsx');
+  const [app, agent] = await Promise.all([
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/app/agent-spatial-context.ts'),
+  ]);
 
   assert.match(app, /const forecastAtmosphere = useMemo/u);
   assert.match(app, /selectCityEnvironmentForecast/u);
@@ -48,7 +51,7 @@ test('v4 forecast cursor drives one active atmosphere through scene operations a
   assert.match(app, /atmosphere=\{scope === 'city' \? activeAtmosphere : null\}/u);
   assert.match(app, /PROVIDER FORECAST · 4D CURSOR/u);
   assert.match(app, /NOT LIVE OBSERVATION/u);
-  assert.match(app, /forecast: temporal\.mode === 'forecast'/u);
+  assert.match(agent, /forecast: temporal\.mode === 'forecast'/u);
   assert.match(app, /state:[\s\S]{0,260}'forecast'/u);
 });
 
