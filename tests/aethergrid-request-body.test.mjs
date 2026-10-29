@@ -17,7 +17,9 @@ test('segmented JSON requests parse once after bounded streaming', async () => {
 test('non-JSON bodies are rejected as client errors without echoing input', async () => {
   await assert.rejects(
     readRequestJson(Readable.from(['{token:"private"]'])),
-    (error) => error.status === 400 &&
+    (error) =>
+      error instanceof SyntaxError &&
+      error.status === 400 &&
       error.message === 'invalid JSON request body' &&
       !error.message.includes('private'),
   );
