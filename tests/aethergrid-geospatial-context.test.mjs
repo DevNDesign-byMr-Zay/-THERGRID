@@ -45,27 +45,15 @@ function cityMesh() {
 test('mapped city evidence preserves provider origin and independent source receipts', () => {
   const mesh = cityMesh();
   const context = summarizeGeospatialContext(mesh);
-  assert.deepEqual({
-    cityId: context.cityId,
-    lat: context.lat,
-    lon: context.lon,
-    source: context.source,
-    live: context.live,
-    buildings: context.buildings,
-    roads: context.roads,
-    powerLines: context.powerLines,
-    powerAssets: context.powerAssets,
-  }, {
-    cityId: 'new-york',
-    lat: 40.7,
-    lon: -74,
-    source: 'openstreetmap',
-    live: true,
-    buildings: 1,
-    roads: 1,
-    powerLines: 1,
-    powerAssets: 1,
-  });
+  assert.equal(context.cityId, 'new-york');
+  assert.equal(context.lat, 40.7);
+  assert.equal(context.lon, -74);
+  assert.equal(context.source, 'openstreetmap');
+  assert.equal(context.live, true);
+  assert.equal(context.buildings, 1);
+  assert.equal(context.roads, 1);
+  assert.equal(context.powerLines, 1);
+  assert.equal(context.powerAssets, 1);
   assert.deepEqual(context.terrain, {
     provider: 'cesium',
     live: true,
