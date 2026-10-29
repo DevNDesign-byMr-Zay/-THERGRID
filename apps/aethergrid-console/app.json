@@ -517,6 +517,7 @@
       "index.html",
       "styles.css",
       "state.js",
+      "standalone-geo.js",
       "app.js"
     ],
     "packagedDirectory": "legacy",
