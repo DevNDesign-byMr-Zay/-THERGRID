@@ -1,5 +1,6 @@
 import {GRID_VIEWS,validateGridActions,gridActionDescription,type GridAction} from '../services/agent-grid-actions';
 import { computeLayerCounts } from './layer-counts';
+import { composeSpatialOverlays, deriveCityContextOverlays } from './spatial-overlay-composition';
 import {loadWeatherRadar,radarOverlay,type RadarManifest} from '../services/weather-radar';
 import {RadarControls} from '../components/RadarControls';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
@@ -65,7 +66,6 @@ import type {
 } from '../renderer/spatial-renderer';
 import { solarStateAt } from '../renderer/solar-position';
 import {
-  atmosphereToWindOverlay,
   loadCityEnvironment,
   loadCityEnvironmentForecast,
   selectCityEnvironmentForecast,
@@ -84,9 +84,7 @@ import {
   type GlobalLiveContext
 } from '../services/global-live-context';
 import {
-  airQualityToOverlay,
   loadCityLiveContext,
-  seismicToOverlay,
   type CityLiveSnapshot
 } from '../services/city-live-context';
 import {
@@ -1057,115 +1055,76 @@ export function App() {
     [semanticOverlays]
   );
 
-  const windOverlay = useMemo(
-    () =>
-      scope === 'city' &&
-      activeAtmosphere &&
-      (temporal.mode === 'live' || temporal.mode === 'forecast' || temporal.mode === 'historical')
-        ? atmosphereToWindOverlay(activeAtmosphere)
-        : null,
-    [scope, activeAtmosphere, temporal.mode]
-  );
-
-  const seismicOverlay = useMemo(
-    () =>
-      scope === 'city' && liveContext && temporal.mode === 'live'
-        ? seismicToOverlay(liveContext)
-        : null,
-    [scope, liveContext, temporal.mode]
-  );
-
-  const hazardOverlay = useMemo(
-    () =>
-      scope === 'city' &&
-      hazardContext &&
-      temporal.mode === 'live' &&
-      !hazardContext.fallback
-        ? hazardContext.overlay
-        : null,
-    [scope, hazardContext, temporal.mode]
-  );
-
-  const transitOverlay = useMemo(
-    () =>
-      scope === 'city' &&
-      transitContext &&
-      temporal.mode === 'live' &&
-      !transitContext.fallback &&
-      !transitContext.unconfigured
-        ? transitContext.overlay
-        : null,
-    [scope, transitContext, temporal.mode]
-  );
-
-  const hydrologyOverlay = useMemo(
-    () =>
-      scope === 'city' &&
-      hydrologyContext &&
-      temporal.mode === 'live' &&
-      !hydrologyContext.fallback
-        ? hydrologyContext.overlay
-        : null,
-    [scope, hydrologyContext, temporal.mode]
-  );
-
-  const airQualityOverlay = useMemo(
-    () =>
-      scope === 'city' && liveContext && temporal.mode === 'live'
-        ? airQualityToOverlay(liveContext, {
-            windSpeedKph: atmosphere?.current?.windSpeedKph,
-            windDirectionDegrees: atmosphere?.current?.windDirectionDegrees
-          })
-        : null,
-    [scope, liveContext, temporal.mode, atmosphere]
-  );
-
-  const activeOverlays = useMemo(() => {
-    const contextualOverlays =
-      scope === 'world'
-        ? [
-            worldOverlay,
-            incidentOverlay,
-            worksetGeometryOverlay,
-            operatorScenarioOverlay,
-            measurementOverlay
-          ]
-        : [
-            ...semanticOverlays,
-            activeIllumination,
-            powerOverlay,
-            windOverlay,
-            seismicOverlay,
-            hazardOverlay,
-            transitOverlay,
-            hydrologyOverlay,
-            incidentOverlay,
-            worksetGeometryOverlay,
-            operatorScenarioOverlay,
-            measurementOverlay
-          ];
-
-    return [aviationOverlay, radarSnapshot, ...contextualOverlays].filter(
-      (snapshot): snapshot is SpatialOverlaySnapshot => Boolean(snapshot)
-    );
-  }, [
-    scope,
-    worldOverlay,
-    aviationOverlay,
-    radarSnapshot,
-    semanticOverlays,
-    activeIllumination,
-    powerOverlay,
+  const {
     windOverlay,
     seismicOverlay,
     hazardOverlay,
     transitOverlay,
     hydrologyOverlay,
-    incidentOverlay,
-    worksetGeometryOverlay,
-    operatorScenarioOverlay,
-    measurementOverlay
-  ]);
+    airQualityOverlay
+  } = useMemo(
+    () =>
+      deriveCityContextOverlays({
+        scope,
+        temporalMode: temporal.mode,
+        activeAtmosphere,
+        atmosphere,
+        liveContext,
+        hazardContext,
+        transitContext,
+        hydrologyContext
+      }),
+    [
+      scope,
+      temporal.mode,
+      activeAtmosphere,
+      atmosphere,
+      liveContext,
+      hazardContext,
+      transitContext,
+      hydrologyContext
+    ]
+  );
+
+  const activeOverlays = useMemo(
+    () =>
+      composeSpatialOverlays({
+        scope,
+        worldOverlay,
+        aviationOverlay,
+        radarSnapshot,
+        semanticOverlays,
+        activeIllumination,
+        powerOverlay,
+        windOverlay,
+        seismicOverlay,
+        hazardOverlay,
+        transitOverlay,
+        hydrologyOverlay,
+        incidentOverlay,
+        worksetGeometryOverlay,
+        operatorScenarioOverlay,
+        measurementOverlay
+      }),
+    [
+      scope,
+      worldOverlay,
+      aviationOverlay,
+      radarSnapshot,
+      semanticOverlays,
+      activeIllumination,
+      powerOverlay,
+      windOverlay,
+      seismicOverlay,
+      hazardOverlay,
+      transitOverlay,
+      hydrologyOverlay,
+      incidentOverlay,
+      worksetGeometryOverlay,
+      operatorScenarioOverlay,
+      measurementOverlay
+    ]
+  );
 
   const handleSpatialSelection = (next: SpatialFeatureSelection | null) => {
     const bound = next
