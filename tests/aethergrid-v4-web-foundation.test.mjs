@@ -589,18 +589,23 @@ test('v4 AIR toggle renders a source-driven AQI field only for live city context
 });
 
 test('v4 layer controls expose only implemented layers with live feature counts', async () => {
-  const app = await text('apps/aethergrid-console/web/src/app/App.tsx');
-  const cityTargets = await text('apps/aethergrid-console/web/src/app/city-targets.ts');
+  const [app, cityTargets, counts] = await Promise.all([
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/app/city-targets.ts'),
+    text('apps/aethergrid-console/web/src/app/layer-counts.ts'),
+  ]);
 
   assert.match(app, /const layerCounts = useMemo/u);
-  assert.match(app, /powerOverlay\.nodes\.length \+ powerOverlay\.edges\.length/u);
-  assert.match(app, /cityIdentity\?\.buildingCount/u);
+  assert.match(app, /computeLayerCounts\(/u);
+  assert.match(counts, /temporalMode === 'live'/u);
+  assert.match(counts, /powerOverlay\.nodes\.length \+ powerOverlay\.edges\.length/u);
+  assert.match(counts, /cityIdentity\?\.buildingCount/u);
   assert.match(app, /layerCounts\[layer\.id\] \?\? 0/u);
   assert.match(app, /INITIAL_LAYERS/u);
   assert.match(cityTargets, /id: 'transit'/u);
   assert.match(cityTargets, /id: 'hydrology'/u);
-  assert.match(app, /transitOverlay\.nodes\.length \+ transitOverlay\.edges\.length/u);
-  assert.match(app, /hydrologyOverlay\.nodes\.length \+ hydrologyOverlay\.edges\.length/u);
+  assert.match(counts, /transitOverlay\.nodes\.length \+ transitOverlay\.edges\.length/u);
+  assert.match(counts, /hydrologyOverlay\.nodes\.length \+ hydrologyOverlay\.edges\.length/u);
 });
 
 test('v4 intelligence workspace tabs preserve mounted AI scenario quantum evidence and system state', async () => {
