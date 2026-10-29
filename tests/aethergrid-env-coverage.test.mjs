@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import test from 'node:test';
 
 const root = new URL('../', import.meta.url);
 const application = new URL('apps/aethergrid-console/', root);
+const runtimeKeyPattern = /\b(?:process\.)?env\.((?:AETHERGRID|GROQ)_[A-Z0-9_]+)\b/gu;
 
 function parseKeys(text) {
   const keys = new Set();
@@ -53,5 +54,58 @@ test('root environment template includes application configuration and leaves se
         assert.match(line, /^[A-Z][A-Z0-9_]*=$/u, `template secret must remain blank: ${line}`);
       }
     }
+  }
+});
+
+const excludedDirectories = new Set([
+  'node_modules',
+  'web',
+  'dist',
+  'build',
+  'coverage',
+  'artifacts',
+  'assets',
+  'test-results',
+]);
+
+async function collectRuntimeSourceKeys(directory, found = new Map()) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      if (!entry.name.startsWith('.') && !excludedDirectories.has(entry.name)) {
+        await collectRuntimeSourceKeys(new URL(`${entry.name}/`, directory), found);
+      }
+      continue;
+    }
+    if (!entry.isFile() || !/\.(?:mjs|js)$/u.test(entry.name)) continue;
+    const file = new URL(entry.name, directory);
+    const source = await readFile(file, 'utf8');
+    for (const match of source.matchAll(runtimeKeyPattern)) {
+      if (!found.has(match[1])) found.set(match[1], file.pathname);
+    }
+  }
+  return found;
+}
+
+test('runtime environment keys stay documented without credentials', async () => {
+  const runtime = await collectRuntimeSourceKeys(application);
+  for (const filename of [
+    'aethergrid-live-provider-smoke.mjs',
+    'aethergrid-canonical-provider-smoke.mjs',
+  ]) {
+    const file = new URL(`scripts/${filename}`, root);
+    const source = await readFile(file, 'utf8');
+    for (const match of source.matchAll(runtimeKeyPattern)) {
+      if (!runtime.has(match[1])) runtime.set(match[1], file.pathname);
+    }
+  }
+  assert.ok(runtime.size > 50, 'runtime discovery unexpectedly omitted source modules');
+  const [rootKeys, appKeys] = await Promise.all([
+    readFile(new URL('.env.example', root), 'utf8').then(parseKeys),
+    readFile(new URL('.env.example', application), 'utf8').then(parseKeys),
+  ]);
+  for (const [key, source] of runtime) {
+    assert.ok(appKeys.has(key), `application template lacks ${key} (referenced in ${source})`);
+    assert.ok(rootKeys.has(key), `root template lacks ${key} (referenced in ${source})`);
   }
 });
