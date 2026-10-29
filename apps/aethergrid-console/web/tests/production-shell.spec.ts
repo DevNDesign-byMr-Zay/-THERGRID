@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test';
+import { isolateBackgroundFeeds } from './helpers/isolate-background-feeds';
+
+test.beforeEach(async ({ page }) => {
+  await isolateBackgroundFeeds(page);
+});
 
 test('profile dialog owns focus and blocks global spatial shortcuts', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
