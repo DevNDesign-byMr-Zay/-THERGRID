@@ -30,10 +30,10 @@ test('UTF-8 multibyte payloads are counted by bytes', async () => {
   const input = Buffer.from(JSON.stringify({ message: '🌎🌐' }));
   assert.ok(input.byteLength > input.toString().length);
   const short = Readable.from([input]);
-  await assert.rejects(
-    readRequestJson(short, { maxBytes: input.byteLength - 1 }),
-    { status: 413, message: 'payload too large' },
-  );
+  await assert.rejects(readRequestJson(short, { maxBytes: input.byteLength - 1 }), {
+    status: 413,
+    message: 'payload too large',
+  });
   const exact = Readable.from([input]);
   const result = await readRequestJson(exact, { maxBytes: input.byteLength });
   assert.deepEqual(result, { message: '🌎🌐' });
