@@ -131,11 +131,12 @@ test('v4 camera journey preserves one WGS84 scene from globe to district', async
 });
 
 test('v4 source-backed power overlay preserves live and fallback provenance', async () => {
-  const [overlayContract, adapter, cesiumLayer, app] = await Promise.all([
+  const [overlayContract, adapter, cesiumLayer, app, presentation] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/overlays/spatial-overlay.ts'),
     text('apps/aethergrid-console/web/src/services/city-power-overlay.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/services/operational-current-sources.ts'),
   ]);
 
   assert.match(overlayContract, /eventTime/u);
@@ -152,7 +153,7 @@ test('v4 source-backed power overlay preserves live and fallback provenance', as
   assert.match(app, /\? 'OSM POWER'/u);
   assert.match(app, /\? 'unavailable'/u);
   assert.match(app, /\? 'live'/u);
-  assert.match(app, /\? 'fallback'/u);
+  assert.match(presentation, /\? 'fallback'/u);
   assert.match(app, /: 'loading'/u);
 });
 
