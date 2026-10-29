@@ -21,30 +21,36 @@ test('TEAM paces a depleted shared Groq token bucket and still requires real too
     const body = JSON.parse(options.body);
     requests.push(body);
     const isTeam = body.messages[0].content.includes('team synthesizer');
-    const message = isTeam && !body.messages.some((item) => item.role === 'tool')
-      ? {
-          role: 'assistant',
-          content: null,
-          tool_calls: [
-            {
-              id: 'team-grid',
-              type: 'function',
-              function: { name: 'set_view', arguments: '{"view":"grid"}' },
-            },
-          ],
-        }
-      : { role: 'assistant', content: 'READY' };
-    return new Response(JSON.stringify({ id: 'request-' + requests.length, choices: [{ message }] }), {
-      headers: {
-        'content-type': 'application/json',
-        'x-ratelimit-remaining-tokens': requests.length === 3 ? '2106' : '6000',
-        'x-ratelimit-reset-tokens': '6s',
+    const message =
+      isTeam && !body.messages.some((item) => item.role === 'tool')
+        ? {
+            role: 'assistant',
+            content: null,
+            tool_calls: [
+              {
+                id: 'team-grid',
+                type: 'function',
+                function: { name: 'set_view', arguments: '{"view":"grid"}' },
+              },
+            ],
+          }
+        : { role: 'assistant', content: 'READY' };
+    return new Response(
+      JSON.stringify({ id: 'request-' + requests.length, choices: [{ message }] }),
+      {
+        headers: {
+          'content-type': 'application/json',
+          'x-ratelimit-remaining-tokens': requests.length === 3 ? '2106' : '6000',
+          'x-ratelimit-reset-tokens': '6s',
+        },
       },
-    });
+    );
   });
   const runtime = createAgentRuntime({
     env: { AETHERGRID_GROQ_API_KEY: 'test-groq-token-budget-unique' },
-    sleep: async (ms) => { waits.push(ms); },
+    sleep: async (ms) => {
+      waits.push(ms);
+    },
   });
   const result = await runtime.runTeam({ message: 'Set grid and prove TEAM synthesis.' });
   assert.deepEqual(waits, [7000]);
@@ -53,7 +59,9 @@ test('TEAM paces a depleted shared Groq token bucket and still requires real too
   assert.equal(result.runtime.fallbackUsed, false);
   assert.match(result.runtime.providerRequestId, /^request-/u);
   assert.deepEqual(result.actions, [{ type: 'set_view', view: 'grid' }]);
-  assert.ok(result.toolResults.some((item) => item.modelSelected && item.ok && item.tool === 'set_view'));
+  assert.ok(
+    result.toolResults.some((item) => item.modelSelected && item.ok && item.tool === 'set_view'),
+  );
   assert.ok(result.contributions.every((item) => item.runtime.executionStatus === 'succeeded'));
 });
 
