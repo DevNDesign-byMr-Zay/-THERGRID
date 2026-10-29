@@ -77,6 +77,8 @@ npm run typecheck:strict-renderer
 npm run check
 ```
 
+`npm run test:report` executes the same maintained Node test files through Node 22's built-in test runner and writes real JUnit XML to `test-results/junit/root-tests.xml` (ignored locally). Engineering CI uploads that XML even if tests fail, and the process exits nonzero for any failed test. This makes passing and failing evidence inspectable without replacing `npm test`, relaxing coverage thresholds, or requiring provider credentials.
+
 `npm run syntax` is cross-platform: it uses Node.js to inspect maintained JavaScript/ESM source, so the same command works in Windows PowerShell and Linux CI without GNU `find` or `xargs`. It skips installed dependencies and generated build artifacts.
 
 [Engineering CI](.github/workflows/ci.yml), [v4 web CI](.github/workflows/aethergrid-v4-web.yml) and [CodeQL](.github/workflows/codeql.yml) bind results to tested commits. [Command-center acceptance evidence](docs/acceptance/aethergrid-command-center/README.md) distinguishes historical provider checks from final-main submission evidence. Credentialed tests are opt-in; an ordinary green test run is not proof of live provider or quantum hardware execution.
