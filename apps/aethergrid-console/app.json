@@ -516,6 +516,7 @@
     "sourceFiles": [
       "index.html",
       "styles.css",
+      "state.js",
       "app.js"
     ],
     "packagedDirectory": "legacy",
