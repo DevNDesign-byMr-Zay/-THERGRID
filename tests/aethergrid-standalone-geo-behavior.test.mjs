@@ -60,7 +60,10 @@ test('standalone flat terrain is bounded with seven-by-seven local samples', () 
   assert.equal(terrain.minElevationM, 0);
   assert.equal(terrain.maxElevationM, 0);
   assert.deepEqual(terrain.points[0], {
-    x: -city.radiusM, z: -city.radiusM, elevationM: 0, relativeElevationM: 0,
+    x: -city.radiusM,
+    z: -city.radiusM,
+    elevationM: 0,
+    relativeElevationM: 0,
   });
   assert.equal(terrain.points.at(-1).x, city.radiusM);
   assert.equal(terrain.points.at(-1).z, city.radiusM);
