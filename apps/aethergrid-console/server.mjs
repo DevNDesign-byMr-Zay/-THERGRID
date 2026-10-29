@@ -3,6 +3,7 @@ import { regions, scenarios, views, state, buildSpatialGraph } from './operator-
 import {createLiveMapRuntime} from './providers/live-map-runtime.mjs';
 import { appendFile, mkdir } from 'node:fs/promises';
 import { createSessionRuntime } from './security/session-runtime.mjs';
+import { publicHttpError } from './security/public-error.mjs';
 import { createObservationStore } from './observation-store.mjs';
 import { validateCoordinates } from "./providers/coordinate-validator.mjs";
 import { createRequestContext } from './providers/request-context.mjs';
@@ -1405,11 +1406,8 @@ if (request.method === 'GET' && url.pathname === '/api/aethergrid/runtime') {
     return canonicalWebRuntime.serve(request, response, url);
   } catch (error) {
     if (error?.code === 'ENOENT') return json(response, 404, { error: 'not_found' });
-    const status = Number(error?.status || 500);
-    json(response, status, {
-      error: status === 400 ? 'invalid_request' : 'server_error',
-      message: error.message,
-    });
+    const { status, payload } = publicHttpError(error);
+    return json(response, status, payload);
   }
 });
 
