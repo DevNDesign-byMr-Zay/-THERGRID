@@ -2,6 +2,8 @@
 
 ## Unreleased — 0.3.3
 
+- Extract deterministic browser-only city mesh fallback from classic legacy `app.js` into `standalone-geo.js` with semantic source-provenance tests, offline service-worker inventory and inline standalone compatibility.
+
 - Isolate legacy direct-open operator state and settings into `state.js` without converting the classic-script launcher to ES modules; verify independent state construction and ZIP inline script order.
 
 - Extract the deterministic operator baseline and 4D spatial-graph builder from the HTTP server into `operator-state.mjs`, with direct non-actuation and topology regressions.
