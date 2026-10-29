@@ -359,10 +359,11 @@ test('v4 city inspector surfaces source-backed skyline identity and coverage', a
 });
 
 test('v4 spatial AI dock calls real agent endpoints with scene context and receipts', async () => {
-  const [client, dock, app] = await Promise.all([
+  const [client, dock, app, agent] = await Promise.all([
     text('apps/aethergrid-console/web/src/services/agent-client.ts'),
     text('apps/aethergrid-console/web/src/components/AgentDock.tsx'),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/app/agent-spatial-context.ts'),
   ]);
 
   assert.match(client, /\/api\/aethergrid\/team/u);
@@ -372,9 +373,9 @@ test('v4 spatial AI dock calls real agent endpoints with scene context and recei
   assert.match(dock, /ADVISORY ONLY/u);
   assert.match(dock, /lastRun\.runtime\.provider/u);
   assert.match(dock, /lastRun\.receipt \|\| 'NO RECEIPT'/u);
-  assert.match(app, /temporalCursor: temporal\.cursorIso/u);
-  assert.match(app, /selectedEntity/u);
-  assert.match(app, /cityIdentity/u);
+  assert.match(agent, /temporalCursor: temporal\.cursorIso/u);
+  assert.match(agent, /selectedEntity/u);
+  assert.match(agent, /cityIdentity/u);
   assert.match(app, /<AgentDock context=\{agentContext\}/u);
 });
 
@@ -505,17 +506,20 @@ test('v4 operator profile persists real identity and bounded local avatar data',
 });
 
 test('v4 world scope isolates global live context from selected-city overlays', async () => {
-  const app = await text('apps/aethergrid-console/web/src/app/App.tsx');
+  const [app, agent] = await Promise.all([
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/app/agent-spatial-context.ts'),
+  ]);
 
   assert.match(
     app,
     /scope === 'world'[\s\S]*worldOverlay,[\s\S]*incidentOverlay,[\s\S]*worksetGeometryOverlay,[\s\S]*operatorScenarioOverlay,[\s\S]*measurementOverlay/u,
   );
   assert.match(app, /atmosphere=\{scope === 'city' \? activeAtmosphere : null\}/u);
-  assert.match(app, /scope === 'world'\s*\? \{\s*latitude: 20,\s*longitude: 0/u);
-  assert.match(app, /scope === 'city' && cityIdentity/u);
-  assert.match(app, /scope === 'city' && activeAtmosphere/u);
-  assert.match(app, /scope === 'city' && liveContext/u);
+  assert.match(agent, /scope === 'world'\s*\? \{\s*latitude: 20,\s*longitude: 0/u);
+  assert.match(agent, /scope === 'city' && cityIdentity/u);
+  assert.match(agent, /scope === 'city' && activeAtmosphere/u);
+  assert.match(agent, /scope === 'city' && liveContext/u);
 });
 
 test('v4 God’s-eye city nodes encode AQI categories and descend into selected cities', async () => {
@@ -905,15 +909,16 @@ test('v4 renderer switching is reversible and preserves safe fallback diagnostic
 });
 
 test('v4 temporal modes keep current-only feeds live-only while allowing source-backed forecast weather', async () => {
-  const [app, rail, counts] = await Promise.all([
+  const [app, rail, counts, agent] = await Promise.all([
     text('apps/aethergrid-console/web/src/app/App.tsx'),
     text('apps/aethergrid-console/web/src/components/TemporalRail.tsx'),
     text('apps/aethergrid-console/web/src/app/layer-counts.ts'),
+    text('apps/aethergrid-console/web/src/app/agent-spatial-context.ts'),
   ]);
 
   assert.match(app, /atmosphere=\{scope === 'city' \? activeAtmosphere : null\}/u);
-  assert.match(app, /forecast: temporal\.mode === 'forecast'/u);
-  assert.match(app, /liveContext:[\s\S]{0,180}temporal\.mode === 'live'/u);
+  assert.match(agent, /forecast: temporal\.mode === 'forecast'/u);
+  assert.match(agent, /liveContext:[\s\S]{0,180}temporal\.mode === 'live'/u);
   assert.match(counts, /temporalMode !== 'live'[\s\S]{0,120}\? 0/u);
   assert.match(rail, /LIVE SOURCES/u);
   assert.match(rail, /STATIC MAP CONTEXT/u);
