@@ -12,6 +12,7 @@ import {
 } from '../components/AgentDock';
 import { DataSourceBadge } from '../components/DataSourceBadge';
 import { LiveSceneBadges } from '../components/LiveSceneBadges';
+import { StageToolbar } from '../components/StageToolbar';
 import { sourcePresentationState } from '../services/source-presentation';
 import { EntityDossierPanel } from '../components/EntityDossierPanel';
 import { EvidencePanel } from '../components/EvidencePanel';
@@ -166,7 +167,6 @@ import {
 import {
   CITY_TARGETS,
   INITIAL_LAYERS,
-  VISUAL_MODES,
   resolveCityTarget,
   type CityTarget
 } from './city-targets';
@@ -1983,61 +1983,19 @@ export function App() {
           data-source-building-count={sourceBuildingCount}
           inert={navigationDrawer.compact && (navOpen || intelOpen)}
         >
-          <div className="stage-toolbar">
-            <div>
-              <span className="eyebrow">ACTIVE FRAME</span>
-              <strong>{temporal.mode.toUpperCase()}</strong>
-            </div>
-            <div className="stage-controls">
-              <div className="scope-modes" role="group" aria-label="Spatial scope">
-                <button
-                  type="button"
-                  className={scope === 'world' ? 'active' : ''}
-                  onClick={() => {
-                    setActiveUseCase(null);
-                    setScope('world');
-                  }}
-                >
-                  WORLD
-                </button>
-                <button
-                  type="button"
-                  className={scope === 'city' ? 'active' : ''}
-                  onClick={() => setScope('city')}
-                >
-                  CITY
-                </button>
-              </div>
-              <div className="interaction-modes" role="group" aria-label="Spatial interaction">
-                {(['inspect', 'measure', 'measure-area'] as const).map((mode) => (
-                  <button
-                    type="button"
-                    key={mode}
-                    className={interactionMode === mode ? 'active' : ''}
-                    aria-pressed={interactionMode === mode}
-                    onClick={() => changeInteractionMode(mode)}
-                  >
-                    {mode === 'measure-area' ? 'AREA' : mode.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-              <div className="visual-modes" role="group" aria-label="Visual mode">
-              {VISUAL_MODES.map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  className={mode === visualMode ? 'active' : ''}
-                  aria-pressed={mode === visualMode}
-                  onClick={() => {
-                    setVisualMode(mode);
-                  }}
-                >
-                  {mode.toUpperCase()}
-                </button>
-              ))}
-              </div>
-            </div>
-          </div>
+          <StageToolbar
+            frameMode={temporal.mode}
+            scope={scope}
+            onWorld={() => {
+              setActiveUseCase(null);
+              setScope('world');
+            }}
+            onCity={() => setScope('city')}
+            interactionMode={interactionMode}
+            onInteractionChange={changeInteractionMode}
+            visualMode={visualMode}
+            onVisualChange={setVisualMode}
+          />
 
           <SpatialViewport
             ref={viewportRef}

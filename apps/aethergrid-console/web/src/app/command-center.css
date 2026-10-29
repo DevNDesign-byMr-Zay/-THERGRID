@@ -676,3 +676,59 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .agent-grid-effects { display: grid; gap: 8px; margin: 12px 0; padding: 12px; border: 1px solid var(--line-strong); border-radius: 8px; }
 .agent-grid-effects ul { margin: 0; padding-inline-start: 18px; font-size: 12px; }
 .agent-grid-effects button { justify-self: start; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--panel-strong); color: var(--cyan); font: inherit; cursor: pointer; }
+
+/* Accessible overflow controls; preserve mapped scene and selected mode states. */
+.immersive-spatial .stage-toolbar { gap: 10px; }
+.immersive-spatial .stage-control-scroll {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 5px;
+  width: 0;
+  max-width: 990px;
+  min-width: 0;
+  pointer-events: auto;
+}
+.immersive-spatial .stage-control-scroll .stage-controls {
+  flex: 1 1 auto;
+  width: auto;
+  max-width: none;
+  min-width: 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(112, 231, 255, 0.38) transparent;
+}
+.immersive-spatial .stage-control-scroll .stage-controls::-webkit-scrollbar {
+  display: block;
+  height: 4px;
+}
+.immersive-spatial .stage-control-scroll .stage-controls::-webkit-scrollbar-thumb {
+  background: rgba(112, 231, 255, 0.38);
+  border-radius: 4px;
+}
+.stage-control-arrow {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(112, 231, 255, 0.25);
+  border-radius: 8px;
+  background: rgba(4, 9, 16, 0.72);
+  color: #c5eeff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+.stage-control-arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.stage-control-arrow:focus-visible,
+.stage-control-scroll .stage-controls:focus-visible {
+  outline: 2px solid #70e7ff;
+  outline-offset: 2px;
+}
+@media (max-width: 1100px) {
+  .immersive-spatial .stage-control-scroll {
+    width: 100%;
+    max-width: none;
+  }
+}

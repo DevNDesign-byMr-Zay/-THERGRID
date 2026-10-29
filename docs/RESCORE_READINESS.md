@@ -74,3 +74,10 @@ After PR #208 merged, PR #209 merged nine fixture-driven, executable NWS hazard-
 Independent review also noted a pre-existing palette input limitation: the native `rgba()` parser assumes controlled six-digit hex values and does not validate malformed input. Its callers currently supply controlled literals. Input validation is deferred to a separate behavioral change; this extraction does not claim to make arbitrary color strings safe.
 
 Before requesting a buyer rescore, require a reviewed merge, exact-new-main Engineering CI and CodeQL, responsive browser acceptance, and a new sanitized canonical evidence report. Do not substitute this local verification for those protected gates.
+
+
+## October 29, 2026 — spatial-control accessibility follow-up
+
+After #210 merged into main (squash `9b21b8bb9f541563852b54049c401627807dd613`), its engineering, web, Windows and CodeQL workflow runs were all successful. A later screenshot review identified a narrow spatial toolbar with an invisible horizontal scrollbar that could hide the REALITY selection on smaller viewports.
+
+The follow-up branch extracts the existing controlled toolbar from the oversized `App.tsx` into `components/StageToolbar.tsx` and adds bounded previous/next controls, normal horizontal keyboard scrolling, explicit selected scope states, a visible thin scrollbar and focus indicators. It preserves the existing WORLD/CITY, INSPECT/MEASURE/AREA and seven visual-mode callbacks; this is an operator UX/maintainability refinement, not a new city-data or 1:1 photorealism claim. A browser regression at 390x844 checks Reality reachability, selection and whole-page horizontal overflow. CI results on the new head are required before declaring that follow-up verified.

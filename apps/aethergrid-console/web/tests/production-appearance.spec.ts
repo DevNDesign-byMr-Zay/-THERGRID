@@ -146,3 +146,29 @@ test('light operator mode labels and live clock meet normal text contrast', asyn
     expect(ratio, `${selector} requires at least 4.5:1 text contrast`).toBeGreaterThanOrEqual(4.5);
   }
 });
+
+
+test('all spatial modes remain accessible by scrolling on compact displays', async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  const controls = page.locator('.stage-controls');
+  const next = page.getByRole('button', { name: 'Scroll spatial controls right' });
+  const previous = page.getByRole('button', { name: 'Scroll spatial controls left' });
+  const reality = page.getByRole('group', { name: 'Visual mode' }).getByRole('button', { name: 'REALITY' });
+  await expect(controls).toBeVisible();
+  await expect(next).toBeEnabled();
+  for (let attempt = 0; attempt < 8 && await next.isEnabled(); attempt += 1) {
+    await next.click();
+  }
+  await expect(reality).toBeInViewport();
+  await reality.click();
+  await expect(reality).toHaveAttribute('aria-pressed', 'true');
+  const rightPosition = await controls.evaluate((element) => element.scrollLeft);
+  expect(rightPosition).toBeGreaterThan(0);
+  await expect(previous).toBeEnabled();
+  await previous.click();
+  expect(await controls.evaluate((element) => element.scrollLeft)).toBeLessThan(rightPosition);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
