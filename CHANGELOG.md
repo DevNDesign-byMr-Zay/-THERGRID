@@ -2,6 +2,8 @@
 
 ## Unreleased — 0.3.3
 
+- Isolate legacy direct-open operator state and settings into `state.js` without converting the classic-script launcher to ES modules; verify independent state construction and ZIP inline script order.
+
 - Extract the deterministic operator baseline and 4D spatial-graph builder from the HTTP server into `operator-state.mjs`, with direct non-actuation and topology regressions.
 
 - Extract reproducible, explicitly synthetic geospatial fallback buildings/roads/power into `geo-fallback.mjs` with direct behavioral regression coverage, preserving the complete application archive and source-truth boundaries.
