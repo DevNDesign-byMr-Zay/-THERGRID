@@ -45,6 +45,7 @@ const REQUIRED_FILES = Object.freeze([
   'apps/aethergrid-console/ai-runtime.mjs',
   'apps/aethergrid-console/profile-store.mjs',
   'apps/aethergrid-console/geo-runtime.mjs',
+  'apps/aethergrid-console/geo-fallback.mjs',
   'apps/aethergrid-console/terrain-runtime.mjs',
   'apps/aethergrid-console/quantum-runtime.mjs',
   'apps/aethergrid-console/providers/coordinate-validator.mjs',

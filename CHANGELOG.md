@@ -2,6 +2,8 @@
 
 ## Unreleased — 0.3.3
 
+- Extract reproducible, explicitly synthetic geospatial fallback buildings/roads/power into `geo-fallback.mjs` with direct behavioral regression coverage, preserving the complete application archive and source-truth boundaries.
+
 Current package candidate: `0.3.3`. This candidate is not published until the gated manual release workflow publishes it. Its independently verified local startup, offline reproducibility, maintainability and web security changes require all exact-main gates and a new immutable `v0.3.3` tag.
 
 - Extract aviation polling, abort/timer cleanup and overlay state into a dedicated React hook, preserving existing live-only activation, world/city queries, refresh intervals and aircraft UI.
