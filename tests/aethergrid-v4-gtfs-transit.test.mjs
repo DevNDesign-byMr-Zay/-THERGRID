@@ -34,16 +34,17 @@ test('v4 GTFS transit adapter withholds scene nodes for fallback or undecoded re
 });
 
 test('v4 GTFS vehicles are live-only scene overlays in both renderers', async () => {
-  const [app, badges, cesium, nativeRenderer, presets, styles, palette, composition] = await Promise.all([
-    text('apps/aethergrid-console/web/src/app/App.tsx'),
-    text('apps/aethergrid-console/web/src/components/LiveSceneBadges.tsx'),
-    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
-    text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
-    text('apps/aethergrid-console/web/src/app/use-case-presets.ts'),
-    text('apps/aethergrid-console/web/src/app/app.css'),
-    text('apps/aethergrid-console/web/src/renderer/overlays/color-mapping.ts'),
-    text('apps/aethergrid-console/web/src/app/spatial-overlay-composition.ts'),
-  ]);
+  const [app, badges, cesium, nativeRenderer, presets, styles, palette, composition] =
+    await Promise.all([
+      text('apps/aethergrid-console/web/src/app/App.tsx'),
+      text('apps/aethergrid-console/web/src/components/LiveSceneBadges.tsx'),
+      text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
+      text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+      text('apps/aethergrid-console/web/src/app/use-case-presets.ts'),
+      text('apps/aethergrid-console/web/src/app/app.css'),
+      text('apps/aethergrid-console/web/src/renderer/overlays/color-mapping.ts'),
+      text('apps/aethergrid-console/web/src/app/spatial-overlay-composition.ts'),
+    ]);
 
   assert.match(app, /loadGtfsTransit/u);
   assert.match(app, /globalThis\.setInterval\(refresh, 30_000\)/u);
