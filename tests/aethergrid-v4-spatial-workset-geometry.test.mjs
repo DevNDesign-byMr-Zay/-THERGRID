@@ -118,12 +118,13 @@ test('v4 AUREN workset geometry review carries an explicit anti-causality relati
 });
 
 test('v4 Cesium and native renderers visually distinguish workset geometry without changing its source semantics', async () => {
-  const [cesium, native] = await Promise.all([
+  const [cesium, native, palette] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
     text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/overlays/color-mapping.ts'),
   ]);
 
-  for (const renderer of [cesium, native]) {
+  for (const renderer of [cesium + palette, native]) {
     assert.match(renderer, /workset-geometry/u);
     assert.match(renderer, /#63ffc5/u);
   }
