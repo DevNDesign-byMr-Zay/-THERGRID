@@ -4,6 +4,7 @@ import {createLiveMapRuntime} from './providers/live-map-runtime.mjs';
 import { appendFile, mkdir } from 'node:fs/promises';
 import { createSessionRuntime } from './security/session-runtime.mjs';
 import { publicHttpError } from './security/public-error.mjs';
+import { readRequestJson as body } from './security/request-body.mjs';
 import { createObservationStore } from './observation-store.mjs';
 import { validateCoordinates } from "./providers/coordinate-validator.mjs";
 import { createRequestContext } from './providers/request-context.mjs';
@@ -101,14 +102,6 @@ async function json(response, status, payload) {
   send(response, status, JSON.stringify(payload, null, 2));
 }
 
-async function body(request) {
-  let raw = '';
-  for await (const chunk of request) {
-    raw += chunk;
-    if (raw.length > 250_000) throw new Error('payload too large');
-  }
-  return raw ? JSON.parse(raw) : {};
-}
 
 function activity(message, type = 'system') {
   const item = {
