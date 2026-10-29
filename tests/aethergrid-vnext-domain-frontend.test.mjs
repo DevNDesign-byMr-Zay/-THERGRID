@@ -60,16 +60,18 @@ test('vNext aviation relationship geometry requires source-backed relationships'
 });
 
 test('vNext aviation uses the canonical provider path and the existing Cesium overlay renderer', async () => {
-  const [client, app, overlay, cesiumLayer] = await Promise.all([
+  const [client, app, cityTargets, overlay, cesiumLayer] = await Promise.all([
     text('apps/aethergrid-console/web/src/services/aviation-client.ts'),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/app/city-targets.ts'),
     text('apps/aethergrid-console/web/src/renderer/overlays/spatial-overlay.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
   ]);
 
   assert.match(client, /\/api\/aethergrid\/domains\/aviation\/aircraft/u);
   assert.match(app, /aviationOverlay/u);
-  assert.match(app, /id: 'aviation'/u);
+  assert.match(app, /INITIAL_LAYERS/u);
+  assert.match(cityTargets, /id: 'aviation'/u);
   assert.match(overlay, /\| 'aircraft'/u);
   assert.match(cesiumLayer, /eventType === 'aircraft'/u);
   assert.match(cesiumLayer, /ModelGraphics/u);

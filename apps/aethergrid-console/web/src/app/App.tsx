@@ -11,6 +11,7 @@ import {
   type AgentHandoffRequest
 } from '../components/AgentDock';
 import { DataSourceBadge } from '../components/DataSourceBadge';
+import { LiveSceneBadges } from '../components/LiveSceneBadges';
 import { sourcePresentationState } from '../services/source-presentation';
 import { EntityDossierPanel } from '../components/EntityDossierPanel';
 import { EvidencePanel } from '../components/EvidencePanel';
@@ -162,143 +163,19 @@ import {
   type UseCaseId,
   type UseCasePreset
 } from './use-case-presets';
+import {
+  CITY_TARGETS,
+  INITIAL_LAYERS,
+  VISUAL_MODES,
+  resolveCityTarget,
+  type CityTarget
+} from './city-targets';
 
 interface CityLoadState {
   spatial: boolean;
   environment: boolean;
   liveContext: boolean;
 }
-
-interface CityTarget extends SpatialTarget {
-  id: string;
-  name: string;
-  district: string;
-  custom?: boolean;
-}
-
-const CITY_TARGETS: readonly CityTarget[] = [
-  {
-    id: 'new-york',
-    name: 'NEW YORK',
-    district: 'Midtown Manhattan',
-    latitude: 40.7549,
-    longitude: -73.984,
-    heightMeters: 90,
-    rangeMeters: 980,
-    headingDegrees: 32,
-    pitchDegrees: -17
-  },
-  {
-    id: 'london',
-    name: 'LONDON',
-    district: 'City / South Bank',
-    latitude: 51.5136,
-    longitude: -0.0917,
-    heightMeters: 70,
-    rangeMeters: 1_050,
-    headingDegrees: -24,
-    pitchDegrees: -18
-  },
-  {
-    id: 'tokyo',
-    name: 'TOKYO',
-    district: 'Shinjuku',
-    latitude: 35.6896,
-    longitude: 139.6917,
-    heightMeters: 75,
-    rangeMeters: 1_050,
-    headingDegrees: 40,
-    pitchDegrees: -17
-  },
-  {
-    id: 'dubai',
-    name: 'DUBAI',
-    district: 'Downtown',
-    latitude: 25.1972,
-    longitude: 55.2744,
-    heightMeters: 105,
-    rangeMeters: 1_250,
-    headingDegrees: -18,
-    pitchDegrees: -15
-  },
-  {
-    id: 'singapore',
-    name: 'SINGAPORE',
-    district: 'Marina Bay / Downtown Core',
-    latitude: 1.2838,
-    longitude: 103.8515,
-    heightMeters: 70,
-    rangeMeters: 1_050,
-    headingDegrees: 18,
-    pitchDegrees: -17
-  },
-  {
-    id: 'sao-paulo',
-    name: 'SÃO PAULO',
-    district: 'Paulista / Bela Vista',
-    latitude: -23.5614,
-    longitude: -46.6559,
-    heightMeters: 65,
-    rangeMeters: 1_050,
-    headingDegrees: 58,
-    pitchDegrees: -18
-  },
-  {
-    id: 'lagos',
-    name: 'LAGOS',
-    district: 'Victoria Island / Eko Atlantic',
-    latitude: 6.4281,
-    longitude: 3.4219,
-    heightMeters: 55,
-    rangeMeters: 1_100,
-    headingDegrees: -35,
-    pitchDegrees: -18
-  },
-  {
-    id: 'sydney',
-    name: 'SYDNEY',
-    district: 'CBD / Circular Quay',
-    latitude: -33.8651,
-    longitude: 151.2099,
-    heightMeters: 70,
-    rangeMeters: 1_050,
-    headingDegrees: 22,
-    pitchDegrees: -17
-  }
-];
-
-const INITIAL_LAYERS: readonly LayerState[] = [
-  { id: 'world', visible: true },
-  { id: 'terrain', visible: true },
-  { id: 'buildings', visible: true },
-  { id: 'illumination', visible: true },
-  { id: 'roads', visible: true },
-  { id: 'water', visible: true },
-  { id: 'green', visible: true },
-  { id: 'grid', visible: true },
-  { id: 'weather', visible: true },
-  { id: 'weather-radar', visible: true,opacity:.68 },
-  { id: 'air', visible: true },
-  { id: 'aviation', visible: true },
-  { id: 'seismic', visible: true },
-  { id: 'hazards', visible: true },
-  { id: 'transit', visible: true },
-  { id: 'hydrology', visible: true },
-  { id: 'energy', visible: true },
-  { id: 'annotations', visible: true },
-  { id: 'workset-analysis', visible: true },
-  { id: 'scenario-model', visible: true }
-];
-
-const VISUAL_MODES: readonly VisualMode[] = [
-  'solid',
-  'wireframe',
-  'grid',
-  'xray',
-  'holographic',
-  'operations',
-  'reality'
-];
 
 export function App() {
   const [worldLongitude] = useState(() => {
@@ -966,45 +843,14 @@ export function App() {
     const query = value.trim();
     setSearchError(null);
     if (!query) return;
-
-    const cityMatch = CITY_TARGETS.find((target) => {
-      const normalized = query.toLocaleLowerCase();
-      return (
-        target.name.toLocaleLowerCase().includes(normalized) ||
-        target.district.toLocaleLowerCase().includes(normalized)
-      );
-    });
-    if (cityMatch) {
-      setCity(cityMatch);
-      setScope('city');
-      setSearchValue('');
+    const target = resolveCityTarget(query);
+    if (!target) {
+      setSearchError('Enter a supported city or latitude, longitude.');
       return;
     }
-
-    const coordinateMatch = query.match(
-      /^\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*$/u
-    );
-    if (coordinateMatch) {
-      const latitude = Number(coordinateMatch[1]);
-      const longitude = Number(coordinateMatch[2]);
-      if (latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180) {
-        setCity({
-          id: `coord-${latitude.toFixed(5)}-${longitude.toFixed(5)}`,
-          name: 'COORDINATE',
-          district: `${latitude.toFixed(5)}°, ${longitude.toFixed(5)}°`,
-          latitude,
-          longitude,
-          rangeMeters: 5_200,
-          pitchDegrees: -35,
-          custom: true
-        });
-        setScope('city');
-        setSearchValue('');
-        return;
-      }
-    }
-
-    setSearchError('Enter a supported city or latitude, longitude.');
+    setCity(target);
+    setScope('city');
+    setSearchValue('');
   };
 
   const sceneTarget = useMemo<SpatialTarget>(() => {
@@ -2242,140 +2088,19 @@ export function App() {
 
           </details>
 
-          {scope === 'city' && streamingState.count > 0 ? (
-            <div className="city-stream-status" role="status" data-live-city-tiles={streamingState.count}>
-              LIVE CITY STREAM · {streamingState.count} VISIBLE TILE{streamingState.count === 1 ? '' : 'S'} · SOURCE-BACKED
-            </div>
-          ) : null}
-          {scope === 'city' && streamingState.error && !cityLoad.spatial ? (
-            <div className="city-load-status" data-live-city-stream="degraded">
-              ADJACENT CITY DATA UNAVAILABLE · CORE GEOMETRY PRESERVED
-            </div>
-          ) : null}
-          {scope === 'city' && Object.values(cityLoad).some(Boolean) ? (
-            <div className="city-load-status" aria-live="polite">
-              <div>
-                <span>LOADING {city.name}</span>
-                <strong>
-                  {Object.values(cityLoad).filter(Boolean).length} SOURCES PENDING
-                </strong>
-              </div>
-              <ul>
-                <li data-ready={!cityLoad.spatial}>GEOMETRY</li>
-                <li data-ready={!cityLoad.environment}>ATMOSPHERE</li>
-                <li data-ready={!cityLoad.liveContext}>LIVE CONTEXT</li>
-              </ul>
-            </div>
-          ) : null}
-
-          {scope === 'city' &&
-          temporal.mode === 'live' &&
-          hazardContext &&
-          hazardContext.alerts.length > 0 ? (
-            <div
-              className="hazard-scene-badge"
-              data-source-state={
-                hazardContext.stale
-                  ? 'stale'
-                  : hazardContext.live
-                    ? 'live'
-                    : 'fallback'
-              }
-            >
-              <span>NWS ACTIVE HAZARDS</span>
-              <strong>
-                {hazardContext.alerts.length} ALERT
-                {hazardContext.alerts.length === 1 ? '' : 'S'}
-              </strong>
-              <small>
-                {hazardContext.alerts[0]?.event ?? 'ACTIVE ALERT'} ·{' '}
-                {hazardContext.alerts[0]?.severity ?? 'UNKNOWN'} SEVERITY
-              </small>
-            </div>
-          ) : hazardError && scope === 'city' && temporal.mode === 'live' ? (
-            <div className="hazard-scene-badge" data-source-state="unavailable">
-              <span>NWS ACTIVE HAZARDS</span>
-              <strong>UNAVAILABLE</strong>
-              <small>{hazardError}</small>
-            </div>
-          ) : null}
-
-          {scope === 'city' && temporal.mode === 'live' && transitContext ? (
-            <div
-              className="transit-scene-badge"
-              data-source-state={
-                transitContext.unconfigured
-                  ? 'unconfigured'
-                  : transitContext.stale
-                    ? 'stale'
-                    : transitContext.live
-                      ? 'live'
-                      : 'fallback'
-              }
-            >
-              <span>GTFS-RT TRANSIT</span>
-              <strong>
-                {transitContext.unconfigured
-                  ? 'FEED NOT CONFIGURED'
-                  : `${transitContext.vehicles.length} VEHICLE${transitContext.vehicles.length === 1 ? '' : 'S'}`}
-              </strong>
-              <small>
-                {transitContext.agencyName ?? transitContext.provider ?? 'GTFS-REALTIME'}
-                {' · '}
-                {transitContext.stale
-                  ? 'STALE SOURCE POSITIONS'
-                  : transitContext.live
-                    ? 'SOURCE-BACKED POSITIONS'
-                    : 'NO LIVE POSITION FEED'}
-              </small>
-            </div>
-          ) : transitError && scope === 'city' && temporal.mode === 'live' ? (
-            <div className="transit-scene-badge" data-source-state="unavailable">
-              <span>GTFS-RT TRANSIT</span>
-              <strong>UNAVAILABLE</strong>
-              <small>{transitError}</small>
-            </div>
-          ) : null}
-
-          {scope === 'city' &&
-          temporal.mode === 'live' &&
-          hydrologyContext ? (
-            <div
-              className="hydrology-scene-badge"
-              data-source-state={
-                hydrologyContext.partial
-                  ? 'partial'
-                  : hydrologyContext.stale
-                    ? 'stale'
-                    : hydrologyContext.live
-                      ? 'live'
-                      : 'fallback'
-              }
-            >
-              <span>NOAA NWPS · {hydrologyContext.gauge.gaugeId}</span>
-              <strong>
-                {hydrologyContext.gauge.observedStageFeet == null
-                  ? 'STAGE UNAVAILABLE'
-                  : `${hydrologyContext.gauge.observedStageFeet.toFixed(2)} FT STAGE`}
-              </strong>
-              <small>
-                {hydrologyContext.partial
-                  ? 'PARTIAL · METADATA SOURCE LIVE'
-                  : hydrologyContext.gauge.name ?? 'SOURCE-BACKED GAUGE'}
-              </small>
-            </div>
-          ) : hydrologyError &&
-            scope === 'city' &&
-            temporal.mode === 'live' ? (
-            <div
-              className="hydrology-scene-badge"
-              data-source-state="unavailable"
-            >
-              <span>NOAA NWPS</span>
-              <strong>UNAVAILABLE</strong>
-              <small>{hydrologyError}</small>
-            </div>
-          ) : null}
+          <LiveSceneBadges
+            scope={scope}
+            cityName={city.name}
+            live={temporal.mode === 'live'}
+            streamingState={streamingState}
+            cityLoad={cityLoad}
+            hazardContext={hazardContext}
+            hazardError={hazardError}
+            transitContext={transitContext}
+            transitError={transitError}
+            hydrologyContext={hydrologyContext}
+            hydrologyError={hydrologyError}
+          />
 
           {measurement ? (
             <div className="measurement-scene-badge">

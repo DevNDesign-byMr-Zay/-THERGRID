@@ -157,13 +157,15 @@ test('v4 source-backed power overlay preserves live and fallback provenance', as
 });
 
 test('v4 streamed 3D buildings have actual visual-mode styling', async () => {
-  const controller = await text(
-    'apps/aethergrid-console/web/src/renderer/cesium/visual-mode-controller.ts',
-  );
+  const [controller, palette] = await Promise.all([
+    text('apps/aethergrid-console/web/src/renderer/cesium/visual-mode-controller.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/visual-mode-palette.ts'),
+  ]);
 
   assert.match(controller, /Cesium3DTileStyle/u);
-  assert.match(controller, /mode === 'xray'/u);
-  assert.match(controller, /mode === 'holographic'/u);
+  assert.match(controller, /tileModePalette/u);
+  assert.match(palette, /mode === 'xray'/u);
+  assert.match(palette, /mode === 'holographic'/u);
   assert.match(controller, /mode === 'reality'/u);
   assert.match(controller, /Reality mode requires a configured photorealistic 3D Tiles provider/u);
 });
@@ -214,16 +216,18 @@ test('v4 appearance preserves dark light system preferences without provider cou
 });
 
 test('v4 world search supports named cities and arbitrary real coordinates', async () => {
-  const [app, powerService] = await Promise.all([
+  const [app, cityTargets, powerService] = await Promise.all([
     text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/app/city-targets.ts'),
     text('apps/aethergrid-console/web/src/services/city-power-overlay.ts'),
   ]);
 
   assert.match(app, /navigateSearch/u);
-  assert.match(app, /latitude >= -90 && latitude <= 90/u);
-  assert.match(app, /longitude >= -180 && longitude <= 180/u);
+  assert.match(app, /resolveCityTarget/u);
+  assert.match(cityTargets, /latitude >= -90 && latitude <= 90/u);
+  assert.match(cityTargets, /longitude >= -180 && longitude <= 180/u);
   assert.match(app, /City or lat, lon/u);
-  assert.match(app, /custom: true/u);
+  assert.match(cityTargets, /custom: true/u);
   assert.match(powerService, /loadCoordinatePowerOverlay/u);
   assert.match(powerService, /\/api\/aethergrid\/geospatial\/point/u);
 });
@@ -295,12 +299,13 @@ test('v4 city-live context renders source-backed AQI and seismic events only in 
 });
 
 test('v4 Cesium city identity includes mapped roads water coastline and green areas', async () => {
-  const [contract, service, layer, renderer, app] = await Promise.all([
+  const [contract, service, layer, renderer, app, cityTargets] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/overlays/spatial-overlay.ts'),
     text('apps/aethergrid-console/web/src/services/city-power-overlay.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/app/city-targets.ts'),
   ]);
 
   assert.match(contract, /OverlayAreaKind = 'water' \| 'green'/u);
@@ -331,9 +336,10 @@ test('v4 Cesium city identity includes mapped roads water coastline and green ar
   assert.match(service, /bboxDepthM/u);
   assert.match(layer, /edge\.kind === 'coastline'/u);
   assert.match(layer, /edge\.kind === 'waterway'/u);
-  assert.match(app, /id: 'roads', visible: true/u);
-  assert.match(app, /id: 'water', visible: true/u);
-  assert.match(app, /id: 'green', visible: true/u);
+  assert.match(app, /INITIAL_LAYERS/u);
+  assert.match(cityTargets, /id: 'roads', visible: true/u);
+  assert.match(cityTargets, /id: 'water', visible: true/u);
+  assert.match(cityTargets, /id: 'green', visible: true/u);
 });
 
 test('v4 city inspector surfaces source-backed skyline identity and coverage', async () => {
@@ -582,13 +588,15 @@ test('v4 AIR toggle renders a source-driven AQI field only for live city context
 
 test('v4 layer controls expose only implemented layers with live feature counts', async () => {
   const app = await text('apps/aethergrid-console/web/src/app/App.tsx');
+  const cityTargets = await text('apps/aethergrid-console/web/src/app/city-targets.ts');
 
   assert.match(app, /const layerCounts = useMemo/u);
   assert.match(app, /powerOverlay\.nodes\.length \+ powerOverlay\.edges\.length/u);
   assert.match(app, /cityIdentity\?\.buildingCount/u);
   assert.match(app, /layerCounts\[layer\.id\] \?\? 0/u);
-  assert.match(app, /id: 'transit'/u);
-  assert.match(app, /id: 'hydrology'/u);
+  assert.match(app, /INITIAL_LAYERS/u);
+  assert.match(cityTargets, /id: 'transit'/u);
+  assert.match(cityTargets, /id: 'hydrology'/u);
   assert.match(app, /transitOverlay\.nodes\.length \+ transitOverlay\.edges\.length/u);
   assert.match(app, /hydrologyOverlay\.nodes\.length \+ hydrologyOverlay\.edges\.length/u);
 });
@@ -663,15 +671,17 @@ test('v4 viewport prevents duplicate initial camera descent while polling transi
 
 test('v4 city transitions report geometry atmosphere and live-context readiness independently', async () => {
   const app = await text('apps/aethergrid-console/web/src/app/App.tsx');
+  const badges = await text('apps/aethergrid-console/web/src/components/LiveSceneBadges.tsx');
 
   assert.match(app, /interface CityLoadState/u);
   assert.match(app, /spatial: true/u);
   assert.match(app, /environment: true/u);
   assert.match(app, /liveContext: true/u);
-  assert.match(app, /SOURCES PENDING/u);
-  assert.match(app, /GEOMETRY/u);
-  assert.match(app, /ATMOSPHERE/u);
-  assert.match(app, /LIVE CONTEXT/u);
+  assert.match(app, /<LiveSceneBadges/u);
+  assert.match(badges, /SOURCES PENDING/u);
+  assert.match(badges, /GEOMETRY/u);
+  assert.match(badges, /ATMOSPHERE/u);
+  assert.match(badges, /LIVE CONTEXT/u);
   assert.match(app, /setCityLoad\(\(current\) => \(\{ \.\.\.current, spatial: false \}\)\)/u);
 });
 
@@ -685,16 +695,18 @@ test('v4 streamed 3d buildings defer until city or district detail', async () =>
 });
 
 test('v4 solid building presentation responds to solar phase without affecting synthetic modes', async () => {
-  const [visual, renderer] = await Promise.all([
+  const [visual, palette, renderer] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/cesium/visual-mode-controller.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/visual-mode-palette.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
   ]);
 
   assert.match(visual, /setSolarPhase/u);
-  assert.match(visual, /this\.#solarPhase === 'golden-hour'/u);
-  assert.match(visual, /this\.#solarPhase === 'twilight'/u);
-  assert.match(visual, /this\.#solarPhase === 'night'/u);
-  assert.match(visual, /#e4a35b/u);
+  assert.match(visual, /solarTilePalette/u);
+  assert.match(palette, /phase === 'golden-hour'/u);
+  assert.match(palette, /phase === 'twilight'/u);
+  assert.match(palette, /phase === 'night'/u);
+  assert.match(palette, /#e4a35b/u);
   assert.match(renderer, /setSolarPhase\(this\.#solar\.phase\)/u);
 });
 
