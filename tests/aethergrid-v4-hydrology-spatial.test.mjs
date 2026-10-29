@@ -62,15 +62,17 @@ test('v4 NOAA gauge binding is coordinate-scoped and live-only in the scene', as
 });
 
 test('v4 NOAA hydrology layer is available to both renderer engines and operational presets', async () => {
-  const [cesium, nativeRenderer, presets, styles] = await Promise.all([
+  const [cesium, nativeRenderer, presets, styles, palette] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
     text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
     text('apps/aethergrid-console/web/src/app/use-case-presets.ts'),
     text('apps/aethergrid-console/web/src/app/app.css'),
+    text('apps/aethergrid-console/web/src/renderer/overlays/color-mapping.ts'),
   ]);
 
-  assert.match(cesium, /noaa-nwps-gauge/u);
-  assert.match(cesium, /hydrologyColor/u);
+  assert.match(palette, /noaa-nwps-gauge/u);
+  assert.match(palette, /hydrologyColor/u);
+  assert.match(cesium, /nodeColor/u);
   assert.match(nativeRenderer, /noaa-nwps-gauge/u);
   assert.match(nativeRenderer, /hydrologyHex/u);
   assert.match(presets, /'hydrology'/u);

@@ -1,4 +1,14 @@
 import { expect, test } from '@playwright/test';
+import { Color } from 'cesium';
+import {
+  buildingAreaColor,
+  colorForIntensity,
+  edgeColor,
+  hazardColor,
+  hydrologyColor,
+  nodeColor,
+  scenarioColor
+} from '../src/renderer/overlays/color-mapping';
 import {
   css,
   hazardHex,
@@ -75,4 +85,84 @@ test('Cesium solid palette keeps mapped building colors and solar phase alpha', 
     outlineHex: '#e4a35b',
     outlineAlpha: 0.34
   });
+});
+
+test('Cesium alert and river-band palettes match native severity mappings', () => {
+  for (const severity of ['EXTREME', 'severe', 'moderate', 'minor', 'unknown']) {
+    const expected = Color.fromCssColorString(hazardHex(severity)).withAlpha(0.67);
+    const actual = hazardColor(severity, 0.67);
+    expect(actual.red).toBeCloseTo(expected.red, 8);
+    expect(actual.green).toBeCloseTo(expected.green, 8);
+    expect(actual.blue).toBeCloseTo(expected.blue, 8);
+    expect(actual.alpha).toBeCloseTo(0.67, 8);
+  }
+  for (const band of ['major', 'moderate', 'minor', 'action', 'unknown']) {
+    const expected = Color.fromCssColorString(hydrologyHex(band)).withAlpha(0.82);
+    const actual = hydrologyColor(band, 0.82);
+    expect(actual.red).toBeCloseTo(expected.red, 8);
+    expect(actual.green).toBeCloseTo(expected.green, 8);
+    expect(actual.blue).toBeCloseTo(expected.blue, 8);
+  }
+});
+
+test('Cesium source nodes retain measured-event and river severity provenance', () => {
+  const position = { longitude: -73.98, latitude: 40.75 };
+  const nws = nodeColor({
+    id: 'alert',
+    kind: 'event',
+    position,
+    intensity: 0.5,
+    properties: { eventType: 'nws-alert', severity: 'severe' }
+  });
+  expect(nws.red).toBeCloseTo(hazardColor('severe').red);
+  expect(nws.alpha).toBeCloseTo(0.9);
+  const gauge = nodeColor({
+    id: 'gauge',
+    kind: 'sensor',
+    position,
+    intensity: 0.5,
+    properties: { eventType: 'noaa-nwps-gauge', floodBand: 'action' }
+  });
+  expect(gauge.blue).toBeCloseTo(hydrologyColor('action').blue);
+  expect(gauge.alpha).toBeCloseTo(0.9);
+  expect(nodeColor({
+    id: 'unknown-city',
+    kind: 'city',
+    position,
+    properties: { category: 'unknown' }
+  }).alpha).toBeCloseTo(0.93);
+});
+
+test('Cesium building and analysis colors preserve alpha and source material identity', () => {
+  const geometry = { id: 'building', kind: 'building' as const, positions: [] };
+  const source = buildingAreaColor({
+    ...geometry,
+    properties: { buildingMaterial: 'glass', sourceBacked: true }
+  }, 0.55);
+  const expected = Color.fromCssColorString('#6baec4');
+  expect(source.red).toBeCloseTo(expected.red);
+  expect(source.alpha).toBeCloseTo(0.55);
+  const note = edgeColor({
+    id: 'note',
+    kind: 'analysis-line',
+    from: { longitude: 0, latitude: 0 },
+    to: { longitude: 1, latitude: 1 },
+    properties: { analysisType: 'workset-geometry' }
+  }, 0.5);
+  expect(note.green).toBeCloseTo(Color.fromCssColorString('#63ffc5').green);
+  expect(note.alpha).toBeCloseTo(0.82);
+});
+
+test('Cesium modeled scenario palette retains risk priority and bounded default intensity', () => {
+  const scenario = {
+    renewableBias: 0,
+    weatherRisk: 0.7,
+    storageStress: 0,
+    stressFactor: 1
+  } as Parameters<typeof scenarioColor>[0];
+  const alert = scenarioColor(scenario, 0.6, 0.44);
+  expect(alert.red).toBeCloseTo(Color.fromCssColorString('#ff7f6b').red);
+  expect(alert.alpha).toBeCloseTo(0.44);
+  expect(colorForIntensity(2, 0.7).green).toBeCloseTo(0.88);
+  expect(colorForIntensity(-1, 0.7).green).toBeCloseTo(0.62);
 });

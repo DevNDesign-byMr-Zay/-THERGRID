@@ -276,10 +276,11 @@ test('v4 provenance UI separates source time from retrieval age', async () => {
 });
 
 test('v4 city-live context renders source-backed AQI and seismic events only in LIVE mode', async () => {
-  const [service, layer, app] = await Promise.all([
+  const [service, layer, app, palette] = await Promise.all([
     text('apps/aethergrid-console/web/src/services/city-live-context.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/renderer/overlays/color-mapping.ts'),
   ]);
 
   assert.match(service, /\/api\/aethergrid\/city-live/u);
@@ -287,8 +288,8 @@ test('v4 city-live context renders source-backed AQI and seismic events only in 
   assert.match(service, /layerId: 'seismic'/u);
   assert.match(service, /usAqi/u);
   assert.match(service, /pm25UgM3/u);
-  assert.match(layer, /eventType === 'earthquake'/u);
-  assert.match(layer, /#ff7b63/u);
+  assert.match(palette, /eventType === 'earthquake'/u);
+  assert.match(palette, /#ff7b63/u);
   assert.match(app, /AIR QUALITY/u);
   assert.match(app, /AQI /u);
   assert.match(
@@ -519,14 +520,15 @@ test('v4 world scope isolates global live context from selected-city overlays', 
 });
 
 test('v4 God’s-eye city nodes encode AQI categories and descend into selected cities', async () => {
-  const [layer, app] = await Promise.all([
+  const [layer, app, palette] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/renderer/overlays/color-mapping.ts'),
   ]);
 
-  assert.match(layer, /node\.kind === 'city'/u);
-  assert.match(layer, /category === 'good'/u);
-  assert.match(layer, /category === 'hazardous'/u);
+  assert.match(palette, /node\.kind === 'city'/u);
+  assert.match(palette, /category === 'good'/u);
+  assert.match(palette, /category === 'hazardous'/u);
   assert.match(app, /handleSpatialSelection/u);
   assert.match(app, /scope !== 'world' \|\| bound\?\.kind !== 'city'/u);
   assert.match(app, /bound\.properties\?\.cityId/u);
@@ -739,12 +741,13 @@ test('v4 city arrival heading is derived from mapped building geometry and appli
 });
 
 test('v4 scenario map effects mirror the backend stress model without mutating source data', async () => {
-  const [client, panel, layer, renderer, app] = await Promise.all([
+  const [client, panel, layer, renderer, app, palette] = await Promise.all([
     text('apps/aethergrid-console/web/src/services/scenario-client.ts'),
     text('apps/aethergrid-console/web/src/components/ScenarioPanel.tsx'),
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/renderer/overlays/color-mapping.ts'),
   ]);
 
   assert.match(client, /stressFactor: 0\.88/u);
@@ -754,7 +757,7 @@ test('v4 scenario map effects mirror the backend stress model without mutating s
   assert.match(panel, /scenarioVisualState/u);
   assert.match(panel, /activeVisual\.stressFactor/u);
   assert.match(layer, /time\.mode === 'scenario'/u);
-  assert.match(layer, /scenario\.stressFactor/u);
+  assert.match(palette, /scenario\.stressFactor/u);
   assert.match(layer, /scenarioColor/u);
   assert.match(renderer, /if \(this\.#time\) overlay\.setTime\(this\.#time\)/u);
   assert.match(app, /MODELED SCENARIO · SOURCE DATA UNCHANGED/u);
