@@ -24,6 +24,8 @@ export async function readRequestJson(request, { maxBytes = MAX_REQUEST_BYTES } 
   try {
     return JSON.parse(body);
   } catch {
-    throw requestError('invalid JSON request body', 400);
+    const error = new SyntaxError('invalid JSON request body');
+    error.status = 400;
+    throw error;
   }
 }
