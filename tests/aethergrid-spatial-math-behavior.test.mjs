@@ -18,13 +18,14 @@ test('camera projection matrices are finite and preserve identity', () => {
   assert.deepEqual([...math.mat4Multiply(identity, perspective)], [...perspective]);
   const camera = math.lookAt([0, 0, 10], [0, 0, 0], [0, 1, 0]);
   assert.equal(camera[14], -10);
+  assert.deepEqual([...math.mat4Multiply(identity, camera)], [...camera]);
 });
 
 test('bilinear terrain interpolation is bounded and degrades safely', () => {
   const terrain = {
     gridSize: 2,
     radiusM: 10,
-    points: [0, 10, 20, 30].map(relativeElevationM => ({relativeElevationM})),
+    points: [0, 10, 20, 30].map((relativeElevationM) => ({ relativeElevationM })),
   };
   assert.equal(math.bilinearTerrainElevation(terrain, 0, 0), 15);
   assert.equal(math.bilinearTerrainElevation(terrain, 10, 10), 30);
@@ -47,4 +48,17 @@ test('direct-open compatibility loads each legacy helper before app.js', async (
     previous = index;
   }
   assert.doesNotMatch(html, /type="module"/u);
+});
+
+test('packaging includes inline math and maintains manifest inventory', async () => {
+  const app = new URL('../apps/aethergrid-console/', import.meta.url);
+  const manifest = JSON.parse(await readFile(new URL('app.json', app), 'utf8'));
+  const packager = await readFile(
+    new URL('../scripts/assemble-aethergrid-full-app.mjs', import.meta.url),
+    'utf8',
+  );
+  assert.ok(manifest.legacyCompatibility.sourceFiles.includes('spatial-math.js'));
+  assert.ok(packager.includes("legacySource.get('spatial-math.js')"));
+  assert.ok(packager.includes('legacy/spatial-math.js'));
+  assert.ok(packager.includes('legacyMathJs'));
 });
