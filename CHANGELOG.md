@@ -2,6 +2,8 @@
 
 ## Unreleased — 0.3.3
 
+- Validate incoming JSON request sizes against actual UTF-8 bytes, reject oversized bodies with 413 and malformed JSON with 400, and execute multi-chunk security regressions without exposing request content.
+
 - Extract legacy 4×4 camera transforms and bounded bilinear terrain interpolation into a pure, directly tested classic script; include it in the offline cache, source inventory, lint and single-HTML legacy package without changing canonical React/Cesium behavior.
 
 - Normalize public HTTP error status and redact unexpected provider/5xx exception details at the API boundary; preserve bounded client errors and add executable security regressions.

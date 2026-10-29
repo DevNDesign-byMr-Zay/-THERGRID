@@ -56,6 +56,7 @@ const REQUIRED_FILES = Object.freeze([
   'apps/aethergrid-console/quantum-runtime.mjs',
   'apps/aethergrid-console/providers/coordinate-validator.mjs',
   'apps/aethergrid-console/security/public-error.mjs',
+  'apps/aethergrid-console/security/request-body.mjs',
   'apps/aethergrid-console/app.json',
   'apps/aethergrid-console/ui.json',
   'apps/aethergrid-console/manifest.webmanifest',
