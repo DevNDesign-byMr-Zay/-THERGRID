@@ -17,6 +17,7 @@ const LEGACY_FILES = new Set([
   'index.html',
   'styles.css',
   'app.js',
+  'state.js',
   'manifest.webmanifest',
   'sw.js',
 ]);
@@ -79,6 +80,7 @@ const REQUIRED_RUNTIME_FILES = Object.freeze([
   'legacy/index.html',
   'legacy/styles.css',
   'legacy/app.js',
+  'legacy/state.js',
   'node_modules/zod/package.json',
 ]);
 
@@ -349,11 +351,13 @@ for (const reference of htmlAssetReferences(canonicalHtml)) {
 const legacyHtml = legacySource.get('index.html')?.toString('utf8');
 const legacyCss = legacySource.get('styles.css')?.toString('utf8');
 const legacyJs = legacySource.get('app.js')?.toString('utf8');
-assert(legacyHtml && legacyCss && legacyJs, 'legacy compatibility sources must remain available');
+const legacyStateJs = legacySource.get('state.js')?.toString('utf8');
+assert(legacyHtml && legacyCss && legacyJs && legacyStateJs, 'legacy compatibility sources must remain available');
 
 let legacyStandalone = legacyHtml
   .replace(/\s*<link rel="manifest" href="\.\/manifest\.webmanifest" \/>\n?/u, '')
   .replace('<link rel="stylesheet" href="./styles.css" />', `<style>\n${legacyCss}\n</style>`)
+  .replace('<script src="./state.js" defer></script>', `<script>\n${legacyStateJs}\n</script>`)
   .replace('<script src="./app.js" defer></script>', `<script>\n${legacyJs}\n</script>`);
 
 for (const [path, mime] of [
