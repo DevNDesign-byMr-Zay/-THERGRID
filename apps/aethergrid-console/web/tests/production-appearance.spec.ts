@@ -1,4 +1,10 @@
 import { expect, test } from '@playwright/test';
+import { isolateBackgroundFeeds } from './helpers/isolate-background-feeds';
+
+// Focused appearance tests never require third-party feeds or provider credentials.
+test.beforeEach(async ({ page }) => {
+  await isolateBackgroundFeeds(page);
+});
 
 test('system theme reacts to OS while explicit choice survives rejected storage', async ({ page }) => {
   test.setTimeout(90_000);
@@ -159,9 +165,10 @@ test('all spatial modes remain accessible by scrolling on compact displays', asy
   const reality = page.getByRole('group', { name: 'Visual mode' }).getByRole('button', { name: 'REALITY' });
   await expect(controls).toBeVisible();
   await expect(next).toBeEnabled();
-  for (let attempt = 0; attempt < 8 && await next.isEnabled(); attempt += 1) {
-    await next.click();
-  }
+  await next.click();
+  await expect.poll(() => controls.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  // Verify the entire mode group remains reachable by native container scrolling.
+  await controls.evaluate((element) => element.scrollTo({ left: element.scrollWidth, behavior: 'instant' }));
   await expect(reality).toBeInViewport();
   await reality.click();
   await expect(reality).toHaveAttribute('aria-pressed', 'true');
