@@ -4,33 +4,30 @@ import { Readable } from 'node:stream';
 
 import { readRequestJson } from '../apps/aethergrid-console/security/request-body.mjs';
 
-test('empty requests retain the existing empty object behavior', async () => {
+test('empty requests retain empty-object behavior', async () => {
   assert.deepEqual(await readRequestJson(Readable.from([])), {});
 });
 
-test('segmented JSON requests parse once after bounded streaming', async () => {
+test('segmented JSON parses without altering request values', async () => {
   const input = Readable.from(['{"region":"New', ' York","active":true}']);
   assert.deepEqual(await readRequestJson(input), { region: 'New York', active: true });
   assert.deepEqual(await readRequestJson(Readable.from(['[1,2,3]'])), [1, 2, 3]);
 });
 
-test('non-JSON bodies are rejected as client errors without echoing input', async () => {
-  await assert.rejects(
-    readRequestJson(Readable.from(['{token:"private"]'])),
-    (error) =>
-      error instanceof SyntaxError &&
-      error.status === 400 &&
-      error.message === 'invalid JSON request body' &&
-      !error.message.includes('private'),
-  );
+test('malformed JSON preserves a safe client SyntaxError', async () => {
+  await assert.rejects(readRequestJson(Readable.from(['{token:"private"]'])), {
+    name: 'SyntaxError',
+    status: 400,
+    message: 'invalid JSON request body',
+  });
 });
 
-test('stream size is bounded by wire bytes even for multibyte UTF-8', async () => {
+test('multibyte UTF-8 bytes count toward upload size limits', async () => {
   const input = Buffer.from(JSON.stringify({ message: '🌎🌐' }), 'utf8');
   assert.ok(input.byteLength > input.toString().length);
   await assert.rejects(
     readRequestJson(Readable.from([input]), { maxBytes: input.byteLength - 1 }),
-    (error) => error.status === 413 && error.message === 'payload too large',
+    { status: 413, message: 'payload too large' },
   );
   assert.deepEqual(
     await readRequestJson(Readable.from([input]), { maxBytes: input.byteLength }),
@@ -38,10 +35,9 @@ test('stream size is bounded by wire bytes even for multibyte UTF-8', async () =
   );
 });
 
-test('chunked oversized uploads terminate when the cumulative limit is exceeded', async () => {
+test('cumulative chunk overflow terminates early', async () => {
   const chunks = [Buffer.alloc(120_000, 'a'), Buffer.alloc(120_001, 'b')];
-  await assert.rejects(
-    readRequestJson(Readable.from(chunks), { maxBytes: 240_000 }),
-    (error) => error.status === 413,
-  );
+  await assert.rejects(readRequestJson(Readable.from(chunks), { maxBytes: 240_000 }), {
+    status: 413,
+  });
 });
