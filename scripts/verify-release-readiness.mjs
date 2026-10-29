@@ -41,6 +41,7 @@ const REQUIRED_FILES = Object.freeze([
   'apps/aethergrid-console/web/index.html',
   'apps/aethergrid-console/web/src/main.tsx',
   'apps/aethergrid-console/web/src/app/App.tsx',
+  'apps/aethergrid-console/web/src/renderer/overlays/color-mapping.ts',
   'apps/aethergrid-console/web/README.md',
   'apps/aethergrid-console/agent-config.mjs',
   'apps/aethergrid-console/ai-runtime.mjs',
