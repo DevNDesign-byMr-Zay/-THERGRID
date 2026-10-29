@@ -129,6 +129,7 @@ test('v4 VÆLON scenario handoff explicitly separates hypothetical model inputs 
 test('v4 scenario model overlay participates in both world and city rendering while remaining separately toggleable', async () => {
   const app = await text('apps/aethergrid-console/web/src/app/App.tsx');
   const cityTargets = await text('apps/aethergrid-console/web/src/app/city-targets.ts');
+  const counts = await text('apps/aethergrid-console/web/src/app/layer-counts.ts');
 
   assert.match(app, /INITIAL_LAYERS/u);
   assert.match(cityTargets, /\{ id: 'scenario-model', visible: true \}/u);
@@ -140,7 +141,7 @@ test('v4 scenario model overlay participates in both world and city rendering wh
     app,
     /seismicOverlay,[\s\S]*incidentOverlay,[\s\S]*worksetGeometryOverlay,[\s\S]*operatorScenarioOverlay,[\s\S]*measurementOverlay/u,
   );
-  assert.match(app, /'scenario-model': operatorScenarioOverlay/u);
+  assert.match(counts, /'scenario-model': operatorScenarioOverlay/u);
 });
 
 test('v4 Cesium and native renderers visually distinguish scenario-model geometry from live infrastructure', async () => {
