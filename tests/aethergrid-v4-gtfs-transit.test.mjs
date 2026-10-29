@@ -34,7 +34,7 @@ test('v4 GTFS transit adapter withholds scene nodes for fallback or undecoded re
 });
 
 test('v4 GTFS vehicles are live-only scene overlays in both renderers', async () => {
-  const [app, badges, cesium, nativeRenderer, presets, styles, palette] = await Promise.all([
+  const [app, badges, cesium, nativeRenderer, presets, styles, palette, composition] = await Promise.all([
     text('apps/aethergrid-console/web/src/app/App.tsx'),
     text('apps/aethergrid-console/web/src/components/LiveSceneBadges.tsx'),
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
@@ -42,13 +42,14 @@ test('v4 GTFS vehicles are live-only scene overlays in both renderers', async ()
     text('apps/aethergrid-console/web/src/app/use-case-presets.ts'),
     text('apps/aethergrid-console/web/src/app/app.css'),
     text('apps/aethergrid-console/web/src/renderer/overlays/color-mapping.ts'),
+    text('apps/aethergrid-console/web/src/app/spatial-overlay-composition.ts'),
   ]);
 
   assert.match(app, /loadGtfsTransit/u);
   assert.match(app, /globalThis\.setInterval\(refresh, 30_000\)/u);
   assert.match(app, /temporal\.mode !== 'live'/u);
-  assert.match(app, /!transitContext\.fallback/u);
-  assert.match(app, /!transitContext\.unconfigured/u);
+  assert.match(composition, /!transitContext\.fallback/u);
+  assert.match(composition, /!transitContext\.unconfigured/u);
   assert.match(app, /transitOverlay/u);
   assert.match(app, /<LiveSceneBadges/u);
   assert.match(badges, /GTFS-RT TRANSIT/u);
