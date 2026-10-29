@@ -1,4 +1,5 @@
 import {GRID_VIEWS,validateGridActions,gridActionDescription,type GridAction} from '../services/agent-grid-actions';
+import { computeLayerCounts } from './layer-counts';
 import {loadWeatherRadar,radarOverlay,type RadarManifest} from '../services/weather-radar';
 import {RadarControls} from '../components/RadarControls';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
@@ -1485,87 +1486,45 @@ export function App() {
     }
   };
 
-  const layerCounts = useMemo(() => {
-    const semantic = new Map(semanticOverlays.map((snapshot) => [snapshot.layerId, snapshot]));
-    const countOverlay = (id: string) => {
-      const snapshot = semantic.get(id);
-      if (!snapshot) return 0;
-      return (
-        snapshot.nodes.length +
-        snapshot.edges.length +
-        (snapshot.areas?.length ?? 0)
-      );
-    };
-
-    return {
-      world: globalLive?.overlay.nodes.length ?? 0,
-      terrain: scope === 'city' ? 1 : 0,
-      buildings: scope === 'city' ? cityIdentity?.buildingCount ?? 0 : 0,
-      roads: scope === 'city' ? countOverlay('roads') : 0,
-      water: scope === 'city' ? countOverlay('water') : 0,
-      green: scope === 'city' ? countOverlay('green') : 0,
-      grid: 1,
-      weather:
-        scope === 'city' && temporal.mode === 'live'
-          ? (windOverlay?.edges.length ?? (atmosphere?.current ? 1 : 0))
-          : 0,
-      air:
-        scope === 'city' &&
-        temporal.mode === 'live' &&
-        liveContext?.airQuality.current?.usAqi != null
-          ? 1
-          : 0,
-      aviation:
-        temporal.mode === 'live' && aviationOverlay
-          ? aviationOverlay.nodes.length + aviationOverlay.edges.length
-          : 0,
-      seismic:
-        temporal.mode !== 'live'
-          ? 0
-          : scope === 'world'
-            ? globalLive?.earthquakeCount ?? 0
-            : liveContext?.seismic.eventCount ?? 0,
-      hazards:
-        scope === 'city' && temporal.mode === 'live' && hazardOverlay
-          ? hazardOverlay.nodes.length + hazardOverlay.edges.length
-          : 0,
-      transit:
-        scope === 'city' && temporal.mode === 'live' && transitOverlay
-          ? transitOverlay.nodes.length + transitOverlay.edges.length
-          : 0,
-      hydrology:
-        scope === 'city' && temporal.mode === 'live' && hydrologyOverlay
-          ? hydrologyOverlay.nodes.length + hydrologyOverlay.edges.length
-          : 0,
-      energy:
-        scope === 'city' && powerOverlay
-          ? powerOverlay.nodes.length + powerOverlay.edges.length
-          : 0,
-      annotations: spatialIncidents.length,
-      'workset-analysis':
-        worksetGeometry.positionedEntityCount + worksetGeometry.edgeCount,
-      'scenario-model': operatorScenarioOverlay
-        ? operatorScenarioOverlay.nodes.length +
-          operatorScenarioOverlay.edges.length
-        : 0
-    } as Record<string, number>;
-  }, [
-    semanticOverlays,
-    globalLive,
-    scope,
-    cityIdentity,
-    atmosphere,
-    liveContext,
-    temporal.mode,
-    windOverlay,
-    hazardOverlay,
-    transitOverlay,
-    hydrologyOverlay,
-    powerOverlay,
-    spatialIncidents,
-    worksetGeometry,
-    operatorScenarioOverlay
-  ]);
+  const layerCounts = useMemo(
+    () =>
+      computeLayerCounts({
+        semanticOverlays,
+        globalLive,
+        scope,
+        cityIdentity,
+        atmosphere,
+        liveContext,
+        temporalMode: temporal.mode,
+        windOverlay,
+        aviationOverlay,
+        hazardOverlay,
+        transitOverlay,
+        hydrologyOverlay,
+        powerOverlay,
+        spatialIncidents,
+        worksetGeometry,
+        operatorScenarioOverlay
+      }),
+    [
+      semanticOverlays,
+      globalLive,
+      scope,
+      cityIdentity,
+      atmosphere,
+      liveContext,
+      temporal.mode,
+      windOverlay,
+      aviationOverlay,
+      hazardOverlay,
+      transitOverlay,
+      hydrologyOverlay,
+      powerOverlay,
+      spatialIncidents,
+      worksetGeometry,
+      operatorScenarioOverlay
+    ]
+  );
 
   const currentBookmark = useMemo(
     () => ({
