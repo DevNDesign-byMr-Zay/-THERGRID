@@ -29,6 +29,7 @@ const REQUIRED_FILES = Object.freeze([
   'apps/aethergrid-console/index.html',
   'apps/aethergrid-console/styles.css',
   'apps/aethergrid-console/app.js',
+  'apps/aethergrid-console/state.js',
   'apps/aethergrid-console/server.mjs',
   'apps/aethergrid-console/analysis/city-use-cases.mjs',
   'apps/aethergrid-console/analysis/city-metrics.mjs',
