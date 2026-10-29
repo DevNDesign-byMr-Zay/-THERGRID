@@ -9,7 +9,7 @@ const source = await readFile(
   'utf8',
 );
 const { loadNwsHazards } = await import(
-  'data:text/javascript;base64,' + Buffer.from(stripTypeScriptTypes(source)).toString('base64'),
+  'data:text/javascript;base64,' + Buffer.from(stripTypeScriptTypes(source)).toString('base64')
 );
 const fetchedAt = '2026-10-01T12:00:00Z';
 const effective = '2026-10-01T11:00:00Z';
