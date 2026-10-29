@@ -218,12 +218,13 @@ async function text(path) {
 }
 
 test('v4 NWS hazards render consistently in Cesium and native failover', async () => {
-  const [cesium, nativeRenderer] = await Promise.all([
+  const [cesium, nativeRenderer, palette] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
     text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/overlays/color-mapping.ts'),
   ]);
 
-  for (const renderer of [cesium, nativeRenderer]) {
+  for (const renderer of [cesium + palette, nativeRenderer]) {
     assert.match(renderer, /nws-alert/u);
     assert.match(renderer, /nws-alert-boundary/u);
     assert.match(renderer, /severity/u);

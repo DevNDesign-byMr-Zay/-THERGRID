@@ -104,12 +104,13 @@ test('v4 AUREN incident review cannot silently promote operator severity or stat
 });
 
 test('v4 Cesium and native renderers visually distinguish local incident severity without changing incident data', async () => {
-  const [cesium, native] = await Promise.all([
+  const [cesium, native, palette] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
     text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/overlays/color-mapping.ts'),
   ]);
 
-  for (const renderer of [cesium, native]) {
+  for (const renderer of [cesium + palette, native]) {
     assert.match(renderer, /operator-incident/u);
     assert.match(renderer, /critical/u);
     assert.match(renderer, /high/u);
