@@ -45,67 +45,67 @@ export function computeLayerCounts({
   worksetGeometry,
   operatorScenarioOverlay
 }: LayerCountInputs): Record<string, number> {
-    const semantic = new Map(semanticOverlays.map((snapshot) => [snapshot.layerId, snapshot]));
-    const countOverlay = (id: string) => {
-      const snapshot = semantic.get(id);
-      if (!snapshot) return 0;
-      return (
-        snapshot.nodes.length +
-        snapshot.edges.length +
-        (snapshot.areas?.length ?? 0)
-      );
-    };
+  const semantic = new Map(semanticOverlays.map((snapshot) => [snapshot.layerId, snapshot]));
+  const countOverlay = (id: string) => {
+    const snapshot = semantic.get(id);
+    if (!snapshot) return 0;
+    return (
+      snapshot.nodes.length +
+      snapshot.edges.length +
+      (snapshot.areas?.length ?? 0)
+    );
+  };
 
-    return {
-      world: globalLive?.overlay.nodes.length ?? 0,
-      terrain: scope === 'city' ? 1 : 0,
-      buildings: scope === 'city' ? cityIdentity?.buildingCount ?? 0 : 0,
-      roads: scope === 'city' ? countOverlay('roads') : 0,
-      water: scope === 'city' ? countOverlay('water') : 0,
-      green: scope === 'city' ? countOverlay('green') : 0,
-      grid: 1,
-      weather:
-        scope === 'city' && temporalMode === 'live'
-          ? (windOverlay?.edges.length ?? (atmosphere?.current ? 1 : 0))
-          : 0,
-      air:
-        scope === 'city' &&
-        temporalMode === 'live' &&
-        liveContext?.airQuality.current?.usAqi != null
-          ? 1
-          : 0,
-      aviation:
-        temporalMode === 'live' && aviationOverlay
-          ? aviationOverlay.nodes.length + aviationOverlay.edges.length
-          : 0,
-      seismic:
-        temporalMode !== 'live'
-          ? 0
-          : scope === 'world'
-            ? globalLive?.earthquakeCount ?? 0
-            : liveContext?.seismic.eventCount ?? 0,
-      hazards:
-        scope === 'city' && temporalMode === 'live' && hazardOverlay
-          ? hazardOverlay.nodes.length + hazardOverlay.edges.length
-          : 0,
-      transit:
-        scope === 'city' && temporalMode === 'live' && transitOverlay
-          ? transitOverlay.nodes.length + transitOverlay.edges.length
-          : 0,
-      hydrology:
-        scope === 'city' && temporalMode === 'live' && hydrologyOverlay
-          ? hydrologyOverlay.nodes.length + hydrologyOverlay.edges.length
-          : 0,
-      energy:
-        scope === 'city' && powerOverlay
-          ? powerOverlay.nodes.length + powerOverlay.edges.length
-          : 0,
-      annotations: spatialIncidents.length,
-      'workset-analysis':
-        worksetGeometry.positionedEntityCount + worksetGeometry.edgeCount,
-      'scenario-model': operatorScenarioOverlay
-        ? operatorScenarioOverlay.nodes.length +
-          operatorScenarioOverlay.edges.length
-        : 0
-    } as Record<string, number>;
+  return {
+    world: globalLive?.overlay.nodes.length ?? 0,
+    terrain: scope === 'city' ? 1 : 0,
+    buildings: scope === 'city' ? cityIdentity?.buildingCount ?? 0 : 0,
+    roads: scope === 'city' ? countOverlay('roads') : 0,
+    water: scope === 'city' ? countOverlay('water') : 0,
+    green: scope === 'city' ? countOverlay('green') : 0,
+    grid: 1,
+    weather:
+      scope === 'city' && temporalMode === 'live'
+        ? (windOverlay?.edges.length ?? (atmosphere?.current ? 1 : 0))
+        : 0,
+    air:
+      scope === 'city' &&
+      temporalMode === 'live' &&
+      liveContext?.airQuality.current?.usAqi != null
+        ? 1
+        : 0,
+    aviation:
+      temporalMode === 'live' && aviationOverlay
+        ? aviationOverlay.nodes.length + aviationOverlay.edges.length
+        : 0,
+    seismic:
+      temporalMode !== 'live'
+        ? 0
+        : scope === 'world'
+          ? globalLive?.earthquakeCount ?? 0
+          : liveContext?.seismic.eventCount ?? 0,
+    hazards:
+      scope === 'city' && temporalMode === 'live' && hazardOverlay
+        ? hazardOverlay.nodes.length + hazardOverlay.edges.length
+        : 0,
+    transit:
+      scope === 'city' && temporalMode === 'live' && transitOverlay
+        ? transitOverlay.nodes.length + transitOverlay.edges.length
+        : 0,
+    hydrology:
+      scope === 'city' && temporalMode === 'live' && hydrologyOverlay
+        ? hydrologyOverlay.nodes.length + hydrologyOverlay.edges.length
+        : 0,
+    energy:
+      scope === 'city' && powerOverlay
+        ? powerOverlay.nodes.length + powerOverlay.edges.length
+        : 0,
+    annotations: spatialIncidents.length,
+    'workset-analysis':
+      worksetGeometry.positionedEntityCount + worksetGeometry.edgeCount,
+    'scenario-model': operatorScenarioOverlay
+      ? operatorScenarioOverlay.nodes.length +
+        operatorScenarioOverlay.edges.length
+      : 0
+  } as Record<string, number>;
 }
