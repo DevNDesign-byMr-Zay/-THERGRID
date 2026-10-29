@@ -105,13 +105,7 @@ test('runtime environment keys stay documented without credentials', async () =>
     readFile(new URL('.env.example', application), 'utf8').then(parseKeys),
   ]);
   for (const [key, source] of runtime) {
-    assert.ok(
-      appKeys.has(key),
-      `application template lacks ${key} (referenced in ${source})`,
-    );
-    assert.ok(
-      rootKeys.has(key),
-      `root template lacks ${key} (referenced in ${source})`,
-    );
+    assert.ok(appKeys.has(key), `application template lacks ${key} (referenced in ${source})`);
+    assert.ok(rootKeys.has(key), `root template lacks ${key} (referenced in ${source})`);
   }
 });
