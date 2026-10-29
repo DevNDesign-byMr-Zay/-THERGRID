@@ -88,7 +88,7 @@ async function collectRuntimeSourceKeys(directory, found = new Map()) {
   return found;
 }
 
-test('runtime environment references remain represented in both secret-free templates', async () => {
+test('runtime environment keys stay documented without credentials', async () => {
   const runtime = await collectRuntimeSourceKeys(application);
   for (const filename of [
     'aethergrid-live-provider-smoke.mjs',
@@ -108,7 +108,10 @@ test('runtime environment references remain represented in both secret-free temp
     readFile(new URL('.env.example', application), 'utf8').then(parseKeys),
   ]);
   for (const [key, source] of runtime) {
-    assert.ok(appKeys.has(key), `application template lacks ${key} (referenced in ${source})`);
+    assert.ok(
+      appKeys.has(key),
+      `application template lacks ${key} (referenced in ${source})`,
+    );
     assert.ok(rootKeys.has(key), `root template lacks ${key} (referenced in ${source})`);
   }
 });
