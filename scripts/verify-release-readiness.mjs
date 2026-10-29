@@ -32,6 +32,8 @@ const REQUIRED_FILES = Object.freeze([
   'apps/aethergrid-console/state.js',
   'apps/aethergrid-console/standalone-geo.js',
   'apps/aethergrid-console/spatial-math.js',
+  'apps/aethergrid-console/legacy-globe-core.js',
+  'apps/aethergrid-console/legacy-visualizers.js',
   'apps/aethergrid-console/server.mjs',
   'apps/aethergrid-console/analysis/city-use-cases.mjs',
   'apps/aethergrid-console/analysis/city-metrics.mjs',

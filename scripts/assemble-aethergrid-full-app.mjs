@@ -20,6 +20,8 @@ const LEGACY_FILES = new Set([
   'state.js',
   'standalone-geo.js',
   'spatial-math.js',
+  'legacy-globe-core.js',
+  'legacy-visualizers.js',
   'manifest.webmanifest',
   'sw.js',
 ]);
@@ -89,6 +91,8 @@ const REQUIRED_RUNTIME_FILES = Object.freeze([
   'legacy/state.js',
   'legacy/standalone-geo.js',
   'legacy/spatial-math.js',
+  'legacy/legacy-globe-core.js',
+  'legacy/legacy-visualizers.js',
   'node_modules/zod/package.json',
 ]);
 
@@ -362,7 +366,9 @@ const legacyJs = legacySource.get('app.js')?.toString('utf8');
 const legacyStateJs = legacySource.get('state.js')?.toString('utf8');
 const legacyGeoJs = legacySource.get('standalone-geo.js')?.toString('utf8');
 const legacyMathJs = legacySource.get('spatial-math.js')?.toString('utf8');
-assert(legacyHtml && legacyCss && legacyJs && legacyStateJs && legacyGeoJs && legacyMathJs, 'legacy compatibility sources must remain available');
+const legacyGlobeCoreJs = legacySource.get('legacy-globe-core.js')?.toString('utf8');
+const legacyVisualizersJs = legacySource.get('legacy-visualizers.js')?.toString('utf8');
+assert(legacyHtml && legacyCss && legacyJs && legacyStateJs && legacyGeoJs && legacyMathJs && legacyGlobeCoreJs && legacyVisualizersJs, 'legacy compatibility sources must remain available');
 
 let legacyStandalone = legacyHtml
   .replace(/\s*<link rel="manifest" href="\.\/manifest\.webmanifest" \/>\n?/u, '')
@@ -370,6 +376,8 @@ let legacyStandalone = legacyHtml
   .replace('<script src="./state.js" defer></script>', `<script>\n${legacyStateJs}\n</script>`)
   .replace('<script src="./standalone-geo.js" defer></script>', `<script>\n${legacyGeoJs}\n</script>`)
   .replace('<script src="./spatial-math.js" defer></script>', `<script>\n${legacyMathJs}\n</script>`)
+  .replace('<script src="./legacy-globe-core.js" defer></script>', `<script>\n${legacyGlobeCoreJs}\n</script>`)
+  .replace('<script src="./legacy-visualizers.js" defer></script>', `<script>\n${legacyVisualizersJs}\n</script>`)
   .replace('<script src="./app.js" defer></script>', `<script>\n${legacyJs}\n</script>`);
 
 for (const [path, mime] of [

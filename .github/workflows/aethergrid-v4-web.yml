@@ -4,6 +4,12 @@ on:
   pull_request:
     paths:
       - 'apps/aethergrid-console/web/**'
+      - 'apps/aethergrid-console/app.js'
+      - 'apps/aethergrid-console/index.html'
+      - 'apps/aethergrid-console/legacy-globe-core.js'
+      - 'apps/aethergrid-console/legacy-visualizers.js'
+      - 'apps/aethergrid-console/sw.js'
+      - 'scripts/assemble-aethergrid-full-app.mjs'
       - 'tests/aethergrid-v4-web-foundation.test.mjs'
       - 'tests/aethergrid-canonical-live-gate.test.mjs'
       - 'scripts/aethergrid-canonical-provider-smoke.mjs'
