@@ -2,6 +2,8 @@
 
 ## Unreleased — 0.3.3
 
+- Extract legacy 4×4 camera transforms and bounded bilinear terrain interpolation into a pure, directly tested classic script; include it in the offline cache, source inventory, lint and single-HTML legacy package without changing canonical React/Cesium behavior.
+
 - Normalize public HTTP error status and redact unexpected provider/5xx exception details at the API boundary; preserve bounded client errors and add executable security regressions.
 
 - Extract deterministic advisory optimization scoring from the HTTP server into a pure, directly tested model; maintain route-level validation, receipts, history and no-physical-actuation boundaries.
