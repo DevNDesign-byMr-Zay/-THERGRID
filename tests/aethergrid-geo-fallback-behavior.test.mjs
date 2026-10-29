@@ -2,21 +2,21 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  seededFallback,
+  fallbackPower,
   fallbackRoads,
-  fallbackPower
+  seededFallback,
 } from '../apps/aethergrid-console/geo-fallback.mjs';
 import {
   heightProfile,
   numericMinHeight,
   numericRoofHeight,
+  numericVoltage,
   roofHeightSource,
-  numericVoltage
 } from '../apps/aethergrid-console/geo-metrics.mjs';
 
 const city = Object.freeze({ id: 'new-york' });
 
-test('synthetic building footprints are stable per city and never look like observed heights', () => {
+test('synthetic buildings are reproducible and explicitly marked as fallback', () => {
   const buildings = seededFallback(city, 5);
   assert.deepEqual(buildings, seededFallback(city, 5));
   assert.notDeepEqual(buildings, seededFallback({ id: 'london' }, 5));
@@ -32,7 +32,7 @@ test('synthetic building footprints are stable per city and never look like obse
   assert.deepEqual(seededFallback(city, 0), []);
 });
 
-test('synthetic roads are deterministic and independent from building generation', () => {
+test('synthetic roads are deterministic and separate from building geometry', () => {
   const roads = fallbackRoads(city, 6);
   assert.deepEqual(roads, fallbackRoads(city, 6));
   assert.notDeepEqual(roads, fallbackRoads({ id: 'tokyo' }, 6));
@@ -40,12 +40,15 @@ test('synthetic roads are deterministic and independent from building generation
   for (const [index, road] of roads.entries()) {
     assert.equal(road.id, `fallback-road-${index + 1}`);
     assert.equal(road.path.length, 4);
-    assert.ok(road.path.every((point) => point.length === 2 && point.every(Number.isFinite)));
+    for (const point of road.path) {
+      assert.equal(point.length, 2);
+      assert.ok(point.every(Number.isFinite));
+    }
     assert.equal(road.highwayType, index % 5 === 0 ? 'primary' : 'residential');
   }
 });
 
-test('synthetic power networks keep bounded, separate asset and line identities', () => {
+test('synthetic power has deterministic asset and line identities', () => {
   const power = fallbackPower(city);
   assert.deepEqual(power, fallbackPower(city));
   assert.notDeepEqual(power, fallbackPower({ id: 'sydney' }));
@@ -53,27 +56,33 @@ test('synthetic power networks keep bounded, separate asset and line identities'
   assert.equal(power.powerLines.length, 8);
   assert.equal(new Set(power.powerAssets.map((item) => item.id)).size, 9);
   assert.equal(new Set(power.powerLines.map((item) => item.id)).size, 8);
-  assert.ok(power.powerAssets.every((asset) =>
-    asset.position.length === 2 && asset.position.every(Number.isFinite)
-  ));
-  assert.ok(power.powerLines.every((line) =>
-    line.path.length === 4 && line.path.flat().every(Number.isFinite)
-  ));
+  for (const asset of power.powerAssets) {
+    assert.equal(asset.position.length, 2);
+    assert.ok(asset.position.every(Number.isFinite));
+  }
+  for (const line of power.powerLines) {
+    assert.equal(line.path.length, 4);
+    assert.ok(line.path.flat().every(Number.isFinite));
+  }
 });
 
-test('real OSM height tags retain source priority and metric/imperial conversion', () => {
+test('real OSM heights prioritize explicit tags and convert imperial measurements', () => {
   const explicit = heightProfile({ height: '100 ft', 'building:levels': '99' });
   assert.equal(explicit.source, 'height');
   assert.ok(Math.abs(explicit.heightM - 30.48) < 1e-10);
-  assert.deepEqual(heightProfile({ est_height: '25,5' }), { heightM: 25.5, source: 'est_height' });
-  assert.deepEqual(heightProfile({ 'building:levels': '10' }), { heightM: 32, source: 'building:levels' });
-  assert.deepEqual(heightProfile({ height: '5000' }), { heightM: 1200, source: 'height' });
+  const estimated = heightProfile({ est_height: '25,5' });
+  assert.equal(estimated.heightM, 25.5);
+  assert.equal(estimated.source, 'est_height');
+  const byLevels = heightProfile({ 'building:levels': '10' });
+  assert.equal(byLevels.heightM, 32);
+  assert.equal(byLevels.source, 'building:levels');
+  assert.equal(heightProfile({ height: '5000' }).heightM, 1200);
   const missing = heightProfile({ height: 'not-a-number' }, 'fixed-building-id');
   assert.equal(missing.source, 'inferred');
   assert.deepEqual(missing, heightProfile({}, 'fixed-building-id'));
 });
 
-test('OSM roof and floor elevation calculations preserve source provenance', () => {
+test('OSM floor and roof measurements retain source semantics', () => {
   assert.ok(Math.abs(numericMinHeight({ min_height: '10 ft' }) - 3.048) < 1e-10);
   assert.equal(numericMinHeight({ 'building:min_level': '3' }), 9.600000000000001);
   assert.equal(numericMinHeight({}), 0);
@@ -84,7 +93,7 @@ test('OSM roof and floor elevation calculations preserve source provenance', () 
   assert.equal(roofHeightSource({}), 'inferred');
 });
 
-test('power voltages remain numeric and unknown provider values remain unavailable', () => {
+test('power voltage parsing preserves the maximum and represents unknown as null', () => {
   assert.equal(numericVoltage('33 000;138000'), 138000);
   assert.equal(numericVoltage('220 kV;110000'), 110000);
   assert.equal(numericVoltage('unknown'), null);
