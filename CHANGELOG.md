@@ -2,6 +2,8 @@
 
 ## Unreleased — 0.3.3
 
+- Extract context-aware city source gating and world/city overlay ordering into a pure typed module, with five direct tests for provider fallbacks, historical/forecast masking, wind geometry and layer precedence.
+
 - Extract React operational weather, air-quality and seismic presentation into a typed and directly tested service, preserving provider timestamps and live, forecast, stale and fallback states.
 
 - Validate incoming JSON request sizes against actual UTF-8 bytes, reject oversized bodies with 413 and malformed JSON with 400, and execute multi-chunk security regressions without exposing request content.
