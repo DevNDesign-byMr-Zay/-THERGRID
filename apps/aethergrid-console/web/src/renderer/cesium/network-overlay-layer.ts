@@ -42,7 +42,7 @@ import {
   scenarioColor
 } from '../overlays/color-mapping';
 
-import type { SpatialScenarioVisual, TemporalInstant, VisualMode } from '../spatial-renderer';
+import type { TemporalInstant, VisualMode } from '../spatial-renderer';
 
 import {
   isActiveAt,
