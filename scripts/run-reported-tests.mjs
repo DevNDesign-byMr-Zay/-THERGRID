@@ -4,7 +4,10 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const report = resolve(root, process.env.AETHERGRID_JUNIT_PATH || 'test-results/junit/root-tests.xml');
+const report = resolve(
+  root,
+  process.env.AETHERGRID_JUNIT_PATH || 'test-results/junit/root-tests.xml',
+);
 
 async function discoverTests(folder) {
   const entries = await readdir(folder, { withFileTypes: true });
@@ -40,10 +43,15 @@ const args = [
   ...files,
 ];
 
+// Node marks child processes spawned by node:test as nested. Remove that marker
+// so the reporter itself can be tested with real passing/failing fixture runners.
+const cleanEnvironment = { ...process.env };
+delete cleanEnvironment.NODE_TEST_CONTEXT;
+
 const result = await new Promise((resolveResult, reject) => {
   const child = spawn(process.execPath, args, {
     cwd: root,
-    env: process.env,
+    env: cleanEnvironment,
     stdio: 'inherit',
   });
   child.once('error', reject);
