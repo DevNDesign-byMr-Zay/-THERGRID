@@ -35,6 +35,7 @@ const REQUIRED_RUNTIME_FILES = Object.freeze([
   'analysis/city-use-cases.mjs',
   'analysis/city-metrics.mjs',
   'analysis/city-planning.mjs',
+  'analysis/operator-optimization.mjs',
   'security/session-runtime.mjs',
   'configure-account.mjs',
   'geo-runtime.mjs',

@@ -35,6 +35,7 @@ const REQUIRED_FILES = Object.freeze([
   'apps/aethergrid-console/analysis/city-use-cases.mjs',
   'apps/aethergrid-console/analysis/city-metrics.mjs',
   'apps/aethergrid-console/analysis/city-planning.mjs',
+  'apps/aethergrid-console/analysis/operator-optimization.mjs',
   'apps/aethergrid-console/web-runtime.mjs',
   'apps/aethergrid-console/web/package.json',
   'apps/aethergrid-console/web/package-lock.json',
