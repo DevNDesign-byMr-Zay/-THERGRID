@@ -595,8 +595,9 @@ async function main() {
       `ÆTHERGRID backend must preserve maintained route: ${route}`,
     );
   }
+  const operatorGraphSource = await text('apps/aethergrid-console/operator-state.mjs');
   assert(
-    /dimensions: \['x', 'y', 'z', 'time'\]/u.test(await text('apps/aethergrid-console/operator-state.mjs')) &&
+    /dimensions: \['x', 'y', 'z', 'time'\]/u.test(operatorGraphSource) &&
       /const spatialGraph = buildSpatialGraph\(\)/u.test(exactAethergridServer),
     'ÆTHERGRID backend must build a time-indexed spatial graph',
   );
