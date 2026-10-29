@@ -3,23 +3,32 @@ import { readFile } from 'node:fs/promises';
 import { stripTypeScriptTypes } from 'node:module';
 import { test } from 'node:test';
 
-// Execute the production service, removing types only. No source-text assertions.
+// Execute the production service, removing types only.
 const source = await readFile(
   new URL('../apps/aethergrid-console/web/src/services/nws-hazards.ts', import.meta.url),
   'utf8',
 );
 const { loadNwsHazards } = await import(
-  'data:text/javascript;base64,' + Buffer.from(stripTypeScriptTypes(source)).toString('base64')
+  'data:text/javascript;base64,' + Buffer.from(stripTypeScriptTypes(source)).toString('base64'),
 );
 const fetchedAt = '2026-10-01T12:00:00Z';
 const effective = '2026-10-01T11:00:00Z';
 const expires = '2026-10-01T15:00:00Z';
-const ring = [[-74, 40], [-73, 40], [-73, 41], [-74, 40]];
+const ring = [
+  [-74, 40],
+  [-73, 40],
+  [-73, 41],
+  [-74, 40],
+];
 
 function alert(overrides = {}) {
   return {
-    id: 'fixture-alert', event: 'Flood Warning', severity: 'Severe',
-    effective, onset: '2026-10-01T10:00:00Z', expires,
+    id: 'fixture-alert',
+    event: 'Flood Warning',
+    severity: 'Severe',
+    effective,
+    onset: '2026-10-01T10:00:00Z',
+    expires,
     geometry: { type: 'Polygon', coordinates: [ring] },
     ...overrides,
   };
@@ -29,9 +38,13 @@ function fixture(t, alerts = [], receipt = { live: true }) {
   const requests = [];
   t.mock.method(globalThis, 'fetch', async (url, options) => {
     requests.push({ url, options });
-    return new Response(JSON.stringify({
-      receipt: { retrievedAt: fetchedAt, ...receipt }, data: { alerts },
-    }), { headers: { 'content-type': 'application/json' } });
+    return new Response(
+      JSON.stringify({
+        receipt: { retrievedAt: fetchedAt, ...receipt },
+        data: { alerts },
+      }),
+      { headers: { 'content-type': 'application/json' } },
+    );
   });
   return requests;
 }
@@ -73,9 +86,17 @@ test('NWS emits exact source boundary segments and no affected-area fill', async
   const { overlay } = await loadNwsHazards(40, -74);
   assert.equal(overlay.edges.length, 3);
   assert.deepEqual(overlay.areas, []);
-  assert.deepEqual(overlay.edges.map((edge) => [
-    [edge.from.longitude, edge.from.latitude], [edge.to.longitude, edge.to.latitude],
-  ]), [[ring[0], ring[1]], [ring[1], ring[2]], [ring[2], ring[3]]]);
+  assert.deepEqual(
+    overlay.edges.map((edge) => [
+      [edge.from.longitude, edge.from.latitude],
+      [edge.to.longitude, edge.to.latitude],
+    ]),
+    [
+      [ring[0], ring[1]],
+      [ring[1], ring[2]],
+      [ring[2], ring[3]],
+    ],
+  );
   for (const edge of overlay.edges) {
     assert.equal(edge.properties.eventType, 'nws-alert-boundary');
     assert.equal(edge.properties.boundaryOnly, true);
@@ -87,15 +108,31 @@ test('NWS emits exact source boundary segments and no affected-area fill', async
 
 test('NWS closes open rings and preserves multipolygon and hole identity', async (t) => {
   const open = ring.slice(0, 3);
-  fixture(t, [alert({ geometry: {
-    type: 'MultiPolygon', coordinates: [[open, open], [open]],
-  } })]);
+  fixture(t, [
+    alert({
+      geometry: {
+        type: 'MultiPolygon',
+        coordinates: [[open, open], [open]],
+      },
+    }),
+  ]);
   const { overlay } = await loadNwsHazards(40, -74);
   assert.equal(overlay.edges.length, 9);
   assert.equal(new Set(overlay.edges.map((edge) => edge.id)).size, 9);
-  assert.deepEqual(overlay.edges.map((edge) => [
-    edge.properties.polygonIndex, edge.properties.ringIndex,
-  ]), [[0, 0], [0, 0], [0, 0], [0, 1], [0, 1], [0, 1], [1, 0], [1, 0], [1, 0]]);
+  assert.deepEqual(
+    overlay.edges.map((edge) => [edge.properties.polygonIndex, edge.properties.ringIndex]),
+    [
+      [0, 0],
+      [0, 0],
+      [0, 0],
+      [0, 1],
+      [0, 1],
+      [0, 1],
+      [1, 0],
+      [1, 0],
+      [1, 0],
+    ],
+  );
   assert.deepEqual(overlay.areas, []);
 });
 
@@ -115,11 +152,17 @@ test('NWS uses point-context markers and onset when geometry and effective are a
 
 test('NWS bounds alert count, text, zones and total boundary segments', async (t) => {
   const coordinates = Array.from({ length: 2100 }, (_, i) => [-74 + i / 10000, 40]);
-  fixture(t, Array.from({ length: 30 }, (_, i) => alert({
-    id: String(i), description: 'x'.repeat(1500),
-    affectedZones: Array.from({ length: 70 }, () => 'zone'),
-    geometry: { type: 'Polygon', coordinates: [coordinates] },
-  })));
+  fixture(
+    t,
+    Array.from({ length: 30 }, (_, i) =>
+      alert({
+        id: String(i),
+        description: 'x'.repeat(1500),
+        affectedZones: Array.from({ length: 70 }, () => 'zone'),
+        geometry: { type: 'Polygon', coordinates: [coordinates] },
+      }),
+    ),
+  );
   const result = await loadNwsHazards(40, -74);
   assert.equal(result.alerts.length, 24);
   assert.equal(result.overlay.nodes.length, 24);
@@ -129,10 +172,21 @@ test('NWS bounds alert count, text, zones and total boundary segments', async (t
 });
 
 test('NWS ignores invalid boundary coordinates and normalizes untrusted text', async (t) => {
-  fixture(t, [alert({
-    event: '  Flood\n Warning  ',
-    geometry: { type: 'Polygon', coordinates: [[[181, 0], [0, 91], ['bad', 0]]] },
-  })]);
+  fixture(t, [
+    alert({
+      event: '  Flood\n Warning  ',
+      geometry: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [181, 0],
+            [0, 91],
+            ['bad', 0],
+          ],
+        ],
+      },
+    }),
+  ]);
   const result = await loadNwsHazards(40, -74);
   assert.equal(result.alerts[0].event, 'Flood Warning');
   assert.deepEqual(result.overlay.edges, []);
@@ -142,7 +196,9 @@ test('NWS reports HTTP and transport failures instead of successful empty data',
   t.mock.method(globalThis, 'fetch', async () => new Response(null, { status: 503 }));
   await assert.rejects(loadNwsHazards(40, -74), /HTTP 503/u);
   t.mock.restoreAll();
-  t.mock.method(globalThis, 'fetch', async () => { throw new Error('fixture transport failed'); });
+  t.mock.method(globalThis, 'fetch', async () => {
+    throw new Error('fixture transport failed');
+  });
   await assert.rejects(loadNwsHazards(40, -74), /fixture transport failed/u);
 });
 
@@ -154,4 +210,39 @@ test('NWS malformed JSON is empty and explicitly non-live fallback', async (t) =
   assert.deepEqual(result.alerts, []);
   assert.deepEqual(result.overlay.nodes, []);
   assert.deepEqual(result.overlay.edges, []);
+});
+
+// Retain existing integration-wiring guards alongside the runtime assertions.
+async function text(path) {
+  return readFile(new URL('../' + path, import.meta.url), 'utf8');
+}
+
+test('v4 NWS hazards render consistently in Cesium and native failover', async () => {
+  const [cesium, nativeRenderer] = await Promise.all([
+    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+  ]);
+
+  for (const renderer of [cesium, nativeRenderer]) {
+    assert.match(renderer, /nws-alert/u);
+    assert.match(renderer, /nws-alert-boundary/u);
+    assert.match(renderer, /severity/u);
+  }
+  assert.match(cesium, /clampToGround/u);
+  assert.match(nativeRenderer, /hazardHex/u);
+});
+
+test('v4 NWS hazard scene layer is live-only and excluded on fallback receipts', async () => {
+  const [app, presets] = await Promise.all([
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/app/use-case-presets.ts'),
+  ]);
+
+  assert.match(app, /loadNwsHazards/u);
+  assert.match(app, /temporal\.mode !== 'live'/u);
+  assert.match(app, /globalThis\.setInterval\(refresh, 60_000\)/u);
+  assert.match(app, /!hazardContext\.fallback/u);
+  assert.match(app, /NWS ACTIVE HAZARDS/u);
+  assert.match(app, /\{ id: 'hazards', visible: true \}/u);
+  assert.match(presets, /'hazards'/u);
 });
