@@ -76,6 +76,31 @@ test('untrusted objective weights are bounded and non-numeric weights use defaul
   assert.equal(fallback.emissionsWeight, 50);
 });
 
+test('invalid reserve constraints fall back to finite advisory values', () => {
+  for (const raw of ['not-a-number', 'Infinity', Number.NaN]) {
+    const result = computeOperatorOptimization(
+      { constraints: { minimumReservePercent: raw } },
+      baseline,
+    );
+    assert.equal(result.minimumReservePercent, 18);
+    for (const metric of [
+      result.currentCost,
+      result.classicalCandidateCost,
+      result.candidateCost,
+      result.emissionsReduction,
+      result.renewableUtilizationGain,
+      result.reliabilityScore,
+    ]) {
+      assert.ok(Number.isFinite(metric));
+    }
+  }
+  assert.equal(
+    computeOperatorOptimization({ constraints: { minimumReservePercent: 999 } }, baseline)
+      .minimumReservePercent,
+    40,
+  );
+});
+
 test('custom scenarios are deterministic without modifying the operator scenario state', () => {
   const custom = Object.freeze({
     loadMultiplierPercent: 125,
