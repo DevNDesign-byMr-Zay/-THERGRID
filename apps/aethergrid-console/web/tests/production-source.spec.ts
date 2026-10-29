@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test';
+import { isolateBackgroundFeeds } from './helpers/isolate-background-feeds';
+
+test.beforeEach(async ({ page }) => {
+  await isolateBackgroundFeeds(page);
+});
 
 test('source presentation never promotes stale, static or unknown receipts to live', async () => {
   const path = '../src/services/source-presentation';
