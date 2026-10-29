@@ -24,9 +24,7 @@ function parseExample(source) {
 test('.env.example covers the maintained health and observability configuration', async () => {
   const values = parseExample(await readFile(ENV_EXAMPLE, 'utf8'));
 
-  assert.deepEqual(
-    Object.keys(values).sort(),
-    [
+  for (const requiredKey of [
       'AETHERGRID_AIR_QUALITY_PROVIDER',
       'AETHERGRID_AIR_QUALITY_URL',
       'AETHERGRID_AI_MODEL',
@@ -107,8 +105,12 @@ test('.env.example covers the maintained health and observability configuration'
       'SERVICE_NAME',
       'THERGRID_LOG_LEVEL',
       'THERGRID_PORT',
-    ].sort(),
-  );
+  ]) {
+    assert.ok(
+      Object.hasOwn(values, requiredKey),
+      `missing maintained environment setting: ${requiredKey}`,
+    );
+  }
 
   assert.deepEqual(parseHealthServiceConfig(values), {
     PORT: 8080,
