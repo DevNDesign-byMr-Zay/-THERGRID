@@ -70,7 +70,7 @@ test('standalone flat terrain is bounded with seven-by-seven local samples', () 
   assert.ok(terrain.points.every((p) => Number.isFinite(p.x) && Number.isFinite(p.z)));
 });
 
-test('legacy direct-open script and cache inventory include standalone geospatial module', async () => {
+test('legacy offline HTML loads and caches the extracted city module', async () => {
   const root = new URL('../apps/aethergrid-console/', import.meta.url);
   const html = await readFile(new URL('index.html', root), 'utf8');
   const sw = await readFile(new URL('sw.js', root), 'utf8');
