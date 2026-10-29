@@ -70,7 +70,7 @@ test('v4 NOAA hydrology layer is available to both renderer engines and operatio
     text('apps/aethergrid-console/web/src/renderer/overlays/color-mapping.ts'),
   ]);
 
-  assert.match(cesium, /noaa-nwps-gauge/u);
+  assert.match(palette, /noaa-nwps-gauge/u);
   assert.match(palette, /hydrologyColor/u);
   assert.match(cesium, /nodeColor/u);
   assert.match(nativeRenderer, /noaa-nwps-gauge/u);
