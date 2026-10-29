@@ -9,9 +9,10 @@ export function computeOperatorOptimization(input = {}, { scenario, scenarioPara
     0,
     Math.min(100, Number.isFinite(rawEmissionsWeight) ? rawEmissionsWeight : 50),
   );
+  const rawMinimumReservePercent = Number(input.constraints?.minimumReservePercent ?? 18);
   const minimumReservePercent = Math.max(
     5,
-    Math.min(40, Number(input.constraints?.minimumReservePercent ?? 18)),
+    Math.min(40, Number.isFinite(rawMinimumReservePercent) ? rawMinimumReservePercent : 18),
   );
   const classicalBaselineRequired =
     input.constraints?.classicalBaselineRequired !== false;
