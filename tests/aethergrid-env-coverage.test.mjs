@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const root = new URL('../', import.meta.url);
 const application = new URL('apps/aethergrid-console/', root);
+const runtimeKeyPattern = /\b(?:process\.)?env\.((?:AETHERGRID|GROQ)_[A-Z0-9_]+)\b/gu;
 
 function parseKeys(text) {
   const keys = new Set();
@@ -79,9 +80,7 @@ async function collectRuntimeSourceKeys(directory, found = new Map()) {
     if (!entry.isFile() || !/\.(?:mjs|js)$/u.test(entry.name)) continue;
     const file = new URL(entry.name, directory);
     const source = await readFile(file, 'utf8');
-    for (const match of source.matchAll(
-      /\b(?:process\.)?env\.((?:AETHERGRID|GROQ)_[A-Z0-9_]+)\b/gu,
-    )) {
+    for (const match of source.matchAll(runtimeKeyPattern)) {
       if (!found.has(match[1])) found.set(match[1], file.pathname);
     }
   }
@@ -96,9 +95,7 @@ test('runtime environment keys stay documented without credentials', async () =>
   ]) {
     const file = new URL(`scripts/${filename}`, root);
     const source = await readFile(file, 'utf8');
-    for (const match of source.matchAll(
-      /\b(?:process\.)?env\.((?:AETHERGRID|GROQ)_[A-Z0-9_]+)\b/gu,
-    )) {
+    for (const match of source.matchAll(runtimeKeyPattern)) {
       if (!runtime.has(match[1])) runtime.set(match[1], file.pathname);
     }
   }
@@ -112,6 +109,9 @@ test('runtime environment keys stay documented without credentials', async () =>
       appKeys.has(key),
       `application template lacks ${key} (referenced in ${source})`,
     );
-    assert.ok(rootKeys.has(key), `root template lacks ${key} (referenced in ${source})`);
+    assert.ok(
+      rootKeys.has(key),
+      `root template lacks ${key} (referenced in ${source})`,
+    );
   }
 });
