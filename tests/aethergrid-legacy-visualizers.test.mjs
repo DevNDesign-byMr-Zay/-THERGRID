@@ -6,6 +6,7 @@ import { runInNewContext } from 'node:vm';
 const root = new URL('../', import.meta.url);
 const read = (path) => readFile(new URL(path, root), 'utf8');
 const source = await read('apps/aethergrid-console/legacy-visualizers.js');
+const globeCoreSource = await read('apps/aethergrid-console/legacy-globe-core.js');
 
 function renderers(settings = { reducedMotion: true, animationIntensity: 40 }) {
   const frameRequests = [];
@@ -17,6 +18,7 @@ function renderers(settings = { reducedMotion: true, animationIntensity: 40 }) {
       frameRequests.push(callback);
     },
   };
+  runInNewContext(globeCoreSource, context, { timeout: 1000 });
   runInNewContext(source, context, { timeout: 1000 });
   const visualizers = context.AETHERGRID_LEGACY_VISUALIZERS({
     clamp: (x, min, max) => Math.max(min, Math.min(max, x)),
@@ -73,6 +75,8 @@ test('global 3D renderer retains WebGL-unavailable constructor, reset and source
   const canvas = { getContext: () => null };
   const globe = new visualizers.GlobalGlobe3D(canvas);
   assert.equal(globe.gl, null);
+  assert.equal(typeof globe.animate, 'function');
+  assert.equal(typeof globe.buildGlobe, 'function');
   assert.equal(globe.distance, 11.5);
   globe.distance = 7;
   globe.reset();
@@ -112,6 +116,7 @@ test('direct-open and packaged legacy pages load visualizers after math and befo
     'state.js',
     'standalone-geo.js',
     'spatial-math.js',
+    'legacy-globe-core.js',
     'legacy-visualizers.js',
     'app.js',
   ];
@@ -119,6 +124,7 @@ test('direct-open and packaged legacy pages load visualizers after math and befo
   assert.ok(at.every((index) => index > 0));
   assert.ok(at.every((index, i) => i === 0 || index > at[i - 1]));
   assert.match(sw, /legacy-visualizers\.js/u);
+  assert.match(assembly, /legacyGlobeCoreJs/u);
   assert.match(assembly, /legacyVisualizersJs/u);
   assert.match(assembly, /legacy\/legacy-visualizers\.js/u);
   assert.match(app, /AETHERGRID_LEGACY_VISUALIZERS/u);
