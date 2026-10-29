@@ -67,6 +67,7 @@ These geospatial tests cover unit conversion and height precedence, voltage pars
 
 ```powershell
 npm test
+npm run test:report
 npm run test:offline
 npm run coverage
 npm run syntax
