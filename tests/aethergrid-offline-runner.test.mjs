@@ -10,12 +10,16 @@ const scripts = new URL('../scripts/', import.meta.url);
 test('offline runner works from paths containing spaces and removes provider credentials', async () => {
   const root = await mkdtemp(join(tmpdir(), 'aethergrid offline with spaces '));
   try {
-    await mkdir(join(root, 'scripts'));
+    await mkdir(join(root, 'scripts', 'lib'), { recursive: true });
     await mkdir(join(root, 'tests', 'js'), { recursive: true });
     await mkdir(join(root, 'tests', 'nested', 'deeper'), { recursive: true });
     for (const filename of ['run-offline-tests.mjs', 'guard-offline-network.mjs']) {
       await copyFile(new URL(filename, scripts), join(root, 'scripts', filename));
     }
+    await copyFile(
+      new URL('lib/test-discovery.mjs', scripts),
+      join(root, 'scripts', 'lib', 'test-discovery.mjs'),
+    );
     await writeFile(
       join(root, 'tests', 'credential.test.mjs'),
       `import test from 'node:test';
