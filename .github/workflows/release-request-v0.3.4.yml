@@ -1,0 +1,56 @@
+# One-time, exact-main bridge for the user-authorized ÆTHERGRID v0.3.4 publication.
+# This does not replace or weaken the manual-only .github/workflows/release.yml.
+name: release/request-v0.3.4
+
+on:
+  workflow_run:
+    workflows: ['aethergrid/canonical-live']
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: aethergrid-v0.3.4-request
+  cancel-in-progress: false
+
+jobs:
+  dispatch-on-verified-main:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out precisely the successful canonical candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - name: Verify release intent, commit, version and publication state
+        id: candidate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFIED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$VERIFIED_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$VERIFIED_SHA"
+          test "$(cat docs/releases/v0.3.4.request)" = 'v0.3.4'
+          test "$(node -p "require('./package.json').version")" = '0.3.4'
+          if gh release view v0.3.4 >/dev/null 2>&1; then
+            echo 'v0.3.4 is already published: no duplicate dispatch'
+            echo 'publish=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'publish=true' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Dispatch the existing protected, manual-only publication workflow
+        if: steps.candidate.outputs.publish == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run release.yml --ref main --field tag=v0.3.4
