@@ -2,8 +2,30 @@ import { createRoot } from 'react-dom/client';
 import { useWorkspacePanels } from '../hooks/use-workspace-panels';
 import { useWeatherRadar } from '../hooks/use-weather-radar';
 import { useOperationalContext } from '../hooks/use-operational-context';
+import { saveOperationalSourceBindings } from '../services/operational-source-bindings';
 
 const globals = window as typeof window & { hook: any; update: (props: any) => void; unmount: () => void };
+const requests: { url: string; signal: AbortSignal | null | undefined }[] = [];
+const nativeFetch = window.fetch.bind(window);
+window.fetch = (input, init) => {
+  requests.push({ url: String(input), signal: init?.signal });
+  return nativeFetch(input, init);
+};
+const listeners = new Map<string, Set<unknown>>();
+const nativeAdd = window.addEventListener.bind(window);
+const nativeRemove = window.removeEventListener.bind(window);
+(window as any).addEventListener = (type: string, callback: any, options: any) => {
+  if (!listeners.has(type)) listeners.set(type, new Set());
+  listeners.get(type)!.add(callback);
+  nativeAdd(type, callback, options);
+};
+(window as any).removeEventListener = (type: string, callback: any, options: any) => {
+  listeners.get(type)?.delete(callback);
+  nativeRemove(type, callback, options);
+};
+(window as any).requests = requests;
+(window as any).listenerCount = (type: string) => listeners.get(type)?.size ?? 0;
+(window as any).saveBinding = saveOperationalSourceBindings;
 const root = createRoot(document.getElementById('root')!);
 let props: any = {
   scope: 'city', mode: 'live', enabled: true, visualMode: 'solid',
