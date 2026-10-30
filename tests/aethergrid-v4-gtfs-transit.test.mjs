@@ -47,9 +47,13 @@ test('v4 GTFS vehicles are live-only scene overlays in both renderers', async ()
       text('apps/aethergrid-console/web/src/app/agent-spatial-context.ts'),
     ]);
 
-  assert.match(app, /loadGtfsTransit/u);
-  assert.match(app, /globalThis\.setInterval\(refresh, 30_000\)/u);
-  assert.match(app, /temporal\.mode !== 'live'/u);
+  const operational = await text(
+    'apps/aethergrid-console/web/src/hooks/use-operational-context.ts',
+  );
+  assert.match(app, /useOperationalContext\(\{ scope, mode: temporal\.mode, city \}\)/u);
+  assert.match(operational, /loadGtfsTransit/u);
+  assert.match(operational, /globalThis\.setInterval\(refresh, 30_000\)/u);
+  assert.match(operational, /mode !== 'live'/u);
   assert.match(composition, /!transitContext\.fallback/u);
   assert.match(composition, /!transitContext\.unconfigured/u);
   assert.match(app, /transitOverlay/u);

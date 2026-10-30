@@ -43,18 +43,22 @@ test('v4 NOAA gauge binding is coordinate-scoped and live-only in the scene', as
     text('apps/aethergrid-console/web/src/components/LiveSceneBadges.tsx'),
   ]);
 
+  const operational = await text(
+    'apps/aethergrid-console/web/src/hooks/use-operational-context.ts',
+  );
+  assert.match(app, /useOperationalContext\(\{ scope, mode: temporal\.mode, city \}\)/u);
   assert.match(bindings, /OPERATIONAL_SOURCE_BINDINGS_EVENT/u);
   assert.doesNotMatch(bindings, /latitude|longitude|geocode/u);
   assert.match(panel, /latitude\.toFixed\(5\)/u);
   assert.match(panel, /longitude\.toFixed\(5\)/u);
-  assert.match(app, /city\.latitude\.toFixed\(5\)/u);
-  assert.match(app, /city\.longitude\.toFixed\(5\)/u);
-  assert.match(app, /loadOperationalSourceBindings/u);
-  assert.match(app, /OPERATIONAL_SOURCE_BINDINGS_EVENT/u);
-  assert.match(app, /loadNoaaHydrologyContext/u);
-  assert.match(app, /scope !== 'city'/u);
-  assert.match(app, /temporal\.mode !== 'live'/u);
-  assert.match(app, /!operationalBindings\.gaugeId/u);
+  assert.match(operational, /city\.latitude\.toFixed\(5\)/u);
+  assert.match(operational, /city\.longitude\.toFixed\(5\)/u);
+  assert.match(operational, /loadOperationalSourceBindings/u);
+  assert.match(operational, /OPERATIONAL_SOURCE_BINDINGS_EVENT/u);
+  assert.match(operational, /loadNoaaHydrologyContext/u);
+  assert.match(operational, /scope !== 'city'/u);
+  assert.match(operational, /mode !== 'live'/u);
+  assert.match(operational, /!operationalBindings\.gaugeId/u);
   assert.match(app, /hydrologyOverlay/u);
   assert.match(app, /<LiveSceneBadges/u);
   assert.match(badges, /NOAA NWPS/u);
