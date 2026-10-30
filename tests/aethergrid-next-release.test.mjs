@@ -20,5 +20,5 @@ test('new security and reproducibility milestone has a unique, aligned v0.3.4 ca
   assert.match(workflow, /workflows: \['aethergrid\/canonical-live'\]/);
   assert.match(workflow, /branches: \[main\]/);
   assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
-  assert.match(workflow, /gh workflow run release\.yml --ref main --field tag=v0\.3\.3/);
+  assert.match(workflow, /gh workflow run release\.yml --ref main --field tag=v0\.3\.4/);
 });
