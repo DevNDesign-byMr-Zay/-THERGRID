@@ -2,12 +2,13 @@ import {validateGridActions,gridActionDescription,type GridAction} from '../serv
 import { computeLayerCounts } from './layer-counts';
 import { composeSpatialOverlays, deriveCityContextOverlays } from './spatial-overlay-composition';
 import { buildAgentSpatialContext } from './agent-spatial-context';
-import {loadWeatherRadar,radarOverlay,type RadarManifest} from '../services/weather-radar';
 import {RadarControls} from '../components/RadarControls';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { flushSync } from 'react-dom';
 import { BRAND } from '../components/brand';
-import { useCommandDrawer } from '../hooks/use-command-drawer';
+import { useWorkspacePanels } from '../hooks/use-workspace-panels';
+import { useOperationalContext } from '../hooks/use-operational-context';
+import { useWeatherRadar } from '../hooks/use-weather-radar';
 
 import {
   AgentDock,
@@ -141,23 +142,6 @@ import {
 } from '../services/temporal-event-navigator';
 import type { EvidenceRecord } from '../services/evidence-client';
 import type { SpatialInvestigation } from '../services/spatial-investigation';
-import {
-  loadNwsHazards,
-  type NwsHazardContext
-} from '../services/nws-hazards';
-import {
-  loadGtfsTransit,
-  type GtfsTransitContext
-} from '../services/gtfs-transit';
-import {
-  loadNoaaHydrologyContext,
-  type NoaaHydrologyContext
-} from '../services/noaa-hydrology';
-import {
-  loadOperationalSourceBindings,
-  OPERATIONAL_SOURCE_BINDINGS_EVENT,
-  type OperationalSourceBindings
-} from '../services/operational-source-bindings';
 import { formatDataAge, formatSourceTime } from '../utils/data-freshness';
 import type { SpatialViewBookmark } from '../services/view-bookmarks';
 import {
@@ -228,32 +212,7 @@ export function App() {
   const [cityReloadId, setCityReloadId] = useState(0);
   const [searchValue, setSearchValue] = useState('');
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [intelOpen, setIntelOpen] = useState(false);
-  const [navOpen, setNavOpen] = useState(false);
-  const [navigationTab, setNavigationTab] = useState('world');
-  const [inspector, setInspector] = useState('overview');
-  const [productMode, setProductMode] = useState('GLOBAL');
-  const [activeDomain, setActiveDomain] = useState<DomainId>('energy');
-  const navigationDrawer = useCommandDrawer(navOpen, () => setNavOpen(false));
-  const intelligenceDrawer = useCommandDrawer(intelOpen, () => setIntelOpen(false));
-  const [intelWorkspace, setIntelWorkspace] = useState<
-    | 'context'
-    | 'operations'
-    | 'analysis'
-    | 'ai'
-    | 'scenario'
-    | 'quantum'
-    | 'evidence'
-    | 'system'
-    | 'settings'
-  >('context');
-  const openIntelligence = () => { setNavOpen(false); setIntelOpen(true); };
-  const showIntelligence = (workspace: typeof intelWorkspace) => {
-    setInspector('overview'); setIntelWorkspace(workspace); openIntelligence();
-  };
-  useEffect(() => {
-    setProductMode(scope === 'world' ? 'GLOBAL' : visualMode === 'holographic' ? 'HOLOGRAPHIC' : 'GRID');
-  }, [scope, visualMode]);
+  const { intelOpen, setIntelOpen, navOpen, setNavOpen, navigationTab, setNavigationTab, inspector, setInspector, productMode, setProductMode, activeDomain, setActiveDomain, navigationDrawer, intelligenceDrawer, intelWorkspace, setIntelWorkspace, openIntelligence, showIntelligence } = useWorkspacePanels({ scope, visualMode });
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [atmosphere, setAtmosphere] = useState<AtmosphericOverlaySnapshot | null>(null);
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
@@ -262,28 +221,13 @@ export function App() {
   const [forecastRevision, setForecastRevision] = useState(0);
   const [forecastError, setForecastError] = useState<string | null>(null);
   const [liveContext, setLiveContext] = useState<CityLiveSnapshot | null>(null);
-  const [hazardContext, setHazardContext] = useState<NwsHazardContext | null>(null);
-  const [hazardError, setHazardError] = useState<string | null>(null);
-  const [transitContext, setTransitContext] = useState<GtfsTransitContext | null>(null);
-  const [transitError, setTransitError] = useState<string | null>(null);
-  const [radarManifest,setRadarManifest]=useState<RadarManifest|null>(null);
-  const [radarError,setRadarError]=useState<string|null>(null);
-  const [radarFrame,setRadarFrame]=useState(0);
-  const [radarPlaying,setRadarPlaying]=useState(()=>!window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  const [radarCoverage,setRadarCoverage]=useState(false);
+  const { operationalBindings, hydrologyContext, hydrologyError, hazardContext, hazardError, transitContext, transitError } = useOperationalContext({ scope, mode: temporal.mode, city });
+  const radarEnabled = layers.some(layer => layer.id === 'weather-radar' && layer.visible);
+  const { radarManifest, radarError, radarFrame, setRadarFrame, radarPlaying, setRadarPlaying, radarCoverage, setRadarCoverage, radarSnapshot } = useWeatherRadar({ enabled: radarEnabled, mode: temporal.mode });
   const aviationEnabled = layers.some(layer=>layer.id==='aviation' && layer.visible);
   const { aviationState, aviationError, aviationOverlay } = useAviationContext({
     scope, city, mode: temporal.mode, enabled: aviationEnabled
   });
-  const [operationalBindings, setOperationalBindings] =
-    useState<OperationalSourceBindings>({
-      gaugeId: null,
-      energyRegion: null,
-      updatedAt: null
-    });
-  const [hydrologyContext, setHydrologyContext] =
-    useState<NoaaHydrologyContext | null>(null);
-  const [hydrologyError, setHydrologyError] = useState<string | null>(null);
   const [globalLive, setGlobalLive] = useState<GlobalLiveContext | null>(null);
   const [liveContextError, setLiveContextError] = useState<string | null>(null);
   const [scenarioVisual, setScenarioVisual] =
@@ -300,11 +244,6 @@ export function App() {
     environment: true,
     liveContext: true
   });
-
-  const operationalBindingScope = useMemo(
-    () => `coord:${city.latitude.toFixed(5)}:${city.longitude.toFixed(5)}`,
-    [city.latitude, city.longitude]
-  );
 
   const [recordedFrames,setRecordedFrames]=useState<string[]>([]);
   useEffect(()=>{
@@ -634,146 +573,6 @@ export function App() {
       setStreamingState({count:0,error:null});
     };
   }, [scope, city.id, city.latitude, city.longitude, temporal.mode]);
-
-  useEffect(() => {
-    const syncBindings = () => {
-      setOperationalBindings(
-        loadOperationalSourceBindings(operationalBindingScope)
-      );
-    };
-    const onBindingChange = (event: Event) => {
-      const detail = (event as CustomEvent<{ scopeId?: string }>).detail;
-      if (detail?.scopeId === operationalBindingScope) syncBindings();
-    };
-
-    syncBindings();
-    globalThis.addEventListener(
-      OPERATIONAL_SOURCE_BINDINGS_EVENT,
-      onBindingChange
-    );
-    return () =>
-      globalThis.removeEventListener(
-        OPERATIONAL_SOURCE_BINDINGS_EVENT,
-        onBindingChange
-      );
-  }, [operationalBindingScope]);
-
-  useEffect(() => {
-    if (
-      scope !== 'city' ||
-      temporal.mode !== 'live' ||
-      !operationalBindings.gaugeId
-    ) {
-      setHydrologyContext(null);
-      setHydrologyError(null);
-      return;
-    }
-
-    const controller = new AbortController();
-    const refresh = () => {
-      void loadNoaaHydrologyContext(
-        operationalBindings.gaugeId as string,
-        controller.signal
-      )
-        .then((next) => {
-          if (!controller.signal.aborted) {
-            setHydrologyContext(next);
-            setHydrologyError(null);
-          }
-        })
-        .catch((error) => {
-          if (controller.signal.aborted) return;
-          setHydrologyContext(null);
-          setHydrologyError(
-            error instanceof Error ? error.message : String(error)
-          );
-        });
-    };
-
-    refresh();
-    const timer = globalThis.setInterval(refresh, 60_000);
-    return () => {
-      controller.abort();
-      globalThis.clearInterval(timer);
-    };
-  }, [scope, temporal.mode, operationalBindings.gaugeId]);
-
-  useEffect(() => {
-    if (temporal.mode !== 'live') {
-      setHazardContext(null);
-      setHazardError(null);
-      return;
-    }
-
-    const controller = new AbortController();
-    const refresh = () => {
-      void loadNwsHazards(city.latitude, city.longitude, controller.signal)
-        .then((next) => {
-          if (!controller.signal.aborted) {
-            setHazardContext(next);
-            setHazardError(null);
-          }
-        })
-        .catch((error) => {
-          if (controller.signal.aborted) return;
-          setHazardContext(null);
-          setHazardError(error instanceof Error ? error.message : String(error));
-        });
-    };
-
-    refresh();
-    const timer = globalThis.setInterval(refresh, 60_000);
-    return () => {
-      controller.abort();
-      globalThis.clearInterval(timer);
-    };
-  }, [city.id, city.latitude, city.longitude, temporal.mode]);
-
-  useEffect(() => {
-    if (scope !== 'city' || temporal.mode !== 'live') {
-      setTransitContext(null);
-      setTransitError(null);
-      return;
-    }
-
-    const controller = new AbortController();
-    const refresh = () => {
-      void loadGtfsTransit(city.id, controller.signal)
-        .then((next) => {
-          if (!controller.signal.aborted) {
-            setTransitContext(next);
-            setTransitError(null);
-          }
-        })
-        .catch((error) => {
-          if (controller.signal.aborted) return;
-          setTransitContext(null);
-          setTransitError(error instanceof Error ? error.message : String(error));
-        });
-    };
-
-    refresh();
-    const timer = globalThis.setInterval(refresh, 30_000);
-    return () => {
-      controller.abort();
-      globalThis.clearInterval(timer);
-    };
-  }, [scope, city.id, temporal.mode]);
-
-  useEffect(()=>{const onError=(event:Event)=>setRadarError(String((event as CustomEvent).detail));window.addEventListener('aethergrid:radar-error',onError);return()=>window.removeEventListener('aethergrid:radar-error',onError);},[]);
-  const radarEnabled=layers.some(layer=>layer.id==='weather-radar' && layer.visible);
-  useEffect(()=>{
-    if(!radarEnabled || temporal.mode!=='live')return;
-    const controller=new AbortController();
-    const refresh=()=>{void loadWeatherRadar(controller.signal).then(next=>{if(controller.signal.aborted)return;setRadarManifest(next);setRadarFrame(next.frames.length-1);setRadarError(null);}).catch(error=>{if(!controller.signal.aborted){setRadarError(String(error.message));setRadarManifest(null);}});};
-    refresh();const timer=globalThis.setInterval(refresh,300000);return()=>{controller.abort();globalThis.clearInterval(timer);};
-  },[radarEnabled,temporal.mode]);
-  useEffect(()=>{
-    if(!radarPlaying || !radarManifest || temporal.mode!=='live' || !radarEnabled)return;
-    const timer=globalThis.setInterval(()=>setRadarFrame(previous=>(previous+1)%radarManifest.frames.length),2000);
-    return()=>globalThis.clearInterval(timer);
-  },[radarPlaying,radarManifest,temporal.mode,radarEnabled]);
-  const radarSnapshot=useMemo(()=>radarManifest && !radarError && radarEnabled && temporal.mode==='live'?radarOverlay(radarManifest,radarFrame,radarCoverage):null,[radarManifest,radarFrame,radarCoverage,radarError,radarEnabled,temporal.mode]);
 
   useEffect(() => {
     if (temporal.mode !== 'forecast') {

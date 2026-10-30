@@ -1,4 +1,5 @@
 import { access, readFile } from 'node:fs/promises';
+import { auditEnvironmentTemplates } from './lib/environment-coverage.mjs';
 
 const REQUIRED_FILES = Object.freeze([
   'Dockerfile',
@@ -110,6 +111,11 @@ async function text(path) {
 }
 
 async function main() {
+  const environmentAudit = await auditEnvironmentTemplates();
+  assert(
+    environmentAudit.missing.length === 0,
+    `Environment templates lack source configuration: ${JSON.stringify(environmentAudit.missing)}`,
+  );
   const root = new URL('../', import.meta.url);
   await Promise.all(REQUIRED_FILES.map((path) => access(new URL(path, root))));
 

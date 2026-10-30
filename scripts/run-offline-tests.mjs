@@ -1,24 +1,12 @@
 import { spawn } from 'node:child_process';
-import { readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
+import { discoverTests } from './lib/test-discovery.mjs';
+
 const root = fileURLToPath(new URL('../', import.meta.url));
 const testsRoot = join(root, 'tests');
-const tests = [];
-async function discoverTests(folder) {
-  for (const entry of await readdir(folder, { withFileTypes: true })) {
-    if (entry.isSymbolicLink() || entry.name === 'node_modules') continue;
-    const path = join(folder, entry.name);
-    if (entry.isDirectory()) {
-      await discoverTests(path);
-    } else if (entry.isFile() && entry.name.endsWith('.test.mjs')) {
-      tests.push(path);
-    }
-  }
-}
-await discoverTests(testsRoot);
-tests.sort();
+const tests = await discoverTests(testsRoot);
 
 const guard = new URL('./guard-offline-network.mjs', import.meta.url).href;
 const nodeOptions = [process.env.NODE_OPTIONS || '', `--import=${guard}`].filter(Boolean).join(' ');

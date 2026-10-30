@@ -242,9 +242,13 @@ test('v4 NWS hazard scene layer is live-only and excluded on fallback receipts',
     text('apps/aethergrid-console/web/src/app/spatial-overlay-composition.ts'),
   ]);
 
-  assert.match(app, /loadNwsHazards/u);
-  assert.match(app, /temporal\.mode !== 'live'/u);
-  assert.match(app, /globalThis\.setInterval\(refresh, 60_000\)/u);
+  const operational = await text(
+    'apps/aethergrid-console/web/src/hooks/use-operational-context.ts',
+  );
+  assert.match(app, /useOperationalContext\(\{ scope, mode: temporal\.mode, city \}\)/u);
+  assert.match(operational, /loadNwsHazards/u);
+  assert.match(operational, /mode !== 'live'/u);
+  assert.match(operational, /globalThis\.setInterval\(refresh, 60_000\)/u);
   assert.match(composition, /!hazardContext\.fallback/u);
   assert.match(app, /<LiveSceneBadges/u);
   assert.match(badges, /NWS ACTIVE HAZARDS/u);

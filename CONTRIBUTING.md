@@ -43,3 +43,9 @@ Container and CodeQL gates remain independent blocking checks in CI.
 Prefer small commits that name the boundary they strengthen. Do not mix broad refactors, speculative architecture, dependency churn, and safety changes in one commit.
 
 Never commit credentials, live infrastructure secrets, private grid/customer data, or real-world control tokens.
+
+For each feature or fix, prefer a focused commit below 300 changed lines where practical, with its behavioral tests. Keep extraction commits separate from formatting and dependency updates. Explain exceptions when a cohesive boundary requires a larger diff.
+
+Request review from a second real contributor before merging feature and refactor PRs. For the next ten feature/fix PRs, record that review in the PR timeline; self-review and automated checks do not count as a second human maintainer. If a reviewer is unavailable, disclose that explicitly instead of fabricating review or contributor identity. Contributor diversity and sustained maintenance must come from actual work over time.
+
+`npm run lint` enforces a 500-code-line default across JavaScript and TypeScript source and tests. Existing oversized modules have exact, non-growing budgets in `config/file-size-budgets.json`; see [module size debt](docs/MODULE_SIZE_DEBT.md). Reduce a budget after extraction and remove it once a module is at or below 500 lines. Do not raise budgets to pass CI.

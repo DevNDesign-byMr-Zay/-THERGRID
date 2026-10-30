@@ -5,6 +5,8 @@
   const { SETTINGS_KEY, DEFAULT_GLOBAL_CITIES, defaultSettings, createState } =
     globalThis.AETHERGRID_LEGACY_STATE;
   const state = createState();
+  const settingsController = globalThis.AETHERGRID_SETTINGS_CONTROLLER;
+  const { environmentHour, weatherPhenomenon } = globalThis.AETHERGRID_ENVIRONMENT_HELPERS;
 
   const toast = q('#toast');
   const panelDialog = q('#panelDialog');
@@ -25,35 +27,11 @@
   }
 
   function resolvedTheme(theme = state.settings.theme) {
-    if (theme === 'system') {
-      return globalThis.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-    }
-    return theme === 'light' ? 'light' : 'dark';
+    return settingsController.resolvedTheme(theme, Boolean(globalThis.matchMedia?.('(prefers-color-scheme: light)').matches));
   }
 
   function isLightTheme() {
     return resolvedTheme() === 'light';
-  }
-
-  function environmentHour(environment) {
-    const value = String(environment?.current?.time || '');
-    const match = value.match(/T(\d{2}):(\d{2})/u);
-    if (!match) return null;
-    return Number(match[1]) + Number(match[2]) / 60;
-  }
-
-  function weatherPhenomenon(environment) {
-    const code = Number(environment?.current?.weatherCode ?? environment?.weatherCode ?? 0);
-    if ([45, 48].includes(code)) return 'Fog';
-    if ([71, 73, 75, 77, 85, 86].includes(code)) return 'Snow';
-    if (code >= 95 && code <= 99) return 'Thunderstorm';
-    if (
-      [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code)
-    ) {
-      return 'Rain';
-    }
-    if (code >= 1 && code <= 3) return 'Cloudy';
-    return code === 0 ? 'Clear' : 'Mixed';
   }
 
   function showToast(title, copy) {
@@ -101,17 +79,12 @@
   }
 
   function loadSettings() {
-    try {
-      const stored = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-      state.settings = { ...defaultSettings, ...stored };
-    } catch {
-      state.settings = { ...defaultSettings };
-    }
+    state.settings = settingsController.loadSettings(() => localStorage, SETTINGS_KEY, defaultSettings);
     applySettings();
   }
 
   function saveSettings() {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
+    settingsController.saveSettings(localStorage, SETTINGS_KEY, state.settings);
     applySettings();
     const badge = q('#settingsSavedBadge');
     if (badge) {
@@ -122,30 +95,14 @@
   }
 
   function applySettings() {
-    const theme = resolvedTheme(state.settings.theme);
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = theme;
-    document.body.dataset.density = state.settings.density;
-    document.body.dataset.spatialLabels = state.settings.spatialLabels ? 'on' : 'off';
-    document.body.dataset.motion =
-      state.settings.reducedMotion || state.settings.animationIntensity === 0 ? 'reduced' : 'full';
-    document.documentElement.style.setProperty(
-      '--animation-scale',
-      String(state.settings.animationIntensity / 100),
-    );
-
-    const bindings = {
-      settingTheme: state.settings.theme,
-      settingDefaultWorkspace: state.settings.defaultWorkspace,
-      settingDensity: state.settings.density,
-      settingAnimation: state.settings.animationIntensity,
-      settingReducedMotion: state.settings.reducedMotion,
-      settingAutoRotate: state.settings.autoRotate,
-      settingSpatialLabels: state.settings.spatialLabels,
-      settingHour: state.settings.defaultHour,
-      settingLiveStream: state.settings.liveStream,
-      settingRefresh: String(state.settings.refreshMs),
-    };
+    const view = settingsController.applySettings(state.settings, resolvedTheme() === 'light');
+    document.documentElement.dataset.theme = view.theme;
+    document.documentElement.style.colorScheme = view.theme;
+    document.body.dataset.density = view.density;
+    document.body.dataset.spatialLabels = view.spatialLabels;
+    document.body.dataset.motion = view.motion;
+    document.documentElement.style.setProperty('--animation-scale', view.animationScale);
+    const bindings = view.bindings;
     for (const [id, value] of Object.entries(bindings)) {
       const input = q(`#${id}`);
       if (!input) continue;

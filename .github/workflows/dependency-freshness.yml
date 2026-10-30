@@ -35,10 +35,28 @@ jobs:
             exit "$status"
           fi
           node -e "JSON.parse(require('node:fs').readFileSync('dependency-outdated.json','utf8') || '{}')"
+      - name: Verify separately locked web dependency graph
+        run: |
+          npm ci --prefix apps/aethergrid-console/web --ignore-scripts
+          npm ls --prefix apps/aethergrid-console/web --depth=0
+      - name: Capture web dependency freshness
+        working-directory: apps/aethergrid-console/web
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          npm outdated --json > web-dependency-outdated.json
+          status=$?
+          set -e
+          cat web-dependency-outdated.json
+          if [ "$status" -gt 1 ]; then exit "$status"; fi
+          node -e "const r=JSON.parse(require('node:fs').readFileSync('web-dependency-outdated.json','utf8')||'{}'); if(r.error) { console.error(r.error); process.exit(1); }"
       - name: Retain dependency freshness evidence
         uses: actions/upload-artifact@v7
         with:
           name: dependency-freshness-${{ github.sha }}
           if-no-files-found: error
           retention-days: 30
-          path: dependency-outdated.json
+          path: |
+            dependency-outdated.json
+            apps/aethergrid-console/web/web-dependency-outdated.json
