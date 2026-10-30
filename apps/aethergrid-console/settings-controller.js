@@ -7,6 +7,7 @@
 
   function loadSettings(storage, key, defaults) {
     try {
+      if (typeof storage === 'function') storage = storage();
       return { ...defaults, ...JSON.parse(storage.getItem(key) || '{}') };
     } catch {
       return { ...defaults };

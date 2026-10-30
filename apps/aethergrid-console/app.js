@@ -79,7 +79,7 @@
   }
 
   function loadSettings() {
-    state.settings = settingsController.loadSettings(localStorage, SETTINGS_KEY, defaultSettings);
+    state.settings = settingsController.loadSettings(() => localStorage, SETTINGS_KEY, defaultSettings);
     applySettings();
   }
 

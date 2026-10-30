@@ -22,6 +22,17 @@ test('settings load merges defaults without mutating them and survives malformed
   assert.equal(loadSettings(stored, 'preferences', defaults).theme, 'light');
   assert.equal(loadSettings(stored, 'preferences', defaults).density, 'comfortable');
   assert.equal(defaults.theme, 'dark');
+  assert.equal(loadSettings(() => stored, 'preferences', defaults).theme, 'light');
+  assert.equal(
+    loadSettings(
+      () => {
+        throw Error('storage getter denied');
+      },
+      'preferences',
+      defaults,
+    ).theme,
+    'dark',
+  );
   for (const storage of [
     { getItem: () => '{invalid' },
     {
