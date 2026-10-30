@@ -41,7 +41,11 @@ jobs:
           test "$(git rev-parse HEAD)" = "$VERIFIED_SHA"
           test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$VERIFIED_SHA"
           test "$(cat docs/releases/v0.3.3.request)" = 'v0.3.3'
-          test "$(node -p "require('./package.json').version")" = '0.3.3'
+          if [ "$(node -p "require('./package.json').version")" != '0.3.3' ]; then
+            echo 'Retired 0.3.3 request: newer package candidate active, skipping old release dispatch'
+            echo 'publish=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if gh release view v0.3.3 >/dev/null 2>&1; then
             echo 'v0.3.3 is already published: no duplicate dispatch'
             echo 'publish=false' >> "$GITHUB_OUTPUT"
