@@ -61,6 +61,7 @@ Published via the gated exact-main release workflow on October 26, 2026.
 
 ### Verified Groq agent-control milestone
 
+- Yield spatial GPU drawing while a compact modal drawer owns interaction; retain current source state and resume visible animation on close, including safe camera-flight completion and renderer replacement.
 - Connect VÆLON, AUREN, SOLVÆR and TEAM to the configured server-side Groq OpenAI-compatible GPT-OSS runtime; retain per-agent receipts and bounded, validated application-only grid/view/layer/location/time skills with Undo.
 - Recover short upstream Groq quota cooldowns without replaying already executed local tools, duplicating state changes, or concealing failed responses.
 - Patch Zod to the verified 4.6.6 dependency and preserve audited locked installs and unchanged test thresholds.

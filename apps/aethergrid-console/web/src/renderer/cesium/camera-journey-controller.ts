@@ -27,6 +27,7 @@ const DEFAULT_STAGES: readonly CameraJourneyStage[] = [
 export class CameraJourneyController {
   #camera: Camera;
   #activeJourney = 0;
+  #renderingActive = true;
 
   constructor(camera: Camera) {
     this.#camera = camera;
@@ -35,6 +36,13 @@ export class CameraJourneyController {
   cancel(): void {
     this.#activeJourney += 1;
     this.#camera.cancelFlight();
+  }
+
+  setRenderingActive(active: boolean): void {
+    this.#renderingActive = active;
+    // Settle the current stage before the viewer stops ticking. Remaining stages
+    // resolve at their final positions without drawing behind the modal.
+    if (!active) this.#camera.completeFlight();
   }
 
   async flyTo(
@@ -89,7 +97,7 @@ export class CameraJourneyController {
     await new Promise<void>((resolve) => {
       this.#camera.flyToBoundingSphere(sphere, {
         offset,
-        duration: typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : stage.durationSeconds,
+        duration: !this.#renderingActive || (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? 0 : stage.durationSeconds,
         complete: resolve,
         cancel: resolve
       });

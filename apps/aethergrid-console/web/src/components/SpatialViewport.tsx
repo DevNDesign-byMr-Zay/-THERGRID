@@ -5,7 +5,7 @@ import {
 } from '../renderer/overlays/atmospheric-overlay';
 import type { SpatialOverlaySnapshot } from '../renderer/overlays/spatial-overlay';
 
-import { useEffect, useRef, useState, useImperativeHandle, type Ref } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useImperativeHandle, type Ref } from 'react';
 
 import { CesiumSpatialRenderer } from '../renderer/cesium/cesium-renderer';
 import { NativeWebglSpatialRenderer } from '../renderer/native/native-webgl-renderer';
@@ -27,6 +27,7 @@ import { useSpatialPerformance } from '../hooks/use-spatial-performance';
 
 interface SpatialViewportProps {
   ref?: Ref<SpatialViewportHandle>;
+  renderingActive?: boolean;
   target: SpatialTarget;
   time: TemporalInstant;
   layers: readonly LayerState[];
@@ -50,6 +51,7 @@ const STARTING_STATUS: SpatialRendererStatus = {
 
 export function SpatialViewport({
   ref,
+  renderingActive = true,
   target,
   time,
   layers,
@@ -65,6 +67,8 @@ export function SpatialViewport({
   useEffect(()=>{const reconnect=()=>setConnectionRevision(n=>n+1);window.addEventListener('aethergrid:spatial-config',reconnect);return()=>window.removeEventListener('aethergrid:spatial-config',reconnect);},[]);
   const hostRef = useRef<HTMLDivElement | null>(null);
   const managerRef = useRef<RendererManager | null>(null);
+  const renderingActiveRef = useRef(renderingActive);
+  renderingActiveRef.current = renderingActive;
   const targetRef = useRef(target);
   targetRef.current = target;
   useImperativeHandle(ref, () => ({ cameraSnapshot: () => managerRef.current?.cameraSnapshot() ?? null }), []);
@@ -78,6 +82,11 @@ export function SpatialViewport({
   const [status, setStatus] = useState<SpatialRendererStatus>(STARTING_STATUS);
   const [switchingEngine, setSwitchingEngine] = useState(false);
   const performance = useSpatialPerformance();
+
+  // Match the spatial workspace's inert boundary before the browser paints a modal.
+  useLayoutEffect(() => {
+    managerRef.current?.setRenderingActive(renderingActive);
+  }, [renderingActive]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -97,11 +106,13 @@ export function SpatialViewport({
     void (async () => {
       const publicConfig = await loadPublicRuntimeConfig();
       if (cancelled) return;
+      manager.setRenderingActive(renderingActiveRef.current);
       const next = await manager.initialize({
         cesiumIonToken: publicConfig.spatial.cesiumIonToken,
         realityEnabled: publicConfig.spatial.realityEnabled
       });
       if (cancelled) { manager.destroy(); return; }
+      manager.setRenderingActive(renderingActiveRef.current);
       setStatus(next);
       manager.setPerformanceTier(performance.resolved);
       manager.setLayers(layers);
