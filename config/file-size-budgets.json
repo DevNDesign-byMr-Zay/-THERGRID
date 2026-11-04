@@ -7,7 +7,7 @@
   "apps/aethergrid-console/web/src/components/QuantumPanel.tsx": 762,
   "apps/aethergrid-console/web/src/components/ScenarioComposerPanel.tsx": 553,
   "apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts": 623,
-  "apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts": 910,
+  "apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts": 889,
   "apps/aethergrid-console/web/src/services/city-power-overlay.ts": 759,
   "apps/aethergrid-console/web/src/services/operator-scenario.ts": 578,
   "scripts/verify-release-readiness.mjs": 745,

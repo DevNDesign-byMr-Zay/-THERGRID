@@ -87,9 +87,9 @@ jobs:
       - name: Install maintained Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Verify native draw commands, geometry and lifecycle
+      - name: Verify renderer draw commands, properties and lifecycle
         if: matrix.suite == 'operator'
-        run: npm run test:native
+        run: npm run test:renderer
 
       - name: Verify extracted hook state and lifecycle boundaries
         if: matrix.suite == 'operator'

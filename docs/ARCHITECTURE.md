@@ -14,7 +14,7 @@ The canonical surface is the React/TypeScript/Cesium application under `apps/aet
 | Native public lifecycle | `native-webgl-renderer.ts` | Retains the SpatialRenderer API, camera journeys/cancellation, overlays, picking, resize and fallback diagnostics; delegates drawing and pure calculations. |
 | Release verification | `scripts/lib/backend-readiness.mjs`, `aethergrid-package-integrity.mjs` | Check mounted backend contracts and actual archive hashes/import closure. Extracted-archive HTTP smoke verifies startup separately. |
 
-Run `npm --prefix apps/aethergrid-console/web run test:native` for deterministic draw-command and lifecycle regressions. It uses instrumented contexts, so browser acceptance remains necessary for visual, context-loss and GPU verification. See [module debt and owned follow-ups](MODULE_SIZE_DEBT.md) for every retained size exception.
+Run `npm --prefix apps/aethergrid-console/web run test:renderer` for deterministic draw-command, property-update and lifecycle regressions; `test:native` remains the native-only subset. It uses instrumented contexts, so browser acceptance remains necessary for visual, context-loss and GPU verification. See [module debt and owned follow-ups](MODULE_SIZE_DEBT.md) for every retained size exception.
 
 ## 1. System boundary
 
@@ -183,3 +183,5 @@ Then implement:
 ## 7. Definition of done for architecture foundation
 
 The architecture foundation is ready when a fresh clone can install, run tests, execute the synthetic microgrid scenario, and generate deterministic `TwinState`, `OperatingProposal`, `SimulationResult`, `DecisionReceipt`, `SpatialScene`, and renderer-ready presentation artifacts without external credentials or physical side effects.
+
+Cesium overlay graphics reuse owned `ConstantProperty` objects through `renderer/cesium/constant-property.ts`. Equal values suppress redundant graphics invalidations; changed values retain Cesium notifications and clone semantics.

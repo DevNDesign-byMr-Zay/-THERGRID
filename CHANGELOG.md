@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reuse owned Cesium constant graphics properties on clock ticks, suppressing unchanged aircraft invalidations while preserving values, animation, source geometry, opacity, selection and temporal visibility; add direct Cesium regressions and retain browser timing/trace evidence.
+
 - Pin the ESLint-only minimatch dependency to patched 11.0.1 for GHSA-g3hv-75wg-m249; retain the existing ESLint version and verify the locked graph, lint and audit.
 
 - Separate authenticated HTTP route families and observation persistence from backend startup while preserving API paths, quotas, sessions, redacted errors, shared state and canonical static serving; add real HTTP regressions.
