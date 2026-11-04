@@ -125,6 +125,9 @@ test('TEAM retains real specialist contributions and provider truth', async ({ p
 });
 
 test('global renderer remains usable with explicit engine provenance', async ({ page }) => {
+  const startedAt = Date.now();
+  const mark = (stage: string) => console.info('AETHERGRID_GLOBAL_STAGE', JSON.stringify({ stage, elapsedMs: Date.now() - startedAt }));
+  mark('launch:start');
   await test.step('launch the global renderer and confirm engine provenance', async () => {
     await page.setViewportSize({ width: 1536, height: 1024 });
     await page.goto('/');
@@ -136,14 +139,20 @@ test('global renderer remains usable with explicit engine provenance', async ({ 
     await expect(page.locator('.spatial-canvas canvas')).toBeVisible();
     await expect(page.locator('.viewport-status')).toContainText(engine === 'cesium' ? 'CESIUM WORLD' : 'NATIVE FALLBACK');
   });
+  mark('launch:complete');
+  console.info('AETHERGRID_GLOBAL_ENVIRONMENT', await page.evaluate(() => ({ tier: document.querySelector('.spatial-shell')?.getAttribute('data-performance-tier'), width: innerWidth, height: innerHeight, dpr: devicePixelRatio, cores: navigator.hardwareConcurrency })));
+  mark('controls:start');
   await test.step('open and close renderer performance controls', async () => {
     await page.getByText('Renderer tools', { exact: true }).click();
     await expect(page.getByRole('group', { name: 'Spatial graphics performance' })).toBeVisible();
     await page.getByText('Renderer tools', { exact: true }).click();
   });
+  mark('controls:complete');
+  mark('screenshot:start');
   await test.step('capture the rendered global workspace', async () => {
     await page.screenshot({ path: 'test-results/global-renderer-1536x1024.png' });
   });
+  mark('screenshot:complete');
 });
 
 test('specialist conversations consume the actual runtime contract', async ({ page }) => {

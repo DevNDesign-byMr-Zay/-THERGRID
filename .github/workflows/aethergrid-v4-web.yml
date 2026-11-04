@@ -118,7 +118,8 @@ jobs:
         if: matrix.suite == 'operator'
         env:
           AETHERGRID_TEST_CANONICAL: '1'
-        run: npx playwright test tests/command-center.spec.ts --grep "compact drawers contain focus and switch exclusively|global renderer remains usable with explicit engine provenance" --output=test-results/drawer-focus --workers=1 --reporter=line
+          DEBUG: 'pw:api'
+        run: npx playwright test tests/command-center.spec.ts --grep "compact drawers contain focus and switch exclusively|global renderer remains usable with explicit engine provenance" --output=test-results/drawer-focus --workers=1 --reporter=line --trace=retain-on-failure
 
       - name: Verify production shell, appearance and source truth
         if: matrix.suite == 'appearance'
