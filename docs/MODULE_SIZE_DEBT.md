@@ -1,27 +1,31 @@
 # Module size debt
 
-The default ceiling is 500 nonblank, noncomment code lines. `npm run lint` checks maintained JavaScript and TypeScript source and tests. ESLint also enforces `max-lines` on maintained JavaScript. These existing exceptions freeze the current sizes; they do not allow unlimited growth. Extract responsibilities with behavioral tests, lower the budget after extraction, and remove it at 500 lines or below.
+The default ceiling is 500 nonblank, noncomment code lines, measured from syntax tokens. `npm run lint` scans maintained JavaScript and TypeScript source and tests; ESLint also checks maintained JavaScript. These finite exceptions cannot grow. Extract one cohesive responsibility with behavioral regression tests, lower its ceiling, and retire it at 500 or below.
 
-The settings and provider-time/weather helpers now have independent classic-script modules because the legacy console and inlined standalone HTML must continue to open without a module server. React drawer state, operational provider lifecycles and radar state now live in dedicated hooks.
+Owner for every row: **DevNDesign-byMr-Zay**, the repository maintainer. Tracking: [#232](https://github.com/DevNDesign-byMr-Zay/-THERGRID/issues/232). Each exception is temporary and has its own rationale and intended resolution below.
 
-| Existing module | Maximum code lines | Next boundary to extract |
-| --- | ---: | --- |
-| `apps/aethergrid-console/ai-runtime.mjs` | 675 | Extract cohesive runtime or presentation responsibilities |
-| `apps/aethergrid-console/app.js` | 3462 | Legacy renderer geometry and workspace controllers |
-| `apps/aethergrid-console/geo-runtime.mjs` | 851 | Extract cohesive runtime or presentation responsibilities |
-| `apps/aethergrid-console/providers/transit-registry.mjs` | 530 | Extract cohesive runtime or presentation responsibilities |
-| `apps/aethergrid-console/server.mjs` | 1231 | Extract cohesive runtime or presentation responsibilities |
-| `apps/aethergrid-console/web/src/app/App.tsx` | 2132 | Spatial acquisition and intelligence workspace composition |
-| `apps/aethergrid-console/web/src/components/QuantumPanel.tsx` | 762 | Extract cohesive runtime or presentation responsibilities |
-| `apps/aethergrid-console/web/src/components/ScenarioComposerPanel.tsx` | 553 | Extract cohesive runtime or presentation responsibilities |
-| `apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts` | 623 | Extract cohesive runtime or presentation responsibilities |
-| `apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts` | 910 | Extract cohesive runtime or presentation responsibilities |
-| `apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts` | 1324 | Extract cohesive runtime or presentation responsibilities |
-| `apps/aethergrid-console/web/src/services/city-power-overlay.ts` | 759 | Extract cohesive runtime or presentation responsibilities |
-| `apps/aethergrid-console/web/src/services/operator-scenario.ts` | 578 | Extract cohesive runtime or presentation responsibilities |
-| `scripts/verify-release-readiness.mjs` | 905 | Release, package and workflow contract groups |
-| `tests/aethergrid-ai-runtime.test.mjs` | 838 | Split behavioral suites by maintained contract |
-| `tests/aethergrid-console.test.mjs` | 506 | Split behavioral suites by maintained contract |
-| `tests/aethergrid-global-quantum-profile.test.mjs` | 844 | Split behavioral suites by maintained contract |
-| `tests/aethergrid-v4-provider-foundation.test.mjs` | 822 | Split behavioral suites by maintained contract |
-| `tests/aethergrid-v4-web-foundation.test.mjs` | 1146 | Split behavioral suites by maintained contract |
+The backend entry point is now 199 code lines, with authorization, observation persistence and route families under `server/http/`. The native renderer is now 498 code lines, with pure frame/environment/geometry and draw backends alongside it. Neither needs a size exception. The release-readiness entry point decreased from 905 to 745 lines. Existing settings/environment companions and React panel/provider/radar hooks remain in place.
+
+| Module | Ceiling | Temporary rationale | Intended resolution |
+| --- | ---: | --- | --- |
+| `apps/aethergrid-console/ai-runtime.mjs` | 675 | Provider routing, tool execution and specialist orchestration share safety context. | Extract provider response/receipt normalization; retain bounded tool execution and specialist command tests. |
+| `apps/aethergrid-console/app.js` | 3462 | Classic script initialization, DOM listeners and file:// packaging must stay ordered. | Extract legacy spatial geometry and draw lifecycle behind existing companion factories; preserve the recorded geometry/camera characterization and direct-open browser acceptance. |
+| `apps/aethergrid-console/geo-runtime.mjs` | 851 | Provider acquisition, cache and mapped/fallback geometry share geographic provenance. | Extract provider fetch/cache policy from mesh normalization; test coordinates, cancellation, offline fallback and source identity. |
+| `apps/aethergrid-console/providers/transit-registry.mjs` | 530 | GTFS parsing and registry/cache selection need shared feed identity. | Separate GTFS parsing from feed resolution; retain malformed-feed, quota and provenance cases. |
+| `apps/aethergrid-console/web/src/app/App.tsx` | 2132 | City acquisition, overlays and timeline effects share cancellation and mounted-scene state. | Extract city acquisition/viewport streaming and environment timeline hooks; prove aborts on city/mode changes and preserve scene identity in browser. |
+| `apps/aethergrid-console/web/src/components/QuantumPanel.tsx` | 762 | Multiple solver modes share job/authentication and advisory-only status. | Separate solver controls and job receipt presentation; retain real local CPU/exact/Aer and optional provider safety tests. |
+| `apps/aethergrid-console/web/src/components/ScenarioComposerPanel.tsx` | 553 | Editor forms share scenario draft validation and source comparison state. | Separate draft controls from comparison/result presentation; preserve scenario persistence, error and temporal behavior. |
+| `apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts` | 623 | Camera transitions, scene lifecycle and source overlays share viewer ownership. | Extract viewer lifecycle/configuration; verify transition cancellation, context restoration, idle demand rendering and cleanup in an actual browser. |
+| `apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts` | 910 | Entity construction and selection reuse source identity and layer ownership. | Extract cohesive entity builders by geometry type; preserve complete-source selection, opacity, hazard precedence and disposal. |
+| `apps/aethergrid-console/web/src/services/city-power-overlay.ts` | 759 | Mapped infrastructure, modeled power and presentation-only illumination must stay distinguishable. | Separate mapped infrastructure conversion from illumination; retain source-feature IDs and explicit modeled/presentation provenance. |
+| `apps/aethergrid-console/web/src/services/operator-scenario.ts` | 578 | Scenario validation, persistence and replay share schema boundaries. | Extract persistence/validation from replay composition; retain malformed-input, migration and source-baseline cases. |
+| `scripts/verify-release-readiness.mjs` | 745 | Release workflow and archive policy checks remain centralized; backend contracts are now separate. | Extract remaining package/workflow contract groups without dropping assertions; maintain deliberate-negative fixtures. |
+| `tests/aethergrid-ai-runtime.test.mjs` | 838 | Behavioral fixtures are shared across specialist and runtime paths. | Split by provider/tool/orchestration contract while preserving every test case and coverage. |
+| `tests/aethergrid-console.test.mjs` | 506 | Legacy source and package compatibility checks share fixtures. | Separate shell and distribution contracts without deleting behavioral cases. |
+| `tests/aethergrid-global-quantum-profile.test.mjs` | 844 | Global, quantum and authenticated profile tests share setup. | Split into focused domains with explicit fixture cleanup and the same security/solver cases. |
+| `tests/aethergrid-v4-provider-foundation.test.mjs` | 822 | Provider behavior and frontend wiring currently share one suite. | Separate HTTP/provider behavior from wiring checks; preserve failure/redaction/provenance assertions. |
+| `tests/aethergrid-v4-web-foundation.test.mjs` | 1143 | Historical frontend wiring checks span many maintained capabilities. | Split by renderer/workspace/temporal contract; prioritize direct behavior tests and preserve existing assertions. |
+
+The remaining classic shell and React shell retain their existing ceilings while browser-sensitive geometry, initialization and cancellation boundaries are characterized and reviewed. This records residual work; it does not certify those refactors complete.
+
+Native draw-command tests characterize geometry, opacity, selection, weather, camera cancellation, reduced motion and per-frame buffer deletion. They do not establish hardware GPU acceleration, context-loss recovery or GPU memory behavior. The native baseline's missing context-loss handler and explicit program deletion remain tracked in #232.
