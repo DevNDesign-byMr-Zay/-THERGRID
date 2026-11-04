@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Pin the ESLint-only minimatch dependency to patched 11.0.1 for GHSA-g3hv-75wg-m249; retain the existing ESLint version and verify the locked graph, lint and audit.
+
 - Separate authenticated HTTP route families and observation persistence from backend startup while preserving API paths, quotas, sessions, redacted errors, shared state and canonical static serving; add real HTTP regressions.
 - Separate native projection, environmental effects, geometry, Canvas2D and WebGL drawing from the public renderer lifecycle; characterize source identity, opacity, selection, weather, camera cancellation, reduced motion and buffer cleanup with executable tests.
 - Verify packaged backend import dependencies and every archive digest instead of requiring a monolithic backend file size; exercise complete cyclic graphs and omitted dependencies.

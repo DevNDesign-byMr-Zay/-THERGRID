@@ -51,5 +51,8 @@
     "typescript": "5.9.3"
   },
   "main": "src/platform-health-service.mjs",
-  "exports": "./src/platform-health-service.mjs"
+  "exports": "./src/platform-health-service.mjs",
+  "overrides": {
+    "minimatch": "11.0.1"
+  }
 }
