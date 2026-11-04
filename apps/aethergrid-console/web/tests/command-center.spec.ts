@@ -125,19 +125,25 @@ test('TEAM retains real specialist contributions and provider truth', async ({ p
 });
 
 test('global renderer remains usable with explicit engine provenance', async ({ page }) => {
-  await page.setViewportSize({ width: 1536, height: 1024 });
-  await page.goto('/');
-  await page.getByRole('navigation', { name: 'Product modes' }).getByRole('button', { name: 'GLOBAL', exact: true }).click();
-  await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer-ready', 'true', { timeout: 15_000 });
-  const engine = await page.locator('.spatial-shell').getAttribute('data-renderer');
-  expect(['cesium', 'native-webgl']).toContain(engine);
-  if (process.env.AETHERGRID_TEST_REQUIRE_CESIUM === '1') expect(engine).toBe('cesium');
-  await expect(page.locator('.spatial-canvas canvas')).toBeVisible();
-  await expect(page.locator('.viewport-status')).toContainText(engine === 'cesium' ? 'CESIUM WORLD' : 'NATIVE FALLBACK');
-  await page.getByText('Renderer tools', { exact: true }).click();
-  await expect(page.getByRole('group', { name: 'Spatial graphics performance' })).toBeVisible();
-  await page.getByText('Renderer tools', { exact: true }).click();
-  await page.screenshot({ path: 'test-results/global-renderer-1536x1024.png' });
+  await test.step('launch the global renderer and confirm engine provenance', async () => {
+    await page.setViewportSize({ width: 1536, height: 1024 });
+    await page.goto('/');
+    await page.getByRole('navigation', { name: 'Product modes' }).getByRole('button', { name: 'GLOBAL', exact: true }).click();
+    await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer-ready', 'true', { timeout: 15_000 });
+    const engine = await page.locator('.spatial-shell').getAttribute('data-renderer');
+    expect(['cesium', 'native-webgl']).toContain(engine);
+    if (process.env.AETHERGRID_TEST_REQUIRE_CESIUM === '1') expect(engine).toBe('cesium');
+    await expect(page.locator('.spatial-canvas canvas')).toBeVisible();
+    await expect(page.locator('.viewport-status')).toContainText(engine === 'cesium' ? 'CESIUM WORLD' : 'NATIVE FALLBACK');
+  });
+  await test.step('open and close renderer performance controls', async () => {
+    await page.getByText('Renderer tools', { exact: true }).click();
+    await expect(page.getByRole('group', { name: 'Spatial graphics performance' })).toBeVisible();
+    await page.getByText('Renderer tools', { exact: true }).click();
+  });
+  await test.step('capture the rendered global workspace', async () => {
+    await page.screenshot({ path: 'test-results/global-renderer-1536x1024.png' });
+  });
 });
 
 test('specialist conversations consume the actual runtime contract', async ({ page }) => {

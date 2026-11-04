@@ -87,6 +87,10 @@ jobs:
       - name: Install maintained Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Verify native draw commands, geometry and lifecycle
+        if: matrix.suite == 'operator'
+        run: npm run test:native
+
       - name: Verify extracted hook state and lifecycle boundaries
         if: matrix.suite == 'operator'
         run: npm run test:hooks -- --reporter=line
@@ -110,11 +114,11 @@ jobs:
           AETHERGRID_TEST_CANONICAL: '1'
         run: npx playwright test tests/tokenless-spatial.spec.ts --workers=1 --reporter=line
 
-      - name: Verify compact navigation drawer focus and keyboard containment
+      - name: Verify global renderer usability and compact navigation keyboard containment
         if: matrix.suite == 'operator'
         env:
           AETHERGRID_TEST_CANONICAL: '1'
-        run: npx playwright test tests/command-center.spec.ts --grep "compact drawers contain focus and switch exclusively" --output=test-results/drawer-focus --workers=1 --reporter=line
+        run: npx playwright test tests/command-center.spec.ts --grep "compact drawers contain focus and switch exclusively|global renderer remains usable with explicit engine provenance" --output=test-results/drawer-focus --workers=1 --reporter=line
 
       - name: Verify production shell, appearance and source truth
         if: matrix.suite == 'appearance'
