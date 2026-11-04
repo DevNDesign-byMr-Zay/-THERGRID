@@ -35,6 +35,18 @@ test('environment discovery reads actual access expressions, including brackets 
   ]);
 });
 
+test('environment discovery recognizes static computed keys and excludes rest bindings and dynamic accesses', async () => {
+  const { sourceEnvironmentKeys } = await import(moduleUrl);
+  const source = [
+    "process['env']['PORT'];",
+    'process.env[`NODE_ENV`];',
+    "const { ['STATIC_KEY']: renamed, ...REST } = process.env;",
+    'process.env[DYNAMIC_KEY];',
+    'const { [OTHER_DYNAMIC]: value } = process.env;',
+  ].join('\n');
+  assert.deepEqual([...sourceEnvironmentKeys(source)].sort(), ['NODE_ENV', 'PORT', 'STATIC_KEY']);
+});
+
 test('environment audit includes nested web configs and scripts, and identifies each missing template key', async () => {
   const { auditEnvironmentTemplates } = await import(moduleUrl);
   const directory = await mkdtemp(join(tmpdir(), 'aethergrid-env-audit-'));
