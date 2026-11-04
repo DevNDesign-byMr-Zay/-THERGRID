@@ -1,3 +1,4 @@
+import { nativeRendererSource } from './support/native-renderer-source.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
@@ -58,13 +59,13 @@ test('v4 forecast cursor drives one active atmosphere through scene operations a
 test('v4 Cesium and native failover render forecast weather without promoting AQI or seismic', async () => {
   const [cesium, nativeRenderer, rail] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/cesium/weather-atmosphere-layer.ts'),
-    text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+    nativeRendererSource(),
     text('apps/aethergrid-console/web/src/components/TemporalRail.tsx'),
   ]);
 
   assert.match(cesium, /this\.#temporalMode === 'forecast'/u);
   assert.match(cesium, /this\.#snapshot\?\.fallback !== true/u);
-  assert.match(nativeRenderer, /this\.#time\.mode === 'forecast'/u);
+  assert.match(nativeRenderer, /frame\.time\.mode === 'forecast'/u);
   assert.match(nativeRenderer, /forecastPresentation/u);
   assert.match(nativeRenderer, /presentationPrecipitation/u);
   assert.match(rail, /FORECAST \+ STATIC/u);

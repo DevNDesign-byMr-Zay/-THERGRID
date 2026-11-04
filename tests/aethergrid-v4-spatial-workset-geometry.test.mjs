@@ -1,3 +1,4 @@
+import { nativeRendererSource } from './support/native-renderer-source.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
@@ -120,7 +121,7 @@ test('v4 AUREN workset geometry review carries an explicit anti-causality relati
 test('v4 Cesium and native renderers visually distinguish workset geometry without changing its source semantics', async () => {
   const [cesium, native, palette] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
-    text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+    nativeRendererSource(),
     text('apps/aethergrid-console/web/src/renderer/overlays/color-mapping.ts'),
   ]);
 

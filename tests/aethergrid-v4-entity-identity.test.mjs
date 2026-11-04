@@ -1,3 +1,4 @@
+import { nativeRendererSource } from './support/native-renderer-source.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
@@ -81,7 +82,7 @@ test('v4 source-feature selection highlights complete mapped features in both re
   const [cesiumLayer, cesiumRenderer, nativeRenderer] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
-    text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+    nativeRendererSource(),
   ]);
 
   assert.match(cesiumLayer, /selectSourceFeature\(sourceFeatureId: string \| null\)/u);
@@ -93,7 +94,7 @@ test('v4 source-feature selection highlights complete mapped features in both re
 
   assert.match(nativeRenderer, /#selectedSourceFeatureId: string \| null/u);
   assert.match(nativeRenderer, /#selectedLayerId: string \| null/u);
-  assert.match(nativeRenderer, /#isSelectedSource/u);
+  assert.match(nativeRenderer, /nativeSelectedSource/u);
   assert.match(nativeRenderer, /snapshot\.edges\.find/u);
   assert.match(nativeRenderer, /snapshot\.areas/u);
   assert.match(nativeRenderer, /selected\s*\?\s*'#ffffff'/u);
