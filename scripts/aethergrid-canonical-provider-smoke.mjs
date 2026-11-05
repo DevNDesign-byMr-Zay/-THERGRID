@@ -1,4 +1,5 @@
 import { createQuantumRuntime } from '../apps/aethergrid-console/quantum-runtime.mjs';
+import { verifyLocalQuantum, evaluateProviderAcceptance } from './lib/canonical-quantum-policy.mjs';
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -12,6 +13,7 @@ import {
 } from './lib/canonical-acceptance.mjs';
 
 const base = 'http://127.0.0.1:8090';
+const quantumProfile = process.env.AETHERGRID_ACCEPTANCE_QUANTUM_PROFILE || 'ibm-required';
 const report = {
   schemaVersion: 1,
   commit: process.env.GITHUB_SHA || null,
@@ -161,7 +163,17 @@ try {
       process.env.AETHERGRID_IBM_QUANTUM_SERVICE_CRN?.trim(),
     ),
   };
-  if (Object.values(ibmPrerequisites).every(Boolean)) {
+  await check('local-quantum', () => verifyLocalQuantum(createQuantumRuntime({ env: {} })));
+  if (quantumProfile === 'local-simulator') {
+    report.providers.ibm = {
+      state: 'not-requested',
+      verified: false,
+      discoveryOnly: true,
+      reason: 'Optional IBM account access excluded by explicit software acceptance profile.',
+      hardwareSubmitted: false,
+      hardwareExecuted: false,
+    };
+  } else if (Object.values(ibmPrerequisites).every(Boolean)) {
     await check('ibm', async () => {
       const runtime = createQuantumRuntime({
         env: {
@@ -216,10 +228,11 @@ try {
     });
   }
   await mkdir('canonical-evidence', { recursive: true });
+  // Unknown profiles fail closed rather than silently bypassing a provider.
+  report.acceptance = evaluateProviderAcceptance(report.providers, quantumProfile);
   const sanitized = sanitizeAcceptance(report);
   await writeFile('canonical-evidence/providers.json', `${JSON.stringify(sanitized, null, 2)}\n`);
-  const failed =
-    report.startup || Object.values(report.providers).some((item) => item.verified === false);
+  const failed = report.startup || !report.acceptance.passed;
   console.log(
     JSON.stringify({
       commit: report.commit,

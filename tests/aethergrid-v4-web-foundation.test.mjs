@@ -1,3 +1,4 @@
+import { nativeRendererSource } from './support/native-renderer-source.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
@@ -870,7 +871,7 @@ test('v4 scenario comparison ghosts preserve source baseline beside modeled powe
 
 test('v4 native failover is a real source-backed WebGL renderer rather than an empty adapter', async () => {
   const [nativeRenderer, viewport] = await Promise.all([
-    text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+    nativeRendererSource(),
     text('apps/aethergrid-console/web/src/components/SpatialViewport.tsx'),
   ]);
 
@@ -879,7 +880,7 @@ test('v4 native failover is a real source-backed WebGL renderer rather than an e
   assert.match(nativeRenderer, /getContext\('2d'\)/u);
   assert.match(nativeRenderer, /gl\.drawArrays/u);
   assert.match(nativeRenderer, /this\.#overlays\.set\(snapshot\.layerId, snapshot\)/u);
-  assert.match(nativeRenderer, /this\.#time\.mode === 'scenario'/u);
+  assert.match(nativeRenderer, /frame\.time\.mode === 'scenario'/u);
   assert.match(nativeRenderer, /solarStateAt/u);
   assert.match(nativeRenderer, /#pickEdge/u);
   assert.match(nativeRenderer, /WebGL unavailable; using Canvas2D source-overlay fallback/u);
@@ -964,7 +965,7 @@ test('v4 live wind field is source-backed spatial geometry shared by Cesium and 
   const [service, cesium, nativeRenderer, app, composition] = await Promise.all([
     text('apps/aethergrid-console/web/src/services/city-environment.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
-    text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+    nativeRendererSource(),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
     text('apps/aethergrid-console/web/src/app/spatial-overlay-composition.ts'),
   ]);
@@ -988,7 +989,7 @@ test('v4 night illumination follows mapped building geometry with explicit prese
   const [service, cesium, nativeRenderer, app] = await Promise.all([
     text('apps/aethergrid-console/web/src/services/city-power-overlay.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
-    text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+    nativeRendererSource(),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
   ]);
 
@@ -1004,38 +1005,34 @@ test('v4 night illumination follows mapped building geometry with explicit prese
 });
 
 test('v4 native failover preserves source-driven weather geometry and layer toggles', async () => {
-  const nativeRenderer = await text(
-    'apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts',
-  );
+  const nativeRenderer = await nativeRendererSource();
 
   assert.match(nativeRenderer, /weatherPhenomenon/u);
-  assert.match(nativeRenderer, /#weatherGeometry/u);
+  assert.match(nativeRenderer, /nativeWeatherGeometry/u);
   assert.match(nativeRenderer, /cloudCoverPercent/u);
   assert.match(nativeRenderer, /precipitationMm/u);
   assert.match(nativeRenderer, /phenomenon === 'snow'/u);
   assert.match(nativeRenderer, /phenomenon === 'fog'/u);
   assert.match(nativeRenderer, /phenomenon === 'thunderstorm'/u);
-  assert.match(nativeRenderer, /this\.#layerVisible\('weather', true\)/u);
-  assert.match(nativeRenderer, /this\.#layerVisible\('air', true\)/u);
-  assert.match(nativeRenderer, /const weather = this\.#weatherGeometry\(\)/u);
+  assert.match(nativeRenderer, /nativeLayerVisible\(frame, 'weather', true\)/u);
+  assert.match(nativeRenderer, /nativeLayerVisible\(frame, 'air', true\)/u);
+  assert.match(nativeRenderer, /const weather = nativeWeatherGeometry\(frame\)/u);
   assert.match(nativeRenderer, /gl\.drawArrays/u);
   assert.match(nativeRenderer, /context\.arc/u);
 });
 
 test('v4 native failover preserves source-driven AQI particles with wind drift', async () => {
-  const nativeRenderer = await text(
-    'apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts',
-  );
+  const nativeRenderer = await nativeRendererSource();
 
-  assert.match(nativeRenderer, /#airGeometry/u);
+  assert.match(nativeRenderer, /nativeAirGeometry/u);
   assert.match(nativeRenderer, /current\.usAqi/u);
   assert.match(nativeRenderer, /current\.pm25UgM3/u);
   assert.match(nativeRenderer, /current\.category === 'good'/u);
   assert.match(nativeRenderer, /current\.category === 'hazardous'/u);
   assert.match(nativeRenderer, /current\.windDirectionDegrees/u);
   assert.match(nativeRenderer, /current\.windSpeedKph/u);
-  assert.match(nativeRenderer, /this\.#layerVisible\('air', true\)/u);
-  assert.match(nativeRenderer, /const air = this\.#airGeometry\(\)/u);
+  assert.match(nativeRenderer, /nativeLayerVisible\(frame, 'air', true\)/u);
+  assert.match(nativeRenderer, /const air = nativeAirGeometry\(frame\)/u);
 });
 
 test('v4 documentation and promotion gates describe only implemented spatial capabilities', async () => {
@@ -1044,7 +1041,7 @@ test('v4 documentation and promotion gates describe only implemented spatial cap
     text('docs/AETHERGRID_FUNCTIONAL_PLAN.md'),
     text('CHANGELOG.md'),
     text('apps/aethergrid-console/web/src/components/SpatialViewport.tsx'),
-    text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+    nativeRendererSource(),
     text('apps/aethergrid-console/web/src/time/temporal-clock.ts'),
   ]);
 
@@ -1068,7 +1065,7 @@ test('v4 surface picking is renderer-neutral and labels terrain versus projectio
   const [contract, cesium, nativeRenderer, manager, surface] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/spatial-renderer.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
-    text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+    nativeRendererSource(),
     text('apps/aethergrid-console/web/src/renderer/renderer-manager.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/surface-picking.ts'),
   ]);

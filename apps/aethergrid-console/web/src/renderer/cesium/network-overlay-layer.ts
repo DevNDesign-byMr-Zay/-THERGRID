@@ -1,3 +1,4 @@
+import { updateConstantProperty } from './constant-property';
 import {aircraftModelUri} from './aircraft-model';
 import {
   CallbackPositionProperty,
@@ -562,8 +563,8 @@ export class NetworkOverlayLayer {
       const intensity = overlayIntensity(node.intensity);
       const urbanLight =
         node.properties?.presentationType === 'urban-illumination';
-      point.outlineColor = new ConstantProperty(Color.WHITE.withAlpha(.35));
-      point.outlineWidth = new ConstantProperty(urbanLight ? 0 : node.kind === 'aircraft' ? .8 : 1.25);
+      updateConstantProperty(point, 'outlineColor', Color.WHITE.withAlpha(.35));
+      updateConstantProperty(point, 'outlineWidth', urbanLight ? 0 : node.kind === 'aircraft' ? .8 : 1.25);
       const baseSize = urbanLight
         ? 1.2 + intensity * 1.8
         : 5 + intensity * 7;
@@ -582,14 +583,10 @@ export class NetworkOverlayLayer {
                 node.id.length * 0.71 +
                 intensity * 4.2
             );
-        point.pixelSize = new ConstantProperty(
-          baseSize * (0.9 + pulse * 0.34)
-        );
-        point.color = new ConstantProperty(
-          Color.fromCssColorString('#ffd37d').withAlpha(
+        updateConstantProperty(point, 'pixelSize', baseSize * (0.9 + pulse * 0.34));
+        updateConstantProperty(point, 'color', Color.fromCssColorString('#ffd37d').withAlpha(
             0.22 + intensity * 0.18 + pulse * 0.18
-          )
-        );
+          ));
       } else if (
         time.mode === 'live' &&
         (node.kind === 'city' ||
@@ -606,22 +603,16 @@ export class NetworkOverlayLayer {
           node.kind === 'event'
             ? Math.max(0, Number(node.properties?.magnitude ?? node.value ?? 0)) * 0.07
             : 0;
-        point.pixelSize = new ConstantProperty(
-          baseSize * (0.92 + pulse * 0.34 + magnitudeBoost)
-        );
-        point.color = new ConstantProperty(nodeColor(node).withAlpha(0.68 + pulse * 0.3));
+        updateConstantProperty(point, 'pixelSize', baseSize * (0.92 + pulse * 0.34 + magnitudeBoost));
+        updateConstantProperty(point, 'color', nodeColor(node).withAlpha(0.68 + pulse * 0.3));
       } else if (scenario && powerNode) {
         const pulse = 0.5 + 0.5 * Math.sin(temporalPhase * 0.32 + intensity * 5.1);
         const stressBoost = Math.max(0, scenario.stressFactor - 1);
-        point.pixelSize = new ConstantProperty(
-          baseSize * (1 + stressBoost * 0.9 + pulse * 0.14)
-        );
-        point.color = new ConstantProperty(
-          scenarioColor(scenario, intensity, 0.88 + pulse * 0.1)
-        );
+        updateConstantProperty(point, 'pixelSize', baseSize * (1 + stressBoost * 0.9 + pulse * 0.14));
+        updateConstantProperty(point, 'color', scenarioColor(scenario, intensity, 0.88 + pulse * 0.1));
       } else {
-        point.pixelSize = new ConstantProperty(baseSize);
-        point.color = new ConstantProperty(nodeColor(node));
+        updateConstantProperty(point, 'pixelSize', baseSize);
+        updateConstantProperty(point, 'color', nodeColor(node));
       }
     }
 
@@ -649,23 +640,19 @@ export class NetworkOverlayLayer {
 
       if (windEdge && time.mode === 'live') {
         const pulse = 0.5 + 0.5 * Math.sin(temporalPhase * 0.72 + intensity * 4.7);
-        polyline.width = new ConstantProperty(
-          edgeWidth(edge, intensity) * (0.88 + pulse * 0.34)
-        );
+        updateConstantProperty(polyline, 'width', edgeWidth(edge, intensity) * (0.88 + pulse * 0.34));
         polyline.material = new ColorMaterialProperty(
           Color.fromCssColorString('#7de9ff').withAlpha(0.34 + pulse * 0.48)
         );
       } else if (scenario && powerEdge) {
         const pulse = 0.5 + 0.5 * Math.sin(temporalPhase * 0.38 + intensity * 6.3);
         const stressBoost = Math.max(0, scenario.stressFactor - 1);
-        polyline.width = new ConstantProperty(
-          edgeWidth(edge, intensity) * (1 + stressBoost * 1.4 + pulse * 0.22)
-        );
+        updateConstantProperty(polyline, 'width', edgeWidth(edge, intensity) * (1 + stressBoost * 1.4 + pulse * 0.22));
         polyline.material = new ColorMaterialProperty(
           scenarioColor(scenario, intensity, 0.5 + pulse * 0.35)
         );
       } else {
-        polyline.width = new ConstantProperty(edgeWidth(edge, intensity));
+        updateConstantProperty(polyline, 'width', edgeWidth(edge, intensity));
         polyline.material = new ColorMaterialProperty(edgeColor(edge, intensity));
       }
     }
@@ -857,17 +844,17 @@ export class NetworkOverlayLayer {
       if (entity.point) {
         const color = entity.point.color?.getValue();
         const outline = entity.point.outlineColor?.getValue();
-        if (color) entity.point.color = new ConstantProperty(color.withAlpha(color.alpha * this.#opacity));
-        if (outline) entity.point.outlineColor = new ConstantProperty(outline.withAlpha(outline.alpha * this.#opacity));
+        if (color) updateConstantProperty(entity.point, 'color', color.withAlpha(color.alpha * this.#opacity));
+        if (outline) updateConstantProperty(entity.point, 'outlineColor', outline.withAlpha(outline.alpha * this.#opacity));
       }
       const label = this.#labelColors.get(id);
       if (label && entity.label) {
-        entity.label.fillColor = new ConstantProperty(label.fill.withAlpha(label.fill.alpha * this.#opacity));
-        entity.label.outlineColor = new ConstantProperty(label.outline.withAlpha(label.outline.alpha * this.#opacity));
-        entity.label.backgroundColor = new ConstantProperty(label.background.withAlpha(label.background.alpha * this.#opacity));
+        updateConstantProperty(entity.label, 'fillColor', label.fill.withAlpha(label.fill.alpha * this.#opacity));
+        updateConstantProperty(entity.label, 'outlineColor', label.outline.withAlpha(label.outline.alpha * this.#opacity));
+        updateConstantProperty(entity.label, 'backgroundColor', label.background.withAlpha(label.background.alpha * this.#opacity));
       }
       const model = this.#modelColors.get(id);
-      if (model && entity.model) entity.model.color = new ConstantProperty(model.withAlpha(model.alpha * this.#opacity));
+      if (model && entity.model) updateConstantProperty(entity.model, 'color', model.withAlpha(model.alpha * this.#opacity));
     }
     for (const entity of [...this.#edgeEntities.values(), ...this.#scenarioGhostEntities.values()]) {
       const property = (entity.polyline?.material as ColorMaterialProperty | undefined)?.color;
@@ -900,13 +887,9 @@ export class NetworkOverlayLayer {
       const entity = this.#nodeEntities.get(node.id);
       if (!entity?.point) continue;
       const intensity = overlayIntensity(node.intensity);
-      entity.point.pixelSize = new ConstantProperty(
-        Math.max(12, (5 + intensity * 7) * 1.35)
-      );
-      entity.point.outlineColor = new ConstantProperty(
-        Color.fromCssColorString('#ffffff').withAlpha(0.98)
-      );
-      entity.point.outlineWidth = new ConstantProperty(2.4);
+      updateConstantProperty(entity.point, 'pixelSize', Math.max(12, (5 + intensity * 7) * 1.35));
+      updateConstantProperty(entity.point, 'outlineColor', Color.fromCssColorString('#ffffff').withAlpha(0.98));
+      updateConstantProperty(entity.point, 'outlineWidth', 2.4);
     }
 
     for (const edge of snapshot.edges) {
@@ -914,9 +897,7 @@ export class NetworkOverlayLayer {
       const entity = this.#edgeEntities.get(edge.id);
       if (!entity?.polyline) continue;
       const intensity = overlayIntensity(edge.intensity);
-      entity.polyline.width = new ConstantProperty(
-        Math.max(3.4, edgeWidth(edge, intensity) * 1.75)
-      );
+      updateConstantProperty(entity.polyline, 'width', Math.max(3.4, edgeWidth(edge, intensity) * 1.75));
       entity.polyline.material = new ColorMaterialProperty(
         Color.fromCssColorString('#ffffff').withAlpha(0.94)
       );
@@ -926,9 +907,7 @@ export class NetworkOverlayLayer {
       if (this.#sourceFeatureId(area.id, area.properties) !== selected) continue;
       const entity = this.#areaEntities.get(area.id);
       if (!entity?.polygon) continue;
-      entity.polygon.outlineColor = new ConstantProperty(
-        Color.fromCssColorString('#ffffff').withAlpha(0.92)
-      );
+      updateConstantProperty(entity.polygon, 'outlineColor', Color.fromCssColorString('#ffffff').withAlpha(0.92));
     }
   }
 

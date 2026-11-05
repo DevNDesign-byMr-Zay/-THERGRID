@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- Add explicit software quantum acceptance after IBM trial expiration: execute and verify the maintained bounded local sampler/estimator, retain every other live-provider gate, and record IBM as unverified. Preserve strict authenticated IBM discovery as an opt-in protected workflow profile.
+
+- Reuse owned Cesium constant graphics properties on clock ticks, suppressing unchanged aircraft invalidations while preserving values, animation, source geometry, opacity, selection and temporal visibility; add direct Cesium regressions and retain browser timing/trace evidence.
+
+- Pin the ESLint-only minimatch dependency to patched 11.0.1 for GHSA-g3hv-75wg-m249; retain the existing ESLint version and verify the locked graph, lint and audit.
+
+- Separate authenticated HTTP route families and observation persistence from backend startup while preserving API paths, quotas, sessions, redacted errors, shared state and canonical static serving; add real HTTP regressions.
+- Separate native projection, environmental effects, geometry, Canvas2D and WebGL drawing from the public renderer lifecycle; characterize source identity, opacity, selection, weather, camera cancellation, reduced motion and buffer cleanup with executable tests.
+- Verify packaged backend import dependencies and every archive digest instead of requiring a monolithic backend file size; exercise complete cyclic graphs and omitted dependencies.
+- Recognize static computed environment access without treating dynamic keys or rest bindings as undocumented settings.
+- Track every remaining module-size exception with an owner, rationale and finite resolution in #232; lower retired and reduced ceilings. Add native behavioral checks and the original global-renderer usability test to PR acceptance, preserving existing timeouts and assertions.
+
 ## Unreleased — 0.3.4
 
 - Align package, lockfile, operator-console manifest, release tests and protected release intent for v0.3.4; keep v0.3.2 and v0.3.3 published tags immutable.

@@ -11,6 +11,11 @@ on:
         description: "Exact final main SHA with successful Engineering CI and CodeQL"
         required: true
         type: string
+      quantum_profile:
+        description: 'Quantum acceptance scope; IBM requires an active account/instance'
+        type: choice
+        default: local-simulator
+        options: [local-simulator, ibm-required]
 
 permissions:
   contents: read
@@ -52,7 +57,7 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            const required = [['engineering/ci', '.github/workflows/ci.yml'], ['security/codeql', '.github/workflows/codeql.yml']];
+            const required = [['engineering/ci', '.github/workflows/ci.yml'], ['security/codeql', '.github/workflows/codeql.yml'], ['aethergrid/qiskit-aer', '.github/workflows/aethergrid-qiskit-aer.yml']];
             // CodeQL may finish before Engineering CI. Wait for the same SHA, never for another commit.
             for (let attempt = 0; attempt < 40; attempt += 1) {
               const { data } = await github.rest.actions.listWorkflowRunsForRepo({
@@ -165,6 +170,7 @@ jobs:
     timeout-minutes: 60
     environment: aethergrid-live-verification
     env:
+      AETHERGRID_ACCEPTANCE_QUANTUM_PROFILE: ${{ inputs.quantum_profile || 'local-simulator' }}
       SUBMISSION_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.submission_sha || github.event.workflow_run.head_sha }}
     steps:
       - name: Checkout exact candidate main commit

@@ -1,26 +1,26 @@
-import { projectLocal, unprojectGround } from './local-projection';
-import { buildingEdges } from '../overlays/building-geometry';
 import {
-  weatherPhenomenon,
+  clamp,
+  normalizeLongitudeDelta,
+  pointSegmentDistance,
+  projectNative,
+  nativeSourceFeatureId,
+  nativeLayerVisible,
+  nativeLayerOpacity,
+  type NativeFrame,
+  type ProjectedFeature,
+} from './native-frame';
+import { nativeBackground } from './native-environment';
+import { collectNativeGeometry } from './native-geometry';
+import { drawNativeCanvas } from './native-canvas';
+import { initializeNativeWebgl, drawNativeWebgl } from './native-webgl-driver';
+import { unprojectGround } from './local-projection';
+import {
   type AirQualityOverlaySnapshot,
-  type AtmosphericOverlaySnapshot
+  type AtmosphericOverlaySnapshot,
 } from '../overlays/atmospheric-overlay';
-import type {
-  OverlayCoordinate,
-  SpatialOverlayEdge,
-  SpatialOverlaySnapshot
-} from '../overlays/spatial-overlay';
+import type { SpatialOverlayEdge, SpatialOverlaySnapshot } from '../overlays/spatial-overlay';
 import { solarStateAt } from '../solar-position';
-import {
-  css,
-  hazardHex,
-  hydrologyHex,
-  layerColor,
-  mix,
-  rgba,
-  visualColor,
-  type Rgba
-} from './native-palette';
+
 import type {
   LayerState,
   SpatialDetailLevel,
@@ -34,92 +34,35 @@ import type {
   SpatialSurfacePoint,
   SpatialTarget,
   TemporalInstant,
-  VisualMode
+  VisualMode,
 } from '../spatial-renderer';
-
-interface NativeWeatherLine {
-  from: readonly [number, number];
-  to: readonly [number, number];
-  color: Rgba;
-}
-
-interface NativeWeatherPoint {
-  position: readonly [number, number];
-  color: Rgba;
-  size: number;
-}
-
-interface NativeWeatherGeometry {
-  lines: readonly NativeWeatherLine[];
-  points: readonly NativeWeatherPoint[];
-}
-
-interface ProjectedFeature {
-  id: string;
-  kind: string;
-  source: string | null;
-  x: number;
-  y: number;
-  latitude: number;
-  longitude: number;
-  heightMeters: number;
-  properties: Readonly<Record<string, unknown>>;
-}
 
 const INITIAL_TARGET: SpatialTarget = {
   latitude: 20,
   longitude: 0,
   rangeMeters: 11_800_000,
   pitchDegrees: -88,
-  journey: 'global'
+  journey: 'global',
 };
 
 const INITIAL_TIME: TemporalInstant = {
   iso: new Date().toISOString(),
-  mode: 'live'
+  mode: 'live',
 };
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
-function normalizeLongitudeDelta(longitude: number): number {
-  return ((longitude + 540) % 360) - 180;
-}
-
-function fractional(value: number): number {
-  return value - Math.floor(value);
-}
-
-function deterministicUnit(index: number, salt: number): number {
-  return fractional(Math.sin(index * 12.9898 + salt * 78.233) * 43_758.5453);
-}
-
-function wrapNdc(value: number): number {
-  return ((((value + 1) % 2) + 2) % 2) - 1;
-}
-
-function pointSegmentDistance(
-  px: number,
-  py: number,
-  ax: number,
-  ay: number,
-  bx: number,
-  by: number
-): number {
-  const dx = bx - ax;
-  const dy = by - ay;
-  if (dx === 0 && dy === 0) return Math.hypot(px - ax, py - ay);
-  const t = clamp(((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy), 0, 1);
-  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
-}
 
 export class NativeWebglSpatialRenderer implements SpatialRenderer {
   cameraSnapshot() {
     if (!this.#ready) return null;
-    return { projection: 'local-projected' as const, latitude: this.#target.latitude, longitude: this.#target.longitude,
-      heightMeters: this.#target.heightMeters ?? 0, headingDegrees: this.#target.headingDegrees ?? 0,
-      pitchDegrees: this.#target.pitchDegrees ?? -55, rollDegrees: 0, target: { ...this.#target } };
+    return {
+      projection: 'local-projected' as const,
+      latitude: this.#target.latitude,
+      longitude: this.#target.longitude,
+      heightMeters: this.#target.heightMeters ?? 0,
+      headingDegrees: this.#target.headingDegrees ?? 0,
+      pitchDegrees: this.#target.pitchDegrees ?? -55,
+      rollDegrees: 0,
+      target: { ...this.#target },
+    };
   }
   readonly engine = 'native-webgl' as const;
 
@@ -167,7 +110,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
       position: 'absolute',
       inset: '0',
       width: '100%',
-      height: '100%'
+      height: '100%',
     });
     this.#container.replaceChildren(canvas);
     this.#canvas = canvas;
@@ -175,11 +118,15 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     this.#gl = canvas.getContext('webgl', {
       antialias: true,
       alpha: false,
-      preserveDrawingBuffer: false
+      preserveDrawingBuffer: false,
     });
 
     if (this.#gl) {
-      this.#initializeWebgl(this.#gl);
+      const bindings = initializeNativeWebgl(this.#gl);
+      this.#program = bindings.program;
+      this.#positionLocation = bindings.positionLocation;
+      this.#colorLocation = bindings.colorLocation;
+      this.#pointSizeLocation = bindings.pointSizeLocation;
     } else {
       this.#context2d = canvas.getContext('2d');
       if (!this.#context2d) throw new Error('No native canvas renderer is available');
@@ -199,7 +146,10 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     this.#animationFrame = null;
     const generation = ++this.#journeyGeneration;
     const start = { ...this.#target };
-    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
       this.#target = { ...target };
       this.#busy = false;
       this.#journeyPhase = 'idle';
@@ -214,7 +164,10 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     await new Promise<void>((resolve) => {
       this.#finishJourney = resolve;
       const tick = (now: number) => {
-        if (generation !== this.#journeyGeneration) { resolve(); return; }
+        if (generation !== this.#journeyGeneration) {
+          resolve();
+          return;
+        }
         const raw = clamp((now - startedAt) / duration, 0, 1);
         const eased = raw < 0.5 ? 2 * raw * raw : 1 - Math.pow(-2 * raw + 2, 2) / 2;
         const rangeStart = start.rangeMeters ?? 11_800_000;
@@ -224,9 +177,8 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
           ...target,
           latitude: start.latitude + (target.latitude - start.latitude) * eased,
           longitude:
-            start.longitude +
-            normalizeLongitudeDelta(target.longitude - start.longitude) * eased,
-          rangeMeters: rangeStart + (rangeEnd - rangeStart) * eased
+            start.longitude + normalizeLongitudeDelta(target.longitude - start.longitude) * eased,
+          rangeMeters: rangeStart + (rangeEnd - rangeStart) * eased,
         };
 
         if (target.journey === 'global') {
@@ -255,8 +207,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
           this.#target = { ...target };
           this.#busy = false;
           this.#journeyPhase = 'idle';
-          this.#detailLevel =
-            target.journey === 'global' ? 'world' : 'district';
+          this.#detailLevel = target.journey === 'global' ? 'world' : 'district';
           this.#render();
           resolve();
         }
@@ -289,10 +240,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
           (snapshot.areas ?? []).find((candidate) => candidate.id === id);
         if (!item) continue;
         this.#selectedLayerId = snapshot.layerId;
-        this.#selectedSourceFeatureId = this.#sourceFeatureId(
-          item.id,
-          item.properties
-        );
+        this.#selectedSourceFeatureId = nativeSourceFeatureId(item.id, item.properties);
         break;
       }
     }
@@ -354,34 +302,27 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     if (world) {
       return {
         latitude: clamp(y * 90, -90, 90),
-        longitude:
-          ((this.#target.longitude + x * 180 + 540) % 360) - 180,
+        longitude: ((this.#target.longitude + x * 180 + 540) % 360) - 180,
         heightMeters: null,
-        source: 'native-projection'
+        source: 'native-projection',
       };
     }
 
     const scale = Math.max(1_500, range * 0.92);
-    const [eastMeters, northMeters] = unprojectGround(x * scale, y * scale, this.#target.headingDegrees ?? 0, this.#target.pitchDegrees ?? -55);
+    const [eastMeters, northMeters] = unprojectGround(
+      x * scale,
+      y * scale,
+      this.#target.headingDegrees ?? 0,
+      this.#target.pitchDegrees ?? -55,
+    );
     const metersPerLongitude =
-      111_320 *
-      Math.max(
-        0.15,
-        Math.cos((this.#target.latitude * Math.PI) / 180)
-      );
+      111_320 * Math.max(0.15, Math.cos((this.#target.latitude * Math.PI) / 180));
 
     return {
-      latitude: clamp(
-        this.#target.latitude + northMeters / 110_540,
-        -90,
-        90
-      ),
-      longitude:
-        ((this.#target.longitude + eastMeters / metersPerLongitude + 540) %
-          360) -
-        180,
+      latitude: clamp(this.#target.latitude + northMeters / 110_540, -90, 90),
+      longitude: ((this.#target.longitude + eastMeters / metersPerLongitude + 540) % 360) - 180,
       heightMeters: null,
-      source: 'native-projection'
+      source: 'native-projection',
     };
   }
 
@@ -414,7 +355,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
       latitude: nearest.latitude,
       longitude: nearest.longitude,
       heightMeters: nearest.heightMeters,
-      properties: nearest.properties
+      properties: nearest.properties,
     };
   }
 
@@ -423,11 +364,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     const container = this.#container;
     if (!canvas || !container) return;
     const dprCap =
-      this.#performanceTier === 'quality'
-        ? 2
-        : this.#performanceTier === 'balanced'
-          ? 1.5
-          : 1;
+      this.#performanceTier === 'quality' ? 2 : this.#performanceTier === 'balanced' ? 1.5 : 1;
     const dpr = Math.min(globalThis.devicePixelRatio || 1, dprCap);
     const width = Math.max(1, Math.round(container.clientWidth * dpr));
     const height = Math.max(1, Math.round(container.clientHeight * dpr));
@@ -439,11 +376,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
   }
 
   status(): SpatialRendererStatus {
-    const solar = solarStateAt(
-      this.#time.iso,
-      this.#target.latitude,
-      this.#target.longitude
-    );
+    const solar = solarStateAt(this.#time.iso, this.#target.latitude, this.#target.longitude);
     return {
       engine: this.engine,
       ready: this.#ready,
@@ -455,7 +388,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
       performanceTier: this.#performanceTier,
       buildingMode: this.#overlays.has('buildings') ? 'source-extruded' : 'none',
       solar,
-      reason: `${this.#reason ?? 'Native renderer'} · Building massing is a wireframe fallback; facade materials and terrain detail are unavailable.`
+      reason: `${this.#reason ?? 'Native renderer'} · Building massing is a wireframe fallback; facade materials and terrain detail are unavailable.`,
     };
   }
 
@@ -478,614 +411,31 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     this.#ready = false;
   }
 
-  #initializeWebgl(gl: WebGLRenderingContext): void {
-    const vertexSource = `
-      attribute vec2 a_position;
-      attribute vec4 a_color;
-      attribute float a_pointSize;
-      varying vec4 v_color;
-      void main() {
-        gl_Position = vec4(a_position, 0.0, 1.0);
-        gl_PointSize = a_pointSize;
-        v_color = a_color;
-      }
-    `;
-    const fragmentSource = `
-      precision mediump float;
-      varying vec4 v_color;
-      void main() {
-        gl_FragColor = v_color;
-      }
-    `;
-
-    const vertex = this.#shader(gl, gl.VERTEX_SHADER, vertexSource);
-    const fragment = this.#shader(gl, gl.FRAGMENT_SHADER, fragmentSource);
-    const program = gl.createProgram();
-    if (!program) throw new Error('Native WebGL program allocation failed');
-    gl.attachShader(program, vertex);
-    gl.attachShader(program, fragment);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      throw new Error(gl.getProgramInfoLog(program) || 'Native WebGL link failed');
-    }
-    gl.deleteShader(vertex);
-    gl.deleteShader(fragment);
-
-    this.#program = program;
-    this.#positionLocation = gl.getAttribLocation(program, 'a_position');
-    this.#colorLocation = gl.getAttribLocation(program, 'a_color');
-    this.#pointSizeLocation = gl.getAttribLocation(program, 'a_pointSize');
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-  }
-
-  #shader(gl: WebGLRenderingContext, type: number, source: string): WebGLShader {
-    const shader = gl.createShader(type);
-    if (!shader) throw new Error('Native WebGL shader allocation failed');
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      throw new Error(gl.getShaderInfoLog(shader) || 'Native WebGL shader compile failed');
-    }
-    return shader;
-  }
-
-  #project(position: OverlayCoordinate): readonly [number, number] {
-    const range = this.#target.rangeMeters ?? 11_800_000;
-    const world = range > 1_500_000 || this.#target.journey === 'global';
-
-    if (world) {
-      const lonDelta = normalizeLongitudeDelta(
-        position.longitude - this.#target.longitude
-      );
-      return [
-        clamp(lonDelta / 180, -1.1, 1.1),
-        clamp(position.latitude / 90, -1.05, 1.05)
-      ];
-    }
-
-    const metersPerLon =
-      111_320 * Math.max(0.15, Math.cos((this.#target.latitude * Math.PI) / 180));
-    const dx =
-      normalizeLongitudeDelta(position.longitude - this.#target.longitude) *
-      metersPerLon;
-    const dy = (position.latitude - this.#target.latitude) * 110_540;
-    const scale = Math.max(1_500, range * 0.92);
-    const [right, vertical] = projectLocal(dx, dy, position.heightMeters ?? 0, this.#target.headingDegrees ?? 0, this.#target.pitchDegrees ?? -55);
-    return [clamp(right / scale, -1.2, 1.2), clamp(vertical / scale, -1.2, 1.2)];
-  }
-
   #render(): void {
     if (!this.#canvas || !this.#ready) return;
     this.#features = [];
 
     if (this.#gl && this.#program) this.#renderWebgl();
-    else if (this.#context2d) this.#render2d();
-  }
-
-  #background(): Rgba {
-    const solar = solarStateAt(
-      this.#time.iso,
-      this.#target.latitude,
-      this.#target.longitude
-    );
-    let color =
-      solar.phase === 'night'
-        ? rgba('#030711')
-        : solar.phase === 'twilight'
-          ? rgba('#0b1220')
-          : solar.phase === 'golden-hour'
-            ? rgba('#17151a')
-            : rgba('#07111d');
-
-    if (
-      this.#time.mode === 'live' &&
-      this.#layerVisible('air', true) &&
-      this.#airQuality?.current?.usAqi != null
-    ) {
-      const haze = clamp(this.#airQuality.current.usAqi / 300, 0, 0.38);
-      color = mix(color, rgba('#7b746e'), haze);
-    }
-
-    if (
-      (this.#time.mode === 'live' || this.#time.mode === 'forecast') &&
-      this.#layerVisible('weather', true) &&
-      (this.#atmosphere?.current?.cloudCoverPercent ?? 0) > 75
-    ) {
-      color = mix(color, rgba('#26313b'), 0.18);
-    }
-
-    return color;
-  }
-
-  #sourceFeatureId(
-    id: string,
-    properties: Readonly<Record<string, unknown>> | undefined
-  ): string {
-    const value = properties?.sourceFeatureId;
-    return typeof value === 'string' && value.trim() ? value.trim() : id;
-  }
-
-  #isSelectedSource(
-    layerId: string,
-    id: string,
-    properties: Readonly<Record<string, unknown>> | undefined
-  ): boolean {
-    if (!this.#selectedSourceFeatureId || this.#selectedLayerId !== layerId) {
-      return false;
-    }
-    return (
-      this.#sourceFeatureId(id, properties) === this.#selectedSourceFeatureId
-    );
+    else if (this.#context2d)
+      this.#features = drawNativeCanvas(this.#context2d, this.#canvas, this.#frame());
   }
 
   #revalidateSelection(): void {
     if (!this.#selectedId) return;
     const layerId = this.#selectedLayerId;
     const snapshot = layerId ? this.#overlays.get(layerId) : undefined;
-    const retained = snapshot && this.#layerVisible(layerId!, true) && this.#layerOpacity(layerId!) > 0 &&
-      [...snapshot.nodes, ...snapshot.edges, ...(snapshot.areas ?? [])].some(item =>
-        this.#sourceFeatureId(item.id, item.properties) === this.#selectedSourceFeatureId);
+    const retained =
+      snapshot &&
+      nativeLayerVisible(this.#frame(), layerId!, true) &&
+      nativeLayerOpacity(this.#frame(), layerId!) > 0 &&
+      [...snapshot.nodes, ...snapshot.edges, ...(snapshot.areas ?? [])].some(
+        (item) => nativeSourceFeatureId(item.id, item.properties) === this.#selectedSourceFeatureId,
+      );
     if (!retained) {
       this.#selectedId = null;
       this.#selectedSourceFeatureId = null;
       this.#selectedLayerId = null;
     }
-  }
-
-  #visualColor(base: Rgba): Rgba {
-    return visualColor(base, this.#mode);
-  }
-
-  #decorativeDensity(): number {
-    return this.#performanceTier === 'quality'
-      ? 1
-      : this.#performanceTier === 'balanced'
-        ? 0.72
-        : 0.42;
-  }
-
-  #airGeometry(): NativeWeatherGeometry {
-    if (
-      this.#time.mode !== 'live' ||
-      !this.#layerVisible('air', true) ||
-      !this.#airQuality?.current ||
-      this.#airQuality.current.usAqi == null
-    ) {
-      return { lines: [], points: [] };
-    }
-
-    const current = this.#airQuality.current;
-    const aqi = Math.max(0, current.usAqi ?? 0);
-    const pm25 = Math.max(0, current.pm25UgM3 ?? 0);
-    const intensity = clamp(Math.max(aqi / 220, pm25 / 80), 0.08, 1);
-    const categoryColor =
-      current.category === 'good'
-        ? '#72e6b8'
-        : current.category === 'moderate'
-          ? '#e4d06c'
-          : current.category === 'unhealthy-sensitive'
-            ? '#e7a461'
-            : current.category === 'unhealthy'
-              ? '#e1766f'
-              : current.category === 'very-unhealthy'
-                ? '#a678d0'
-                : current.category === 'hazardous'
-                  ? '#a96078'
-                  : '#9fb3c3';
-
-    const seconds = this.#motionPhaseSeconds();
-    const windFrom = current.windDirectionDegrees ?? 0;
-    const toward = ((windFrom + 180) * Math.PI) / 180;
-    const speed = Math.max(0, current.windSpeedKph ?? 0);
-    const driftX = Math.sin(toward) * speed * 0.00012;
-    const driftY = Math.cos(toward) * speed * 0.00005;
-    const count = Math.max(
-      8,
-      Math.round((22 + intensity * 86) * this.#decorativeDensity())
-    );
-    const points: NativeWeatherPoint[] = [];
-
-    for (let index = 0; index < count; index += 1) {
-      const seedX = deterministicUnit(index, 21.41);
-      const seedY = deterministicUnit(index, 27.13);
-      const depth = deterministicUnit(index, 31.79);
-      const x = wrapNdc(seedX * 2 - 1 + seconds * driftX);
-      const y = clamp(
-        -0.65 + seedY * 1.32 + seconds * driftY,
-        -0.94,
-        0.82
-      );
-      points.push({
-        position: [x, y],
-        color: rgba(categoryColor, 0.025 + intensity * (0.08 + depth * 0.1)),
-        size: 2.2 + intensity * 3.4 + depth * 2.2
-      });
-    }
-
-    return { lines: [], points };
-  }
-
-  #motionPhaseSeconds(): number {
-    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 0;
-    const timestamp = Date.parse(this.#time.iso);
-    return Number.isFinite(timestamp) ? timestamp / 1000 : 0;
-  }
-
-  #weatherGeometry(): NativeWeatherGeometry {
-    if (
-      (this.#time.mode !== 'live' && this.#time.mode !== 'forecast') ||
-      !this.#layerVisible('weather', true) ||
-      !this.#atmosphere?.current
-    ) {
-      return { lines: [], points: [] };
-    }
-
-    const current = this.#atmosphere.current;
-    const phenomenon = weatherPhenomenon(this.#atmosphere);
-    const seconds = this.#motionPhaseSeconds();
-    const cloudCover = clamp(current.cloudCoverPercent ?? 0, 0, 100);
-    const precipitation = Math.max(0, current.precipitationMm ?? 0);
-    const windSpeed = Math.max(0, current.windSpeedKph ?? 0);
-    const windFrom = current.windDirectionDegrees ?? 0;
-    const windToward = ((windFrom + 180) * Math.PI) / 180;
-    const windX = Math.sin(windToward);
-    const windY = Math.cos(windToward);
-
-    const lines: NativeWeatherLine[] = [];
-    const points: NativeWeatherPoint[] = [];
-
-    const cloudCount = Math.round(
-      (cloudCover / 100) * 72 * this.#decorativeDensity()
-    );
-    const cloudDrift = seconds * Math.min(80, windSpeed) * 0.00016;
-    for (let index = 0; index < cloudCount; index += 1) {
-      const seedX = deterministicUnit(index, 3.17);
-      const seedY = deterministicUnit(index, 8.41);
-      const depth = deterministicUnit(index, 5.73);
-      const x = wrapNdc(seedX * 2 - 1 + cloudDrift * windX);
-      const y = clamp(0.2 + seedY * 0.72 + cloudDrift * windY * 0.18, -0.95, 0.96);
-      points.push({
-        position: [x, y],
-        color: rgba('#c4d0db', 0.05 + (cloudCover / 100) * 0.16),
-        size: 5 + depth * 13
-      });
-    }
-
-    const forecastPresentation =
-      this.#time.mode === 'forecast' &&
-      (phenomenon === 'rain' ||
-        phenomenon === 'snow' ||
-        phenomenon === 'thunderstorm' ||
-        phenomenon === 'mixed');
-    const presentationPrecipitation =
-      precipitation > 0.02 ? precipitation : forecastPresentation ? 0.1 : 0;
-    const precipitationActive =
-      presentationPrecipitation > 0.02 &&
-      (phenomenon === 'rain' ||
-        phenomenon === 'snow' ||
-        phenomenon === 'thunderstorm' ||
-        phenomenon === 'mixed');
-    if (precipitationActive) {
-      const count = Math.max(
-        8,
-        Math.round(
-          (18 + clamp(presentationPrecipitation / 8, 0, 1) * 90) *
-            this.#decorativeDensity()
-        )
-      );
-      const snow = phenomenon === 'snow';
-      const fallRate = snow ? 0.045 : 0.13;
-      const windLean = clamp(windSpeed / 85, 0, 0.7) * windX;
-
-      for (let index = 0; index < count; index += 1) {
-        const seedX = deterministicUnit(index, 2.11);
-        const seedY = deterministicUnit(index, 7.91);
-        const phase = fractional(seedY + seconds * fallRate);
-        const y = 1 - phase * 2;
-        const x = wrapNdc(
-          seedX * 2 - 1 +
-            seconds * windLean * (snow ? 0.002 : 0.0035) +
-            (snow ? Math.sin(seconds * 0.7 + index) * 0.025 : 0)
-        );
-
-        if (snow) {
-          points.push({
-            position: [x, y],
-            color: rgba('#e8f4ff', 0.42 + clamp(presentationPrecipitation / 8, 0, 1) * 0.3),
-            size: 2.2 + deterministicUnit(index, 4.13) * 3
-          });
-        } else {
-          const length = 0.045 + clamp(presentationPrecipitation / 8, 0, 1) * 0.07;
-          lines.push({
-            from: [x, y],
-            to: [
-              clamp(x + windLean * length * 0.75, -1.08, 1.08),
-              clamp(y - length, -1.08, 1.08)
-            ],
-            color: rgba(
-              '#9ddcff',
-              0.22 + clamp(presentationPrecipitation / 8, 0, 1) * 0.42
-            )
-          });
-        }
-      }
-    }
-
-    if (phenomenon === 'fog') {
-      const visibility = Math.max(250, current.visibilityM ?? 10_000);
-      const fogStrength = 1 - clamp(visibility / 10_000, 0, 1);
-      const fogCount = Math.max(
-        10,
-        Math.round((24 + fogStrength * 54) * this.#decorativeDensity())
-      );
-      for (let index = 0; index < fogCount; index += 1) {
-        const x = deterministicUnit(index, 11.23) * 2 - 1;
-        const y = -0.82 + deterministicUnit(index, 13.37) * 0.62;
-        points.push({
-          position: [x, y],
-          color: rgba('#b9c8d2', 0.05 + fogStrength * 0.16),
-          size: 8 + deterministicUnit(index, 17.81) * 18
-        });
-      }
-    }
-
-    return { lines, points };
-  }
-
-  #collectGeometry(): {
-    linePositions: number[];
-    lineColors: number[];
-    pointPositions: number[];
-    pointColors: number[];
-    pointSizes: number[];
-  } {
-    const linePositions: number[] = [];
-    const lineColors: number[] = [];
-    const pointPositions: number[] = [];
-    const pointColors: number[] = [];
-    const pointSizes: number[] = [];
-
-    const addLine = (
-      from: OverlayCoordinate,
-      to: OverlayCoordinate,
-      color: Rgba
-    ) => {
-      const a = this.#project(from);
-      const b = this.#project(to);
-      linePositions.push(a[0], a[1], b[0], b[1]);
-      for (let index = 0; index < 2; index += 1) {
-        lineColors.push(color.r, color.g, color.b, color.a);
-      }
-    };
-
-    if (this.#layerVisible('grid', true)) {
-      const grid = this.#visualColor(rgba('#4b89a8', 0.14));
-      grid.a *= this.#layerOpacity('grid');
-      for (let index = -4; index <= 4; index += 1) {
-        const value = index / 4;
-        linePositions.push(-1, value, 1, value, value, -1, value, 1);
-        for (let repeat = 0; repeat < 4; repeat += 1) {
-          lineColors.push(grid.r, grid.g, grid.b, grid.a);
-        }
-      }
-    }
-
-    const weather = this.#weatherGeometry();
-    for (const line of weather.lines) {
-      linePositions.push(
-        line.from[0],
-        line.from[1],
-        line.to[0],
-        line.to[1]
-      );
-      for (let repeat = 0; repeat < 2; repeat += 1) {
-        lineColors.push(
-          line.color.r,
-          line.color.g,
-          line.color.b,
-          line.color.a
-        );
-      }
-    }
-    for (const point of weather.points) {
-      pointPositions.push(point.position[0], point.position[1]);
-      pointColors.push(
-        point.color.r,
-        point.color.g,
-        point.color.b,
-        point.color.a
-      );
-      pointSizes.push(point.size);
-    }
-
-    const air = this.#airGeometry();
-    for (const point of air.points) {
-      pointPositions.push(point.position[0], point.position[1]);
-      pointColors.push(
-        point.color.r,
-        point.color.g,
-        point.color.b,
-        point.color.a
-      );
-      pointSizes.push(point.size);
-    }
-
-    for (const snapshot of this.#overlays.values()) {
-      if (!this.#layerVisible(snapshot.layerId, true)) continue;
-      const lineStart = lineColors.length;
-      const pointStart = pointColors.length;
-      const scenario = this.#time.mode === 'scenario' ? this.#time.scenarioVisual : null;
-      const base = this.#visualColor(layerColor(snapshot.layerId));
-
-      for (const edge of snapshot.edges) {
-        let color = base;
-        const windEdge =
-          edge.kind === 'flow' && edge.properties?.vectorType === 'wind';
-        const worksetGeometryEdge =
-          edge.properties?.analysisType === 'workset-geometry';
-        const scenarioModelEdge =
-          edge.properties?.analysisType === 'scenario-model';
-        const nwsBoundary =
-          edge.properties?.eventType === 'nws-alert-boundary';
-        if (nwsBoundary) {
-          color = rgba(hazardHex(edge.properties?.severity), 0.88);
-        } else if (scenarioModelEdge) {
-          color = rgba('#d991ff', 0.86);
-        } else if (worksetGeometryEdge) {
-          color = rgba('#63ffc5', 0.78);
-        } else if (windEdge && this.#time.mode === 'live') {
-          const phase = this.#motionPhaseSeconds();
-          const pulse = 0.5 + 0.5 * Math.sin(phase * 0.72 + (edge.intensity ?? 0.5) * 4.7);
-          color = rgba('#7de9ff', 0.34 + pulse * 0.48);
-        } else if (
-          scenario &&
-          snapshot.layerId === 'energy' &&
-          (edge.kind === 'transmission' || edge.kind === 'distribution')
-        ) {
-          color =
-            scenario.renewableBias > 0.25
-              ? rgba('#63ffc5', 0.96)
-              : scenario.weatherRisk > 0.55
-                ? rgba('#ff7f6b', 0.96)
-                : scenario.storageStress > 0.45
-                  ? rgba('#f2aa62', 0.96)
-                  : rgba('#ffbd73', 0.92);
-          addLine(edge.from, edge.to, rgba('#91a0ad', 0.22));
-        }
-        if (
-          this.#isSelectedSource(
-            snapshot.layerId,
-            edge.id,
-            edge.properties
-          )
-        ) {
-          color = rgba('#ffffff', 1);
-        }
-        addLine(edge.from, edge.to, color);
-      }
-
-      for (const area of snapshot.areas ?? []) {
-        const selected = this.#isSelectedSource(
-          snapshot.layerId,
-          area.id,
-          area.properties
-        );
-        const areaColor = selected
-          ? rgba('#ffffff', 0.96)
-          : this.#visualColor(layerColor(snapshot.layerId, area.kind));
-        if (area.kind === 'building') {
-          for (const [from, to] of buildingEdges(area)) addLine(from, to, areaColor);
-        } else {
-          for (let index = 1; index < area.positions.length; index += 1) {
-            addLine(area.positions[index - 1], area.positions[index], areaColor);
-          }
-        }
-      }
-
-      for (const node of snapshot.nodes) {
-        const point = this.#project(node.position);
-        const urbanLight =
-          node.properties?.presentationType === 'urban-illumination';
-        const worksetGeometryNode =
-          node.properties?.analysisType === 'workset-geometry';
-        const scenarioModelNode =
-          node.properties?.analysisType === 'scenario-model';
-        const phase = this.#motionPhaseSeconds();
-        const lightPulse =
-          0.5 +
-          0.5 *
-            Math.sin(
-              phase * 0.12 +
-                node.id.length * 0.71 +
-                (node.intensity ?? 0.5) * 4.2
-            );
-        const operatorIncident =
-          node.properties?.eventType === 'operator-incident';
-        const incidentSeverity = String(node.properties?.severity ?? 'info');
-        const incidentColor =
-          incidentSeverity === 'critical'
-            ? '#ff4f63'
-            : incidentSeverity === 'high'
-              ? '#ff806b'
-              : incidentSeverity === 'medium'
-                ? '#f0b45f'
-                : incidentSeverity === 'low'
-                  ? '#e0d778'
-                  : '#8dc9ff';
-        const nwsAlert = node.properties?.eventType === 'nws-alert';
-        const gtfsVehicle =
-          node.kind === 'transit' && node.properties?.eventType === 'gtfs-vehicle';
-        const noaaGauge =
-          node.kind === 'sensor' && node.properties?.eventType === 'noaa-nwps-gauge';
-        let color = nwsAlert
-          ? rgba(hazardHex(node.properties?.severity), 0.96)
-          : gtfsVehicle
-            ? rgba('#70e7ff', 0.96)
-            : noaaGauge
-              ? rgba(hydrologyHex(node.properties?.floodBand), 0.96)
-          : urbanLight
-            ? rgba(
-                '#ffd37d',
-                0.48 +
-                  (node.intensity ?? 0.5) * 0.22 +
-                  lightPulse * 0.2
-              )
-            : operatorIncident
-            ? rgba(incidentColor, 0.96)
-            : scenarioModelNode
-              ? rgba('#d991ff', 0.96)
-              : worksetGeometryNode
-                ? rgba('#63ffc5', 0.96)
-                : this.#visualColor(layerColor(snapshot.layerId, node.kind));
-        const selected = this.#isSelectedSource(
-          snapshot.layerId,
-          node.id,
-          node.properties
-        );
-        if (selected) color = rgba('#ffffff', 1);
-        pointPositions.push(point[0], point[1]);
-        pointColors.push(color.r, color.g, color.b, color.a);
-        pointSizes.push(
-          selected
-            ? 13
-            : (6 + clamp(node.intensity ?? 0.5, 0, 1) * 6) *
-                (urbanLight ? 0.88 + lightPulse * 0.2 : 1)
-        );
-        this.#features.push({
-          id: node.id,
-          kind: node.kind,
-          source: snapshot.attribution ?? null,
-          x: point[0],
-          y: point[1],
-          latitude: node.position.latitude,
-          longitude: node.position.longitude,
-          heightMeters: node.position.heightMeters ?? 0,
-          properties: {
-            layerId: snapshot.layerId,
-            eventTime: snapshot.eventTime,
-            sourceTime: snapshot.sourceTime,
-            fetchedAt: snapshot.fetchedAt,
-            live: snapshot.live,
-            stale: snapshot.stale,
-            fallback: snapshot.fallback,
-            attribution: snapshot.attribution,
-            ...node.properties
-          }
-        });
-      }
-      const opacity = this.#layerOpacity(snapshot.layerId);
-      for (let index = lineStart + 3; index < lineColors.length; index += 4) lineColors[index] *= opacity;
-      for (let index = pointStart + 3; index < pointColors.length; index += 4) pointColors[index] *= opacity;
-    }
-
-    return {
-      linePositions,
-      lineColors,
-      pointPositions,
-      pointColors,
-      pointSizes
-    };
   }
 
   #renderWebgl(): void {
@@ -1094,305 +444,57 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     const canvas = this.#canvas;
     if (!gl || !program || !canvas) return;
 
-    const background = this.#background();
+    const background = nativeBackground(this.#frame());
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(background.r, background.g, background.b, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(program);
 
-    const geometry = this.#collectGeometry();
-    this.#drawWebgl(
+    const geometry = collectNativeGeometry(this.#frame());
+    this.#features = geometry.features;
+    drawNativeWebgl(
+      gl,
+      {
+        program,
+        positionLocation: this.#positionLocation,
+        colorLocation: this.#colorLocation,
+        pointSizeLocation: this.#pointSizeLocation,
+      },
       gl.LINES,
       geometry.linePositions,
       geometry.lineColors,
-      new Array(geometry.linePositions.length / 2).fill(1)
+      new Array(geometry.linePositions.length / 2).fill(1),
     );
-    this.#drawWebgl(
+    drawNativeWebgl(
+      gl,
+      {
+        program,
+        positionLocation: this.#positionLocation,
+        colorLocation: this.#colorLocation,
+        pointSizeLocation: this.#pointSizeLocation,
+      },
       gl.POINTS,
       geometry.pointPositions,
       geometry.pointColors,
-      geometry.pointSizes
+      geometry.pointSizes,
     );
-  }
-
-  #drawWebgl(
-    mode: number,
-    positions: readonly number[],
-    colors: readonly number[],
-    sizes: readonly number[]
-  ): void {
-    const gl = this.#gl;
-    if (!gl || !this.#program || !positions.length) return;
-    const count = positions.length / 2;
-
-    const positionBuffer = gl.createBuffer();
-    const colorBuffer = gl.createBuffer();
-    const sizeBuffer = gl.createBuffer();
-    if (!positionBuffer || !colorBuffer || !sizeBuffer) return;
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.DYNAMIC_DRAW);
-    gl.enableVertexAttribArray(this.#positionLocation);
-    gl.vertexAttribPointer(this.#positionLocation, 2, gl.FLOAT, false, 0, 0);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.DYNAMIC_DRAW);
-    gl.enableVertexAttribArray(this.#colorLocation);
-    gl.vertexAttribPointer(this.#colorLocation, 4, gl.FLOAT, false, 0, 0);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sizes), gl.DYNAMIC_DRAW);
-    gl.enableVertexAttribArray(this.#pointSizeLocation);
-    gl.vertexAttribPointer(this.#pointSizeLocation, 1, gl.FLOAT, false, 0, 0);
-
-    gl.drawArrays(mode, 0, count);
-    gl.deleteBuffer(positionBuffer);
-    gl.deleteBuffer(colorBuffer);
-    gl.deleteBuffer(sizeBuffer);
-  }
-
-  #render2d(): void {
-    const context = this.#context2d;
-    const canvas = this.#canvas;
-    if (!context || !canvas) return;
-
-    const dpr = Math.min(globalThis.devicePixelRatio || 1, 2);
-    const width = canvas.width / dpr;
-    const height = canvas.height / dpr;
-    context.setTransform(dpr, 0, 0, dpr, 0, 0);
-    context.fillStyle = css(this.#background());
-    context.fillRect(0, 0, width, height);
-
-    const toScreen = (position: OverlayCoordinate) => {
-      const projected = this.#project(position);
-      return [
-        ((projected[0] + 1) / 2) * width,
-        ((1 - projected[1]) / 2) * height
-      ] as const;
-    };
-
-    if (this.#layerVisible('grid', true)) {
-      const gridColor = this.#visualColor(rgba('#4b89a8', 0.14));
-      gridColor.a *= this.#layerOpacity('grid');
-      context.strokeStyle = css(gridColor);
-      context.lineWidth = 1;
-      context.beginPath();
-      for (let index = -4; index <= 4; index += 1) {
-        const x = ((index / 4 + 1) / 2) * width;
-        const y = ((1 - index / 4) / 2) * height;
-        context.moveTo(x, 0);
-        context.lineTo(x, height);
-        context.moveTo(0, y);
-        context.lineTo(width, y);
-      }
-      context.stroke();
-    }
-
-    const weather = this.#weatherGeometry();
-    context.lineCap = 'round';
-    for (const line of weather.lines) {
-      context.strokeStyle = css(line.color);
-      context.lineWidth = 1;
-      context.beginPath();
-      context.moveTo(
-        ((line.from[0] + 1) / 2) * width,
-        ((1 - line.from[1]) / 2) * height
-      );
-      context.lineTo(
-        ((line.to[0] + 1) / 2) * width,
-        ((1 - line.to[1]) / 2) * height
-      );
-      context.stroke();
-    }
-    for (const point of weather.points) {
-      context.fillStyle = css(point.color);
-      context.beginPath();
-      context.arc(
-        ((point.position[0] + 1) / 2) * width,
-        ((1 - point.position[1]) / 2) * height,
-        Math.max(1, point.size / 2),
-        0,
-        Math.PI * 2
-      );
-      context.fill();
-    }
-
-    const air = this.#airGeometry();
-    for (const point of air.points) {
-      context.fillStyle = css(point.color);
-      context.beginPath();
-      context.arc(
-        ((point.position[0] + 1) / 2) * width,
-        ((1 - point.position[1]) / 2) * height,
-        Math.max(1, point.size / 2),
-        0,
-        Math.PI * 2
-      );
-      context.fill();
-    }
-
-    for (const snapshot of this.#overlays.values()) {
-      if (!this.#layerVisible(snapshot.layerId, true)) continue;
-      context.save();
-      context.globalAlpha = this.#layerOpacity(snapshot.layerId);
-      const base = this.#visualColor(layerColor(snapshot.layerId));
-
-      for (const edge of snapshot.edges) {
-        const a = toScreen(edge.from);
-        const b = toScreen(edge.to);
-        const windEdge =
-          edge.kind === 'flow' && edge.properties?.vectorType === 'wind';
-        const worksetGeometryEdge =
-          edge.properties?.analysisType === 'workset-geometry';
-        const scenarioModelEdge =
-          edge.properties?.analysisType === 'scenario-model';
-        const phase = this.#motionPhaseSeconds();
-        const pulse = 0.5 + 0.5 * Math.sin(phase * 0.72 + (edge.intensity ?? 0.5) * 4.7);
-        const selected = this.#isSelectedSource(
-          snapshot.layerId,
-          edge.id,
-          edge.properties
-        );
-        context.strokeStyle = selected
-          ? '#ffffff'
-          : css(
-              scenarioModelEdge
-                ? rgba('#d991ff', 0.86)
-                : worksetGeometryEdge
-                  ? rgba('#63ffc5', 0.78)
-                  : windEdge && this.#time.mode === 'live'
-                    ? rgba('#7de9ff', 0.34 + pulse * 0.48)
-                    : base
-            );
-        context.lineWidth = selected
-          ? 3
-          : snapshot.layerId === 'energy'
-            ? 1.8
-            : windEdge
-              ? 1.2 + (edge.intensity ?? 0.5) * 1.2
-              : 1;
-        context.beginPath();
-        context.moveTo(a[0], a[1]);
-        context.lineTo(b[0], b[1]);
-        context.stroke();
-      }
-
-      for (const area of snapshot.areas ?? []) {
-        const selected = this.#isSelectedSource(
-          snapshot.layerId,
-          area.id,
-          area.properties
-        );
-        context.strokeStyle = selected
-          ? '#ffffff'
-          : css(this.#visualColor(layerColor(snapshot.layerId, area.kind)));
-        context.lineWidth = selected ? 2.5 : 1;
-        if (area.kind === 'building') {
-          for (const [from, to] of buildingEdges(area)) {
-            const a = toScreen(from), b = toScreen(to);
-            context.beginPath(); context.moveTo(a[0], a[1]); context.lineTo(b[0], b[1]); context.stroke();
-          }
-          continue;
-        }
-        context.beginPath();
-        area.positions.forEach((position, index) => {
-          const point = toScreen(position);
-          if (index === 0) context.moveTo(point[0], point[1]);
-          else context.lineTo(point[0], point[1]);
-        });
-        context.closePath();
-        context.stroke();
-      }
-
-      for (const node of snapshot.nodes) {
-        const point = this.#project(node.position);
-        const x = ((point[0] + 1) / 2) * width;
-        const y = ((1 - point[1]) / 2) * height;
-        const selected = this.#isSelectedSource(
-          snapshot.layerId,
-          node.id,
-          node.properties
-        );
-        const urbanLight =
-          node.properties?.presentationType === 'urban-illumination';
-        const worksetGeometryNode =
-          node.properties?.analysisType === 'workset-geometry';
-        const scenarioModelNode =
-          node.properties?.analysisType === 'scenario-model';
-        const phase = this.#motionPhaseSeconds();
-        const lightPulse =
-          0.5 +
-          0.5 *
-            Math.sin(
-              phase * 0.12 +
-                node.id.length * 0.71 +
-                (node.intensity ?? 0.5) * 4.2
-            );
-        context.fillStyle = selected
-          ? '#ffffff'
-          : css(
-              scenarioModelNode
-                ? rgba('#d991ff', 0.96)
-                : worksetGeometryNode
-                  ? rgba('#63ffc5', 0.96)
-                  : urbanLight
-                    ? rgba(
-                        '#ffd37d',
-                        0.48 +
-                          (node.intensity ?? 0.5) * 0.22 +
-                          lightPulse * 0.2
-                      )
-                    : this.#visualColor(
-                        layerColor(snapshot.layerId, node.kind)
-                      )
-            );
-        context.beginPath();
-        context.arc(x, y, selected ? 6 : 3.5 + clamp(node.intensity ?? 0.5, 0, 1) * 2.5, 0, Math.PI * 2);
-        context.fill();
-
-        this.#features.push({
-          id: node.id,
-          kind: node.kind,
-          source: snapshot.attribution ?? null,
-          x: point[0],
-          y: point[1],
-          latitude: node.position.latitude,
-          longitude: node.position.longitude,
-          heightMeters: node.position.heightMeters ?? 0,
-          properties: {
-            layerId: snapshot.layerId,
-            eventTime: snapshot.eventTime,
-            sourceTime: snapshot.sourceTime,
-            fetchedAt: snapshot.fetchedAt,
-            live: snapshot.live,
-            stale: snapshot.stale,
-            fallback: snapshot.fallback,
-            attribution: snapshot.attribution,
-            ...node.properties
-          }
-        });
-      }
-      context.restore();
-    }
   }
 
   #pickEdge(point: SpatialPickPoint): SpatialFeatureSelection | null {
     const canvas = this.#canvas;
     if (!canvas) return null;
 
-    let best:
-      | {
-          edge: SpatialOverlayEdge;
-          snapshot: SpatialOverlaySnapshot;
-          distance: number;
-        }
-      | null = null;
+    let best: {
+      edge: SpatialOverlayEdge;
+      snapshot: SpatialOverlaySnapshot;
+      distance: number;
+    } | null = null;
 
     for (const snapshot of this.#overlays.values()) {
-      if (!this.#layerVisible(snapshot.layerId, true)) continue;
+      if (!nativeLayerVisible(this.#frame(), snapshot.layerId, true)) continue;
       for (const edge of snapshot.edges) {
-        const a = this.#project(edge.from);
-        const b = this.#project(edge.to);
+        const a = projectNative(this.#frame(), edge.from);
+        const b = projectNative(this.#frame(), edge.to);
         const ax = ((a[0] + 1) / 2) * canvas.clientWidth;
         const ay = ((1 - a[1]) / 2) * canvas.clientHeight;
         const bx = ((b[0] + 1) / 2) * canvas.clientWidth;
@@ -1408,8 +510,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     const midpoint = {
       latitude: (best.edge.from.latitude + best.edge.to.latitude) / 2,
       longitude: (best.edge.from.longitude + best.edge.to.longitude) / 2,
-      heightMeters:
-        ((best.edge.from.heightMeters ?? 0) + (best.edge.to.heightMeters ?? 0)) / 2
+      heightMeters: ((best.edge.from.heightMeters ?? 0) + (best.edge.to.heightMeters ?? 0)) / 2,
     };
 
     return {
@@ -1428,17 +529,23 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
         stale: best.snapshot.stale,
         fallback: best.snapshot.fallback,
         attribution: best.snapshot.attribution,
-        ...best.edge.properties
-      }
+        ...best.edge.properties,
+      },
     };
   }
 
-  #layerVisible(id: string, fallback: boolean): boolean {
-    return (this.#layers.get(id)?.visible ?? fallback) && this.#layerOpacity(id) > 0;
-  }
-
-  #layerOpacity(id: string): number {
-    const value = this.#layers.get(id)?.opacity ?? 1;
-    return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 1;
+  #frame(): NativeFrame {
+    return {
+      target: this.#target,
+      time: this.#time,
+      mode: this.#mode,
+      performanceTier: this.#performanceTier,
+      layers: this.#layers,
+      overlays: this.#overlays,
+      atmosphere: this.#atmosphere,
+      airQuality: this.#airQuality,
+      selectedSourceFeatureId: this.#selectedSourceFeatureId,
+      selectedLayerId: this.#selectedLayerId,
+    };
   }
 }

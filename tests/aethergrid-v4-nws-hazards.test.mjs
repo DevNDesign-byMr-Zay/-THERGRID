@@ -1,3 +1,4 @@
+import { nativeRendererSource } from './support/native-renderer-source.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { stripTypeScriptTypes } from 'node:module';
@@ -220,7 +221,7 @@ async function text(path) {
 test('v4 NWS hazards render consistently in Cesium and native failover', async () => {
   const [cesium, nativeRenderer, palette] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
-    text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+    nativeRendererSource(),
     text('apps/aethergrid-console/web/src/renderer/overlays/color-mapping.ts'),
   ]);
 

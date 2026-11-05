@@ -1,3 +1,4 @@
+import { nativeRendererSource } from './support/native-renderer-source.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
@@ -68,7 +69,7 @@ test('v4 NOAA gauge binding is coordinate-scoped and live-only in the scene', as
 test('v4 NOAA hydrology layer is available to both renderer engines and operational presets', async () => {
   const [cesium, nativeRenderer, presets, styles, palette] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
-    text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+    nativeRendererSource(),
     text('apps/aethergrid-console/web/src/app/use-case-presets.ts'),
     text('apps/aethergrid-console/web/src/app/app.css'),
     text('apps/aethergrid-console/web/src/renderer/overlays/color-mapping.ts'),

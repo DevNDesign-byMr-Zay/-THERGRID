@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, posix } from 'node:path';
+import ts from 'typescript';
 
 const ARCHIVE_PREFIX = 'aethergrid-functional-app/';
 
@@ -13,6 +14,38 @@ function safeRelativePath(path) {
     !path.includes('\\') &&
     !path.split('/').some((part) => !part || part === '.' || part === '..')
   );
+}
+
+async function verifyBackendModules(root, expected) {
+  const visited = new Set();
+  const pending = ['server.mjs'];
+  while (pending.length) {
+    const path = pending.pop();
+    if (visited.has(path)) continue;
+    assert.ok(safeRelativePath(path) && expected.has(path), 'missing backend module: ' + path);
+    visited.add(path);
+    const source = await readFile(join(root, ...path.split('/')), 'utf8');
+    const ast = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true);
+    function visit(node) {
+      const specifier =
+        ts.isImportDeclaration(node) || ts.isExportDeclaration(node)
+          ? node.moduleSpecifier
+          : ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword
+            ? node.arguments[0]
+            : null;
+      if (specifier && ts.isStringLiteralLike(specifier) && specifier.text.startsWith('.')) {
+        const dependency = posix.normalize(posix.join(posix.dirname(path), specifier.text));
+        assert.ok(
+          safeRelativePath(dependency) && expected.has(dependency),
+          'missing backend module: ' + dependency,
+        );
+        if (dependency.endsWith('.mjs')) pending.push(dependency);
+      }
+      ts.forEachChild(node, visit);
+    }
+    visit(ast);
+  }
+  return visited.size;
 }
 
 /** Checks the bytes actually extracted from a user-facing ZIP, not only its advertised manifest. */
@@ -86,10 +119,11 @@ export async function verifyAethergridPackageInventory(root, entryNames) {
   assert.ok(javascriptAssets > 0, 'canonical frontend has no substantial compiled JavaScript');
   assert.ok(stylesheetAssets > 0, 'canonical frontend has no compiled stylesheet');
   assert.ok(cesiumWorkers > 0, 'canonical frontend has no Cesium Workers');
-  assert.ok(expected.get('server.mjs')?.bytes >= 10_000, 'packaged backend appears incomplete');
+  const backendModules = await verifyBackendModules(root, expected);
 
   return Object.freeze({
     verifiedFiles: expected.size,
+    backendModules,
     verifiedBytes,
     javascriptAssets,
     cesiumWorkers,

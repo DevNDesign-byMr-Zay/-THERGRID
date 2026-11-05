@@ -13,11 +13,22 @@ const excludedDirectories = new Set([
   'playwright-report',
 ]);
 
+function literalKey(node) {
+  return node && (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))
+    ? node.text
+    : null;
+}
+
+function propertyKey(node) {
+  if (ts.isPropertyAccessExpression(node)) return node.name.text;
+  return ts.isElementAccessExpression(node) ? literalKey(node.argumentExpression) : null;
+}
+
 function isEnvironment(node) {
   return (
     (ts.isIdentifier(node) && node.text === 'env') ||
-    (ts.isPropertyAccessExpression(node) &&
-      node.name.text === 'env' &&
+    ((ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) &&
+      propertyKey(node) === 'env' &&
       ((ts.isIdentifier(node.expression) && node.expression.text === 'process') ||
         (ts.isMetaProperty(node.expression) && node.expression.name.text === 'meta')))
   );
@@ -36,9 +47,9 @@ export function sourceEnvironmentKeys(source, filename = 'source.ts') {
       ts.isElementAccessExpression(node) &&
       isEnvironment(node.expression) &&
       node.argumentExpression &&
-      ts.isStringLiteral(node.argumentExpression)
+      literalKey(node.argumentExpression) !== null
     ) {
-      add(node.argumentExpression.text);
+      add(literalKey(node.argumentExpression));
     } else if (
       ts.isVariableDeclaration(node) &&
       node.initializer &&
@@ -46,8 +57,13 @@ export function sourceEnvironmentKeys(source, filename = 'source.ts') {
       ts.isObjectBindingPattern(node.name)
     ) {
       for (const element of node.name.elements) {
+        if (element.dotDotDotToken) continue;
         const name = element.propertyName ?? element.name;
         if (ts.isIdentifier(name) || ts.isStringLiteral(name)) add(name.text);
+        else if (ts.isComputedPropertyName(name)) {
+          const key = literalKey(name.expression);
+          if (key) add(key);
+        }
       }
     }
     ts.forEachChild(node, visit);

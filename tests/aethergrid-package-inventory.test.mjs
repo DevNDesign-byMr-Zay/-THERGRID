@@ -16,11 +16,13 @@ const contents = {
   'web/dist/cesium/Workers/worker.js': 'self.onmessage = () => {}',
 };
 
-async function fixture(t) {
+async function fixture(t, overrides = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'aethergrid-package-integrity-'));
   t.after(() => rm(dir, { recursive: true, force: true }));
   const files = [];
-  for (const [path, value] of Object.entries(contents).sort(([a], [b]) => a.localeCompare(b))) {
+  for (const [path, value] of Object.entries({ ...contents, ...overrides }).sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
     const target = join(dir, ...path.split('/'));
     await mkdir(dirname(target), { recursive: true });
     await writeFile(target, value);
@@ -69,4 +71,25 @@ test('missing or duplicate archive entries cannot masquerade as complete', async
   const { dir, entries } = await fixture(t);
   await assert.rejects(verifyAethergridPackageInventory(dir, entries.slice(1)));
   await assert.rejects(verifyAethergridPackageInventory(dir, [...entries, entries[0]]));
+});
+
+test('compact backend with a complete cyclic module graph passes inventory verification', async (t) => {
+  const { dir, entries } = await fixture(t, {
+    'server.mjs': "import './server/http/routes.mjs'; export const server = {};",
+    'server/http/routes.mjs': "export { value } from './helpers.mjs';",
+    'server/http/helpers.mjs': "import '../../server.mjs'; export const value = 1;",
+  });
+  const result = await verifyAethergridPackageInventory(dir, entries);
+  assert.equal(result.backendModules, 3);
+});
+
+test('self-consistent inventory cannot omit a transitive backend module', async (t) => {
+  const { dir, entries } = await fixture(t, {
+    'server.mjs': "import './server/http/routes.mjs'; export const server = {};",
+    'server/http/routes.mjs': "export { value } from './missing.mjs';",
+  });
+  await assert.rejects(
+    verifyAethergridPackageInventory(dir, entries),
+    /missing backend module: server\/http\/missing\.mjs/u,
+  );
 });

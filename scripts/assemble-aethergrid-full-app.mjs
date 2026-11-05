@@ -30,6 +30,14 @@ const LEGACY_FILES = new Set([
 
 const REQUIRED_RUNTIME_FILES = Object.freeze([
   'server.mjs',
+  'server/http/auth-routes.mjs',
+  'server/http/observation-http.mjs',
+  'server/http/provider-routes.mjs',
+  'server/http/spatial-routes.mjs',
+  'server/http/quantum-routes.mjs',
+  'server/http/agent-routes.mjs',
+  'server/http/operator-routes.mjs',
+
   'web-runtime.mjs',
   'agent-config.mjs',
   'agent-grid-skills.mjs',

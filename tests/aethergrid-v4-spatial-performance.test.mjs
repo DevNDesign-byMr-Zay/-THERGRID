@@ -1,3 +1,4 @@
+import { nativeRendererSource } from './support/native-renderer-source.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
@@ -28,7 +29,7 @@ test('v4 performance tiers change renderer cost without changing data or analysi
     text('apps/aethergrid-console/web/src/renderer/spatial-renderer.ts'),
     text('apps/aethergrid-console/web/src/renderer/renderer-manager.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
-    text('apps/aethergrid-console/web/src/renderer/native/native-webgl-renderer.ts'),
+    nativeRendererSource(),
   ]);
 
   assert.match(contract, /SpatialPerformanceTier/u);
@@ -43,9 +44,9 @@ test('v4 performance tiers change renderer cost without changing data or analysi
   assert.match(cesium, /performanceTier: this\.#performanceTier/u);
 
   assert.match(native, /dprCap/u);
-  assert.match(native, /#decorativeDensity/u);
+  assert.match(native, /nativeDecorativeDensity/u);
   assert.match(native, /performanceTier: this\.#performanceTier/u);
-  assert.match(native, /#decorativeDensity/u);
+  assert.match(native, /nativeDecorativeDensity/u);
 });
 
 test('v4 spatial viewport exposes explicit AUTO HQ BAL ECO operator controls', async () => {
