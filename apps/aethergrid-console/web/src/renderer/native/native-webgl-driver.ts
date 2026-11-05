@@ -5,7 +5,7 @@ import type { NativeFrame, ProjectedFeature } from './native-frame';
 // Own the canvas listeners and all context-bound resources together. CPU scene
 // state remains with the renderer and is redrawn only after fresh bindings exist.
 export class NativeWebglDriver {
-  #bindings: NativeWebglBindings | null;
+  #bindings: NativeWebglBindings | null = null;
   #destroyed = false;
   reason: string | null = null;
 
@@ -14,9 +14,20 @@ export class NativeWebglDriver {
     private readonly gl: WebGLRenderingContext,
     private readonly redraw: () => void,
   ) {
-    this.#bindings = initializeNativeWebgl(gl);
     canvas.addEventListener('webglcontextlost', this.#onLost);
     canvas.addEventListener('webglcontextrestored', this.#onRestored);
+    try {
+      this.#bindings = initializeNativeWebgl(gl);
+    } catch (error) {
+      if (gl.isContextLost()) {
+        // Allocation can lose the context before its loss event is delivered.
+        // Retain this listener owner so the queued event permits restoration.
+        this.reason = 'WebGL context lost; rendering suspended until restoration';
+      } else {
+        this.destroy();
+        throw error;
+      }
+    }
   }
 
   get suspended(): boolean {

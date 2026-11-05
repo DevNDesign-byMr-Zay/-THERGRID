@@ -12,6 +12,7 @@ test('native browser restores actual WebGL contexts repeatedly and releases the 
   await expect(page.locator('.spatial-shell')).toHaveAttribute('data-renderer-ready', 'true', {
     timeout: 30_000,
   });
+  await page.getByText('Renderer tools', { exact: true }).click();
   await page
     .getByRole('group', { name: 'Spatial renderer' })
     .getByRole('button', { name: 'NATIVE', exact: true })
@@ -77,7 +78,9 @@ test('native browser restores actual WebGL contexts repeatedly and releases the 
       .getByRole('button', { name: cycle === 1 ? 'SOLID' : 'HOLOGRAPHIC', exact: true })
       .click();
     await page.setViewportSize({ width: 1100 + cycle * 20, height: 760 });
-    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+    await page.evaluate(
+      () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+    );
     expect(await page.evaluate(() => (window as any).__nativeLifecycle.draws)).toBe(before);
     await page.evaluate(() => (window as any).__nativeLifecycle.extension.restoreContext());
     await expect

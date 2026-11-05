@@ -9,6 +9,8 @@ function fixture() {
   );
   let lost = false,
     failLink = false,
+    failShader = false,
+    loseOnInitialLink = false,
     draws = 0,
     removed = false,
     reducedMotion = true;
@@ -16,7 +18,9 @@ function fixture() {
     pendingDelete: object | null = null;
   const programs = new Set<object>(),
     deleted: object[] = [],
-    shaders = new Set<object>();
+    shaders = new Set<object>(),
+    allocations: object[] = [];
+  let initialLossEvent: Event | null = null;
   const uploads: number[][] = [],
     commands: { colors: number[]; sizes: number[] }[] = [];
   const frames = new Map<number, FrameRequestCallback>();
@@ -38,6 +42,7 @@ function fixture() {
       createProgram: () => {
         const program = {};
         programs.add(program);
+        allocations.push(program);
         return program;
       },
       // WebGL defers deletion of the current program until it is unbound.
@@ -56,8 +61,20 @@ function fixture() {
         active = program;
         if (program) expect(programs.has(program)).toBe(true);
       },
-      getShaderParameter: () => true,
-      getProgramParameter: () => !failLink,
+      getShaderParameter: () => !failShader,
+      getShaderInfoLog: () => 'Shader failure fixture',
+      getProgramParameter: () => {
+        if (loseOnInitialLink) {
+          loseOnInitialLink = false;
+          lost = true;
+          programs.clear();
+          shaders.clear();
+          initialLossEvent = new Event('webglcontextlost', { cancelable: true });
+          queueMicrotask(() => canvas.dispatchEvent(initialLossEvent!));
+          return false;
+        }
+        return !failLink;
+      },
       getProgramInfoLog: () => 'Link failure fixture',
       getAttribLocation: () => 0,
       createBuffer: () => ({}),
@@ -102,6 +119,16 @@ function fixture() {
     programs,
     deleted,
     shaders,
+    allocations,
+    get initialLossEvent() {
+      return initialLossEvent;
+    },
+    set loseOnInitialLink(value: boolean) {
+      loseOnInitialLink = value;
+    },
+    set failShader(value: boolean) {
+      failShader = value;
+    },
     get draws() {
       return draws;
     },
@@ -335,3 +362,67 @@ test('native loss retains scene updates and journeys settle while GPU draws are 
     f.cleanup();
   }
 });
+
+// A loss during first linking must leave an owner for the queued loss event.
+test('native initial linking loss remains suspended and restores the retained public scene', async () => {
+  const f = fixture();
+  try {
+    f.loseOnInitialLink = true;
+    await scene(f.renderer);
+    expect(f.initialLossEvent?.defaultPrevented).toBe(true);
+    expect(f.renderer.status()).toMatchObject({ ready: false, degraded: true });
+    expect(f.renderer.status().reason).toMatch(/context lost/i);
+    expect(f.draws).toBe(0);
+    expect(f.programs.size).toBe(0);
+    const camera = f.renderer.cameraSnapshot(),
+      solar = f.renderer.status().solar;
+    f.restore();
+    expect(f.allocations).toHaveLength(2);
+    expect(f.allocations[1]).not.toBe(f.allocations[0]);
+    expect(f.programs.size).toBe(1);
+    expect(f.renderer.status()).toMatchObject({
+      ready: true,
+      degraded: false,
+      visualMode: 'solid',
+      performanceTier: 'quality',
+      solar,
+    });
+    expect(f.renderer.cameraSnapshot()).toEqual(camera);
+    expect(f.commands.at(-1)).toEqual({ colors: [1, 1, 1, 0.25], sizes: [13] });
+    expect(await f.renderer.pick({ x: 400, y: 300 })).toMatchObject({
+      id: 'station',
+      source: 'Lifecycle source',
+      properties: { sourceFeatureId: 'mapped-station', stale: true, fallback: false },
+    });
+    f.renderer.destroy();
+    f.renderer.destroy();
+    expect(f.deleted).toHaveLength(1);
+    expect(f.programs.size).toBe(0);
+    expect(f.loss().defaultPrevented).toBe(false);
+    f.restore();
+    expect(f.programs.size).toBe(0);
+  } finally {
+    f.cleanup();
+  }
+});
+
+for (const failure of ['shader', 'link'] as const) {
+  test(`native genuine initial ${failure} failure rejects and relinquishes listener ownership`, async () => {
+    const f = fixture();
+    try {
+      if (failure === 'shader') f.failShader = true;
+      else f.failLink = true;
+      await expect(f.renderer.initialize()).rejects.toThrow(
+        failure === 'shader' ? 'Shader failure fixture' : 'Link failure fixture',
+      );
+      expect(f.renderer.status().ready).toBe(false);
+      expect(f.programs.size).toBe(0);
+      expect(f.shaders.size).toBe(0);
+      expect(f.loss().defaultPrevented).toBe(false);
+      f.restore();
+      expect(f.programs.size).toBe(0);
+    } finally {
+      f.cleanup();
+    }
+  });
+}
