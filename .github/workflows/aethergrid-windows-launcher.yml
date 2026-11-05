@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - '.github/workflows/aethergrid-windows-launcher.yml'
+      - '.github/workflows/aethergrid-qiskit-aer.yml'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/release-request-v*.yml'
       - 'apps/aethergrid-console/START-AETHERGRID.ps1'
       - 'apps/aethergrid-console/START-AETHERGRID.cmd'
       - 'apps/aethergrid-console/README.md'
@@ -35,6 +38,7 @@ on:
       - 'scripts/run-offline-tests.mjs'
       - 'tests/syntax-check.test.mjs'
       - 'tests/aethergrid-offline-*.test.mjs'
+      - 'tests/aethergrid-release-request-gate.test.mjs'
       - 'package.json'
   workflow_dispatch:
 
@@ -77,6 +81,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'PowerShell syntax verification failed' }
           node --test tests/syntax-check.test.mjs tests/aethergrid-offline-network.test.mjs tests/aethergrid-offline-overloads.test.mjs tests/aethergrid-offline-runner.test.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Windows offline-network control tests failed' }
+
+      - name: Verify guarded release workflow scripts from PowerShell
+        shell: powershell
+        run: |
+          node --test tests/aethergrid-release-request-gate.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Windows release gate tests failed' }
 
       - name: Verify PowerShell 5.1 startup, port precedence and live health
         shell: powershell
