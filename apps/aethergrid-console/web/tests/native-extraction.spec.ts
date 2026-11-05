@@ -75,7 +75,7 @@ function nativeFixture(webgl = false) {
     },
     { get: (target, key) => (key in target ? target[key as keyof typeof target] : () => {}) },
   );
-  const canvas: any = {
+  const canvas: any = Object.assign(new EventTarget(), {
     style: {},
     clientWidth: 800,
     clientHeight: 600,
@@ -86,7 +86,7 @@ function nativeFixture(webgl = false) {
       removed = true;
     },
     getContext: (kind: string) => (kind === 'webgl' && webgl ? gl : kind === '2d' ? context : null),
-  };
+  });
   globals.document = { createElement: () => canvas };
   globals.window = { matchMedia: () => ({ matches: reducedMotion }) };
   globals.devicePixelRatio = 3;

@@ -1,3 +1,92 @@
+import { nativeBackground } from './native-environment';
+import { collectNativeGeometry } from './native-geometry';
+import type { NativeFrame, ProjectedFeature } from './native-frame';
+
+// Own the canvas listeners and all context-bound resources together. CPU scene
+// state remains with the renderer and is redrawn only after fresh bindings exist.
+export class NativeWebglDriver {
+  #bindings: NativeWebglBindings | null;
+  #destroyed = false;
+  reason: string | null = null;
+
+  constructor(
+    private readonly canvas: HTMLCanvasElement,
+    private readonly gl: WebGLRenderingContext,
+    private readonly redraw: () => void,
+  ) {
+    this.#bindings = initializeNativeWebgl(gl);
+    canvas.addEventListener('webglcontextlost', this.#onLost);
+    canvas.addEventListener('webglcontextrestored', this.#onRestored);
+  }
+
+  get suspended(): boolean {
+    return !this.#bindings || this.gl.isContextLost();
+  }
+
+  #onLost = (event: Event): void => {
+    event.preventDefault();
+    // Lost-context programs are invalid already; never delete or reuse them.
+    this.#bindings = null;
+    this.reason = 'WebGL context lost; rendering suspended until restoration';
+  };
+
+  #onRestored = (): void => {
+    if (this.#destroyed || this.gl.isContextLost()) return;
+    // Ignore duplicate restoration notifications once this context is usable.
+    if (this.#bindings) return;
+    try {
+      this.#bindings = initializeNativeWebgl(this.gl);
+      this.reason = null;
+    } catch (error) {
+      this.reason = `WebGL restoration failed: ${error instanceof Error ? error.message : String(error)}`;
+      return;
+    }
+    this.redraw();
+  };
+
+  draw(frame: NativeFrame): ProjectedFeature[] {
+    const bindings = this.#bindings;
+    if (this.#destroyed || this.suspended || !bindings) return [];
+    const gl = this.gl,
+      background = nativeBackground(frame);
+    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    gl.clearColor(background.r, background.g, background.b, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(bindings.program);
+    const geometry = collectNativeGeometry(frame);
+    drawNativeWebgl(
+      gl,
+      bindings,
+      gl.LINES,
+      geometry.linePositions,
+      geometry.lineColors,
+      new Array(geometry.linePositions.length / 2).fill(1),
+    );
+    drawNativeWebgl(
+      gl,
+      bindings,
+      gl.POINTS,
+      geometry.pointPositions,
+      geometry.pointColors,
+      geometry.pointSizes,
+    );
+    return geometry.features;
+  }
+
+  destroy(): void {
+    if (this.#destroyed) return;
+    this.#destroyed = true;
+    this.canvas.removeEventListener('webglcontextlost', this.#onLost);
+    this.canvas.removeEventListener('webglcontextrestored', this.#onRestored);
+    if (this.#bindings && !this.gl.isContextLost()) {
+      // Deleting a current program is deferred by WebGL until it is unbound.
+      this.gl.useProgram(null);
+      this.gl.deleteProgram(this.#bindings.program);
+    }
+    this.#bindings = null;
+  }
+}
+
 export interface NativeWebglBindings {
   program: WebGLProgram;
   positionLocation: number;
@@ -24,33 +113,46 @@ export function initializeNativeWebgl(gl: WebGLRenderingContext): NativeWebglBin
       }
     `;
 
-  const vertex = shader(gl, gl.VERTEX_SHADER, vertexSource);
-  const fragment = shader(gl, gl.FRAGMENT_SHADER, fragmentSource);
-  const program = gl.createProgram();
-  if (!program) throw new Error('Native WebGL program allocation failed');
-  gl.attachShader(program, vertex);
-  gl.attachShader(program, fragment);
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    throw new Error(gl.getProgramInfoLog(program) || 'Native WebGL link failed');
+  let vertex: WebGLShader | null = null,
+    fragment: WebGLShader | null = null;
+  let program: WebGLProgram | null = null;
+  try {
+    vertex = shader(gl, gl.VERTEX_SHADER, vertexSource);
+    fragment = shader(gl, gl.FRAGMENT_SHADER, fragmentSource);
+    program = gl.createProgram();
+    if (!program) throw new Error('Native WebGL program allocation failed');
+    gl.attachShader(program, vertex);
+    gl.attachShader(program, fragment);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      throw new Error(gl.getProgramInfoLog(program) || 'Native WebGL link failed');
+    }
+    const positionLocation = gl.getAttribLocation(program, 'a_position');
+    const colorLocation = gl.getAttribLocation(program, 'a_color');
+    const pointSizeLocation = gl.getAttribLocation(program, 'a_pointSize');
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    return { program, positionLocation, colorLocation, pointSizeLocation };
+  } catch (error) {
+    if (program && !gl.isContextLost()) gl.deleteProgram(program);
+    throw error;
+  } finally {
+    if (!gl.isContextLost()) {
+      if (vertex) gl.deleteShader(vertex);
+      if (fragment) gl.deleteShader(fragment);
+    }
   }
-  gl.deleteShader(vertex);
-  gl.deleteShader(fragment);
-
-  const positionLocation = gl.getAttribLocation(program, 'a_position');
-  const colorLocation = gl.getAttribLocation(program, 'a_color');
-  const pointSizeLocation = gl.getAttribLocation(program, 'a_pointSize');
-  gl.enable(gl.BLEND);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-  return { program, positionLocation, colorLocation, pointSizeLocation };
 }
+
 function shader(gl: WebGLRenderingContext, type: number, source: string): WebGLShader {
   const shader = gl.createShader(type);
   if (!shader) throw new Error('Native WebGL shader allocation failed');
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    throw new Error(gl.getShaderInfoLog(shader) || 'Native WebGL shader compile failed');
+    const message = gl.getShaderInfoLog(shader) || 'Native WebGL shader compile failed';
+    if (!gl.isContextLost()) gl.deleteShader(shader);
+    throw new Error(message);
   }
   return shader;
 }
