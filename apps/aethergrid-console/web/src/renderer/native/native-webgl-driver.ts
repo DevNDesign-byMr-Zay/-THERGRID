@@ -2,6 +2,8 @@ import { nativeBackground } from './native-environment';
 import { collectNativeGeometry } from './native-geometry';
 import type { NativeFrame, ProjectedFeature } from './native-frame';
 
+export const NATIVE_AVAILABILITY_EVENT = 'aethergrid:native-availability';
+
 // Own the canvas listeners and all context-bound resources together. CPU scene
 // state remains with the renderer and is redrawn only after fresh bindings exist.
 export class NativeWebglDriver {
@@ -39,6 +41,7 @@ export class NativeWebglDriver {
     // Lost-context programs are invalid already; never delete or reuse them.
     this.#bindings = null;
     this.reason = 'WebGL context lost; rendering suspended until restoration';
+    this.#notifyAvailability();
   };
 
   #onRestored = (): void => {
@@ -50,10 +53,17 @@ export class NativeWebglDriver {
       this.reason = null;
     } catch (error) {
       this.reason = `WebGL restoration failed: ${error instanceof Error ? error.message : String(error)}`;
+      this.#notifyAvailability();
       return;
     }
     this.redraw();
+    this.#notifyAvailability();
   };
+
+  #notifyAvailability(): void {
+    // Native context events do not bubble. Notify the host after the driver transition.
+    this.canvas.dispatchEvent(new Event(NATIVE_AVAILABILITY_EVENT, { bubbles: true }));
+  }
 
   draw(frame: NativeFrame): ProjectedFeature[] {
     const bindings = this.#bindings;

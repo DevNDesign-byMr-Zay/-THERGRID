@@ -210,6 +210,69 @@ async function scene(renderer: NativeWebglSpatialRenderer) {
   renderer.selectFeature('station');
 }
 
+test('native status reaches canvas observers after loss, failed restore and a fresh draw', async () => {
+  const f = fixture();
+  try {
+    await scene(f.renderer);
+    const before = f.draws;
+    const states: unknown[] = [];
+    f.canvas.addEventListener('aethergrid:native-availability', (event: Event) => {
+      const { ready, reason } = f.renderer.status();
+      states.push({ bubbles: event.bubbles, ready, reason, drew: f.draws > before });
+    });
+    f.loss();
+    f.failLink = true;
+    f.restore();
+    f.failLink = false;
+    f.restore();
+    f.restore();
+    expect(states).toEqual([
+      { bubbles: true, ready: false, reason: expect.stringMatching(/context lost/i), drew: false },
+      { bubbles: true, ready: false, reason: expect.stringMatching(/Link failure fixture/), drew: false },
+      { bubbles: true, ready: true, reason: expect.not.stringMatching(/context lost|restoration failed/i), drew: true },
+    ]);
+    f.loss();
+    f.renderer.destroy();
+    f.restore();
+    f.loss();
+    expect(states).toHaveLength(4);
+  } finally {
+    f.cleanup();
+  }
+});
+
+for (const kind of ['node', 'edge'] as const) {
+  test(`native suspended picking ignores ${kind}s even when overlay, layers and camera change`, async () => {
+    const f = fixture(), center = { x: 400, y: 300 };
+    const overlay = (id: string, latitude: number, longitude: number) => ({
+      id: 'source', layerId: 'energy', eventTime: '2026-06-21T12:00:00Z',
+      attribution: 'Latest mapped source', live: false, stale: true, fallback: false,
+      nodes: kind === 'node' ? [{ id, kind: 'substation' as const, position: { latitude, longitude }, properties: { sourceFeatureId: 'mapped' } }] : [],
+      edges: kind === 'edge' ? [{ id, kind: 'transmission' as const, from: { latitude, longitude: longitude - 0.01 }, to: { latitude, longitude: longitude + 0.01 }, properties: { sourceFeatureId: 'mapped' } }] : [],
+    });
+    try {
+      await scene(f.renderer);
+      f.renderer.applyOverlay(overlay('before', 40, -74));
+      expect(await f.renderer.pick(center)).toMatchObject({ id: 'before' });
+      f.loss();
+      expect.soft(await f.renderer.pick(center), 'immediately after loss').toBeNull();
+      f.renderer.clearOverlay('energy');
+      expect.soft(await f.renderer.pick(center), 'after removal').toBeNull();
+      f.renderer.applyOverlay(overlay('latest', 41, -73));
+      f.renderer.setLayers([{ id: 'energy', visible: false }]);
+      expect.soft(await f.renderer.pick(center), 'with replacement hidden').toBeNull();
+      f.renderer.setLayers([{ id: 'energy', visible: true }]);
+      await f.renderer.flyTo({ latitude: 41, longitude: -73, rangeMeters: 5000, journey: 'direct' });
+      expect.soft(await f.renderer.pick(center), 'at the new camera target').toBeNull();
+      expect(await f.renderer.pickSurface(center)).toMatchObject({ latitude: 41, longitude: -73, source: 'native-projection' });
+      f.restore();
+      expect(await f.renderer.pick(center)).toMatchObject({ id: 'latest', source: 'Latest mapped source', properties: { sourceFeatureId: 'mapped', stale: true, fallback: false } });
+    } finally {
+      f.cleanup();
+    }
+  });
+}
+
 // Removing preventDefault or the suspended draw guard must fail this contract.
 test('native loss permits restoration and suspends GPU work without losing camera or scene state', async () => {
   const f = fixture();

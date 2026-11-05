@@ -11,6 +11,7 @@ import {
 } from './native-frame';
 import { drawNativeCanvas } from './native-canvas';
 import { NativeWebglDriver } from './native-webgl-driver';
+export { NATIVE_AVAILABILITY_EVENT } from './native-webgl-driver';
 import { unprojectGround } from './local-projection';
 import {
   type AirQualityOverlaySnapshot,
@@ -318,7 +319,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
 
   async pick(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null> {
     const canvas = this.#canvas;
-    if (!canvas) return null;
+    if (!canvas || !this.#ready || this.#driver?.suspended) return null;
 
     let nearest: ProjectedFeature | null = null;
     let distance = 18;

@@ -8,7 +8,7 @@ import type { SpatialOverlaySnapshot } from '../renderer/overlays/spatial-overla
 import { useEffect, useRef, useState, useImperativeHandle, type Ref } from 'react';
 
 import { CesiumSpatialRenderer } from '../renderer/cesium/cesium-renderer';
-import { NativeWebglSpatialRenderer } from '../renderer/native/native-webgl-renderer';
+import { NATIVE_AVAILABILITY_EVENT, NativeWebglSpatialRenderer } from '../renderer/native/native-webgl-renderer';
 import { RendererManager } from '../renderer/renderer-manager';
 import type {
   LayerState,
@@ -47,6 +47,7 @@ const STARTING_STATUS: SpatialRendererStatus = {
   degraded: false,
   reason: null
 };
+const EMPTY_OVERLAYS: readonly SpatialOverlaySnapshot[] = [];
 
 export function SpatialViewport({
   ref,
@@ -54,7 +55,7 @@ export function SpatialViewport({
   time,
   layers,
   visualMode,
-  overlays = [],
+  overlays = EMPTY_OVERLAYS,
   atmosphere = null,
   airQuality = null,
   interactionMode = 'inspect',
@@ -65,6 +66,8 @@ export function SpatialViewport({
   useEffect(()=>{const reconnect=()=>setConnectionRevision(n=>n+1);window.addEventListener('aethergrid:spatial-config',reconnect);return()=>window.removeEventListener('aethergrid:spatial-config',reconnect);},[]);
   const hostRef = useRef<HTMLDivElement | null>(null);
   const managerRef = useRef<RendererManager | null>(null);
+  // CPU scene updates stay live after setup, even when native GPU drawing is suspended.
+  const [initializedManager, setInitializedManager] = useState<RendererManager | null>(null);
   const targetRef = useRef(target);
   targetRef.current = target;
   useImperativeHandle(ref, () => ({ cameraSnapshot: () => managerRef.current?.cameraSnapshot() ?? null }), []);
@@ -89,54 +92,29 @@ export function SpatialViewport({
       new NativeWebglSpatialRenderer()
     );
     managerRef.current = manager;
+    setInitializedManager(null);
     setStatus(STARTING_STATUS);
+    setSwitchingEngine(false);
+    lastJourneyKeyRef.current = null;
     overlaySnapshotsRef.current.clear();
     overlayIdsRef.current.clear();
     manager.mount(host);
 
+    const onNativeAvailability = () => {
+      if (!cancelled && manager.engine === 'native-webgl') setStatus(manager.status());
+    };
+    host.addEventListener(NATIVE_AVAILABILITY_EVENT, onNativeAvailability);
+
     void (async () => {
       const publicConfig = await loadPublicRuntimeConfig();
       if (cancelled) return;
-      const next = await manager.initialize({
+      await manager.initialize({
         cesiumIonToken: publicConfig.spatial.cesiumIonToken,
         realityEnabled: publicConfig.spatial.realityEnabled
       });
       if (cancelled) { manager.destroy(); return; }
-      setStatus(next);
-      manager.setPerformanceTier(performance.resolved);
-      manager.setLayers(layers);
-      manager.setVisualMode(visualMode);
-      manager.setTime(time);
-      for (const snapshot of overlays) {
-        manager.applyOverlay(snapshot);
-        overlaySnapshotsRef.current.set(snapshot.layerId, snapshot);
-      }
-      if (atmosphere) manager.applyAtmosphere(atmosphere);
-      if (airQuality) manager.applyAirQuality(airQuality);
-      overlayIdsRef.current = new Set(overlays.map((snapshot) => snapshot.layerId));
-      const targetKey = [
-        target.latitude,
-        target.longitude,
-        target.rangeMeters ?? '',
-        target.heightMeters ?? '',
-        target.pitchDegrees ?? '',
-        target.headingDegrees ?? '',
-        target.journey ?? ''
-      ].join(':');
-      lastJourneyKeyRef.current = targetKey;
-      const generation = ++journeyGenerationRef.current;
-      const journey = manager.flyTo(target);
+      setInitializedManager(manager);
       setStatus(manager.status());
-      const poll = globalThis.setInterval(() => {
-        if (!cancelled && generation === journeyGenerationRef.current) {
-          setStatus(manager.status());
-        }
-      }, 120);
-      await journey;
-      globalThis.clearInterval(poll);
-      if (!cancelled && generation === journeyGenerationRef.current) {
-        setStatus(manager.status());
-      }
     })().catch((error) => {
       if (cancelled) return;
       setStatus({
@@ -167,13 +145,18 @@ export function SpatialViewport({
         return;
       }
 
+      const engine = manager.engine;
+      const canInspect = () => !cancelled && engine === manager.engine &&
+        (engine !== 'native-webgl' || manager.status().ready);
+      if (!canInspect()) return;
       void manager
         .pick(screen)
         .then((selection) => {
+          if (!canInspect()) return;
           manager.selectFeature(selection?.id ?? null);
           onSelectionRef.current?.(selection);
         })
-        .catch(() => onSelectionRef.current?.(null));
+        .catch(() => { if (canInspect()) onSelectionRef.current?.(null); });
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
@@ -187,10 +170,11 @@ export function SpatialViewport({
     return () => {
       cancelled = true;
       observer.disconnect();
+      host.removeEventListener(NATIVE_AVAILABILITY_EVENT, onNativeAvailability);
       host.removeEventListener('click', onPointer);
       globalThis.removeEventListener('keydown', onKeyDown);
-      manager.destroy();
       if (managerRef.current === manager) managerRef.current = null;
+      manager.destroy();
     };
   }, [connectionRevision]);
 
@@ -201,36 +185,36 @@ export function SpatialViewport({
   }, [interactionMode, onSelection, onSurfacePoint]);
 
   useEffect(() => {
-    const manager = managerRef.current;
-    if (!manager || !status.ready) return;
+    const manager = initializedManager;
+    if (!manager || managerRef.current !== manager) return;
     manager.setLayers(layers);
     setStatus(manager.status());
-  }, [layers, status.ready]);
+  }, [layers, initializedManager]);
 
   useEffect(() => {
-    const manager = managerRef.current;
-    if (!manager || !status.ready) return;
+    const manager = initializedManager;
+    if (!manager || managerRef.current !== manager) return;
     manager.setVisualMode(visualMode);
     setStatus(manager.status());
-  }, [visualMode, status.ready]);
+  }, [visualMode, initializedManager]);
 
   useEffect(() => {
-    const manager = managerRef.current;
-    if (!manager || !status.ready) return;
+    const manager = initializedManager;
+    if (!manager || managerRef.current !== manager) return;
     manager.setPerformanceTier(performance.resolved);
     setStatus(manager.status());
-  }, [performance.resolved, status.ready]);
+  }, [performance.resolved, initializedManager]);
 
   useEffect(() => {
-    const manager = managerRef.current;
-    if (!manager || !status.ready) return;
+    const manager = initializedManager;
+    if (!manager || managerRef.current !== manager) return;
     manager.setTime(time);
     setStatus(manager.status());
-  }, [time, status.ready]);
+  }, [time, initializedManager]);
 
   useEffect(() => {
-    const manager = managerRef.current;
-    if (!manager || !status.ready) return;
+    const manager = initializedManager;
+    if (!manager || managerRef.current !== manager) return;
 
     const nextIds = new Set(overlays.map((snapshot) => snapshot.layerId));
     for (const layerId of overlayIdsRef.current) {
@@ -242,25 +226,25 @@ export function SpatialViewport({
     }
     overlayIdsRef.current = nextIds;
     setStatus(manager.status());
-  }, [overlays, status.ready]);
+  }, [overlays, initializedManager]);
 
   useEffect(() => {
-    const manager = managerRef.current;
-    if (!manager || !status.ready) return;
+    const manager = initializedManager;
+    if (!manager || managerRef.current !== manager) return;
     if (atmosphere) manager.applyAtmosphere(atmosphere);
     else manager.clearAtmosphere();
-  }, [atmosphere, status.ready]);
+  }, [atmosphere, initializedManager]);
 
   useEffect(() => {
-    const manager = managerRef.current;
-    if (!manager || !status.ready) return;
+    const manager = initializedManager;
+    if (!manager || managerRef.current !== manager) return;
     if (airQuality) manager.applyAirQuality(airQuality);
     else manager.clearAirQuality();
-  }, [airQuality, status.ready]);
+  }, [airQuality, initializedManager]);
 
   useEffect(() => {
-    const manager = managerRef.current;
-    if (!manager || !status.ready) return;
+    const manager = initializedManager;
+    if (!manager || managerRef.current !== manager) return;
 
     const targetKey = [
       target.latitude,
@@ -275,16 +259,18 @@ export function SpatialViewport({
     lastJourneyKeyRef.current = targetKey;
 
     const generation = ++journeyGenerationRef.current;
+    const isCurrent = () => managerRef.current === manager && generation === journeyGenerationRef.current;
     const journey = manager.flyTo(target);
     setStatus(manager.status());
     const poll = globalThis.setInterval(() => {
-      if (generation === journeyGenerationRef.current) {
+      if (isCurrent()) {
         setStatus(manager.status());
       }
     }, 120);
 
     void journey
       .catch((error) => {
+        if (!isCurrent()) return;
         setStatus({
           ...manager.status(),
           degraded: true,
@@ -293,7 +279,7 @@ export function SpatialViewport({
       })
       .finally(() => {
         globalThis.clearInterval(poll);
-        if (generation === journeyGenerationRef.current) {
+        if (isCurrent()) {
           setStatus(manager.status());
         }
       });
@@ -301,7 +287,7 @@ export function SpatialViewport({
     return () => {
       globalThis.clearInterval(poll);
     };
-  }, [target, status.ready]);
+  }, [target, initializedManager]);
 
   const switchEngine = async (
     engine: SpatialRendererStatus['engine']
@@ -312,18 +298,19 @@ export function SpatialViewport({
     setSwitchingEngine(true);
     try {
       const next = await manager.use(engine);
+      if (managerRef.current !== manager) return;
       setStatus(next);
-      lastJourneyKeyRef.current = null;
       await manager.flyTo(targetRef.current);
-      setStatus(manager.status());
+      if (managerRef.current === manager) setStatus(manager.status());
     } catch (error) {
+      if (managerRef.current !== manager) return;
       setStatus({
         ...manager.status(),
         degraded: true,
         reason: error instanceof Error ? error.message : String(error)
       });
     } finally {
-      setSwitchingEngine(false);
+      if (managerRef.current === manager) setSwitchingEngine(false);
     }
   };
 
