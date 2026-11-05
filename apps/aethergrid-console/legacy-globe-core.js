@@ -54,6 +54,8 @@
     }
 
     makeBuffer(data) {
+      // Keep CPU geometry/configuration usable when this canvas has no WebGL context.
+      if (!this.gl) return { buffer: null, count: data.length / 3 };
       const buffer = this.gl.createBuffer();
       this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer);
       this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(data), this.gl.STATIC_DRAW);
