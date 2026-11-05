@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add explicit software quantum acceptance after IBM trial expiration: execute and verify the maintained bounded local sampler/estimator, retain every other live-provider gate, and record IBM as unverified. Preserve strict authenticated IBM discovery as an opt-in protected workflow profile.
+
 - Reuse owned Cesium constant graphics properties on clock ticks, suppressing unchanged aircraft invalidations while preserving values, animation, source geometry, opacity, selection and temporal visibility; add direct Cesium regressions and retain browser timing/trace evidence.
 
 - Pin the ESLint-only minimatch dependency to patched 11.0.1 for GHSA-g3hv-75wg-m249; retain the existing ESLint version and verify the locked graph, lint and audit.

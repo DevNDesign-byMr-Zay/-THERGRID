@@ -342,6 +342,10 @@ test('canonical acceptance starts after clean main CodeQL and retains exact-SHA 
   assert.match(workflow, /environment: aethergrid-live-verification/u);
   assert.match(workflow, /\['engineering\/ci', '\.github\/workflows\/ci\.yml'\]/u);
   assert.match(workflow, /\['security\/codeql', '\.github\/workflows\/codeql\.yml'\]/u);
+  assert.match(
+    workflow,
+    /\['aethergrid\/qiskit-aer', '\.github\/workflows\/aethergrid-qiskit-aer\.yml'\]/u,
+  );
 });
 
 test('credentialed canonical acceptance cannot run before every isolated browser workload succeeds', () => {
