@@ -22,6 +22,7 @@ const LEGACY_FILES = new Set([
   'state.js',
   'standalone-geo.js',
   'spatial-math.js',
+  'legacy-city-buildings.js',
   'legacy-globe-core.js',
   'legacy-visualizers.js',
   'manifest.webmanifest',
@@ -103,6 +104,7 @@ const REQUIRED_RUNTIME_FILES = Object.freeze([
   'legacy/state.js',
   'legacy/standalone-geo.js',
   'legacy/spatial-math.js',
+  'legacy/legacy-city-buildings.js',
   'legacy/legacy-globe-core.js',
   'legacy/legacy-visualizers.js',
   'node_modules/zod/package.json',
@@ -388,6 +390,7 @@ let legacyStandalone = legacyHtml
   .replace('<script src="./state.js" defer></script>', `<script>\n${legacyStateJs}\n</script>`)
   .replace('<script src="./standalone-geo.js" defer></script>', `<script>\n${legacyGeoJs}\n</script>`)
   .replace('<script src="./spatial-math.js" defer></script>', `<script>\n${legacyMathJs}\n</script>`)
+  .replace('<script src="./legacy-city-buildings.js" defer></script>', `<script>\n${legacySource.get('legacy-city-buildings.js').toString('utf8')}\n</script>`)
   .replace('<script src="./legacy-globe-core.js" defer></script>', `<script>\n${legacyGlobeCoreJs}\n</script>`)
   .replace('<script src="./legacy-visualizers.js" defer></script>', `<script>\n${legacyVisualizersJs}\n</script>`)
   .replace('<script src="./settings-controller.js" defer></script>', `<script>\n${legacySource.get('settings-controller.js').toString('utf8')}\n</script>`)

@@ -43,7 +43,13 @@ test('direct-open compatibility loads each legacy helper before app.js', async (
   const html = await readFile(new URL('index.html', root), 'utf8');
   const worker = await readFile(new URL('sw.js', root), 'utf8');
   let previous = -1;
-  for (const name of ['state.js', 'standalone-geo.js', 'spatial-math.js', 'app.js']) {
+  for (const name of [
+    'state.js',
+    'standalone-geo.js',
+    'spatial-math.js',
+    'legacy-city-buildings.js',
+    'app.js',
+  ]) {
     const script = '<script src="./' + name + '" defer></script>';
     const index = html.indexOf(script);
     assert.ok(index > previous, 'script order: ' + name);

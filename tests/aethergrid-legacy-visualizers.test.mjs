@@ -116,6 +116,7 @@ test('direct-open and packaged legacy pages load visualizers after math and befo
     'state.js',
     'standalone-geo.js',
     'spatial-math.js',
+    'legacy-city-buildings.js',
     'legacy-globe-core.js',
     'legacy-visualizers.js',
     'app.js',
