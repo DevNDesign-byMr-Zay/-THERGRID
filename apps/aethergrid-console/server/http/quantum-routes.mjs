@@ -5,6 +5,7 @@ import { AerBridgeError, probeQiskitAer, runQiskitAer } from '../../qiskit-aer-r
 // A matched route returns true from json(); false leaves dispatch to the next family.
 export function createQuantumRoutes({
   quantumRuntime,
+  openQuantumRuntime,
   dwaveProvider,
   providerRegistry,
   state,
@@ -12,6 +13,19 @@ export function createQuantumRoutes({
   json,
 }) {
   return async function handleRoutes({ request, response, url, reqContext, execCtx }) {
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/quantum/openquantum/runtime') {
+      return json(response, 200, openQuantumRuntime.summary());
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/quantum/openquantum/status') {
+      return json(response, 200, await openQuantumRuntime.status());
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/aethergrid/quantum/openquantum/backends') {
+      const result = await openQuantumRuntime.listBackends();
+      return json(response, 200, providerRegistry.redactor.redactValue(result));
+    }
+
     if (request.method === 'GET' && url.pathname === '/api/aethergrid/quantum/dwave/solvers') {
       const result = await dwaveProvider.request({ action: 'discover' }, execCtx);
       return json(response, 200, providerRegistry.redactor.redactValue(result));
