@@ -2,6 +2,13 @@ name: Open Quantum read-only discovery
 
 on:
   workflow_dispatch:
+  # Explicitly scoped one-shot acceptance on this integration branch.
+  # Only this workflow file change triggers the secret-backed read-only check.
+  push:
+    branches:
+      - feat/openquantum-readonly-discovery
+    paths:
+      - .github/workflows/openquantum-readonly.yml
 
 permissions:
   contents: read
