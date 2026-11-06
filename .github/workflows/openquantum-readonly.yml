@@ -1,0 +1,31 @@
+name: Open Quantum read-only discovery
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install optional Open Quantum SDK
+        run: python -m pip install -r apps/aethergrid-console/requirements-openquantum.txt
+      - name: Authenticate and discover backends (no jobs or credit spending)
+        env:
+          # These GitHub secrets contain JSON, not a local filesystem path.
+          AETHERGRID_OPENQUANTUM_SDK_KEY_JSON: ${{ secrets.AETHERGRID_OPENQUANTUM_SDK_KEY_JSON || secrets.OPENQUANTUM_SDK_KEY_JSON || secrets.OPENQUANTUM_SDK_KEY }}
+          OPENQUANTUM_CLIENT_ID: ${{ secrets.OPENQUANTUM_CLIENT_ID }}
+          OPENQUANTUM_CLIENT_SECRET: ${{ secrets.OPENQUANTUM_CLIENT_SECRET }}
+        run: node scripts/openquantum-readonly-smoke.mjs
