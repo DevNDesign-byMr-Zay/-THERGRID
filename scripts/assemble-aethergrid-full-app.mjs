@@ -88,6 +88,7 @@ const REQUIRED_RUNTIME_FILES = Object.freeze([
   'providers/eia-provider.mjs',
   'providers/transit-feed-config.mjs',
   'providers/transit-registry.mjs',
+  'providers/gtfs-realtime-decoder.mjs',
   'providers/transitland-provider.mjs',
   'providers/dwave-provider.mjs',
   'app.json',
