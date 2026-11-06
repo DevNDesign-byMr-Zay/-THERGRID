@@ -280,6 +280,8 @@ for (const absolute of await collectFiles(APP_ROOT)) {
     relativePath === '.aethergrid-data' ||
     relativePath.startsWith('.aethergrid-data/') ||
     relativePath === '.aethergrid.pid' ||
+    /(?:^|\/)sdk-key-[^/]+\.json$/u.test(relativePath) ||
+    relativePath.startsWith('.venv-openquantum/') ||
     relativePath === '.aethergrid-runtime' ||
     relativePath.startsWith('.aethergrid-runtime/') ||
     ((relativePath === '.env' || relativePath.startsWith('.env.')) &&
