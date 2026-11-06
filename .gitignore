@@ -29,6 +29,10 @@ apps/aethergrid-console/.aethergrid-data/
 apps/aethergrid-console/.aethergrid-runtime/
 
 # Explicit local secret material
+sdk-key-*.json
+**/sdk-key-*.json
+.venv-openquantum/
+**/.venv-openquantum/
 .env.secrets
 **/.env.secrets
 secrets.env
