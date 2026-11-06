@@ -241,6 +241,9 @@ test('operator scenario transport uses its declared modeled interval', async ({ 
   }])); });
   await mappedCity(page);
   await page.getByRole('button', { name: 'SCENARIOS', exact: true }).click();
+  await expect(page.locator('.scenario-baseline-grid')).toContainText('new-york');
+  await expect(page.locator('.scenario-comparison-grid')).toContainText('+10 pts');
+  await expect(page.locator('.scenario-visual-grid')).toContainText('VISUAL STRESS');
   await page.getByRole('button', { name: 'ACTIVATE MODEL', exact: true }).click();
   await page.getByRole('button', { name: 'Close intelligence drawer' }).click();
   const rail = page.getByRole('region', { name: '4D time controls' });

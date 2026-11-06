@@ -84,6 +84,10 @@ test('v4 scenario composer exposes assumptions persistence comparison activation
   const panel = await text('apps/aethergrid-console/web/src/components/ScenarioComposerPanel.tsx');
 
   assert.match(panel, /4D SCENARIO COMPOSER/u);
+  assert.match(
+    panel,
+    /<ScenarioComparisonSummary scenario=\{selected\} comparison=\{comparison\}/u,
+  );
   assert.match(panel, /SAVE HYPOTHETICAL SCENARIO/u);
   assert.match(panel, /operatorScenarioTemplateParameters/u);
   assert.match(panel, /ADD ASSUMPTION/u);
