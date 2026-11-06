@@ -10,6 +10,7 @@ import { useCitySources } from '../hooks/use-city-sources';
 import { useWorkspacePanels } from '../hooks/use-workspace-panels';
 import { useOperationalContext } from '../hooks/use-operational-context';
 import { useWeatherRadar } from '../hooks/use-weather-radar';
+import { useWeatherTimeline } from '../hooks/use-weather-timeline';
 
 import {
   AgentDock,
@@ -50,7 +51,6 @@ import {
 import { useAviationContext } from '../hooks/use-aviation-context';
 import { useOperatorShortcuts } from '../hooks/use-operator-shortcuts';
 import { useTemporalClock } from '../hooks/use-temporal-clock';
-import { forecastFrameInstants } from '../time/forecast-frames';
 import { frameTemporalInstant } from '../time/frame-temporal-instant';
 import { spatialRenderFrame, spatialRenderFrameKey } from '../time/render-frame';
 import {
@@ -67,12 +67,6 @@ import type {
   VisualMode
 } from '../renderer/spatial-renderer';
 import { solarStateAt } from '../renderer/solar-position';
-import {
-  loadCityEnvironment,
-  loadCityEnvironmentForecast,
-  selectCityEnvironmentForecast,
-  type AtmosphericForecastSeries
-} from '../services/city-environment';
 import type { ScenarioVisualState } from '../services/scenario-client';
 import {
   compareOperatorScenario,
@@ -187,10 +181,6 @@ export function App() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const { intelOpen, setIntelOpen, navOpen, setNavOpen, navigationTab, setNavigationTab, inspector, setInspector, productMode, setProductMode, activeDomain, setActiveDomain, navigationDrawer, intelligenceDrawer, intelWorkspace, setIntelWorkspace, openIntelligence, showIntelligence } = useWorkspacePanels({ scope, visualMode });
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const [forecastSeries, setForecastSeries] =
-    useState<AtmosphericForecastSeries | null>(null);
-  const [forecastRevision, setForecastRevision] = useState(0);
-  const [forecastError, setForecastError] = useState<string | null>(null);
   const { operationalBindings, hydrologyContext, hydrologyError, hazardContext, hazardError, transitContext, transitError } = useOperationalContext({ scope, mode: temporal.mode, city });
   const radarEnabled = layers.some(layer => layer.id === 'weather-radar' && layer.visible);
   const { radarManifest, radarError, radarFrame, setRadarFrame, radarPlaying, setRadarPlaying, radarCoverage, setRadarCoverage, radarSnapshot } = useWeatherRadar({ enabled: radarEnabled, mode: temporal.mode });
@@ -208,23 +198,10 @@ export function App() {
   const [agentHandoff, setAgentHandoff] = useState<AgentHandoffRequest | null>(null);
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceRecord | null>(null);
   const [evidenceRequest, setEvidenceRequest] = useState<{id: string; generation: number} | null>(null);
-  const [recordedFrames,setRecordedFrames]=useState<string[]>([]);
-  useEffect(()=>{
-    const controller=new AbortController();
-    const query=new URLSearchParams({kind:'weather',lat:String(city.latitude),lon:String(city.longitude)});
-    void fetch(`/api/aethergrid/history?${query}`,{signal:controller.signal}).then(r=>r.ok ? r.json() : Promise.reject()).then((value:{observations:{observedAt:string}[]})=>{if(!controller.signal.aborted) setRecordedFrames(value.observations.map(item=>item.observedAt).sort());}).catch(()=>{if(!controller.signal.aborted) setRecordedFrames([]);});
-    return ()=>controller.abort();
-  },[city.latitude,city.longitude,temporal.mode]);
-  const [recordedAtmosphere,setRecordedAtmosphere]=useState<AtmosphericOverlaySnapshot|null>(null);
-  const [recordedError,setRecordedError]=useState<string|null>(null);
-  useEffect(()=>{
-    if(temporal.mode !== 'historical'){setRecordedAtmosphere(null);setRecordedError(null);return;}
-    const controller=new AbortController();setRecordedAtmosphere(null);
-    void loadCityEnvironment(city.latitude,city.longitude,controller.signal,temporal.cursorIso)
-      .then(value=>{if(!controller.signal.aborted){setRecordedAtmosphere({...value,live:false});setRecordedError(null);}})
-      .catch(()=>{if(!controller.signal.aborted) setRecordedError('No recorded provider observation for this time and location.');});
-    return ()=>controller.abort();
-  },[temporal.mode,temporal.cursorIso,city.latitude,city.longitude]);
+  const {
+    forecastSeries, forecastAtmosphere, forecastFrames, forecastError, retryForecast,
+    recordedFrames, recordedAtmosphere, recordedError
+  } = useWeatherTimeline({ city, mode: temporal.mode, cursorIso: temporal.cursorIso });
 
   const {
     powerOverlay, illuminationOverlay, semanticOverlays, cityIdentity, streamingState,
@@ -236,8 +213,6 @@ export function App() {
     reloadId: cityReloadId,
     viewportRef,
     onCityReset() {
-      setForecastSeries(null);
-      setForecastError(null);
       setSelection(null);
       setMeasurementPoints([]);
       setMeasurementFrame(null);
@@ -246,27 +221,11 @@ export function App() {
     }
   });
 
-  const forecastAtmosphere = useMemo(
-    () =>
-      temporal.mode === 'forecast' && forecastSeries
-        ? selectCityEnvironmentForecast(
-            forecastSeries,
-            temporal.cursorIso
-          )
-        : null,
-    [
-      temporal.mode,
-      temporal.cursorIso,
-      forecastSeries
-    ]
-  );
-
   const temporalInstant = useMemo(
     () => frameTemporalInstant(temporal, scenarioVisual, forecastAtmosphere),
     [temporal, scenarioVisual, forecastAtmosphere]
   );
 
-  const forecastFrames = useMemo(() => forecastFrameInstants(forecastSeries), [forecastSeries]);
   const renderFrameKey = spatialRenderFrameKey(temporalInstant);
   const renderInstant = useMemo(() => spatialRenderFrame(temporalInstant), [renderFrameKey]);
   useEffect(() => {
@@ -431,32 +390,6 @@ export function App() {
       globalThis.clearInterval(timer);
     };
   }, []);
-
-  useEffect(() => {
-    if (temporal.mode !== 'forecast') {
-      setForecastError(null);
-      return;
-    }
-
-    const controller = new AbortController();
-    setForecastSeries(null);
-    setForecastError(null);
-
-    void loadCityEnvironmentForecast(
-      city.latitude,
-      city.longitude,
-      controller.signal
-    )
-      .then((series) => {
-        if (!controller.signal.aborted) setForecastSeries(series);
-      })
-      .catch((error) => {
-        if (controller.signal.aborted) return;
-        setForecastError(error instanceof Error ? error.message : String(error));
-      });
-
-    return () => controller.abort();
-  }, [city.id, city.latitude, city.longitude, temporal.mode, forecastRevision]);
 
   useEffect(() => {
     if (!pendingSessionRestore) return;
@@ -1938,7 +1871,7 @@ export function App() {
                 const mapped = CITY_TARGETS.find(target => target.name === observation.region);
                 restoreBookmark(comparisonFrameBookmark(currentBookmark, observation,
                   mapped ?? { id: 'comparison-coordinate', name: observation.region, latitude: observation.coordinate.latitude, longitude: observation.coordinate.longitude, rangeMeters: 2800, custom: true }));
-                setForecastRevision(current => current + 1);
+                retryForecast();
               }}
             />
             <button type="button" onClick={() => downloadSpatialScene({
@@ -2062,7 +1995,7 @@ export function App() {
         forecastSeries={forecastSeries}
         forecastError={forecastError}
         onHeightChange={setTemporalRailHeight}
-        onRetryForecast={() => setForecastRevision((revision) => revision + 1)}
+        onRetryForecast={retryForecast}
         onScenarioEvent={restoreScenarioFromTemporalEvent}
       >
           {temporal.mode === 'scenario' && scenarioVisual ? (
