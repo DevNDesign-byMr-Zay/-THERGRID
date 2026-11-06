@@ -18,6 +18,7 @@ const LEGACY_FILES = new Set([
   'styles.css',
   'app.js',
   'settings-controller.js',
+  'legacy-ui-helpers.js',
   'environment-helpers.js',
   'state.js',
   'standalone-geo.js',
@@ -103,6 +104,7 @@ const REQUIRED_RUNTIME_FILES = Object.freeze([
   'legacy/styles.css',
   'legacy/app.js',
   'legacy/settings-controller.js',
+  'legacy/legacy-ui-helpers.js',
   'legacy/environment-helpers.js',
   'legacy/state.js',
   'legacy/standalone-geo.js',
@@ -405,6 +407,7 @@ let legacyStandalone = legacyHtml
   .replace('<script src="./legacy-visualizers.js" defer></script>', `<script>\n${legacyVisualizersJs}\n</script>`)
   .replace('<script src="./settings-controller.js" defer></script>', `<script>\n${legacySource.get('settings-controller.js').toString('utf8')}\n</script>`)
   .replace('<script src="./environment-helpers.js" defer></script>', `<script>\n${legacySource.get('environment-helpers.js').toString('utf8')}\n</script>`)
+  .replace('<script src="./legacy-ui-helpers.js" defer></script>', `<script>\n${legacySource.get('legacy-ui-helpers.js').toString('utf8')}\n</script>`)
   .replace('<script src="./app.js" defer></script>', `<script>\n${legacyJs}\n</script>`);
 
 for (const [path, mime] of [
