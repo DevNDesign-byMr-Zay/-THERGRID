@@ -67,11 +67,23 @@ function normalizeBackend(item = {}) {
   };
 }
 
+function normalizeStatus(rawStatus) {
+  const str = String(rawStatus || 'SUBMITTED').toUpperCase();
+  if (['COMPLETED', 'SUCCEEDED', 'DONE'].includes(str)) return 'COMPLETED';
+  if (['FAILED', 'ERROR', 'CANCELLED_ERROR'].includes(str)) return 'FAILED';
+  if (['CANCELLED', 'CANCELED'].includes(str)) return 'CANCELLED';
+  if (['RUNNING', 'EXECUTING'].includes(str)) return 'RUNNING';
+  if (['QUEUED', 'PENDING', 'VALIDATING'].includes(str)) return 'QUEUED';
+  if (['SUBMITTED'].includes(str)) return 'SUBMITTED';
+  return rawStatus || 'QUEUED';
+}
+
 function normalizeJob(job = {}) {
-  const status =
+  const rawStatus =
     typeof job.state === 'object'
       ? job.state?.status || job.status
       : job.status || job.state || null;
+  const status = normalizeStatus(rawStatus);
   return {
     id: job.id || job.job_id || null,
     backend: job.backend || job.backend_name || null,
@@ -79,7 +91,7 @@ function normalizeJob(job = {}) {
     status,
     created: job.created || job.created_at || null,
     hardwareSubmitted: true,
-    hardwareExecuted: String(status || '').toLowerCase() === 'completed',
+    hardwareExecuted: status === 'COMPLETED',
   };
 }
 
@@ -464,6 +476,96 @@ export function createQuantumRuntime({
     return { ...result, receipt: receipt(result) };
   }
 
+  async function runExperiment({
+    problemType = 'bell_sampler',
+    backend = defaultBackend || (provider === 'local-simulator' ? 'aethergrid-local-sampler' : ''),
+    shots = 1024,
+    qubits = 2,
+    operatorApproved = false,
+    maxRetries = 2,
+    circuit = DEFAULT_CIRCUIT,
+  } = {}) {
+    const numQubits = Number(qubits) || 2;
+    const cleanShots = Number(shots) || 1024;
+
+    if (numQubits > 10 || numQubits < 1) throw new Error('Experiment exceeds maximum problem size (max 10 qubits)');
+    if (cleanShots > 10000 || cleanShots < 1) throw new Error('Experiment exceeds maximum shots (max 10,000 shots)');
+
+    const estimatedQpuTimeSec = Math.round((cleanShots * 0.001 + 1.5) * 10) / 10;
+    const resourceUsage = {
+      qubits: numQubits,
+      shots: cleanShots,
+      estimatedQpuTimeSec,
+      estimatedQuotaUsage: `${estimatedQpuTimeSec} QPU seconds`,
+    };
+
+    let classicalBaseline = null;
+    if (problemType === 'microgrid_qubo') {
+      classicalBaseline = {
+        problem: 'microgrid_balance_2var',
+        optimalBits: [1, 0],
+        optimalObjective: -2,
+        expectedDistribution: { '10': 0.5, '01': 0.5 },
+      };
+    } else {
+      classicalBaseline = {
+        problem: 'bell_state_entanglement',
+        theoreticalDistribution: { '00': 0.5, '11': 0.5, '01': 0.0, '10': 0.0 },
+        idealEntanglementFidelity: 1.0,
+      };
+    }
+
+    if (provider === 'ibm-quantum') {
+      if (!operatorApproved) {
+        const error = new Error('Explicit operator approval is required for IBM Quantum hardware execution');
+        error.code = 'OPERATOR_APPROVAL_REQUIRED';
+        error.details = { resourceUsage, classicalBaseline };
+        throw error;
+      }
+      if (!backend) throw new Error('IBM Quantum backend selection is required');
+    }
+
+    let jobResult = null;
+    let attempt = 0;
+    let lastError = null;
+
+    while (attempt <= maxRetries) {
+      try {
+        jobResult = await submitSampler({ circuit, backend, shots: cleanShots });
+        break;
+      } catch (err) {
+        lastError = err;
+        attempt += 1;
+        if (attempt > maxRetries) break;
+      }
+    }
+
+    if (!jobResult) {
+      throw new Error(`Experiment submission failed after ${maxRetries + 1} attempts: ${lastError?.message}`);
+    }
+
+    const experimentTimestamp = now();
+    const payload = {
+      experimentId: `exp-${Date.now()}`,
+      problemType,
+      provider,
+      backend: jobResult.backend,
+      resourceUsage,
+      classicalBaseline,
+      job: jobResult,
+      operatorApproved,
+      timestamp: experimentTimestamp,
+      hardwareSubmitted: Boolean(jobResult.hardwareSubmitted),
+      hardwareExecuted: Boolean(jobResult.hardwareExecuted),
+    };
+
+    const experimentReceipt = receipt(payload);
+    return {
+      ...payload,
+      receipt: experimentReceipt,
+    };
+  }
+
   async function listJobs({ limit = 20 } = {}) {
     if (provider !== 'ibm-quantum') {
       return { provider: 'local-simulator', jobs: [] };
@@ -497,6 +599,19 @@ export function createQuantumRuntime({
       rawState: payload.state || null,
     };
   }
+  async function cancelJob(id) {
+    requireRemoteProvider();
+    const payload = await ibmRequest(`jobs/${encodeURIComponent(id)}/cancel`, {
+      method: 'POST',
+    });
+    return {
+      provider: 'ibm-quantum',
+      jobId: id,
+      status: 'CANCELLED',
+      cancelled: true,
+      result: payload,
+    };
+  }
 
   async function jobResults(id) {
     requireRemoteProvider();
@@ -523,6 +638,8 @@ export function createQuantumRuntime({
     submitEstimator,
     listJobs,
     job,
+    cancelJob,
+    runExperiment,
     jobResults,
     jobMetrics,
     DEFAULT_CIRCUIT,
