@@ -56,7 +56,7 @@ def main():
         from openquantum_sdk import OpenQuantumClient
         from openquantum_sdk.exceptions import AuthenticationError
         from openquantum_sdk.models import APIError
-        from httpx import RequestError, TimeoutException
+        from requests.exceptions import HTTPError, RequestException, Timeout
     except Exception:
         emit({"provider": "openquantum", "status": "sdk_missing", "hardwareSubmitted": False, "hardwareExecuted": False})
         return
@@ -80,9 +80,9 @@ def main():
 
     try:
         with OpenQuantumClient.from_env(**options) as client:
-            backends = client.backends(limit=50)
+            page = client.management.list_backend_classes(limit=50)
         result.update(status="ready", live=True, backends=[
-            item for source in backends[:50] if (item := safe_backend(source)) is not None
+            safe_backend(vars(backend)) for backend in page.backend_classes[:50]
         ])
     except AuthenticationError:
         result["status"] = "authentication_failed"
@@ -90,9 +90,13 @@ def main():
         status = error.error_response.status_code
         result["httpStatus"] = status if isinstance(status, int) and 400 <= status <= 599 else None
         result["status"] = "authentication_failed" if status == 401 else "provider_rejected"
-    except TimeoutException:
+    except HTTPError as error:
+        status = error.response.status_code if error.response is not None else None
+        result["httpStatus"] = status if isinstance(status, int) and 400 <= status <= 599 else None
+        result["status"] = "authentication_failed" if status == 401 else "provider_rejected"
+    except Timeout:
         result["status"] = "provider_timeout"
-    except RequestError:
+    except RequestException:
         result["status"] = "provider_unreachable"
     except Exception:
         # Third-party exception text can contain private values.

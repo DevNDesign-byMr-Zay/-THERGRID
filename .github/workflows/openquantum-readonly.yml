@@ -23,6 +23,8 @@ jobs:
           python-version: '3.11'
       - name: Install optional Open Quantum SDK
         run: python -m pip install -r apps/aethergrid-console/requirements-openquantum.txt
+      - name: Verify SDK adapter against loopback fixtures
+        run: python tests/openquantum_bridge_test.py
       - name: Authenticate and discover backends (no jobs or credit spending)
         env:
           # These GitHub secrets contain JSON, not a local filesystem path.
