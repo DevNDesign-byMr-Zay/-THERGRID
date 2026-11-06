@@ -116,14 +116,18 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 22
-      - name: Prove clean locked install and full maintained verification
+      - name: Install from the clean root lockfile
         shell: bash
         run: |
           set -euo pipefail
           rm -rf node_modules coverage
           npm ci --ignore-scripts
-          npm audit --audit-level=moderate
-          npm run check
+      - name: Run the documented fresh-clone test command
+        run: npm test
+      - name: Audit root dependencies
+        run: npm audit --audit-level=moderate
+      - name: Build and verify the maintained application
+        run: npm run check
       - name: Build application container without cached layers
         run: docker compose -f docker-compose.yml build --no-cache
       - name: Start clean application service and probe health
