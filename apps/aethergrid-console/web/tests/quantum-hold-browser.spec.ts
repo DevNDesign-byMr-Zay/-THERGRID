@@ -24,3 +24,34 @@ test('existing D-Wave controls stay held while IBM discovery remains available',
   expect(dwaveRequests).toBe(0);
   await page.screenshot({path:'test-results/dwave-held-390.png'});
 });
+
+test('Open Quantum discovery searches provider metadata and refreshes without job submission', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const methods: string[] = [];
+  let calls = 0;
+  await page.route('**/api/aethergrid/quantum/openquantum/**', (route) => {
+    methods.push(route.request().method());
+    calls += 1;
+    return route.fulfill({ json: calls === 1 ? {
+      status: 'ready', live: true, backends: [
+        { name: 'Fixture QPU', shortCode: 'fixture:qpu', providerId: 'vendor', type: 'QPU', status: 'Online', queueDepth: 0, acceptingJobs: true },
+        { name: 'Fixture simulator', shortCode: 'fixture:sim', providerId: 'vendor', type: 'SIMULATOR', status: 'Online', queueDepth: null, acceptingJobs: null }
+      ]
+    } : { status: 'authentication_failed', live: false, backends: [] } });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'QUANTUM', exact: true }).click();
+  await page.getByRole('button', { name: 'OPEN QUANTUM', exact: true }).click();
+  const discovery = page.getByRole('group', { name: 'Open Quantum backend discovery' });
+  await discovery.getByRole('button', { name: 'Discover backends' }).click();
+  await expect(discovery.getByRole('status')).toHaveText('Authenticated. 2 backends returned.');
+  await expect(discovery.getByText('Hardware QPU', { exact: false })).toBeVisible();
+  await discovery.getByRole('searchbox', { name: 'Filter backends' }).fill('fixture:sim');
+  await expect(discovery.getByText('Fixture QPU', { exact: true })).toHaveCount(0);
+  await expect(discovery.getByText('Fixture simulator', { exact: true })).toBeVisible();
+  await page.screenshot({ path: 'test-results/open-quantum-discovery-fixture-390.png' });
+  await discovery.getByRole('button', { name: 'Refresh backends' }).click();
+  await expect(discovery.getByRole('status')).toHaveText('Open Quantum rejected authentication.');
+  expect(methods).toEqual(['GET', 'GET']);
+});

@@ -27,48 +27,10 @@ import {
   type QuantumRuntimeSummary
 } from '../services/quantum-client';
 
-type QuantumWorkspace = 'gate-model' | 'annealing' | 'local-optimization' | 'qiskit-aer';
+import { OpenQuantumDiscoveryPanel } from './OpenQuantumDiscoveryPanel';
+import { dwaveJobState, jobState, parseJsonObject, solverName } from './quantum-presentation';
 
-interface JsonObjectParse {
-  value: Record<string, unknown> | null;
-  error: string | null;
-}
-
-function parseJsonObject(input: string, allowEmpty: boolean): JsonObjectParse {
-  try {
-    const parsed = JSON.parse(input) as unknown;
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return { value: null, error: 'JSON must be an object.' };
-    }
-    const value = parsed as Record<string, unknown>;
-    if (!allowEmpty && Object.keys(value).length === 0) {
-      return { value: null, error: 'Problem payload cannot be empty.' };
-    }
-    return { value, error: null };
-  } catch {
-    return { value: null, error: 'Invalid JSON.' };
-  }
-}
-
-function jobState(job: QuantumJob | null): string {
-  if (!job) return 'NO RUN';
-  if (job.hardwareExecuted) return 'HARDWARE EXECUTED';
-  if (job.hardwareSubmitted) return 'HARDWARE SUBMITTED';
-  return job.status === 'COMPLETED'
-    ? 'LOCAL COMPLETED'
-    : String(job.status || 'UNKNOWN');
-}
-
-function dwaveJobState(job: DwaveJobState | null): string {
-  if (!job) return 'NO D-WAVE RUN';
-  if (job.hardwareExecuted) return 'HARDWARE EXECUTED';
-  if (job.hardwareSubmitted) return 'HARDWARE SUBMITTED';
-  return String(job.status || 'UNKNOWN');
-}
-
-function solverName(solver: DwaveSolver): string {
-  return solver.name || solver.id || 'UNNAMED SOLVER';
-}
+type QuantumWorkspace = 'gate-model' | 'annealing' | 'local-optimization' | 'qiskit-aer' | 'open-quantum';
 
 export function QuantumPanel() {
   const [workspace, setWorkspace] = useState<QuantumWorkspace>('gate-model');
@@ -400,12 +362,12 @@ export function QuantumPanel() {
                 ? 'LOCAL QUBO OPTIMIZATION'
                 : workspace === 'qiskit-aer'
                   ? 'QISKIT AER SIMULATION'
-                  : 'D-WAVE ANNEALING'}
+                  : workspace === 'open-quantum' ? 'OPEN QUANTUM' : 'D-WAVE ANNEALING'}
           </strong>
         </span>
         {workspace === 'gate-model' ? (
           <em className={hardware && configured ? 'hardware' : 'simulator'}>
-            {hardware && configured ? 'QPU READY' : 'SIMULATOR'}
+            {hardware && configured ? 'QPU READY' : runtime?.provider === 'local-simulator' ? 'SIMULATOR' : 'GATE MODEL UNAVAILABLE'}
           </em>
         ) : workspace === 'local-optimization' ? (
           <em className="simulator">CPU · FREE</em>
@@ -413,6 +375,8 @@ export function QuantumPanel() {
           <em className="simulator">
             {aerStatus?.available ? 'CPU SIMULATOR' : 'OPTIONAL SIMULATOR'}
           </em>
+        ) : workspace === 'open-quantum' ? (
+          <em className="simulator">DISCOVERY ONLY</em>
         ) : (
           <em className={dwaveConfigured ? 'hardware' : 'simulator'}>
             {dwaveConfigured ? 'SAPI CONNECTED' : 'UNCONFIGURED'}
@@ -448,6 +412,13 @@ export function QuantumPanel() {
           onClick={() => setWorkspace('qiskit-aer')}
         >
           QISKIT AER
+        </button>
+        <button
+          type="button"
+          className={workspace === 'open-quantum' ? 'active' : ''}
+          onClick={() => setWorkspace('open-quantum')}
+        >
+          OPEN QUANTUM
         </button>
       </div>
 
@@ -508,7 +479,7 @@ export function QuantumPanel() {
             className={hardware ? 'quantum-run hardware' : 'quantum-run'}
             type="button"
             onClick={() => void runBell()}
-            disabled={running || !runtime || (hardware && !configured)}
+            disabled={running || !runtime?.primitives?.includes('sampler') || !configured}
           >
             {running
               ? 'SUBMITTING…'
@@ -551,6 +522,8 @@ export function QuantumPanel() {
             )}
           </details>
         </>
+      ) : workspace === 'open-quantum' ? (
+        <OpenQuantumDiscoveryPanel />
       ) : workspace === 'qiskit-aer' ? (
         <fieldset className="dwave-workspace aer-workspace">
           <legend>QISKIT AER · CPU CIRCUIT SIMULATION</legend>

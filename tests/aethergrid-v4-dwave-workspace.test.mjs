@@ -38,8 +38,17 @@ test('v4 D-Wave operator workspace requires two explicit confirmation boundaries
 test('v4 D-Wave workspace distinguishes submitted hardware from executed hardware', async () => {
   const panel = await text('apps/aethergrid-console/web/src/components/QuantumPanel.tsx');
 
-  assert.match(panel, /if \(job\.hardwareExecuted\) return 'HARDWARE EXECUTED'/u);
-  assert.match(panel, /if \(job\.hardwareSubmitted\) return 'HARDWARE SUBMITTED'/u);
+  const { dwaveJobState } = await import(
+    '../apps/aethergrid-console/web/src/components/quantum-presentation.ts'
+  );
+  assert.equal(
+    dwaveJobState({ hardwareExecuted: true, hardwareSubmitted: true }),
+    'HARDWARE EXECUTED',
+  );
+  assert.equal(
+    dwaveJobState({ hardwareExecuted: false, hardwareSubmitted: true }),
+    'HARDWARE SUBMITTED',
+  );
   assert.match(panel, /loadDwaveJob/u);
   assert.match(panel, /next\.status === 'COMPLETED'/u);
   assert.match(panel, /loadDwaveResult/u);
@@ -52,8 +61,11 @@ test('v4 D-Wave workspace validates source payloads locally but sends them uncha
   const panel = await text('apps/aethergrid-console/web/src/components/QuantumPanel.tsx');
 
   assert.match(panel, /parseJsonObject/u);
-  assert.match(panel, /Problem payload cannot be empty/u);
-  assert.match(panel, /Invalid JSON/u);
+  const { parseJsonObject } = await import(
+    '../apps/aethergrid-console/web/src/components/quantum-presentation.ts'
+  );
+  assert.equal(parseJsonObject('{}', false).error, 'Problem payload cannot be empty.');
+  assert.equal(parseJsonObject('{', false).error, 'Invalid JSON.');
   assert.match(panel, /problemPayload: parsedProblem\.value/u);
   assert.match(panel, /parameters: parsedParameters\.value/u);
   assert.match(panel, /sent unchanged as the provider problem payload/u);
@@ -79,4 +91,30 @@ test('v4 D-Wave discovery failure does not block IBM or local gate-model startup
   assert.match(panel, /void loadDwaveSolvers\(\)/u);
   assert.match(panel, /setDwaveError/u);
   assert.doesNotMatch(panel, /Promise\.all\(\[[\s\S]{0,220}loadDwaveSolvers\(\)[\s\S]{0,120}\]\)/u);
+});
+
+test('v4 quantum panel distinguishes local simulation submitted QPU and executed QPU states', async () => {
+  const [client, panel, app] = await Promise.all([
+    text('apps/aethergrid-console/web/src/services/quantum-client.ts'),
+    text('apps/aethergrid-console/web/src/components/QuantumPanel.tsx'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+  ]);
+
+  assert.match(client, /\/api\/aethergrid\/quantum\/runtime/u);
+  assert.match(client, /\/api\/aethergrid\/quantum\/backends/u);
+  assert.match(client, /\/api\/aethergrid\/quantum\/jobs/u);
+  assert.match(client, /OPENQASM 3\.0/u);
+  const { jobState } = await import(
+    '../apps/aethergrid-console/web/src/components/quantum-presentation.ts'
+  );
+  assert.equal(jobState({ hardwareExecuted: true, hardwareSubmitted: true }), 'HARDWARE EXECUTED');
+  assert.equal(
+    jobState({ hardwareExecuted: false, hardwareSubmitted: true }),
+    'HARDWARE SUBMITTED',
+  );
+  assert.equal(jobState({ status: 'COMPLETED' }), 'LOCAL COMPLETED');
+  assert.match(panel, /globalThis\.confirm/u);
+  assert.match(panel, /SUBMIT BELL TEST TO QPU/u);
+  assert.match(panel, /RUN LOCAL BELL TEST/u);
+  assert.match(app, /<QuantumPanel/u);
 });
