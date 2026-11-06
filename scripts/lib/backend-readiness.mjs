@@ -21,6 +21,21 @@ export async function verifyBackendReadiness(text, assert, pkg, exactAethergridL
   const exactAethergridWebRuntime = await text('apps/aethergrid-console/web-runtime.mjs');
   const exactAethergridPackager = await text('scripts/assemble-aethergrid-full-app.mjs');
   const exactAethergridApp = JSON.parse(await text('apps/aethergrid-console/app.json'));
+  const cityBuildings = await text('apps/aethergrid-console/legacy-city-buildings.js');
+  const buildingScript = '<script src="./legacy-city-buildings.js" defer></script>';
+  assert(
+    cityBuildings.includes('AETHERGRID_CITY_BUILDINGS') &&
+      exactAethergridLegacyHtml.includes('<script src="./spatial-math.js" defer></script>') &&
+      exactAethergridApp.legacyCompatibility?.sourceFiles.includes('legacy-city-buildings.js') &&
+      exactAethergridLegacyHtml.indexOf(buildingScript) >
+        exactAethergridLegacyHtml.indexOf('<script src="./spatial-math.js" defer></script>') &&
+      exactAethergridLegacyHtml.indexOf(buildingScript) <
+        exactAethergridLegacyHtml.indexOf('<script src="./app.js" defer></script>') &&
+      exactAethergridPackager.includes("'legacy/legacy-city-buildings.js'") &&
+      exactAethergridPackager.includes("legacySource.get('legacy-city-buildings.js')") &&
+      exactAethergridPackager.includes(".replace('" + buildingScript + "'"),
+    'legacy building geometry must load after math and before app and remain packaged/inlined',
+  );
   const exactAethergridUi = JSON.parse(await text('apps/aethergrid-console/ui.json'));
   const exactAethergridWebPackage = JSON.parse(
     await text('apps/aethergrid-console/web/package.json'),

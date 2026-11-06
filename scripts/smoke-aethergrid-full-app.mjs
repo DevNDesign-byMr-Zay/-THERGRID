@@ -100,6 +100,7 @@ try {
     'aethergrid-functional-app/web/dist/index.html',
     'aethergrid-functional-app/legacy/index.html',
     'aethergrid-functional-app/legacy/standalone.html',
+    'aethergrid-functional-app/legacy/legacy-city-buildings.js',
     'aethergrid-functional-app/node_modules/zod/package.json',
     'aethergrid-functional-app/.env.secrets.example',
     'aethergrid-functional-app/qiskit-aer-runtime.mjs',
@@ -121,6 +122,25 @@ try {
   assert(
     !extracted.some((path) => path.includes('/.venv-qiskit/') || path.includes('/.venv/')),
     'optional private Python environments must never be included in the ZIP',
+  );
+
+  const [legacyHtml, standaloneHtml, cityBuildings] = await Promise.all(
+    ['index.html', 'standalone.html', 'legacy-city-buildings.js'].map((name) =>
+      readFile(join(appRoot, 'legacy', name), 'utf8'),
+    ),
+  );
+  const buildingScript = '<script src="./legacy-city-buildings.js" defer></script>';
+  assert(
+    legacyHtml.includes('./spatial-math.js') &&
+      legacyHtml.indexOf(buildingScript) > legacyHtml.indexOf('./spatial-math.js') &&
+      legacyHtml.indexOf(buildingScript) < legacyHtml.indexOf('./app.js'),
+    'packaged legacy page must load building geometry between math and app',
+  );
+  assert(
+    standaloneHtml.includes(cityBuildings) &&
+      standaloneHtml.indexOf(cityBuildings) < standaloneHtml.indexOf('  class SpatialGrid4D {') &&
+      !standaloneHtml.includes(buildingScript),
+    'standalone must inline the exact building companion before the application',
   );
 
   const port = await reservePort();

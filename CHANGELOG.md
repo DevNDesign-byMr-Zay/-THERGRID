@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased
+## Unreleased — 0.3.5
+
+Current package candidate: `0.3.5`. Published tags and artifacts through `v0.3.4` remain immutable. Exact candidate verification and publication are pending the protected main gates.
+
+- Own native WebGL context listeners before initial buffer allocation and restore using the current renderer state, with executable lifecycle regressions.
+- Extract source building geometry into the legacy classic-script companion and preserve direct-open ordering, source provenance and packaged startup.
+- Retain city configuration when WebGL is unavailable so normal and inline legacy startup can use the existing fallback without losing initialization.
+- Add the exact-main canonical-triggered v0.3.5 release request, retire superseded requests safely, and include matching version-specific notes alongside generated release notes.
+- Reconcile current readiness documentation with the verified `34c18d1` baseline, keeping fresh v0.3.5 verification pending.
 
 - Add explicit software quantum acceptance after IBM trial expiration: execute and verify the maintained bounded local sampler/estimator, retain every other live-provider gate, and record IBM as unverified. Preserve strict authenticated IBM discovery as an opt-in protected workflow profile.
 
@@ -48,7 +56,7 @@
 
 - Extract reproducible, explicitly synthetic geospatial fallback buildings/roads/power into `geo-fallback.mjs` with direct behavioral regression coverage, preserving the complete application archive and source-truth boundaries.
 
-Current package candidate: `0.3.4`. The published `v0.3.3` tag remains immutable. This new candidate packages the subsequent React/Cesium, geospatial, AI context, legacy rendering, and Groq TEAM quota fixes; the v0.3.4 tag requires successful exact-main release gates.
+Historical 0.3.4 candidate record: this milestone packaged React/Cesium, geospatial, AI context, legacy rendering and Groq TEAM quota fixes. The published `v0.3.4` tag remains immutable.
 
 - Extract aviation polling, abort/timer cleanup and overlay state into a dedicated React hook, preserving existing live-only activation, world/city queries, refresh intervals and aircraft UI.
 - Replace POSIX-only syntax verification with a portable Node runner compatible with Windows PowerShell and fresh clones.

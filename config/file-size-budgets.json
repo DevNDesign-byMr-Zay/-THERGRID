@@ -1,6 +1,6 @@
 {
   "apps/aethergrid-console/ai-runtime.mjs": 675,
-  "apps/aethergrid-console/app.js": 3462,
+  "apps/aethergrid-console/app.js": 3320,
   "apps/aethergrid-console/geo-runtime.mjs": 851,
   "apps/aethergrid-console/providers/transit-registry.mjs": 530,
   "apps/aethergrid-console/web/src/app/App.tsx": 2132,

@@ -9,10 +9,9 @@ import {
   type NativeFrame,
   type ProjectedFeature,
 } from './native-frame';
-import { nativeBackground } from './native-environment';
-import { collectNativeGeometry } from './native-geometry';
 import { drawNativeCanvas } from './native-canvas';
-import { initializeNativeWebgl, drawNativeWebgl } from './native-webgl-driver';
+import { NativeWebglDriver } from './native-webgl-driver';
+export { NATIVE_AVAILABILITY_EVENT } from './native-webgl-driver';
 import { unprojectGround } from './local-projection';
 import {
   type AirQualityOverlaySnapshot,
@@ -68,12 +67,8 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
 
   #container: HTMLElement | null = null;
   #canvas: HTMLCanvasElement | null = null;
-  #gl: WebGLRenderingContext | null = null;
+  #driver: NativeWebglDriver | null = null;
   #context2d: CanvasRenderingContext2D | null = null;
-  #program: WebGLProgram | null = null;
-  #positionLocation = -1;
-  #colorLocation = -1;
-  #pointSizeLocation = -1;
   #ready = false;
   #degraded = false;
   #reason: string | null = null;
@@ -115,18 +110,14 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     this.#container.replaceChildren(canvas);
     this.#canvas = canvas;
 
-    this.#gl = canvas.getContext('webgl', {
+    const gl = canvas.getContext('webgl', {
       antialias: true,
       alpha: false,
       preserveDrawingBuffer: false,
     });
 
-    if (this.#gl) {
-      const bindings = initializeNativeWebgl(this.#gl);
-      this.#program = bindings.program;
-      this.#positionLocation = bindings.positionLocation;
-      this.#colorLocation = bindings.colorLocation;
-      this.#pointSizeLocation = bindings.pointSizeLocation;
+    if (gl) {
+      this.#driver = new NativeWebglDriver(canvas, gl, () => this.#render());
     } else {
       this.#context2d = canvas.getContext('2d');
       if (!this.#context2d) throw new Error('No native canvas renderer is available');
@@ -328,7 +319,7 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
 
   async pick(point: SpatialPickPoint): Promise<SpatialFeatureSelection | null> {
     const canvas = this.#canvas;
-    if (!canvas) return null;
+    if (!canvas || !this.#ready || this.#driver?.suspended) return null;
 
     let nearest: ProjectedFeature | null = null;
     let distance = 18;
@@ -379,16 +370,16 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     const solar = solarStateAt(this.#time.iso, this.#target.latitude, this.#target.longitude);
     return {
       engine: this.engine,
-      ready: this.#ready,
+      ready: this.#ready && !this.#driver?.suspended,
       visualMode: this.#mode,
-      degraded: this.#degraded,
+      degraded: this.#degraded || !!this.#driver?.suspended,
       busy: this.#busy,
       journeyPhase: this.#journeyPhase,
       detailLevel: this.#detailLevel,
       performanceTier: this.#performanceTier,
       buildingMode: this.#overlays.has('buildings') ? 'source-extruded' : 'none',
       solar,
-      reason: `${this.#reason ?? 'Native renderer'} · Building massing is a wireframe fallback; facade materials and terrain detail are unavailable.`,
+      reason: `${this.#driver?.reason ?? this.#reason ?? 'Native renderer'} · Building massing is a wireframe fallback; facade materials and terrain detail are unavailable.`,
     };
   }
 
@@ -403,8 +394,8 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
     this.#selectedSourceFeatureId = null;
     this.#selectedLayerId = null;
     this.#features = [];
-    this.#program = null;
-    this.#gl = null;
+    this.#driver?.destroy();
+    this.#driver = null;
     this.#context2d = null;
     this.#canvas?.remove();
     this.#canvas = null;
@@ -412,10 +403,10 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
   }
 
   #render(): void {
-    if (!this.#canvas || !this.#ready) return;
+    if (!this.#canvas || !this.#ready || this.#driver?.suspended) return;
     this.#features = [];
 
-    if (this.#gl && this.#program) this.#renderWebgl();
+    if (this.#driver) this.#features = this.#driver.draw(this.#frame());
     else if (this.#context2d)
       this.#features = drawNativeCanvas(this.#context2d, this.#canvas, this.#frame());
   }
@@ -436,48 +427,6 @@ export class NativeWebglSpatialRenderer implements SpatialRenderer {
       this.#selectedSourceFeatureId = null;
       this.#selectedLayerId = null;
     }
-  }
-
-  #renderWebgl(): void {
-    const gl = this.#gl;
-    const program = this.#program;
-    const canvas = this.#canvas;
-    if (!gl || !program || !canvas) return;
-
-    const background = nativeBackground(this.#frame());
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(background.r, background.g, background.b, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.useProgram(program);
-
-    const geometry = collectNativeGeometry(this.#frame());
-    this.#features = geometry.features;
-    drawNativeWebgl(
-      gl,
-      {
-        program,
-        positionLocation: this.#positionLocation,
-        colorLocation: this.#colorLocation,
-        pointSizeLocation: this.#pointSizeLocation,
-      },
-      gl.LINES,
-      geometry.linePositions,
-      geometry.lineColors,
-      new Array(geometry.linePositions.length / 2).fill(1),
-    );
-    drawNativeWebgl(
-      gl,
-      {
-        program,
-        positionLocation: this.#positionLocation,
-        colorLocation: this.#colorLocation,
-        pointSizeLocation: this.#pointSizeLocation,
-      },
-      gl.POINTS,
-      geometry.pointPositions,
-      geometry.pointColors,
-      geometry.pointSizes,
-    );
   }
 
   #pickEdge(point: SpatialPickPoint): SpatialFeatureSelection | null {

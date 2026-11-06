@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
     paths:
+      - "package.json"
+      - "package-lock.json"
       - ".github/workflows/aethergrid-qiskit-aer.yml"
       - "apps/aethergrid-console/qiskit-aer-bridge.py"
       - "apps/aethergrid-console/qiskit-aer-runtime.mjs"

@@ -86,6 +86,110 @@ test('global 3D renderer retains WebGL-unavailable constructor, reset and source
   assert.equal(Number.isFinite(target.pitch), true);
 });
 
+test('no-WebGL globe retains repeated city, live and solar configuration without allocating graphics', () => {
+  const { visualizers, frameRequests } = renderers();
+  const solarUpdates = [];
+  const globe = new visualizers.GlobalGlobe3D(
+    { getContext: () => null },
+    {
+      onSolarUpdate: (solar) => solarUpdates.push(solar),
+    },
+  );
+  const cities = [
+    { id: 'equator', lat: 0, lon: 0, source: 'source-catalog' },
+    { id: 'antipode', lat: 0, lon: 180, source: 'source-catalog' },
+  ];
+  for (let repeat = 0; repeat < 2; repeat++) {
+    globe.setCities(cities);
+    assert.deepEqual(
+      Array.from(globe.cities, (city) => city.id),
+      ['equator', 'antipode'],
+    );
+    assert.deepEqual(Array.from(globe.cities[0].position), [4.08, 0, 0]);
+    assert.equal(globe.cities[1].lat, 0);
+    assert.equal(globe.cities[1].lon, 180);
+    assert.equal(globe.cities[0].source, 'source-catalog');
+    assert.equal(globe.cities[0].solarDaylight, !globe.cities[1].solarDaylight);
+    const snapshot = {
+      cities: [{ id: 'equator', airQuality: { usAqi: 35 }, source: 'air-observation' }],
+      seismic: { events: [{ lat: 1, lon: 2, magnitude: 5.2, source: 'quake-observation' }] },
+    };
+    globe.setLiveActivity(snapshot);
+    assert.equal(globe.liveSnapshot, snapshot);
+    assert.equal(globe.cities[0].live, snapshot.cities[0]);
+    assert.equal(globe.cities[1].live, null);
+    assert.equal(globe.liveBuffers.airGood.count, 1);
+    assert.equal(globe.liveBuffers.quakeHigh.count, 1);
+    globe.updateSolarGeometry(true);
+    globe.updateUtcSweep(true);
+    assert.equal(globe.terminatorBuffer.count, 288);
+    assert.equal(globe.sunBuffer.count, 1);
+    assert.equal(globe.utcSweepBuffer.count, 120);
+    assert.equal(Number.isFinite(globe.solarState.subsolarLat), true);
+    assert.equal(Number.isNaN(Date.parse(globe.solarState.generatedAt)), false);
+    for (const item of [
+      globe.cityBuffer,
+      globe.terminatorBuffer,
+      globe.sunBuffer,
+      globe.nightCityBuffer,
+      globe.utcSweepBuffer,
+      ...Object.values(globe.liveBuffers),
+    ]) {
+      assert.equal(item.buffer, null);
+    }
+  }
+  assert.equal(solarUpdates.length, 4);
+  assert.equal(solarUpdates.at(-1), globe.solarState);
+  assert.equal(cities[0].position, undefined);
+  globe.setCities([]);
+  globe.setLiveActivity(null);
+  assert.equal(globe.cities.length, 0);
+  assert.equal(globe.cityBuffer.count, 0);
+  assert.equal(globe.liveSnapshot, null);
+  assert.ok(Object.values(globe.liveBuffers).every((item) => item.count === 0));
+  globe.animate();
+  globe.resize();
+  assert.equal(frameRequests.length, 0);
+});
+
+test('no-WebGL globe selection, focus and animated descent preserve callbacks and resolve', async () => {
+  const settings = { reducedMotion: false, animationIntensity: 40 };
+  const { visualizers, frameRequests } = renderers(settings);
+  const selected = [];
+  const globe = new visualizers.GlobalGlobe3D(
+    { getContext: () => null },
+    {
+      onSelectCity: (city) => selected.push(city),
+    },
+  );
+  const city = { id: 'east', lat: 0, lon: 90, source: 'source-catalog' };
+  for (let repeat = 0; repeat < 2; repeat++) {
+    globe.markCitySelected(city);
+    assert.equal(globe.selectedCity, city);
+    assert.equal(globe.selectedBuffer.buffer, null);
+    assert.equal(globe.selectedBuffer.count, 1);
+    globe.focusCity(city);
+    assert.equal(globe.yaw, -Math.PI);
+    assert.equal(globe.pitch, 0);
+    assert.equal(globe.distance, 8.2);
+    const descent = globe.descendToCity(city, 700);
+    assert.equal(typeof descent.then, 'function');
+    frameRequests.shift()(350);
+    assert.ok(globe.distance > 5.65 && globe.distance < 8.2);
+    frameRequests.shift()(700);
+    await descent;
+    assert.equal(globe.distance, 5.65);
+    assert.equal(globe.yaw, -Math.PI);
+  }
+  settings.reducedMotion = true;
+  await globe.descendToCity(city);
+  await globe.descendToCity(null);
+  assert.equal(selected.length, 7);
+  assert.ok(selected.every((value) => value === city));
+  assert.equal(frameRequests.length, 0);
+  assert.equal(globe.pickCity(0, 0), null);
+});
+
 test('two-dimensional wave and scenario canvases render and honor reduced-motion settings', () => {
   const settings = { reducedMotion: true, animationIntensity: 40 };
   const { visualizers, frameRequests } = renderers(settings);
@@ -116,6 +220,7 @@ test('direct-open and packaged legacy pages load visualizers after math and befo
     'state.js',
     'standalone-geo.js',
     'spatial-math.js',
+    'legacy-city-buildings.js',
     'legacy-globe-core.js',
     'legacy-visualizers.js',
     'app.js',

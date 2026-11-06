@@ -519,6 +519,7 @@
       "state.js",
       "standalone-geo.js",
       "spatial-math.js",
+      "legacy-city-buildings.js",
       "app.js"
     ],
     "packagedDirectory": "legacy",

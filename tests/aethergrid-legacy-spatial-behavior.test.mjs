@@ -8,6 +8,7 @@ const appRoot = new URL('../apps/aethergrid-console/', import.meta.url);
 const read = (file) => readFile(new URL(file, appRoot), 'utf8');
 const appSource = await read('app.js');
 const mathSource = await read('spatial-math.js');
+const buildingsSource = await read('legacy-city-buildings.js');
 
 function webgl() {
   const buffers = [];
@@ -125,6 +126,7 @@ function harness({ available = true, settings = {}, options = {} } = {}) {
     },
   };
   runInNewContext(mathSource, context);
+  runInNewContext(buildingsSource, context);
   Object.assign(context, context.AETHERGRID_SPATIAL_MATH);
   const start = appSource.indexOf('  class SpatialGrid4D {');
   const end = appSource.indexOf('\n  const { GlobalGlobe3D, WaveSurface, ScenarioChart }', start);

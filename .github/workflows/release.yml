@@ -162,10 +162,17 @@ jobs:
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release_tag.outputs.tag }}
         run: |
-          gh release create "${{ steps.release_tag.outputs.tag }}" \
+          set -euo pipefail
+          notes=()
+          if [ -f "docs/releases/${RELEASE_TAG}.md" ]; then
+            notes=(--notes-file "docs/releases/${RELEASE_TAG}.md")
+          fi
+          gh release create "$RELEASE_TAG" \
             sbom.cdx.json release-commit.txt release-artifacts.sha256 release-manifest.json \
             dist/aethergrid-functional-app.zip dist/aethergrid-operator-console.zip \
             --target "$GITHUB_SHA" \
-            --title "${{ steps.release_tag.outputs.tag }}" \
+            --title "$RELEASE_TAG" \
+            "${notes[@]}" \
             --generate-notes
