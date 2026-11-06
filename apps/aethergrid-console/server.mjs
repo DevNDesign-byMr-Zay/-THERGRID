@@ -23,6 +23,7 @@ import { createCityLiveRuntime } from './city-live-runtime.mjs';
 import { createGeoRuntime } from './geo-runtime.mjs';
 import { createProfileStore } from './profile-store.mjs';
 import { createQuantumRuntime } from './quantum-runtime.mjs';
+import { createOpenQuantumRuntime } from './openquantum-runtime.mjs';
 import { createTerrainRuntime } from './terrain-runtime.mjs';
 import { createCanonicalWebRuntime } from './web-runtime.mjs';
 import { CITY_USE_CASES } from './analysis/city-use-cases.mjs';
@@ -65,6 +66,7 @@ const cityEnvironmentRuntime = createCityEnvironmentRuntime({
 const cityLiveRuntime = createCityLiveRuntime({ fetchImpl: createPipelineFetch('air-quality') });
 const geoRuntime = createGeoRuntime({ fetchImpl: createPipelineFetch('geo') });
 const quantumRuntime = createQuantumRuntime();
+const openQuantumRuntime = createOpenQuantumRuntime();
 const terrainRuntime = createTerrainRuntime({ fetchImpl: createPipelineFetch('terrain') });
 providerRegistry.health.registerProvider('live-maps', {
   name: 'Live aviation and radar',
@@ -145,7 +147,7 @@ const routeFamilies = [
     activity,
     json,
   }),
-  createQuantumRoutes({ quantumRuntime, dwaveProvider, providerRegistry, state, activity, json }),
+  createQuantumRoutes({ quantumRuntime, openQuantumRuntime, dwaveProvider, providerRegistry, state, activity, json }),
   createOperatorRoutes({
     state,
     regions,
