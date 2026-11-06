@@ -78,6 +78,26 @@ async function jsonRequest<T>(
   return payload;
 }
 
+export interface OpenQuantumDiscovery {
+  status: string;
+  live: boolean;
+  sdkInstalled?: boolean;
+  httpStatus?: number | null;
+  backends: Array<{
+    name: string;
+    shortCode: string;
+    providerId: string;
+    type: string;
+    status: string;
+    acceptingJobs: boolean | null;
+    queueDepth: number | null;
+  }>;
+}
+
+export function loadOpenQuantumBackends(signal: AbortSignal): Promise<OpenQuantumDiscovery> {
+  return jsonRequest('/api/aethergrid/quantum/openquantum/backends', { signal });
+}
+
 export function loadQuantumRuntime(): Promise<QuantumRuntimeSummary> {
   return jsonRequest('/api/aethergrid/quantum/runtime');
 }

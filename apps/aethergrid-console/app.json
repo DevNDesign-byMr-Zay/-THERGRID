@@ -520,6 +520,7 @@
       "standalone-geo.js",
       "spatial-math.js",
       "legacy-city-buildings.js",
+      "legacy-ui-helpers.js",
       "app.js"
     ],
     "packagedDirectory": "legacy",

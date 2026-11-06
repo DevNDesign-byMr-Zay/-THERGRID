@@ -162,6 +162,18 @@ export function createProviderRegistry(options = {}) {
     hardwareEnabled: dwaveConfigured,
   });
 
+  const openQuantumConfigured = Boolean(
+    rawEnv.AETHERGRID_OPENQUANTUM_SDK_KEY_JSON || rawEnv.OPENQUANTUM_SDK_KEY_JSON ||
+    rawEnv.OPENQUANTUM_SDK_KEY || (rawEnv.OPENQUANTUM_CLIENT_ID && rawEnv.OPENQUANTUM_CLIENT_SECRET)
+  );
+  health.registerProvider('openquantum', {
+    name: 'Open Quantum SDK (read-only discovery)',
+    capability: 'quantum',
+    capabilities: ['quantum'],
+    status: openQuantumConfigured ? PROVIDER_STATUS.CONFIGURED : PROVIDER_STATUS.UNCONFIGURED,
+    hardwareEnabled: false,
+  });
+
   const ibmConfigured = Boolean(config.quantum.ibm.apiKey && config.quantum.ibm.serviceCrn);
   health.registerProvider('ibm-quantum', {
     name: 'IBM Quantum Compute',

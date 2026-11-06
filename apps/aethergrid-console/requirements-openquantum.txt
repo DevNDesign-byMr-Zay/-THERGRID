@@ -1,0 +1,2 @@
+# Optional Open Quantum read-only SDK; not required for the Node/offline application.
+openquantum-sdk==1.0.0

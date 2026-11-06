@@ -223,6 +223,14 @@ test('HTTP route families retain their shared security, evidence and lifecycle c
         const submission = await post('/api/aethergrid/quantum/dwave/jobs', {});
         assert.equal(submission.status, 400);
         assert.equal((await submission.json()).error, 'confirmation_required');
+        const stringConfirmation = await post('/api/aethergrid/quantum/dwave/jobs', {
+          confirmSubmission: 'true',
+          solver: 'fixture',
+          problemType: 'qubo',
+          problemPayload: { fixture: true },
+        });
+        assert.equal(stringConfirmation.status, 400);
+        assert.equal((await stringConfirmation.json()).error, 'confirmation_required');
         assert.equal((await get('/api/aethergrid/quantum/dwave/jobs')).status, 400);
         assert.equal((await get('/api/aethergrid/quantum/jobs/id/unsupported')).status, 404);
       },

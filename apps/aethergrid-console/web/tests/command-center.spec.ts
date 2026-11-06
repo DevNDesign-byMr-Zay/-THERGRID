@@ -125,6 +125,7 @@ test('TEAM retains real specialist contributions and provider truth', async ({ p
 });
 
 test('global renderer remains usable with explicit engine provenance', async ({ page }) => {
+  if (process.env.AETHERGRID_TEST_REQUIRE_CESIUM !== '1') await isolateBackgroundFeeds(page);
   const startedAt = Date.now();
   const mark = (stage: string) => console.info('AETHERGRID_GLOBAL_STAGE', JSON.stringify({ stage, elapsedMs: Date.now() - startedAt }));
   mark('launch:start');

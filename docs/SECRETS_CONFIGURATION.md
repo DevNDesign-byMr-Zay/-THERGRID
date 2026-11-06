@@ -26,7 +26,12 @@ Recommended secret names:
 | IBM Quantum | `AETHERGRID_IBM_QUANTUM_API_KEY` |
 | IBM Quantum instance | `AETHERGRID_IBM_QUANTUM_SERVICE_CRN` |
 | D-Wave | `AETHERGRID_DWAVE_API_TOKEN` |
+| Open Quantum read-only SDK | `AETHERGRID_OPENQUANTUM_SDK_KEY_JSON` (encrypted GitHub Actions secret) |
 | OpenAI-compatible AI key | `AETHERGRID_OPENAI_API_KEY` |
+
+## Open Quantum
+
+For GitHub Actions, save the complete JSON SDK key in the repository secret `AETHERGRID_OPENQUANTUM_SDK_KEY_JSON` (or use the split `OPENQUANTUM_CLIENT_ID` / `OPENQUANTUM_CLIENT_SECRET` secrets). The manual `Open Quantum read-only discovery` workflow uses those secrets for backend discovery without submitting any quantum jobs. Repository secrets do not automatically configure a local PC or hosted ÆTHERGRID instance. See `docs/OPENQUANTUM_INTEGRATION.md`. Rotate any SDK key that has been exposed in a chat or other shared file.
 
 ## Groq
 

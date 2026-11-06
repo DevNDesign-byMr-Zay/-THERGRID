@@ -48,6 +48,7 @@ test('direct-open compatibility loads each legacy helper before app.js', async (
     'standalone-geo.js',
     'spatial-math.js',
     'legacy-city-buildings.js',
+    'legacy-ui-helpers.js',
     'app.js',
   ]) {
     const script = '<script src="./' + name + '" defer></script>';

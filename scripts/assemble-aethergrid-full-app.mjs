@@ -18,6 +18,7 @@ const LEGACY_FILES = new Set([
   'styles.css',
   'app.js',
   'settings-controller.js',
+  'legacy-ui-helpers.js',
   'environment-helpers.js',
   'state.js',
   'standalone-geo.js',
@@ -62,6 +63,9 @@ const REQUIRED_RUNTIME_FILES = Object.freeze([
   'city-live-runtime.mjs',
   'terrain-runtime.mjs',
   'quantum-runtime.mjs',
+  'openquantum-runtime.mjs',
+  'openquantum-bridge.py',
+  'requirements-openquantum.txt',
   'local-optimization-runtime.mjs',
   'qiskit-aer-runtime.mjs',
   'qiskit-aer-bridge.py',
@@ -100,6 +104,7 @@ const REQUIRED_RUNTIME_FILES = Object.freeze([
   'legacy/styles.css',
   'legacy/app.js',
   'legacy/settings-controller.js',
+  'legacy/legacy-ui-helpers.js',
   'legacy/environment-helpers.js',
   'legacy/state.js',
   'legacy/standalone-geo.js',
@@ -115,6 +120,11 @@ const PRIVATE_BROWSER_ENV_NAMES = Object.freeze([
   'AETHERGRID_IBM_QUANTUM_API_KEY',
   'AETHERGRID_IBM_QUANTUM_SERVICE_CRN',
   'AETHERGRID_DWAVE_API_TOKEN',
+  'AETHERGRID_OPENQUANTUM_SDK_KEY_JSON',
+  'OPENQUANTUM_SDK_KEY_JSON',
+  'OPENQUANTUM_CLIENT_ID',
+  'OPENQUANTUM_CLIENT_SECRET',
+  'OPENQUANTUM_SDK_KEY',
   'AETHERGRID_TOMORROW_API_KEY',
   'AETHERGRID_EIA_API_KEY',
   'AETHERGRID_OPENAI_API_KEY',
@@ -272,6 +282,8 @@ for (const absolute of await collectFiles(APP_ROOT)) {
     relativePath === '.aethergrid-data' ||
     relativePath.startsWith('.aethergrid-data/') ||
     relativePath === '.aethergrid.pid' ||
+    /(?:^|\/)sdk-key-[^/]+\.json$/u.test(relativePath) ||
+    relativePath.startsWith('.venv-openquantum/') ||
     relativePath === '.aethergrid-runtime' ||
     relativePath.startsWith('.aethergrid-runtime/') ||
     ((relativePath === '.env' || relativePath.startsWith('.env.')) &&
@@ -395,6 +407,7 @@ let legacyStandalone = legacyHtml
   .replace('<script src="./legacy-visualizers.js" defer></script>', `<script>\n${legacyVisualizersJs}\n</script>`)
   .replace('<script src="./settings-controller.js" defer></script>', `<script>\n${legacySource.get('settings-controller.js').toString('utf8')}\n</script>`)
   .replace('<script src="./environment-helpers.js" defer></script>', `<script>\n${legacySource.get('environment-helpers.js').toString('utf8')}\n</script>`)
+  .replace('<script src="./legacy-ui-helpers.js" defer></script>', `<script>\n${legacySource.get('legacy-ui-helpers.js').toString('utf8')}\n</script>`)
   .replace('<script src="./app.js" defer></script>', `<script>\n${legacyJs}\n</script>`);
 
 for (const [path, mime] of [

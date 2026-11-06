@@ -107,6 +107,13 @@ export const envSchema = z.object({
   AETHERGRID_IBM_QUANTUM_API_KEY: optionalString,
   AETHERGRID_IBM_QUANTUM_SERVICE_CRN: optionalString,
   AETHERGRID_IBM_QUANTUM_BACKEND: optionalString,
+  // Optional Open Quantum SDK secrets — never serialized into public config.
+  AETHERGRID_OPENQUANTUM_SDK_KEY_JSON: optionalString,
+  OPENQUANTUM_SDK_KEY_JSON: optionalString,
+  OPENQUANTUM_CLIENT_ID: optionalString,
+  OPENQUANTUM_CLIENT_SECRET: optionalString,
+  OPENQUANTUM_SDK_KEY: optionalString,
+  AETHERGRID_OPENQUANTUM_PYTHON: optionalString,
 
   // Forward-compatible optional providers (Cesium, Tomorrow.io, Google 3D Tiles, Overture, EIA, D-Wave, NWS, Transit, Hydrology)
   AETHERGRID_CESIUM_ION_TOKEN: optionalString,

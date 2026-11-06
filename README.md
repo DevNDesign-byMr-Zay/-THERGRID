@@ -55,7 +55,15 @@ The React workspace has a separate lockfile and its own dependency security gate
 
 ## Verification and evidence
 
-From a fresh clone, install Node.js 22, run `npm ci --ignore-scripts` in the repository root, then run `npm test`. The default root suite requires no provider credentials and uses injected adapters, local fixtures and loopback HTTP servers. No paid quantum job or physical infrastructure action is part of this suite. To prove the tests are independent of external provider access, run `npm run test:offline`; this clears provider credentials and rejects non-loopback TCP/TLS and `fetch` connections from the Node test processes, while allowing local fixture servers. It is an application-process guard, not a substitute for machine/container egress isolation.
+From a fresh clone with Node.js 22, run these commands in the repository root. Provider credentials and optional Python packages are unnecessary for this verification path.
+
+```shell
+npm ci --ignore-scripts
+npm test
+npm run test:offline
+```
+
+The default suite uses injected adapters, local fixtures and loopback HTTP servers. The offline command additionally clears provider credentials and rejects non-loopback TCP/TLS and `fetch` connections from the Node test processes. Neither suite submits quantum jobs or controls physical infrastructure.
 
 For a focused example that exercises returned runtime data rather than matching source text:
 

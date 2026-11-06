@@ -8,17 +8,9 @@
   const settingsController = globalThis.AETHERGRID_SETTINGS_CONTROLLER;
   const { environmentHour, weatherPhenomenon } = globalThis.AETHERGRID_ENVIRONMENT_HELPERS;
 
-  const toast = q('#toast');
-  const panelDialog = q('#panelDialog');
-  const dialogKicker = q('#dialogKicker');
-  const dialogTitle = q('#dialogTitle');
   const dialogBody = q('#dialogBody');
-
-  function escapeHtml(value = '') {
-    return String(value).replace(/[&<>'"]/g, (character) =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character],
-    );
-  }
+  const panelDialog = q('#panelDialog');
+  const { escapeHtml, showToast, openPanel } = globalThis.AETHERGRID_LEGACY_UI.createFeedback(document);
 
   function titleCase(value = '') {
     return String(value)
@@ -33,25 +25,6 @@
   function isLightTheme() {
     return resolvedTheme() === 'light';
   }
-
-  function showToast(title, copy) {
-    if (!toast) return;
-    toast.innerHTML = `<b>${escapeHtml(title)}</b><small>${escapeHtml(copy)}</small>`;
-    toast.classList.add('show');
-    clearTimeout(showToast.timer);
-    showToast.timer = setTimeout(() => toast.classList.remove('show'), 3000);
-  }
-
-  function openPanel(kicker, title, html) {
-    dialogKicker.textContent = kicker;
-    dialogTitle.textContent = title;
-    dialogBody.innerHTML = html;
-    panelDialog.showModal();
-  }
-
-  qa('[data-dialog-close]').forEach((button) =>
-    button.addEventListener('click', () => button.closest('dialog')?.close()),
-  );
 
   async function api(path, options = {}) {
     if (location.protocol === 'file:') throw new Error('standalone mode');
