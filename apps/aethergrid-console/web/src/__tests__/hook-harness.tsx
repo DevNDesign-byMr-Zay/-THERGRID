@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { useWorkspacePanels } from '../hooks/use-workspace-panels';
 import { useWeatherRadar } from '../hooks/use-weather-radar';
+import { useCitySources } from '../hooks/use-city-sources';
 import { useOperationalContext } from '../hooks/use-operational-context';
 import { saveOperationalSourceBindings } from '../services/operational-source-bindings';
 
@@ -42,7 +43,12 @@ function Panels() {
 }
 function Radar() { globals.hook = useWeatherRadar(props); return <output>Radar ready</output>; }
 function Operational() { globals.hook = useOperationalContext(props); return <output>Operational ready</output>; }
-function render() { root.render(kind === 'panels' ? <Panels /> : kind === 'radar' ? <Radar /> : <Operational />); }
+const cityViewport = { current: null };
+function CitySources() {
+  globals.hook = useCitySources({ ...props, scope: 'world', reloadId: 0, viewportRef: cityViewport, onCityReset() {} });
+  return <output>City sources ready</output>;
+}
+function render() { root.render(kind === 'panels' ? <Panels /> : kind === 'radar' ? <Radar /> : kind === 'city-sources' ? <CitySources /> : <Operational />); }
 globals.update = (next) => { props = { ...props, ...next }; render(); };
 globals.unmount = () => root.unmount();
 render();

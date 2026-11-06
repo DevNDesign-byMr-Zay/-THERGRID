@@ -15,15 +15,17 @@ test('offline HTML never opens dead localhost without verified local service hea
 });
 
 test('failed mapped city geometry can be retried without replacing source-backed data', async () => {
-  const [app, css] = await Promise.all([
+  const [app, css, citySources] = await Promise.all([
     read('apps/aethergrid-console/web/src/app/App.tsx'),
     read('apps/aethergrid-console/web/src/app/app.css'),
+    read('apps/aethergrid-console/web/src/hooks/use-city-sources.ts'),
   ]);
   assert.match(app, /const \[cityReloadId, setCityReloadId\] = useState\(0\)/u);
-  assert.match(app, /\[city\.id, city\.latitude, city\.longitude, cityReloadId\]/u);
+  assert.match(app, /reloadId: cityReloadId/u);
+  assert.match(citySources, /\[city\.id, city\.latitude, city\.longitude, reloadId\]/u);
   assert.match(app, /onClick=\{\(\) => setCityReloadId\(\(current\) => current \+ 1\)\}/u);
   assert.match(app, /RETRY 3D CITY/u);
-  assert.match(app, /bundle\.identity\.sourceProvider === 'local-fallback'/u);
+  assert.match(citySources, /bundle\.identity\.sourceProvider === 'local-fallback'/u);
   assert.match(css, /\.scene-caption \.city-retry-button/u);
   assert.match(css, /pointer-events: auto/u);
 });

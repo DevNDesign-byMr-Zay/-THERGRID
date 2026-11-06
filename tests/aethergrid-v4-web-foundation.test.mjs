@@ -665,16 +665,21 @@ test('v4 city transitions report geometry atmosphere and live-context readiness 
   const app = await text('apps/aethergrid-console/web/src/app/App.tsx');
   const badges = await text('apps/aethergrid-console/web/src/components/LiveSceneBadges.tsx');
 
-  assert.match(app, /interface CityLoadState/u);
-  assert.match(app, /spatial: true/u);
-  assert.match(app, /environment: true/u);
-  assert.match(app, /liveContext: true/u);
+  const citySources = await text('apps/aethergrid-console/web/src/hooks/use-city-sources.ts');
+  assert.match(app, /useCitySources\(/u);
+  assert.match(citySources, /interface CityLoadState/u);
+  assert.match(citySources, /spatial: true/u);
+  assert.match(citySources, /environment: true/u);
+  assert.match(citySources, /liveContext: true/u);
   assert.match(app, /<LiveSceneBadges/u);
   assert.match(badges, /SOURCES PENDING/u);
   assert.match(badges, /GEOMETRY/u);
   assert.match(badges, /ATMOSPHERE/u);
   assert.match(badges, /LIVE CONTEXT/u);
-  assert.match(app, /setCityLoad\(\(current\) => \(\{ \.\.\.current, spatial: false \}\)\)/u);
+  assert.match(
+    citySources,
+    /setCityLoad\(\(current\) => \(\{ \.\.\.current, spatial: false \}\)\)/u,
+  );
 });
 
 test('v4 streamed 3d buildings defer until city or district detail', async () => {
