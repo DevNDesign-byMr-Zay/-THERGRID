@@ -16,6 +16,10 @@ def credentials_present():
 
 
 def credential_kwargs():
+    client_id = os.environ.get("OPENQUANTUM_CLIENT_ID", "").strip()
+    client_secret = os.environ.get("OPENQUANTUM_CLIENT_SECRET", "").strip()
+    if client_id and client_secret:
+        return {"client_id": client_id, "client_secret": client_secret}
     packed = os.environ.get("AETHERGRID_OPENQUANTUM_SDK_KEY_JSON") or os.environ.get("OPENQUANTUM_SDK_KEY_JSON")
     if not packed:
         return {}

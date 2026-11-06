@@ -73,7 +73,7 @@ class OpenQuantumBridgeTest(TestCase):
         self.addCleanup(self.provider.shutdown)
         self.endpoint = f"http://127.0.0.1:{self.provider.server_port}"
 
-    def discover(self, packed=None, endpoint=None):
+    def discover(self, packed=None, endpoint=None, split=False):
         env = {
             name: value for name, value in os.environ.items()
             if not name.startswith(("OPENQUANTUM_", "AETHERGRID_OPENQUANTUM_"))
@@ -83,6 +83,8 @@ class OpenQuantumBridgeTest(TestCase):
                    OPENQUANTUM_MANAGEMENT_URL=target, NO_PROXY="127.0.0.1")
         if packed is not None:
             env["AETHERGRID_OPENQUANTUM_SDK_KEY_JSON"] = packed
+        if split:
+            env.update(OPENQUANTUM_CLIENT_ID="fixture", OPENQUANTUM_CLIENT_SECRET="fixture-secret")
         run = subprocess.run([sys.executable, str(BRIDGE), "--action", "backends"],
                              env=env, capture_output=True, text=True, check=True, timeout=10)
         self.assertEqual(run.stderr, "")
@@ -102,6 +104,11 @@ class OpenQuantumBridgeTest(TestCase):
         self.assertEqual(result["backends"][0]["queueDepth"], 0)
         self.assertEqual(self.provider.token_calls, 1)
         self.assertEqual(self.provider.catalog_calls, 1)
+
+    def test_explicit_split_credentials_override_a_malformed_legacy_alias(self):
+        result = self.discover("invalid-legacy-value", split=True)
+        self.assertEqual(result["status"], "ready")
+        self.assertEqual(self.provider.token_calls, 1)
 
     def test_invalid_credentials_return_sanitized_http_status(self):
         result = self.discover(json.dumps({"client_id": "fixture", "client_secret": "bad"}))
