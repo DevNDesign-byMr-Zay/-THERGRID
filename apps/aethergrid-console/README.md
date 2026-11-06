@@ -14,6 +14,10 @@ Provider credentials remain server-side. The browser receives only the bounded p
 
 The approved command-center screenshot is a design/acceptance reference only and is excluded from the runtime package.
 
+## Open Quantum — optional read-only hardware discovery
+
+An independent Open Quantum SDK integration is available at `GET /api/aethergrid/quantum/openquantum/runtime`, `/status`, and `/backends`. It can authenticate with an SDK JSON key stored in GitHub Actions secrets or a private server environment; it **does not submit QPU jobs or consume credits**. Its Python dependency is optional, so Windows/offline operation and the existing IBM/local quantum provider remain unchanged. See `docs/OPENQUANTUM_INTEGRATION.md` for setup and the manually dispatched credentialed smoke test. Do not select `AETHERGRID_QUANTUM_PROVIDER=openquantum` before a reviewed quote/approval/submit adapter exists.
+
 ## Production launch
 
 From the repository root:
