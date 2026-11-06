@@ -7,6 +7,7 @@ on:
       - 'apps/aethergrid-console/app.js'
       - 'apps/aethergrid-console/index.html'
       - 'apps/aethergrid-console/legacy-globe-core.js'
+      - 'apps/aethergrid-console/legacy-city-mesh.js'
       - 'apps/aethergrid-console/legacy-visualizers.js'
       - 'apps/aethergrid-console/sw.js'
       - 'scripts/assemble-aethergrid-full-app.mjs'

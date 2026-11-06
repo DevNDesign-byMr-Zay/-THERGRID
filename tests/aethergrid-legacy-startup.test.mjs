@@ -9,6 +9,7 @@ const html = await readAsset('index.html');
 
 function assertBootstrapped({ context, nodes, listeners, contexts }) {
   assert.equal(typeof context.AETHERGRID_CITY_BUILDINGS?.buildCityBuildings, 'function');
+  assert.equal(typeof context.AETHERGRID_LEGACY_CITY_MESH?.loadCityMesh, 'function');
   assert.equal(typeof context.AETHERGRID_LEGACY_VISUALIZERS, 'function');
   assert.equal(context.document.body.dataset.workspace, 'grid');
   assert.equal(nodes.get('#streamReadout').textContent, 'LOCAL 4D SIM');
@@ -25,6 +26,7 @@ test('complete normal classic-script bootstrap reaches offline workspace with no
     'standalone-geo.js',
     'spatial-math.js',
     'legacy-city-buildings.js',
+    'legacy-city-mesh.js',
     'legacy-globe-core.js',
     'legacy-visualizers.js',
     'settings-controller.js',
@@ -43,7 +45,45 @@ test('complete source-inlined classic-script bootstrap reaches offline workspace
     throw new Error('fully inline bootstrap must not load an external script');
   });
   assertBootstrapped(result);
-  assert.deepEqual(result.scripts, Array(10).fill('inline'));
+  assert.deepEqual(result.scripts, Array(11).fill('inline'));
+});
+
+test('cached pre-extraction HTML can descend after the missing city mesh script is recovered', async () => {
+  const mixedHtml = html.replace('<script src="./legacy-city-mesh.js" defer></script>', '');
+  const result = await bootstrapLegacyPage(mixedHtml, readAsset, {
+    settings: { reducedMotion: true },
+  });
+  assert.equal(result.context.AETHERGRID_LEGACY_CITY_MESH, undefined);
+  const descend = result.listeners.find(
+    ({ selector, name }) => selector === '[data-action="load-live-city"]' && name === 'click',
+  );
+  await descend.callback();
+  assert.equal(typeof result.context.AETHERGRID_LEGACY_CITY_MESH?.loadCityMesh, 'function');
+  assert.equal(result.scripts.filter((name) => name === 'legacy-city-mesh.js').length, 1);
+  assert.match(result.nodes.get('#cityMeshStatus').innerHTML, /New York.*mapped structures/u);
+});
+
+test('a missing city companion reports failure and allows a subsequent recovery', async () => {
+  const mixedHtml = html.replace('<script src="./legacy-city-mesh.js" defer></script>', '');
+  let attempts = 0;
+  const result = await bootstrapLegacyPage(
+    mixedHtml,
+    (name) => {
+      if (name === 'legacy-city-mesh.js' && ++attempts === 1) {
+        return Promise.reject(new Error('temporary connection loss'));
+      }
+      return readAsset(name);
+    },
+    { settings: { reducedMotion: true } },
+  );
+  const descend = result.listeners.find(
+    ({ selector, name }) => selector === '[data-action="load-live-city"]' && name === 'click',
+  );
+  await descend.callback();
+  assert.equal(result.nodes.get('#geoSourceStatus').textContent, 'CITY RENDERER UNAVAILABLE');
+  await descend.callback();
+  assert.equal(attempts, 2);
+  assert.match(result.nodes.get('#cityMeshStatus').innerHTML, /New York.*mapped structures/u);
 });
 
 test('legacy feedback escapes toast text and preserves dialog labels and dismissal', async () => {

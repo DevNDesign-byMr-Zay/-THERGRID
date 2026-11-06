@@ -101,6 +101,7 @@ try {
     'aethergrid-functional-app/legacy/index.html',
     'aethergrid-functional-app/legacy/standalone.html',
     'aethergrid-functional-app/legacy/legacy-city-buildings.js',
+    'aethergrid-functional-app/legacy/legacy-city-mesh.js',
     'aethergrid-functional-app/node_modules/zod/package.json',
     'aethergrid-functional-app/.env.secrets.example',
     'aethergrid-functional-app/qiskit-aer-runtime.mjs',
@@ -124,24 +125,32 @@ try {
     'optional private Python environments must never be included in the ZIP',
   );
 
-  const [legacyHtml, standaloneHtml, cityBuildings] = await Promise.all(
-    ['index.html', 'standalone.html', 'legacy-city-buildings.js'].map((name) =>
+  const [legacyHtml, standaloneHtml] = await Promise.all(
+    ['index.html', 'standalone.html'].map((name) =>
       readFile(join(appRoot, 'legacy', name), 'utf8'),
     ),
   );
-  const buildingScript = '<script src="./legacy-city-buildings.js" defer></script>';
-  assert(
-    legacyHtml.includes('./spatial-math.js') &&
-      legacyHtml.indexOf(buildingScript) > legacyHtml.indexOf('./spatial-math.js') &&
-      legacyHtml.indexOf(buildingScript) < legacyHtml.indexOf('./app.js'),
-    'packaged legacy page must load building geometry between math and app',
-  );
-  assert(
-    standaloneHtml.includes(cityBuildings) &&
-      standaloneHtml.indexOf(cityBuildings) < standaloneHtml.indexOf('  class SpatialGrid4D {') &&
-      !standaloneHtml.includes(buildingScript),
-    'standalone must inline the exact building companion before the application',
-  );
+  let previousScript = legacyHtml.indexOf('./spatial-math.js');
+  let previousInline = -1;
+  assert(previousScript >= 0, 'packaged legacy page must load spatial math');
+  for (const name of ['legacy-city-buildings.js', 'legacy-city-mesh.js']) {
+    const source = await readFile(join(appRoot, 'legacy', name), 'utf8');
+    const script = `<script src="./${name}" defer></script>`;
+    const scriptIndex = legacyHtml.indexOf(script);
+    const inlineIndex = standaloneHtml.indexOf(source);
+    assert(
+      scriptIndex > previousScript && scriptIndex < legacyHtml.indexOf('./app.js'),
+      `packaged legacy page must load ${name} after its dependencies and before app`,
+    );
+    assert(
+      inlineIndex > previousInline &&
+        inlineIndex < standaloneHtml.indexOf('  class SpatialGrid4D {') &&
+        !standaloneHtml.includes(script),
+      `standalone must inline the exact ${name} companion before the application`,
+    );
+    previousScript = scriptIndex;
+    previousInline = inlineIndex;
+  }
 
   const port = await reservePort();
   child = spawn(process.execPath, ['server.mjs'], {

@@ -21,21 +21,28 @@ export async function verifyBackendReadiness(text, assert, pkg, exactAethergridL
   const exactAethergridWebRuntime = await text('apps/aethergrid-console/web-runtime.mjs');
   const exactAethergridPackager = await text('scripts/assemble-aethergrid-full-app.mjs');
   const exactAethergridApp = JSON.parse(await text('apps/aethergrid-console/app.json'));
-  const cityBuildings = await text('apps/aethergrid-console/legacy-city-buildings.js');
-  const buildingScript = '<script src="./legacy-city-buildings.js" defer></script>';
-  assert(
-    cityBuildings.includes('AETHERGRID_CITY_BUILDINGS') &&
-      exactAethergridLegacyHtml.includes('<script src="./spatial-math.js" defer></script>') &&
-      exactAethergridApp.legacyCompatibility?.sourceFiles.includes('legacy-city-buildings.js') &&
-      exactAethergridLegacyHtml.indexOf(buildingScript) >
-        exactAethergridLegacyHtml.indexOf('<script src="./spatial-math.js" defer></script>') &&
-      exactAethergridLegacyHtml.indexOf(buildingScript) <
-        exactAethergridLegacyHtml.indexOf('<script src="./app.js" defer></script>') &&
-      exactAethergridPackager.includes("'legacy/legacy-city-buildings.js'") &&
-      exactAethergridPackager.includes("legacySource.get('legacy-city-buildings.js')") &&
-      exactAethergridPackager.includes(".replace('" + buildingScript + "'"),
-    'legacy building geometry must load after math and before app and remain packaged/inlined',
-  );
+  for (const [file, symbol, prerequisite] of [
+    ['legacy-city-buildings.js', 'AETHERGRID_CITY_BUILDINGS', 'spatial-math.js'],
+    ['legacy-city-mesh.js', 'AETHERGRID_LEGACY_CITY_MESH', 'legacy-city-buildings.js'],
+  ]) {
+    const source = await text(`apps/aethergrid-console/${file}`);
+    const script = `<script src="./${file}" defer></script>`;
+    const prerequisiteIndex = exactAethergridLegacyHtml.indexOf(
+      `<script src="./${prerequisite}" defer></script>`,
+    );
+    const scriptIndex = exactAethergridLegacyHtml.indexOf(script);
+    assert(
+      source.includes(symbol) &&
+        exactAethergridApp.legacyCompatibility?.sourceFiles.includes(file) &&
+        prerequisiteIndex >= 0 &&
+        scriptIndex > prerequisiteIndex &&
+        scriptIndex < exactAethergridLegacyHtml.indexOf('<script src="./app.js" defer></script>') &&
+        exactAethergridPackager.includes(`'legacy/${file}'`) &&
+        exactAethergridPackager.includes(`legacySource.get('${file}')`) &&
+        exactAethergridPackager.includes(`.replace('${script}'`),
+      `legacy city companion ${file} must load after math and its prerequisites, before app, and remain packaged and inlined`,
+    );
+  }
   const exactAethergridUi = JSON.parse(await text('apps/aethergrid-console/ui.json'));
   const exactAethergridWebPackage = JSON.parse(
     await text('apps/aethergrid-console/web/package.json'),
