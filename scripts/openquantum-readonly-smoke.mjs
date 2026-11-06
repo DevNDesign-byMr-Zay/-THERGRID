@@ -4,15 +4,22 @@ const result = await createOpenQuantumRuntime().listBackends();
 const publicReport = {
   provider: result.provider,
   status: result.status,
+  sdkInstalled: result.sdkInstalled === true,
+  sdkVersion: result.sdkVersion ?? null,
+  httpStatus: result.httpStatus ?? null,
   live: result.live === true,
   backendCount: result.backends.length,
-  backends: result.backends.map(({ name, shortCode, type, status, acceptingJobs }) => ({
-    name,
-    shortCode,
-    type,
-    status,
-    acceptingJobs,
-  })),
+  backends: result.backends.map(
+    ({ name, shortCode, providerId, type, status, acceptingJobs, queueDepth }) => ({
+      name,
+      providerId,
+      shortCode,
+      type,
+      status,
+      acceptingJobs,
+      queueDepth,
+    }),
+  ),
   hardwareSubmitted: false,
   hardwareExecuted: false,
 };

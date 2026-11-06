@@ -81,3 +81,34 @@ test('Read-only status exposes SDK metadata only', async () => {
   assert.equal(result.status, 'sdk_missing');
   assert.ok(!JSON.stringify(result).includes('fake-secret'));
 });
+
+test('discovery distinguishes provider failure from hardware activity and only emits safe status codes', async () => {
+  const env = { OPENQUANTUM_CLIENT_ID: 'fixture-id', OPENQUANTUM_CLIENT_SECRET: 'fixture-secret' };
+  for (const status of [
+    'authentication_failed',
+    'provider_timeout',
+    'provider_unreachable',
+    'fixture-secret',
+  ]) {
+    const runtime = createOpenQuantumRuntime({
+      env,
+      runWorker: async () => ({
+        status,
+        live: true,
+        hardwareSubmitted: true,
+        httpStatus: 401,
+        sdkInstalled: true,
+        sdkVersion: '1.0.0',
+        backends: [{ name: 'untrusted' }],
+      }),
+    });
+    const result = await runtime.listBackends();
+    assert.equal(result.status, status === 'fixture-secret' ? 'unavailable' : status);
+    assert.equal(result.sdkVersion, '1.0.0');
+    assert.equal(result.httpStatus, 401);
+    assert.deepEqual(result.backends, []);
+    assert.equal(result.live, false);
+    assert.equal(result.hardwareSubmitted, false);
+    assert.doesNotMatch(JSON.stringify(result), /fixture-secret/u);
+  }
+});

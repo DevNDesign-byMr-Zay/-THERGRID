@@ -4,6 +4,11 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
+const DISCOVERY_STATUSES = new Set([
+  'ready', 'unconfigured', 'sdk_missing', 'invalid_credentials_format',
+  'authentication_failed', 'provider_rejected', 'provider_timeout', 'provider_unreachable',
+  'worker_unavailable', 'worker_timeout', 'unavailable',
+]);
 const BRIDGE = fileURLToPath(new URL('./openquantum-bridge.py', import.meta.url));
 
 function hasCredentials(env) {
@@ -21,7 +26,8 @@ async function executeBridge(action, env) {
       env, timeout: 20_000, maxBuffer: 64 * 1024, windowsHide: true,
     });
     return JSON.parse(result.stdout.trim());
-  } catch {
+  } catch (error) {
+    if (error?.killed && error?.signal) return { status: 'worker_timeout', backends: [] };
     return { provider: 'openquantum', status: 'worker_unavailable', backends: [] };
   }
 }
@@ -44,9 +50,15 @@ export function createOpenQuantumRuntime({ env = process.env, runWorker = execut
     async listBackends() {
       if (!configured) return { ...this.summary(), backends: [] };
       const result = await runWorker('backends', env);
-      return { provider: 'openquantum', status: String(result.status || 'unavailable'),
+      return { provider: 'openquantum',
+        status: DISCOVERY_STATUSES.has(result.status) ? result.status : 'unavailable',
+        sdkInstalled: result.sdkInstalled === true,
+        sdkVersion: /^\d+(?:\.\d+){1,3}$/.test(result.sdkVersion) ? result.sdkVersion : null,
+        httpStatus: Number.isInteger(result.httpStatus) && result.httpStatus >= 400 && result.httpStatus <= 599
+          ? result.httpStatus : null,
         backends: result.status === 'ready' && Array.isArray(result.backends)
-          ? result.backends.slice(0, 50).map((b) => ({
+          ? result.backends.filter((item) => item && typeof item === 'object').slice(0, 50).map((b) => ({
+            providerId: String(b.providerId || '').slice(0, 100),
             name: String(b.name || '').slice(0, 160),
             shortCode: String(b.shortCode || '').slice(0, 100),
             type: String(b.type || '').slice(0, 32),

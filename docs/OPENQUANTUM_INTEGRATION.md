@@ -4,7 +4,7 @@ This optional integration performs authenticated **read-only backend discovery**
 
 ## Credential setup
 
-Use GitHub Actions repository secret `AETHERGRID_OPENQUANTUM_SDK_KEY_JSON` with the entire original SDK JSON (`client_id` and `client_secret`), or split secrets `OPENQUANTUM_CLIENT_ID` / `OPENQUANTUM_CLIENT_SECRET`. The manual workflow also recognizes `OPENQUANTUM_SDK_KEY_JSON` or `OPENQUANTUM_SDK_KEY` **when the GitHub secret contains the complete JSON** rather than a file path.
+Use GitHub Actions repository secret `AETHERGRID_OPENQUANTUM_SDK_KEY_JSON` with the entire original SDK JSON (`client_id` and `client_secret`), or split secrets `OPENQUANTUM_CLIENT_ID` / `OPENQUANTUM_CLIENT_SECRET`. The manual workflow also recognizes `OPENQUANTUM_SDK_KEY_JSON` `OPENQUANTUM_SDK_KEY`, or the existing `OPEN_QUANTUM` alias **when the GitHub secret contains the complete JSON** rather than a file path.
 
 GitHub repository secrets are injected into Actions jobs only, **not automatically into an ÆTHERGRID installation or deployed service**. For local or hosted runtime, set `AETHERGRID_OPENQUANTUM_SDK_KEY_JSON` through the private process environment, or set `OPENQUANTUM_SDK_KEY` to the absolute path of a server-private SDK JSON file, or provide the two separate environment variables. Never use browser/`VITE_` variables.
 
@@ -26,7 +26,7 @@ The Windows app ZIP includes the bridge but cannot silently install Python or co
 
 - `GET /api/aethergrid/quantum/openquantum/runtime` — config presence, not connection proof.
 - `GET /api/aethergrid/quantum/openquantum/status` — optional SDK installed/version.
-- `GET /api/aethergrid/quantum/openquantum/backends` — authenticated live QPU discovery; no QPU jobs.
+- `GET /api/aethergrid/quantum/openquantum/backends` — authenticated live QPU discovery; no QPU jobs. Includes backend provider ID, type, queue depth and intake status when the catalog returns them.
 
 The selected default provider remains `local-simulator`. **Do not select `AETHERGRID_QUANTUM_PROVIDER=openquantum` yet**, because job execution/quote authorization has deliberately not been implemented in this first phase.
 
@@ -39,7 +39,7 @@ node --test tests/aethergrid-openquantum-runtime.test.mjs
 python -m py_compile apps/aethergrid-console/openquantum-bridge.py
 ```
 
-The manual `Open Quantum read-only discovery` GitHub Actions workflow runs only via `workflow_dispatch` from a trusted branch. It injects GitHub repository secrets for discovery and prints only public backend fields. Its successful result establishes authenticated discovery — **not available credit balance or successful hardware execution**.
+The manual `Open Quantum read-only discovery` GitHub Actions workflow accepts `workflow_dispatch` on protected `main`. It injects GitHub repository secrets for discovery and prints only public backend fields. Its successful result establishes authenticated discovery — **not available credit balance or successful hardware execution**.
 
 Next PR: approved QASM transpilation, quote-only preflight, maximum Spark credit budget, operator confirmation, signed receipt/job status and results before adding a real hardware submit button. Hardware jobs must never run automatically in ordinary CI.
 

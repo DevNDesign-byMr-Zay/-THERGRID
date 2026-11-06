@@ -23,7 +23,10 @@ def credential_kwargs():
         data = json.loads(packed)
     except (ValueError, TypeError):
         raise ValueError("invalid_credentials_format") from None
-    if not isinstance(data, dict) or not data.get("client_id") or not data.get("client_secret"):
+    if not isinstance(data, dict) or not all(
+        isinstance(data.get(field), str) and data[field].strip()
+        for field in ("client_id", "client_secret")
+    ):
         raise ValueError("invalid_credentials_format")
     from openquantum_sdk.auth import ClientCredentials
     return {"creds": ClientCredentials(client_id=data["client_id"], client_secret=data["client_secret"])}
@@ -34,6 +37,7 @@ def safe_backend(item):
         return None
     return {
         "name": str(item.get("name") or "")[:160],
+        "providerId": str(item.get("provider_id") or "")[:100],
         "shortCode": str(item.get("short_code") or "")[:100],
         "type": str(item.get("type") or "")[:32],
         "status": str(item.get("status") or "unknown")[:48],
@@ -50,6 +54,9 @@ def main():
         from importlib.metadata import version
         sdk_version = version("openquantum-sdk")
         from openquantum_sdk import OpenQuantumClient
+        from openquantum_sdk.exceptions import AuthenticationError
+        from openquantum_sdk.models import APIError
+        from httpx import RequestError, TimeoutException
     except Exception:
         emit({"provider": "openquantum", "status": "sdk_missing", "hardwareSubmitted": False, "hardwareExecuted": False})
         return
@@ -62,22 +69,35 @@ def main():
         emit({"provider": "openquantum", "status": "unconfigured", "backends": [],
               "hardwareSubmitted": False, "hardwareExecuted": False})
         return
+    result = {"provider": "openquantum", "sdkInstalled": True, "sdkVersion": sdk_version,
+              "backends": [], "hardwareSubmitted": False, "hardwareExecuted": False}
     try:
-        client = OpenQuantumClient.from_env(**credential_kwargs())
-        try:
-            backends = client.backends(limit=50)
-        finally:
-            client.close()
-        safe = [item for source in backends if (item := safe_backend(source)) is not None]
-        emit({"provider": "openquantum", "status": "ready", "backends": safe, "live": True,
-              "hardwareSubmitted": False, "hardwareExecuted": False})
+        options = credential_kwargs()
     except ValueError:
-        emit({"provider": "openquantum", "status": "invalid_credentials_format", "backends": [],
-              "hardwareSubmitted": False, "hardwareExecuted": False})
+        result["status"] = "invalid_credentials_format"
+        emit(result)
+        return
+
+    try:
+        with OpenQuantumClient.from_env(**options) as client:
+            backends = client.backends(limit=50)
+        result.update(status="ready", live=True, backends=[
+            item for source in backends[:50] if (item := safe_backend(source)) is not None
+        ])
+    except AuthenticationError:
+        result["status"] = "authentication_failed"
+    except APIError as error:
+        status = error.error_response.status_code
+        result["httpStatus"] = status if isinstance(status, int) and 400 <= status <= 599 else None
+        result["status"] = "authentication_failed" if status == 401 else "provider_rejected"
+    except TimeoutException:
+        result["status"] = "provider_timeout"
+    except RequestError:
+        result["status"] = "provider_unreachable"
     except Exception:
-        # Never print third-party exception messages: they may contain sensitive data.
-        emit({"provider": "openquantum", "status": "unavailable", "backends": [],
-              "hardwareSubmitted": False, "hardwareExecuted": False})
+        # Third-party exception text can contain private values.
+        result["status"] = "unavailable"
+    emit(result)
 
 
 if __name__ == "__main__":

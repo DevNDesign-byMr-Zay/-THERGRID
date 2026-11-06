@@ -2,19 +2,13 @@ name: Open Quantum read-only discovery
 
 on:
   workflow_dispatch:
-  # Explicitly scoped one-shot acceptance on this integration branch.
-  # Only this workflow file change triggers the secret-backed read-only check.
-  push:
-    branches:
-      - feat/openquantum-readonly-discovery
-    paths:
-      - .github/workflows/openquantum-readonly.yml
 
 permissions:
   contents: read
 
 jobs:
   discover:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -35,18 +29,4 @@ jobs:
           AETHERGRID_OPENQUANTUM_SDK_KEY_JSON: ${{ secrets.AETHERGRID_OPENQUANTUM_SDK_KEY_JSON || secrets.OPENQUANTUM_SDK_KEY_JSON || secrets.OPENQUANTUM_SDK_KEY || secrets.OPEN_QUANTUM }}
           OPENQUANTUM_CLIENT_ID: ${{ secrets.OPENQUANTUM_CLIENT_ID }}
           OPENQUANTUM_CLIENT_SECRET: ${{ secrets.OPENQUANTUM_CLIENT_SECRET }}
-        run: |
-          node --input-type=module <<'JS'
-          const value = (process.env.AETHERGRID_OPENQUANTUM_SDK_KEY_JSON || '').trim();
-          let parsed;
-          try { parsed = JSON.parse(value); } catch {}
-          const format = !value ? 'missing' :
-            Array.isArray(parsed) ? 'json-array' :
-            parsed && typeof parsed === 'object' ?
-              ('client_id' in parsed && 'client_secret' in parsed ? 'sdk-json' :
-               'clientId' in parsed && 'clientSecret' in parsed ? 'camel-case-json' : 'other-json-object') :
-            typeof parsed === 'string' ? 'json-string' :
-            /^(?:Bearer )?eyJ[\w-]*\.[\w-]+\.[\w-]+$/.test(value) ? 'jwt-shaped' : 'other-text';
-          console.log('Open Quantum credential format:', format);
-          JS
-          node scripts/openquantum-readonly-smoke.mjs
+        run: node scripts/openquantum-readonly-smoke.mjs
