@@ -1,4 +1,4 @@
-const CACHE='aethergrid-v10';
+const CACHE='aethergrid-v11';
 const FILES=['./','./index.html','./styles.css','./state.js','./standalone-geo.js','./spatial-math.js','./legacy-city-buildings.js','./legacy-globe-core.js','./legacy-visualizers.js','./settings-controller.js','./environment-helpers.js','./legacy-ui-helpers.js','./app.js','./app.json','./ui.json','./manifest.webmanifest','./assets/brand/aethergrid-logo.webp','./assets/brand/vaelon.webp','./assets/brand/auren.webp','./assets/brand/solvaer.webp'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES))));
 self.addEventListener('activate',event=>event.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))])));

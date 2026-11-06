@@ -18,13 +18,23 @@
       .replace(/\b\w/g, (letter) => letter.toUpperCase());
   }
 
-  function resolvedTheme(theme = state.settings.theme) {
-    return settingsController.resolvedTheme(theme, Boolean(globalThis.matchMedia?.('(prefers-color-scheme: light)').matches));
-  }
-
-  function isLightTheme() {
-    return resolvedTheme() === 'light';
-  }
+  const { loadSettings, bindSettings, isLightTheme } = settingsController.createSettingsUi({
+    document,
+    state,
+    settingsKey: SETTINGS_KEY,
+    defaultSettings,
+    getStorage: () => localStorage,
+    getSystemTheme: () => globalThis.matchMedia?.('(prefers-color-scheme: light)'),
+    formatHour,
+    applyRendererSettings(hour, autoRotate) {
+      spatial?.setTime(hour);
+      holographic?.setTime(hour);
+      if (holographic) holographic.autoRotate = autoRotate;
+    },
+    configureTelemetry,
+    healthCheck,
+    showToast,
+  });
 
   async function api(path, options = {}) {
     if (location.protocol === 'file:') throw new Error('standalone mode');
@@ -49,95 +59,6 @@
     if (Array.isArray(next.evidence)) state.evidence = next.evidence;
     if (Array.isArray(next.activity)) state.activity = next.activity;
     syncStateToUi();
-  }
-
-  function loadSettings() {
-    state.settings = settingsController.loadSettings(() => localStorage, SETTINGS_KEY, defaultSettings);
-    applySettings();
-  }
-
-  function saveSettings() {
-    settingsController.saveSettings(localStorage, SETTINGS_KEY, state.settings);
-    applySettings();
-    const badge = q('#settingsSavedBadge');
-    if (badge) {
-      badge.textContent = 'SAVED';
-      clearTimeout(saveSettings.timer);
-      saveSettings.timer = setTimeout(() => (badge.textContent = 'SAVED LOCALLY'), 1200);
-    }
-  }
-
-  function applySettings() {
-    const view = settingsController.applySettings(state.settings, resolvedTheme() === 'light');
-    document.documentElement.dataset.theme = view.theme;
-    document.documentElement.style.colorScheme = view.theme;
-    document.body.dataset.density = view.density;
-    document.body.dataset.spatialLabels = view.spatialLabels;
-    document.body.dataset.motion = view.motion;
-    document.documentElement.style.setProperty('--animation-scale', view.animationScale);
-    const bindings = view.bindings;
-    for (const [id, value] of Object.entries(bindings)) {
-      const input = q(`#${id}`);
-      if (!input) continue;
-      if (input.type === 'checkbox') input.checked = Boolean(value);
-      else input.value = String(value);
-    }
-    const animationValue = q('#settingAnimationValue');
-    if (animationValue) animationValue.textContent = `${state.settings.animationIntensity}%`;
-    const hourValue = q('#settingHourValue');
-    if (hourValue) hourValue.textContent = formatHour(state.settings.defaultHour);
-
-    spatial?.setTime(state.settings.defaultHour);
-    holographic?.setTime(state.settings.defaultHour);
-    if (holographic) holographic.autoRotate = state.settings.autoRotate;
-    const gridSlider = q('#timeSlider');
-    const holoSlider = q('#holoTimeSlider');
-    if (gridSlider) gridSlider.value = state.settings.defaultHour;
-    if (holoSlider) holoSlider.value = state.settings.defaultHour;
-    if (q('#timeValue')) q('#timeValue').textContent = formatHour(state.settings.defaultHour);
-    if (q('#holoTimeValue')) q('#holoTimeValue').textContent = formatHour(state.settings.defaultHour);
-  }
-
-  function bindSettings() {
-    const binding = [
-      ['settingTheme', 'theme', 'value'],
-      ['settingDefaultWorkspace', 'defaultWorkspace', 'value'],
-      ['settingDensity', 'density', 'value'],
-      ['settingAnimation', 'animationIntensity', 'number'],
-      ['settingReducedMotion', 'reducedMotion', 'checked'],
-      ['settingAutoRotate', 'autoRotate', 'checked'],
-      ['settingSpatialLabels', 'spatialLabels', 'checked'],
-      ['settingHour', 'defaultHour', 'number'],
-      ['settingLiveStream', 'liveStream', 'checked'],
-      ['settingRefresh', 'refreshMs', 'number'],
-    ];
-    for (const [id, key, mode] of binding) {
-      const input = q(`#${id}`);
-      if (!input) continue;
-      input.addEventListener('input', () => {
-        state.settings[key] =
-          mode === 'checked' ? input.checked : mode === 'number' ? Number(input.value) : input.value;
-        saveSettings();
-        if (key === 'liveStream') configureTelemetry();
-      });
-      input.addEventListener('change', () => {
-        state.settings[key] =
-          mode === 'checked' ? input.checked : mode === 'number' ? Number(input.value) : input.value;
-        saveSettings();
-        if (key === 'liveStream' || key === 'refreshMs') configureTelemetry();
-      });
-    }
-    q('[data-action="reset-settings"]')?.addEventListener('click', () => {
-      state.settings = { ...defaultSettings };
-      localStorage.removeItem(SETTINGS_KEY);
-      applySettings();
-      configureTelemetry();
-      showToast('SETTINGS RESET', 'Operator preferences restored to defaults.');
-    });
-    q('[data-action="health-check"]')?.addEventListener('click', healthCheck);
-    globalThis.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change', () => {
-      if (state.settings.theme === 'system') applySettings();
-    });
   }
 
   function switchWorkspace(name, { persist = true } = {}) {

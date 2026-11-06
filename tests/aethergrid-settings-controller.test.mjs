@@ -96,3 +96,48 @@ test('settings presentation resolves system theme, motion, labels and field valu
     'full',
   );
 });
+
+test('legacy settings UI applies stored values and updates renderer time before the time controls', async () => {
+  const { createSettingsUi } = await controller();
+  const settings = {
+    theme: 'system',
+    density: 'compact',
+    spatialLabels: false,
+    reducedMotion: true,
+    animationIntensity: 50,
+    refreshMs: 2500,
+    defaultHour: 13,
+    autoRotate: true,
+  };
+  const state = { settings: {} };
+  const timeSlider = { value: 'old' };
+  const checkbox = { type: 'checkbox' };
+  const elements = new Map([
+    ['#timeSlider', timeSlider],
+    ['#settingAutoRotate', checkbox],
+  ]);
+  const document = {
+    documentElement: { dataset: {}, style: { setProperty() {} } },
+    body: { dataset: {} },
+    querySelector: (selector) => elements.get(selector),
+  };
+  const rendererUpdates = [];
+  const ui = createSettingsUi({
+    document,
+    state,
+    settingsKey: 'operator',
+    defaultSettings: settings,
+    getStorage: () => ({ getItem: () => '{"defaultHour":16}' }),
+    getSystemTheme: () => ({ matches: true }),
+    formatHour: String,
+    applyRendererSettings(hour, autoRotate) {
+      rendererUpdates.push([hour, autoRotate, timeSlider.value]);
+    },
+  });
+  ui.loadSettings();
+  assert.equal(document.documentElement.dataset.theme, 'light');
+  assert.equal(document.body.dataset.motion, 'reduced');
+  assert.equal(checkbox.checked, true);
+  assert.deepEqual(rendererUpdates, [[16, true, 'old']]);
+  assert.equal(timeSlider.value, 16);
+});
