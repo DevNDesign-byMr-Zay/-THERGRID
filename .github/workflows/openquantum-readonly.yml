@@ -32,7 +32,7 @@ jobs:
       - name: Authenticate and discover backends (no jobs or credit spending)
         env:
           # These GitHub secrets contain JSON, not a local filesystem path.
-          AETHERGRID_OPENQUANTUM_SDK_KEY_JSON: ${{ secrets.AETHERGRID_OPENQUANTUM_SDK_KEY_JSON || secrets.OPENQUANTUM_SDK_KEY_JSON || secrets.OPENQUANTUM_SDK_KEY }}
+          AETHERGRID_OPENQUANTUM_SDK_KEY_JSON: ${{ secrets.AETHERGRID_OPENQUANTUM_SDK_KEY_JSON || secrets.OPENQUANTUM_SDK_KEY_JSON || secrets.OPENQUANTUM_SDK_KEY || secrets.OPEN_QUANTUM }}
           OPENQUANTUM_CLIENT_ID: ${{ secrets.OPENQUANTUM_CLIENT_ID }}
           OPENQUANTUM_CLIENT_SECRET: ${{ secrets.OPENQUANTUM_CLIENT_SECRET }}
         run: node scripts/openquantum-readonly-smoke.mjs
