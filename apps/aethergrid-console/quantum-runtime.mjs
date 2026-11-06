@@ -123,7 +123,18 @@ export function createQuantumRuntime({
   fetchImpl = fetch,
   now = () => new Date().toISOString(),
 } = {}) {
-  const provider = String(env.AETHERGRID_QUANTUM_PROVIDER || 'local-simulator').toLowerCase();
+  const provider = String(env.AETHERGRID_QUANTUM_PROVIDER || 'local-simulator').trim().toLowerCase();
+  const localBackend = 'aethergrid-local-sampler';
+  const gateModelProvider = provider === 'local-simulator' || provider === 'ibm-quantum';
+
+  function requireGateModelProvider() {
+    if (gateModelProvider) return;
+    const message = provider === 'dwave'
+      ? 'D-Wave annealing uses the dedicated D-Wave jobs endpoint with an explicit solver and problem.'
+      : 'The selected quantum provider does not support the generic gate-model jobs endpoint.';
+    throw Object.assign(new Error(message), { status: 422 });
+  }
+
   const baseUrl = String(
     env.AETHERGRID_IBM_QUANTUM_BASE_URL || 'https://quantum.cloud.ibm.com/api/v1/',
   );
@@ -156,7 +167,7 @@ export function createQuantumRuntime({
     } else if (selectedProvider === 'dwave') {
       selectedProviderStatus = dwaveStatus;
     } else {
-      selectedProviderStatus = 'ready';
+      selectedProviderStatus = provider === 'local-simulator' ? 'ready' : 'unsupported';
     }
 
     const selectedHardwareEnabled =
@@ -166,35 +177,17 @@ export function createQuantumRuntime({
           ? dwaveConfigured
           : false;
 
-    let alternateProvider = null;
-    let alternateProviderAvailable = false;
-    let aggregateStatus = selectedProviderStatus;
-
-    if (selectedProviderStatus !== 'configured' && selectedProviderStatus !== 'ready') {
-      if (selectedProvider === 'ibm-quantum' && dwaveConfigured) {
-        alternateProvider = 'dwave';
-        alternateProviderAvailable = true;
-        aggregateStatus = 'alternate-available';
-      } else if (selectedProvider === 'dwave' && ibmConfigured) {
-        alternateProvider = 'ibm-quantum';
-        alternateProviderAvailable = true;
-        aggregateStatus = 'alternate-available';
-      } else {
-        alternateProvider = 'local-simulator';
-        alternateProviderAvailable = true;
-      }
-    } else {
-      if (selectedProvider === 'ibm-quantum' && dwaveConfigured) {
-        alternateProvider = 'dwave';
-        alternateProviderAvailable = true;
-      } else if (selectedProvider === 'dwave' && ibmConfigured) {
-        alternateProvider = 'ibm-quantum';
-        alternateProviderAvailable = true;
-      } else if (selectedProvider !== 'local-simulator') {
-        alternateProvider = 'local-simulator';
-        alternateProviderAvailable = true;
-      }
-    }
+    const alternateProvider =
+      selectedProvider === 'ibm-quantum' && dwaveConfigured ? 'dwave'
+      : selectedProvider === 'dwave' && ibmConfigured ? 'ibm-quantum'
+      : selectedProvider !== 'local-simulator' ? 'local-simulator'
+      : null;
+    const alternateProviderAvailable = alternateProvider !== null;
+    const aggregateStatus =
+      selectedProviderStatus !== 'configured' && selectedProviderStatus !== 'ready' &&
+      alternateProviderAvailable && alternateProvider !== 'local-simulator'
+        ? 'alternate-available'
+        : selectedProviderStatus;
 
     return {
       provider: selectedProvider,
@@ -207,12 +200,12 @@ export function createQuantumRuntime({
       apiVersion: API_VERSION,
       configured: selectedProviderStatus === 'configured' || selectedProviderStatus === 'ready',
       defaultBackend:
-        defaultBackend ||
-        (selectedProvider === 'local-simulator' ? 'aethergrid-local-sampler' : null),
+        selectedProvider === 'ibm-quantum' ? defaultBackend || null :
+          selectedProvider === 'local-simulator' ? localBackend : null,
       baseUrl:
         selectedProvider === 'ibm-quantum' ? safeUrl(baseUrl, 'IBM Quantum base URL').origin : null,
-      primitives: ['sampler', 'estimator'],
-      hardwareExecution: selectedHardwareEnabled,
+      primitives: gateModelProvider ? ['sampler', 'estimator'] : [],
+      hardwareExecution: gateModelProvider && selectedHardwareEnabled,
       credentialsExposed: false,
       providers: {
         ibm: {
@@ -302,12 +295,13 @@ export function createQuantumRuntime({
   }
 
   async function listBackends() {
+    if (!gateModelProvider) return { provider, backends: [] };
     if (provider !== 'ibm-quantum') {
       return {
         provider: 'local-simulator',
         backends: [
           {
-            name: 'aethergrid-local-sampler',
+            name: localBackend,
             status: 'online',
             simulator: true,
             description:
@@ -328,7 +322,7 @@ export function createQuantumRuntime({
 
   function localSampler({
     circuit = DEFAULT_CIRCUIT,
-    backend = 'aethergrid-local-sampler',
+    backend = localBackend,
     shots = 1024,
   } = {}) {
     const hasHadamard = /\bh\s+\$0/u.test(circuit);
@@ -360,7 +354,7 @@ export function createQuantumRuntime({
   function localEstimator({
     circuit = DEFAULT_ESTIMATOR_CIRCUIT,
     observable = 'ZZ',
-    backend = 'aethergrid-local-sampler',
+    backend = localBackend,
   } = {}) {
     const completedAt = now();
     const value = localEstimatorValue(circuit, observable);
@@ -381,16 +375,24 @@ export function createQuantumRuntime({
     return { ...result, receipt: receipt(result) };
   }
 
+  function requireLocalBackend(backend) {
+    if (backend && backend !== localBackend) {
+      throw Object.assign(new Error('Local simulation requires the aethergrid-local-sampler backend.'), { status: 422 });
+    }
+  }
+
   async function submitSampler({
     circuit = DEFAULT_CIRCUIT,
-    backend = defaultBackend,
+    backend = provider === 'ibm-quantum' ? defaultBackend : localBackend,
     shots = 1024,
   } = {}) {
+    requireGateModelProvider();
     const clean = cleanCircuit(circuit, DEFAULT_CIRCUIT);
     const cleanShots = Math.max(1, Math.min(100_000, Number(shots) || 1024));
 
     if (provider !== 'ibm-quantum') {
-      return localSampler({ circuit: clean, backend, shots: cleanShots });
+      requireLocalBackend(backend);
+      return localSampler({ circuit: clean, backend: localBackend, shots: cleanShots });
     }
     if (!backend) throw new Error('IBM Quantum backend is required');
 
@@ -423,16 +425,18 @@ export function createQuantumRuntime({
   async function submitEstimator({
     circuit = DEFAULT_ESTIMATOR_CIRCUIT,
     observable = 'ZZ',
-    backend = defaultBackend,
+    backend = provider === 'ibm-quantum' ? defaultBackend : localBackend,
   } = {}) {
+    requireGateModelProvider();
     const clean = cleanCircuit(circuit, DEFAULT_ESTIMATOR_CIRCUIT);
     const cleanObservable = normalizeObservable(observable);
 
     if (provider !== 'ibm-quantum') {
+      requireLocalBackend(backend);
       return localEstimator({
         circuit: clean,
         observable: cleanObservable,
-        backend,
+        backend: localBackend,
       });
     }
     if (!backend) throw new Error('IBM Quantum backend is required');
@@ -466,7 +470,7 @@ export function createQuantumRuntime({
 
   async function listJobs({ limit = 20 } = {}) {
     if (provider !== 'ibm-quantum') {
-      return { provider: 'local-simulator', jobs: [] };
+      return { provider, jobs: [] };
     }
     const payload = await ibmRequest(
       `jobs?limit=${Math.max(1, Math.min(200, Number(limit) || 20))}`,
@@ -479,6 +483,7 @@ export function createQuantumRuntime({
   }
 
   function requireRemoteProvider() {
+    requireGateModelProvider();
     if (provider !== 'ibm-quantum') {
       const error = new Error(
         'local simulator jobs complete synchronously and are not remotely queryable',

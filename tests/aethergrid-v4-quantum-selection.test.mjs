@@ -97,3 +97,36 @@ test('quantum selection: both hardware providers unconfigured falls back to loca
   assert.equal(summary.alternateProviderAvailable, true);
   assert.equal(summary.hardwareEnabled, false);
 });
+
+for (const provider of ['dwave', 'openquantum', 'typo']) {
+  test(`generic quantum routes never simulate on behalf of ${provider}`, async () => {
+    const runtime = createQuantumRuntime({
+      env: {
+        AETHERGRID_QUANTUM_PROVIDER: provider,
+        AETHERGRID_IBM_QUANTUM_BACKEND: 'stale-ibm-backend',
+        AETHERGRID_DWAVE_API_TOKEN: 'fixture-token',
+      },
+      fetchImpl: async () => assert.fail('generic route must never contact a remote provider'),
+    });
+
+    const status = runtime.summary();
+    assert.deepEqual(status.primitives, []);
+    assert.equal(status.defaultBackend, null);
+    assert.equal(status.hardwareExecution, false);
+    assert.deepEqual(await runtime.listBackends(), { provider, backends: [] });
+    assert.deepEqual(await runtime.listJobs(), { provider, jobs: [] });
+    await assert.rejects(runtime.submitSampler({ backend: 'qpu-label' }), { status: 422 });
+    await assert.rejects(runtime.submitEstimator({ backend: 'qpu-label' }), { status: 422 });
+    await assert.rejects(runtime.job('id'), { status: 422 });
+  });
+}
+
+test('local simulation cannot return a result labelled as a remote backend', async () => {
+  const runtime = createQuantumRuntime({
+    env: { AETHERGRID_IBM_QUANTUM_BACKEND: 'stale-ibm-backend' },
+  });
+  await assert.rejects(runtime.submitSampler({ backend: 'remote-qpu' }), { status: 422 });
+  await assert.rejects(runtime.submitEstimator({ backend: 'remote-qpu' }), { status: 422 });
+  assert.equal((await runtime.submitSampler()).backend, 'aethergrid-local-sampler');
+  assert.equal((await runtime.submitEstimator()).backend, 'aethergrid-local-sampler');
+});

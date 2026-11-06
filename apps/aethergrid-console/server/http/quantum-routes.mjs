@@ -45,7 +45,7 @@ export function createQuantumRoutes({
 
     if (request.method === 'POST' && url.pathname === '/api/aethergrid/quantum/dwave/jobs') {
       const payload = await body(request);
-      if (!payload || !payload.confirmSubmission) {
+      if (payload?.confirmSubmission !== true) {
         return json(response, 400, {
           error: 'confirmation_required',
           message:
