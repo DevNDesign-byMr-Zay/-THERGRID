@@ -7,7 +7,11 @@ const publicReport = {
   live: result.live === true,
   backendCount: result.backends.length,
   backends: result.backends.map(({ name, shortCode, type, status, acceptingJobs }) => ({
-    name, shortCode, type, status, acceptingJobs,
+    name,
+    shortCode,
+    type,
+    status,
+    acceptingJobs,
   })),
   hardwareSubmitted: false,
   hardwareExecuted: false,
