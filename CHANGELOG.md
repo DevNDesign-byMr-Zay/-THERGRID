@@ -1,8 +1,13 @@
 # Changelog
 
-## Unreleased — 0.3.5
+## Unreleased — 0.3.6
+Current package candidate: `0.3.6`. The candidate is not published until the gated manual release workflow publishes it.
 
-Current package candidate: `0.3.5`. Published tags and artifacts through `v0.3.4` remain immutable. Exact candidate verification and publication are pending the protected main gates.
+- Add optional read-only Open Quantum backend discovery with searchable provider metadata and separate SDK authentication checks.
+- Route D-Wave through its dedicated annealing endpoints and reject generic gate-model requests for unsupported providers. Require explicit boolean confirmation for annealing submission.
+- Extract legacy toast and dialog behavior while preserving normal and inlined HTML startup. Clarify clean-clone verification and monitor both npm lockfiles.
+
+## 0.3.5
 
 - Own native WebGL context listeners before initial buffer allocation and restore using the current renderer state, with executable lifecycle regressions.
 - Extract source building geometry into the legacy classic-script companion and preserve direct-open ordering, source provenance and packaged startup.

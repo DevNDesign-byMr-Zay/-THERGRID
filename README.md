@@ -105,7 +105,7 @@ The canonical report used `local-simulator`, with `passed: true`, `failed: []` a
 
 ## Current status and future work
 
-The current package candidate is **0.3.5**; published `v0.3.4` remains immutable. The candidate adds native renderer lifecycle ownership, source-preserving legacy geometry extraction and fallback startup regressions. Candidate verification, reviewed integration, exact-main canonical acceptance and release publication are pending. The software quantum profile preserves the strict IBM discovery option; simulator success does not certify quantum hardware. Production deployment configuration and physical-device acceptance remain separate work. [Roadmap](docs/ROADMAP.md) separates delivered work from future pilots and actuation research.
+The current package candidate is **0.3.6**. The published `v0.3.5` release remains immutable. This patch packages read-only Open Quantum backend discovery, stricter quantum routing and legacy HTML feedback extraction. Publication requires reviewed integration and exact-main canonical acceptance. Live Open Quantum discovery requires a supported SDK credential. See [release notes](docs/releases/v0.3.6.md) for scope and startup instructions.
 
 ## Reproducible verification
 
