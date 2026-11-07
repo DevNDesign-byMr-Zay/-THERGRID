@@ -6,7 +6,6 @@
   "apps/aethergrid-console/web/src/components/QuantumPanel.tsx": 762,
   "apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts": 623,
   "apps/aethergrid-console/web/src/services/city-power-overlay.ts": 759,
-  "apps/aethergrid-console/web/src/services/operator-scenario.ts": 578,
   "scripts/verify-release-readiness.mjs": 745,
   "tests/aethergrid-ai-runtime.test.mjs": 838,
   "tests/aethergrid-console.test.mjs": 506,
