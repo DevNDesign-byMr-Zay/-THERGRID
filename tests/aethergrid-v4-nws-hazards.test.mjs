@@ -220,7 +220,7 @@ async function text(path) {
 
 test('v4 NWS hazards render consistently in Cesium and native failover', async () => {
   const [cesium, nativeRenderer, palette] = await Promise.all([
-    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-entities.ts'),
     nativeRendererSource(),
     text('apps/aethergrid-console/web/src/renderer/overlays/color-mapping.ts'),
   ]);

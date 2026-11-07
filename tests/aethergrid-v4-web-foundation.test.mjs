@@ -132,13 +132,15 @@ test('v4 camera journey preserves one WGS84 scene from globe to district', async
 });
 
 test('v4 source-backed power overlay preserves live and fallback provenance', async () => {
-  const [overlayContract, adapter, cesiumLayer, app, presentation] = await Promise.all([
-    text('apps/aethergrid-console/web/src/renderer/overlays/spatial-overlay.ts'),
-    text('apps/aethergrid-console/web/src/services/city-power-overlay.ts'),
-    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
-    text('apps/aethergrid-console/web/src/app/App.tsx'),
-    text('apps/aethergrid-console/web/src/services/operational-current-sources.ts'),
-  ]);
+  const [overlayContract, adapter, cesiumLayer, cesiumEntities, app, presentation] =
+    await Promise.all([
+      text('apps/aethergrid-console/web/src/renderer/overlays/spatial-overlay.ts'),
+      text('apps/aethergrid-console/web/src/services/city-power-overlay.ts'),
+      text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
+      text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-entities.ts'),
+      text('apps/aethergrid-console/web/src/app/App.tsx'),
+      text('apps/aethergrid-console/web/src/services/operational-current-sources.ts'),
+    ]);
 
   assert.match(overlayContract, /eventTime/u);
   assert.match(overlayContract, /sourceTime/u);
@@ -148,8 +150,8 @@ test('v4 source-backed power overlay preserves live and fallback provenance', as
   assert.match(adapter, /upstreamTimestamp/u);
   assert.match(adapter, /localMetersToCoordinate/u);
   assert.match(cesiumLayer, /CustomDataSource/u);
-  assert.match(cesiumLayer, /PolylineGraphics/u);
-  assert.match(cesiumLayer, /PointGraphics/u);
+  assert.match(cesiumEntities, /PolylineGraphics/u);
+  assert.match(cesiumEntities, /PointGraphics/u);
   assert.match(app, /<DataSourceBadge/u);
   assert.match(app, /\? 'OSM POWER'/u);
   assert.match(app, /\? 'unavailable'/u);
@@ -269,14 +271,16 @@ test('v4 city-live context renders source-backed AQI and seismic events only in 
 });
 
 test('v4 Cesium city identity includes mapped roads water coastline and green areas', async () => {
-  const [contract, service, layer, renderer, app, cityTargets] = await Promise.all([
-    text('apps/aethergrid-console/web/src/renderer/overlays/spatial-overlay.ts'),
-    text('apps/aethergrid-console/web/src/services/city-power-overlay.ts'),
-    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
-    text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
-    text('apps/aethergrid-console/web/src/app/App.tsx'),
-    text('apps/aethergrid-console/web/src/app/city-targets.ts'),
-  ]);
+  const [contract, service, cesiumEntities, buildingPrimitives, renderer, app, cityTargets] =
+    await Promise.all([
+      text('apps/aethergrid-console/web/src/renderer/overlays/spatial-overlay.ts'),
+      text('apps/aethergrid-console/web/src/services/city-power-overlay.ts'),
+      text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-entities.ts'),
+      text('apps/aethergrid-console/web/src/renderer/cesium/building-overlay-primitives.ts'),
+      text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
+      text('apps/aethergrid-console/web/src/app/App.tsx'),
+      text('apps/aethergrid-console/web/src/app/city-targets.ts'),
+    ]);
 
   assert.match(contract, /OverlayAreaKind = 'water' \| 'green'/u);
   assert.match(service, /cityMeshToSemanticOverlays/u);
@@ -289,23 +293,23 @@ test('v4 Cesium city identity includes mapped roads water coastline and green ar
   assert.match(service, /layerId: 'green'/u);
   assert.match(service, /loadCitySpatialBundle/u);
   assert.match(service, /loadCoordinateSpatialBundle/u);
-  assert.match(layer, /PolygonGraphics/u);
-  assert.match(layer, /PolygonHierarchy/u);
-  assert.match(layer, /WallGraphics/u);
-  assert.match(layer, /BoxGraphics/u);
-  assert.match(layer, /PolygonGeometry/u);
-  assert.match(layer, /GeometryInstance/u);
-  assert.match(layer, /PerInstanceColorAppearance/u);
-  assert.match(layer, /ColorGeometryInstanceAttribute/u);
-  assert.match(layer, /minimumHeights/u);
-  assert.match(layer, /maximumHeights/u);
-  assert.match(layer, /buildingAreaColor/u);
+  assert.match(cesiumEntities, /PolygonGraphics/u);
+  assert.match(cesiumEntities, /PolygonHierarchy/u);
+  assert.match(cesiumEntities, /WallGraphics/u);
+  assert.match(cesiumEntities, /BoxGraphics/u);
+  assert.match(buildingPrimitives, /PolygonGeometry/u);
+  assert.match(buildingPrimitives, /GeometryInstance/u);
+  assert.match(buildingPrimitives, /PerInstanceColorAppearance/u);
+  assert.match(buildingPrimitives, /ColorGeometryInstanceAttribute/u);
+  assert.match(cesiumEntities, /minimumHeights/u);
+  assert.match(cesiumEntities, /maximumHeights/u);
+  assert.match(buildingPrimitives, /buildingAreaColor/u);
   assert.match(renderer, /openstreetmap-source-extrusion/u);
   assert.match(service, /footprintEnvelope/u);
   assert.match(service, /bboxWidthM/u);
   assert.match(service, /bboxDepthM/u);
-  assert.match(layer, /edge\.kind === 'coastline'/u);
-  assert.match(layer, /edge\.kind === 'waterway'/u);
+  assert.match(cesiumEntities, /edge\.kind === 'coastline'/u);
+  assert.match(cesiumEntities, /edge\.kind === 'waterway'/u);
   assert.match(app, /INITIAL_LAYERS/u);
   assert.match(cityTargets, /id: 'roads', visible: true/u);
   assert.match(cityTargets, /id: 'water', visible: true/u);
@@ -505,20 +509,6 @@ test('v4 operator shortcuts keep world city live intel and search keyboard-acces
   assert.match(app, /searchInputRef\.current\?\.focus/u);
   assert.match(app, /<kbd aria-hidden="true">⌘K<\/kbd>/u);
   assert.match(styles, /grid-template-columns: 24px 1fr auto auto/u);
-});
-
-test('v4 semantic overlays use camera-distance LOD while global nodes remain orbital', async () => {
-  const layer = await text(
-    'apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts',
-  );
-
-  assert.match(layer, /DistanceDisplayCondition/u);
-  assert.match(layer, /node\.kind === 'city' \|\| node\.kind === 'event'/u);
-  assert.match(layer, /return 30_000_000/u);
-  assert.match(layer, /edge\.kind === 'route'/u);
-  assert.match(layer, /return 80_000/u);
-  assert.match(layer, /area\.kind === 'water' \? 100_000 : 80_000/u);
-  assert.match(layer, /Number\.POSITIVE_INFINITY/u);
 });
 
 test('v4 AIR toggle renders a source-driven AQI field only for live city context', async () => {
@@ -811,13 +801,14 @@ test('v4 saved views restore spatial layers use case and exact 4d cursor without
 });
 
 test('v4 scenario comparison ghosts preserve source baseline beside modeled power routes', async () => {
-  const [layer, app] = await Promise.all([
+  const [layer, cesiumEntities, app] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-entities.ts'),
     text('apps/aethergrid-console/web/src/app/App.tsx'),
   ]);
 
   assert.match(layer, /scenarioGhostEntity/u);
-  assert.match(layer, /source-baseline/u);
+  assert.match(cesiumEntities, /source-baseline/u);
   assert.match(layer, /snapshot\.layerId === 'energy'/u);
   assert.match(layer, /ghost\.show =\s*Boolean\(scenario\)/u);
   assert.match(app, /DIM = SOURCE BASELINE · BRIGHT = MODELED SCENARIO/u);

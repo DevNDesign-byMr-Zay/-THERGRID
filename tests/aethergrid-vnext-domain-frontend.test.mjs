@@ -65,7 +65,7 @@ test('vNext aviation uses the canonical provider path and the existing Cesium ov
     text('apps/aethergrid-console/web/src/app/App.tsx'),
     text('apps/aethergrid-console/web/src/app/city-targets.ts'),
     text('apps/aethergrid-console/web/src/renderer/overlays/spatial-overlay.ts'),
-    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-entities.ts'),
   ]);
 
   assert.match(client, /\/api\/aethergrid\/domains\/aviation\/aircraft/u);

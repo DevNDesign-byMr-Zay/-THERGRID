@@ -5,7 +5,6 @@
   "apps/aethergrid-console/web/src/app/App.tsx": 1938,
   "apps/aethergrid-console/web/src/components/QuantumPanel.tsx": 762,
   "apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts": 623,
-  "apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts": 889,
   "apps/aethergrid-console/web/src/services/city-power-overlay.ts": 759,
   "apps/aethergrid-console/web/src/services/operator-scenario.ts": 578,
   "scripts/verify-release-readiness.mjs": 745,
@@ -13,5 +12,5 @@
   "tests/aethergrid-console.test.mjs": 506,
   "tests/aethergrid-global-quantum-profile.test.mjs": 844,
   "tests/aethergrid-v4-provider-foundation.test.mjs": 822,
-  "tests/aethergrid-v4-web-foundation.test.mjs": 1101
+  "tests/aethergrid-v4-web-foundation.test.mjs": 1094
 }
