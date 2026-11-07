@@ -28,7 +28,7 @@ jobs:
           fetch-depth: 0
 
       - name: Require successful exact-SHA canonical live acceptance
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             // Only a successful completion of the newest matching exact-main run is valid.
