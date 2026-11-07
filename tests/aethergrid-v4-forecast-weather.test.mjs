@@ -9,6 +9,39 @@ async function text(path) {
   return readFile(new URL(path, ROOT), 'utf8');
 }
 
+test('v4 live atmosphere is source-backed and drives Cesium clouds and fog', async () => {
+  const [contract, service, weatherLayer, app, citySources] = await Promise.all([
+    text('apps/aethergrid-console/web/src/renderer/overlays/atmospheric-overlay.ts'),
+    text('apps/aethergrid-console/web/src/services/city-environment.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/weather-atmosphere-layer.ts'),
+    text('apps/aethergrid-console/web/src/app/App.tsx'),
+    text('apps/aethergrid-console/web/src/hooks/use-city-sources.ts'),
+  ]);
+
+  assert.match(contract, /weatherPhenomenon/u);
+  assert.match(contract, /'rain'/u);
+  assert.match(contract, /'snow'/u);
+  assert.match(contract, /'fog'/u);
+  assert.match(service, /\/api\/aethergrid\/weather\/current/u);
+  assert.match(service, /source\.live === true/u);
+  assert.match(service, /modelTimeToIso/u);
+  assert.match(weatherLayer, /CloudCollection/u);
+  assert.match(weatherLayer, /scene\.fog\.density/u);
+  assert.match(weatherLayer, /visualDensityScalar/u);
+  assert.match(weatherLayer, /cloudCoverPercent/u);
+  assert.match(weatherLayer, /windDirectionDegrees/u);
+  assert.match(weatherLayer, /ParticleSystem/u);
+  assert.match(weatherLayer, /BoxEmitter/u);
+  assert.match(weatherLayer, /time\.mode !== 'live' && time\.mode !== 'forecast'/u);
+  assert.match(app, /ATMOSPHERE/u);
+  assert.match(app, /useCitySources\(/u);
+  assert.match(citySources, /loadCityEnvironment/u);
+  assert.match(
+    app,
+    /Current weather is hidden outside LIVE; provider forecast is available in FORECAST mode/u,
+  );
+});
+
 test('v4 forecast weather uses the backend provider route and exact-sample selection', async () => {
   const service = await text('apps/aethergrid-console/web/src/services/city-environment.ts');
 
@@ -40,13 +73,16 @@ test('v4 forecast weather keeps Tomorrow and Open-Meteo shapes separate without 
 });
 
 test('v4 forecast cursor drives one active atmosphere through scene operations and AI context', async () => {
-  const [app, agent] = await Promise.all([
+  const [app, agent, timeline] = await Promise.all([
     text('apps/aethergrid-console/web/src/app/App.tsx'),
     text('apps/aethergrid-console/web/src/app/agent-spatial-context.ts'),
+    text('apps/aethergrid-console/web/src/hooks/use-weather-timeline.ts'),
   ]);
 
-  assert.match(app, /const forecastAtmosphere = useMemo/u);
-  assert.match(app, /selectCityEnvironmentForecast/u);
+  assert.match(app, /useWeatherTimeline\(/u);
+  assert.match(timeline, /const forecastAtmosphere = useMemo/u);
+  assert.match(timeline, /selectCityEnvironmentForecast/u);
+  assert.doesNotMatch(app, /setForecastSeries|setForecastError/u);
   assert.match(app, /const activeAtmosphere/u);
   assert.match(app, /temporal\.mode === 'forecast'/u);
   assert.match(app, /atmosphere=\{scope === 'city' \? activeAtmosphere : null\}/u);

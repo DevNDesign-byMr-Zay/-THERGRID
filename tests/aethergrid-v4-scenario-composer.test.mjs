@@ -66,7 +66,9 @@ test('v4 scenario comparison is a parameter/model comparison against an explicit
 });
 
 test('v4 scenario overlay is time-bounded modeled geometry and never provider telemetry', async () => {
-  const service = await text('apps/aethergrid-console/web/src/services/operator-scenario.ts');
+  const service = await text(
+    'apps/aethergrid-console/web/src/services/operator-scenario-overlay.ts',
+  );
 
   assert.match(service, /layerId: 'scenario-model'/u);
   assert.match(service, /analysisType: 'scenario-model'/u);
@@ -84,6 +86,10 @@ test('v4 scenario composer exposes assumptions persistence comparison activation
   const panel = await text('apps/aethergrid-console/web/src/components/ScenarioComposerPanel.tsx');
 
   assert.match(panel, /4D SCENARIO COMPOSER/u);
+  assert.match(
+    panel,
+    /<ScenarioComparisonSummary scenario=\{selected\} comparison=\{comparison\}/u,
+  );
   assert.match(panel, /SAVE HYPOTHETICAL SCENARIO/u);
   assert.match(panel, /operatorScenarioTemplateParameters/u);
   assert.match(panel, /ADD ASSUMPTION/u);

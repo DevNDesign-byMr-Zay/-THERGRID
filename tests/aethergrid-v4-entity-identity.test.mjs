@@ -68,7 +68,7 @@ test('v4 operator context carries canonical identity into selection AI and frame
 test('v4 renderer manager retains the selected scene feature across engine activation', async () => {
   const manager = await text('apps/aethergrid-console/web/src/renderer/renderer-manager.ts');
   const overlayLayer = await text(
-    'apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts',
+    'apps/aethergrid-console/web/src/renderer/cesium/network-overlay-entities.ts',
   );
 
   assert.match(manager, /#selectedFeatureId: string \| null/u);
@@ -79,15 +79,16 @@ test('v4 renderer manager retains the selected scene feature across engine activ
 });
 
 test('v4 source-feature selection highlights complete mapped features in both renderers', async () => {
-  const [cesiumLayer, cesiumRenderer, nativeRenderer] = await Promise.all([
+  const [cesiumLayer, cesiumEntities, cesiumRenderer, nativeRenderer] = await Promise.all([
     text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-layer.ts'),
+    text('apps/aethergrid-console/web/src/renderer/cesium/network-overlay-entities.ts'),
     text('apps/aethergrid-console/web/src/renderer/cesium/cesium-renderer.ts'),
     nativeRendererSource(),
   ]);
 
   assert.match(cesiumLayer, /selectSourceFeature\(sourceFeatureId: string \| null\)/u);
   assert.match(cesiumLayer, /#applySelectionHighlight/u);
-  assert.match(cesiumLayer, /properties\?\.sourceFeatureId/u);
+  assert.match(cesiumEntities, /properties\?\.sourceFeatureId/u);
   assert.match(cesiumLayer, /edgeWidth\(edge, intensity\) \* 1\.75/u);
   assert.match(cesiumRenderer, /selectSourceFeature\(sourceFeatureId\)/u);
   assert.match(cesiumRenderer, /overlay\.clearSelection\(\)/u);
@@ -98,4 +99,18 @@ test('v4 source-feature selection highlights complete mapped features in both re
   assert.match(nativeRenderer, /snapshot\.edges\.find/u);
   assert.match(nativeRenderer, /snapshot\.areas/u);
   assert.match(nativeRenderer, /selected\s*\?\s*'#ffffff'/u);
+});
+
+test('v4 semantic overlays use camera-distance LOD while global nodes remain orbital', async () => {
+  const layer = await text(
+    'apps/aethergrid-console/web/src/renderer/cesium/network-overlay-entities.ts',
+  );
+
+  assert.match(layer, /DistanceDisplayCondition/u);
+  assert.match(layer, /node\.kind === 'city' \|\| node\.kind === 'event'/u);
+  assert.match(layer, /return 30_000_000/u);
+  assert.match(layer, /edge\.kind === 'route'/u);
+  assert.match(layer, /return 80_000/u);
+  assert.match(layer, /area\.kind === 'water' \? 100_000 : 80_000/u);
+  assert.match(layer, /Number\.POSITIVE_INFINITY/u);
 });

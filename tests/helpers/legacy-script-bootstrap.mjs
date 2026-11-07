@@ -2,12 +2,12 @@ import { runInNewContext } from 'node:vm';
 
 // Minimal DOM/storage/timer fixture, never a graphics or live-service substitute.
 // Rendering/timers stay idle; every shipped classic script executes unchanged.
-export async function bootstrapLegacyPage(html, readAsset) {
+export async function bootstrapLegacyPage(html, readAsset, { settings } = {}) {
   const nodes = new Map();
   const listeners = [];
   const contexts = [];
   const scripts = [];
-  const element = () => ({
+  const element = (selector) => ({
     dataset: {},
     style: { setProperty() {} },
     classList: { add() {}, remove() {}, toggle() {} },
@@ -21,17 +21,22 @@ export async function bootstrapLegacyPage(html, readAsset) {
     querySelectorAll: () => [],
     querySelector: () => null,
     addEventListener(name, callback) {
-      listeners.push({ name, callback });
+      listeners.push({ selector, name, callback });
     },
     removeAttribute() {},
     append() {},
     insertAdjacentHTML() {},
   });
   const querySelector = (selector) => {
-    if (!nodes.has(selector)) nodes.set(selector, element());
+    if (!nodes.has(selector)) nodes.set(selector, element(selector));
     return nodes.get(selector);
   };
   const storage = { getItem: () => null, setItem() {} };
+  const preferences = {
+    ...storage,
+    getItem: (key) =>
+      settings && key === 'aethergrid.operator.settings.v2' ? JSON.stringify(settings) : null,
+  };
   const context = {
     document: {
       querySelector,
@@ -39,9 +44,21 @@ export async function bootstrapLegacyPage(html, readAsset) {
       documentElement: element(),
       body: element(),
       createElement: element,
+      head: {
+        append(script) {
+          const name = script.src.slice(2);
+          scripts.push(name);
+          void readAsset(name)
+            .then((source) => runInNewContext(source, context, { timeout: 1000, filename: name }))
+            .then(
+              () => script.onload(),
+              () => script.onerror(),
+            );
+        },
+      },
     },
     location: { protocol: 'file:', hash: '' },
-    localStorage: storage,
+    localStorage: preferences,
     sessionStorage: storage,
     navigator: {},
     performance: { now: () => 0 },

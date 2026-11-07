@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { Cartesian3, Color } from 'cesium';
+import { Cartesian3, Color, PrimitiveCollection, type GeometryInstance, type Viewer } from 'cesium';
 import { NetworkOverlayLayer } from '../src/renderer/cesium/network-overlay-layer';
 
 function fixture() {
@@ -98,5 +98,87 @@ test('animated city pulses, opacity and temporal visibility still update real Ce
     expect(aircraft.show).toBe(false);
   } finally {
     layer.destroy();
+  }
+});
+
+test('building picks select the entire source feature and replacing the overlay releases its primitives', () => {
+  const primitives = new PrimitiveCollection();
+  const viewer = {
+    dataSources: { add() {}, remove() {} },
+    scene: { requestRender() {}, primitives },
+  } as unknown as Viewer;
+  const layer = new NetworkOverlayLayer(viewer);
+  const time = '2026-11-04T12:00:00Z';
+  try {
+    layer.apply({
+      id: 'building-fixture',
+      layerId: 'buildings',
+      eventTime: time,
+      sourceTime: time,
+      fetchedAt: time,
+      live: true,
+      stale: false,
+      fallback: false,
+      attribution: 'Mapped-building fixture',
+      nodes: [],
+      edges: [],
+      areas: [
+        {
+          id: 'split-building',
+          kind: 'building',
+          positions: [
+            { longitude: -74, latitude: 40 },
+            { longitude: -73.999, latitude: 40 },
+            { longitude: -73.999, latitude: 40.001 },
+            { longitude: -74, latitude: 40.001 },
+          ],
+          properties: {
+            sourceFeatureId: '  osm:way:123  ',
+            sourceBacked: true,
+            heightM: 35,
+            heightSource: 'height',
+            roofShape: 'pyramidal',
+            roofHeightM: 10,
+          },
+        },
+      ],
+    });
+
+    const fill = primitives.get(0);
+    const outline = primitives.get(1);
+    const fillInstances = fill.geometryInstances as GeometryInstance[];
+    const outlineInstances = outline.geometryInstances as GeometryInstance[];
+    expect(fillInstances.length).toBeGreaterThan(1);
+    expect(outlineInstances.length).toBeGreaterThan(0);
+    for (const { id } of [...fillInstances, ...outlineInstances]) {
+      expect(id.sourceFeatureId).toBe('osm:way:123');
+      expect(id.properties.sourceTime).toBe(time);
+      expect(id.properties.roofRefinement).toBe('source-tagged-pyramidal');
+    }
+    layer.selectSourceFeature(fillInstances[0].id.sourceFeatureId);
+    expect(outlineInstances[0].attributes.color.value).toEqual(Uint8Array.of(255, 255, 255, 255));
+    layer.setPresentation('wireframe', 0.5);
+    expect(fill.show).toBe(false);
+    expect(outline.show).toBe(true);
+
+    layer.apply({
+      id: 'empty-fixture',
+      layerId: 'buildings',
+      eventTime: time,
+      sourceTime: null,
+      fetchedAt: null,
+      live: false,
+      stale: false,
+      fallback: false,
+      nodes: [],
+      edges: [],
+      areas: [],
+    });
+    expect(primitives.length).toBe(0);
+    expect(fill.isDestroyed()).toBe(true);
+    expect(outline.isDestroyed()).toBe(true);
+  } finally {
+    layer.destroy();
+    primitives.destroy();
   }
 });

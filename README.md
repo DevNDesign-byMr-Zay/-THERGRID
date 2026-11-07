@@ -37,7 +37,23 @@ npm run dev
 
 Open the Vite URL (normally `http://localhost:5174`); its development API proxy connects to port 8090. See the [web workspace README](apps/aethergrid-console/web/README.md) for build and browser-test commands.
 
-The React workspace has a separate lockfile and its own dependency security gate. Run `npm audit --audit-level=moderate --prefix apps/aethergrid-console/web` from the repository root (or `npm audit --audit-level=moderate` from inside the web workspace). The engineering and v4 web CI workflows block on that audit; root-only `npm audit` does not cover the web dependency graph.
+The application has two independently locked npm graphs:
+
+| Install root | Runtime dependencies | Lockfile |
+| --- | --- | --- |
+| Repository root | Pino and Zod for the Node services | [Root lockfile](package-lock.json) |
+| `apps/aethergrid-console/web` | React, React DOM, Cesium, Cesium Engine and Cesium Widgets | [Web lockfile](apps/aethergrid-console/web/package-lock.json) |
+
+After installing both graphs, inspect and audit them from the repository root:
+
+```powershell
+npm ls --all
+npm ls --all --prefix apps/aethergrid-console/web
+npm audit --audit-level=moderate
+npm audit --audit-level=moderate --prefix apps/aethergrid-console/web
+```
+
+Engineering CI audits both graphs. The v4 web workflow also audits the web graph before building it, and the repository dependency update configuration covers both npm roots.
 
 `npm run package:aethergrid-app` builds and ships the same canonical React/Cesium application in `dist/aethergrid-functional-app.zip`; `npm run smoke:aethergrid-app` launches and probes that packaged runtime. Native v3 direct-open compatibility is explicitly packaged under `legacy/`. `npm start` runs the independent platform health service; `npm run operator-console` runs the earlier evidence console.
 
@@ -97,7 +113,7 @@ The final submission gate must run on one exact `main` SHA after canonical packa
 
 The root `.env.example` configures the health service and mirrors the application's optional runtime variables without secrets. The application backend's [environment example](apps/aethergrid-console/.env.example) documents server-side provider configuration, legacy direct-provider overrides, and launcher controls. `AETHERGRID_SETUP_PASSWORD` is only for temporary account bootstrap and must never be saved with a value in a template or an on-disk runtime env file. Keep credentials in encrypted Actions secrets or an ignored deployment/runtime environment; never commit them. Public provider/runtime endpoints redact server credentials.
 
-## Latest verified main evidence
+## Earlier verified main evidence
 
 Verified baseline `34c18d17783e085f90bbebf7eea1b11483cbb5c3` passed [Engineering CI](https://github.com/DevNDesign-byMr-Zay/-THERGRID/actions/runs/41956848200), [CodeQL](https://github.com/DevNDesign-byMr-Zay/-THERGRID/actions/runs/41956847547), [real Qiskit Aer](https://github.com/DevNDesign-byMr-Zay/-THERGRID/actions/runs/41956847543) and [canonical acceptance](https://github.com/DevNDesign-byMr-Zay/-THERGRID/actions/runs/41957050578). Node tests passed 729/729 with coverage of 95.38% lines, 83.36% branches and 96.11% functions. Canonical browser acceptance passed 258 tests (3 skipped), then 2 credentialed Cesium tests. Live agents, weather, energy, hydrology and transit were verified; NYC Ferry was fresh-empty outside service hours with a 6-second source age. Terrain, imagery, 25 building tiles and globe-to-city descent were verified.
 
@@ -105,7 +121,7 @@ The canonical report used `local-simulator`, with `passed: true`, `failed: []` a
 
 ## Current status and future work
 
-The current package candidate is **0.3.6**. The published `v0.3.5` release remains immutable. This patch packages read-only Open Quantum backend discovery, stricter quantum routing and legacy HTML feedback extraction. Publication requires reviewed integration and exact-main canonical acceptance. Live Open Quantum discovery requires a supported SDK credential. See [release notes](docs/releases/v0.3.6.md) for scope and startup instructions.
+[ÆTHERGRID v0.3.6](https://github.com/DevNDesign-byMr-Zay/-THERGRID/releases/tag/v0.3.6) is published and immutable at commit `9ea601ae43203ea094c3d7525af880436f9e7a34`. The [protected release workflow](https://github.com/DevNDesign-byMr-Zay/-THERGRID/actions/runs/42270397438) verified checksums after [canonical acceptance passed on that commit](https://github.com/DevNDesign-byMr-Zay/-THERGRID/actions/runs/42270645181). The release includes read-only Open Quantum backend discovery, stricter quantum routing and legacy HTML feedback extraction. Live Open Quantum discovery requires a supported SDK credential. See the [release notes](docs/releases/v0.3.6.md) for startup instructions.
 
 ## Reproducible verification
 

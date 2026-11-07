@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import { ScenarioComparisonSummary } from './ScenarioComparisonSummary';
+
 import type { ScenarioId, ScenarioParameters } from '../services/scenario-client';
 import {
   addOperatorScenarioAssumption,
@@ -54,10 +56,6 @@ function inputToIso(value: string, fallback: string): string {
   if (!value) return fallback;
   const parsed = new Date(value);
   return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : fallback;
-}
-
-function signed(value: number): string {
-  return `${value >= 0 ? '+' : ''}${value.toFixed(0)}`;
 }
 
 export function ScenarioComposerPanel({
@@ -387,70 +385,7 @@ export function ScenarioComposerPanel({
 
           {selected.description ? <p>{selected.description}</p> : null}
 
-          <div className="scenario-baseline-grid">
-            <span>
-              <small>BASE REGION</small>
-              <strong>{selected.baseline.region}</strong>
-            </span>
-            <span>
-              <small>BASE FRAME</small>
-              <strong>{selected.baseline.temporal.mode.toUpperCase()}</strong>
-            </span>
-            <span>
-              <small>ENTITIES</small>
-              <strong>{selected.references.canonicalEntityIds.length}</strong>
-            </span>
-            <span>
-              <small>INCIDENT REFS</small>
-              <strong>{selected.references.incidentIds.length}</strong>
-            </span>
-          </div>
-
-          <div className="scenario-comparison-grid">
-            <span>
-              <small>LOAD Δ</small>
-              <strong>
-                {signed(comparison.deltas.loadMultiplierPercent)} pts
-              </strong>
-            </span>
-            <span>
-              <small>RENEWABLE Δ</small>
-              <strong>
-                {signed(comparison.deltas.renewableAvailabilityPercent)} pts
-              </strong>
-            </span>
-            <span>
-              <small>STORAGE Δ</small>
-              <strong>
-                {signed(comparison.deltas.storageReservePercent)} pts
-              </strong>
-            </span>
-            <span>
-              <small>WEATHER Δ</small>
-              <strong>
-                {signed(comparison.deltas.weatherRiskPercent)} pts
-              </strong>
-            </span>
-          </div>
-
-          <div className="scenario-visual-grid">
-            <span>
-              <small>VISUAL STRESS</small>
-              <strong>{comparison.visual.stressFactor.toFixed(2)}×</strong>
-            </span>
-            <span>
-              <small>RENEWABLE BIAS</small>
-              <strong>{comparison.visual.renewableBias.toFixed(2)}</strong>
-            </span>
-            <span>
-              <small>STORAGE STRESS</small>
-              <strong>{comparison.visual.storageStress.toFixed(2)}</strong>
-            </span>
-            <span>
-              <small>WEATHER RISK</small>
-              <strong>{comparison.visual.weatherRisk.toFixed(2)}</strong>
-            </span>
-          </div>
+          <ScenarioComparisonSummary scenario={selected} comparison={comparison} />
 
           <div className="scenario-selected-parameters">
             <label>

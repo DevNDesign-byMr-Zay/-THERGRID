@@ -1,90 +1,31 @@
-import { updateConstantProperty } from './constant-property';
-import {aircraftModelUri} from './aircraft-model';
 import {
   CallbackPositionProperty,
-  CallbackProperty,
-  Cartesian2,
   Cartesian3,
-  BoxGraphics,
   Color,
-  ColorGeometryInstanceAttribute,
   ColorMaterialProperty,
-  ConstantProperty,
   CustomDataSource,
-  DistanceDisplayCondition,
-  Entity,
-  GeometryInstance,
-  HeadingPitchRoll,
-  HorizontalOrigin,
-  LabelGraphics,
-  Math as CesiumMath,
-  ModelGraphics,
-  PerInstanceColorAppearance,
-  PointGraphics,
-  PolygonGeometry,
-  PolygonGraphics,
-  PolygonHierarchy,
-  PolylineGraphics,
-  PolylineGeometry,
-  PolylineColorAppearance,
-  Primitive,
-  Transforms,
-  VerticalOrigin,
-  Viewer,
-  WallGraphics,
-  WallGeometry
+  type Entity,
+  type Viewer,
 } from 'cesium';
 
-import { buildingEdges, buildingGeometry } from '../overlays/building-geometry';
-import {
-  buildingAreaColor,
-  edgeColor,
-  nodeColor,
-  scenarioColor
-} from '../overlays/color-mapping';
-
-import type { TemporalInstant, VisualMode } from '../spatial-renderer';
-
+import { edgeColor, nodeColor, scenarioColor } from '../overlays/color-mapping';
 import {
   isActiveAt,
   overlayIntensity,
-  type SpatialOverlayArea,
-  type SpatialOverlayEdge,
-  type SpatialOverlayNode,
-  type SpatialOverlaySnapshot
+  type SpatialOverlaySnapshot,
 } from '../overlays/spatial-overlay';
-
-function coordinate(position: SpatialOverlayNode['position']): Cartesian3 {
-  return Cartesian3.fromDegrees(
-    position.longitude,
-    position.latitude,
-    position.heightMeters ?? 20
-  );
-}
-
-function nodeFarDistance(node: SpatialOverlayNode): number {
-  if (node.kind === 'city' || node.kind === 'event' || node.kind === 'aircraft') {
-    return 30_000_000;
-  }
-  if (node.kind === 'generation') return 320_000;
-  if (node.kind === 'substation') return 220_000;
-  if (node.kind === 'transit') return 180_000;
-  return 180_000;
-}
-
-function edgeFarDistance(edge: SpatialOverlayEdge): number {
-  if (edge.properties?.eventType === 'nws-alert-boundary') return 2_000_000;
-  if (edge.kind === 'coastline') return 180_000;
-  if (edge.kind === 'waterway') return 110_000;
-  if (edge.kind === 'route') return 80_000;
-  if (edge.kind === 'transmission' || edge.kind === 'distribution') return 220_000;
-  return 140_000;
-}
-
-function areaFarDistance(area: SpatialOverlayArea): number {
-  if (area.kind === 'building') return 90_000;
-  return area.kind === 'water' ? 100_000 : 80_000;
-}
+import type { TemporalInstant, VisualMode } from '../spatial-renderer';
+import { BuildingOverlayPrimitives } from './building-overlay-primitives';
+import { updateConstantProperty } from './constant-property';
+import {
+  areaEntity,
+  coordinate,
+  edgeEntity,
+  edgeWidth,
+  nodeEntity,
+  overlaySourceFeatureId,
+  scenarioGhostEntity,
+} from './network-overlay-entities';
 
 function provenanceProperties(
   snapshot: SpatialOverlaySnapshot
@@ -102,317 +43,6 @@ function provenanceProperties(
   };
 }
 
-function aircraftHeading(node: SpatialOverlayNode): number {
-  const value = Number(node.properties?.trackDegrees);
-  return Number.isFinite(value) ? value : 0;
-}
-
-function nodeEntity(
-  node: SpatialOverlayNode,
-  provenance: Readonly<Record<string, unknown>>,
-  viewer: Viewer
-): Entity {
-  const intensity = overlayIntensity(node.intensity);
-  const position = coordinate(node.position);
-  const aircraft =
-    node.kind === 'aircraft' && node.properties?.eventType === 'aircraft';
-  const aircraftModel = aircraft && node.properties?.render3d === true;
-  const staleAircraft = aircraft && node.properties?.truthState === 'stale';
-  const urbanLight =
-    node.properties?.presentationType === 'urban-illumination';
-
-  return new Entity({
-    id: node.id,
-    name: node.label ?? node.id,
-    position,
-    orientation: aircraftModel
-      ? Transforms.headingPitchRollQuaternion(
-          position,
-          new HeadingPitchRoll(
-            CesiumMath.toRadians(aircraftHeading(node)-90),
-            0,
-            0
-          )
-        )
-      : undefined,
-    point: new PointGraphics({
-      pixelSize: aircraft
-        ? 4 + intensity * 3
-        : urbanLight
-          ? 1.2 + intensity * 1.8
-          : 5 + intensity * 7,
-      color: aircraft
-        ? Color.fromCssColorString(
-            staleAircraft ? '#8193a1' : '#70e7ff'
-          ).withAlpha(staleAircraft ? 0.58 : 0.92)
-        : nodeColor(node),
-      outlineColor: new ConstantProperty(Color.WHITE.withAlpha(0.35)),
-      outlineWidth: urbanLight ? 0 : aircraft ? 0.8 : 1.25,
-      distanceDisplayCondition: new ConstantProperty(
-        aircraft
-          ? new DistanceDisplayCondition(aircraftModel ? 850_000 : 0, nodeFarDistance(node))
-          : new DistanceDisplayCondition(0, nodeFarDistance(node))
-      ),
-      disableDepthTestDistance:
-        node.kind === 'city' || node.kind === 'event'
-          ? Number.POSITIVE_INFINITY
-          : aircraft ? 0 : 1_500_000
-    }),
-    model: aircraftModel
-      ? new ModelGraphics({
-          // ModelVisualizer checks show before creating the model; distanceDisplayCondition runs later.
-          show: new CallbackProperty(() => {
-            const cameraPosition = viewer.camera?.positionWC;
-            return !cameraPosition || Cartesian3.distanceSquared(cameraPosition, position) <= 900_000 * 900_000;
-          }, false),
-          uri: aircraftModelUri,
-          scale: 8,
-          minimumPixelSize: 12,
-          maximumScale: 18,
-          color: Color.fromCssColorString(
-            staleAircraft ? '#71828f' : '#79eaff'
-          ).withAlpha(staleAircraft ? 0.62 : 0.96),
-          silhouetteColor: Color.fromCssColorString('#dff8ff').withAlpha(0.68),
-          silhouetteSize: 0.5,
-          distanceDisplayCondition: new ConstantProperty(
-            new DistanceDisplayCondition(0, 900_000)
-          )
-        })
-      : undefined,
-    label: aircraft
-      ? new LabelGraphics({
-          text: node.label ?? node.id,
-          font: '11px Inter, sans-serif',
-          fillColor: Color.fromCssColorString('#edf8ff'),
-          outlineColor: Color.fromCssColorString('#06101a').withAlpha(0.94),
-          outlineWidth: 3,
-          horizontalOrigin: HorizontalOrigin.CENTER,
-          verticalOrigin: VerticalOrigin.BOTTOM,
-          pixelOffset: new Cartesian2(0, -18),
-          showBackground: true,
-          backgroundColor: Color.fromCssColorString('#06101a').withAlpha(0.72),
-          distanceDisplayCondition: new ConstantProperty(
-            new DistanceDisplayCondition(0, 420_000)
-          ),
-          disableDepthTestDistance: 0
-        })
-      : undefined,
-    properties: {
-      overlayKind: node.kind,
-      sourceName: node.label ?? node.id,
-      value: node.value ?? null,
-      unit: node.unit ?? null,
-      ...provenance,
-      ...node.properties
-    }
-  });
-}
-
-function edgeWidth(edge: SpatialOverlayEdge, intensity: number): number {
-  if (edge.properties?.eventType === 'nws-alert-boundary') {
-    return 2.1 + intensity * 2.4;
-  }
-  if (edge.kind === 'analysis-line' && edge.properties?.analysisType === 'measurement') {
-    return 3.1;
-  }
-  if (edge.kind === 'analysis-line' && edge.properties?.analysisType === 'workset-geometry') {
-    return 1.6 + intensity * 1.8;
-  }
-  if (edge.kind === 'analysis-line' && edge.properties?.analysisType === 'scenario-model') {
-    return 2 + intensity * 2.2;
-  }
-  if (edge.kind === 'flow' && edge.properties?.vectorType === 'wind') {
-    return 1.1 + intensity * 1.8;
-  }
-  return edge.kind === 'coastline'
-    ? 2.6
-    : edge.kind === 'waterway'
-      ? 2.2
-      : edge.kind === 'route'
-        ? 1.1 + intensity * 1.4
-        : 1.4 + intensity * 2.8;
-}
-
-function edgeEntity(
-  edge: SpatialOverlayEdge,
-  provenance: Readonly<Record<string, unknown>>
-): Entity {
-  const intensity = overlayIntensity(edge.intensity);
-  return new Entity({
-    id: edge.id,
-    name: edge.label ?? edge.id,
-    polyline: new PolylineGraphics({
-      positions: new ConstantProperty([
-        coordinate(edge.from),
-        coordinate(edge.to)
-      ]),
-      width: edgeWidth(edge, intensity),
-      material: new ColorMaterialProperty(edgeColor(edge, intensity)),
-      distanceDisplayCondition: new ConstantProperty(
-        new DistanceDisplayCondition(0, edgeFarDistance(edge))
-      ),
-      clampToGround:
-        edge.properties?.eventType !== 'aircraft-history' &&
-        edge.properties?.eventType !== 'aviation-relationship' &&
-        (edge.kind === 'route' ||
-          edge.kind === 'waterway' ||
-          edge.kind === 'coastline' ||
-          edge.properties?.eventType === 'nws-alert-boundary')
-    }),
-    properties: {
-      overlayKind: edge.kind,
-      sourceName: edge.label ?? edge.id,
-      value: edge.value ?? null,
-      unit: edge.unit ?? null,
-      ...provenance,
-      ...edge.properties
-    }
-  });
-}
-
-function scenarioGhostEntity(
-  edge: SpatialOverlayEdge,
-  provenance: Readonly<Record<string, unknown>>
-): Entity {
-  const intensity = overlayIntensity(edge.intensity);
-  return new Entity({
-    id: `${edge.id}:source-baseline`,
-    name: `${edge.label ?? edge.id} · source baseline`,
-    show: false,
-    polyline: new PolylineGraphics({
-      positions: new ConstantProperty([
-        coordinate(edge.from),
-        coordinate(edge.to)
-      ]),
-      width: Math.max(1, edgeWidth(edge, intensity) * 0.72),
-      material: new ColorMaterialProperty(
-        Color.fromCssColorString('#91a0ad').withAlpha(0.24)
-      ),
-      distanceDisplayCondition: new ConstantProperty(
-        new DistanceDisplayCondition(0, edgeFarDistance(edge))
-      ),
-      clampToGround: false
-    }),
-    properties: {
-      overlayKind: 'scenario-baseline',
-      sourceEdgeId: edge.id,
-      ...provenance
-    }
-  });
-}
-
-function areaEntity(
-  area: SpatialOverlayArea,
-  provenance: Readonly<Record<string, unknown>>
-): Entity {
-  const positions = area.positions.map((position) => coordinate(position));
-  const water = area.kind === 'water';
-  const building = area.kind === 'building';
-  const minHeightM = Math.max(0, Number(area.properties?.minHeightM ?? 0));
-  const heightM = Math.max(
-    minHeightM + 3.2,
-    Number(area.properties?.heightM ?? minHeightM + 12)
-  );
-  const sourceBacked = area.properties?.sourceBacked === true;
-  const buildingFill = buildingAreaColor(area, sourceBacked ? 0.94 : 0.58);
-  const buildingRoof = buildingAreaColor(area, sourceBacked ? 1 : 0.7);
-  const buildingOutline = buildingAreaColor(area, sourceBacked ? 0.48 : 0.24);
-  const buildingMinimumHeights = building
-    ? positions.map(() => minHeightM)
-    : undefined;
-  const buildingMaximumHeights = building
-    ? positions.map(() => heightM)
-    : undefined;
-  const centroidLatitude = Number(area.properties?.centroidLatitude);
-  const centroidLongitude = Number(area.properties?.centroidLongitude);
-  const boxWidthM = Math.max(4, Number(area.properties?.bboxWidthM ?? 4));
-  const boxDepthM = Math.max(4, Number(area.properties?.bboxDepthM ?? 4));
-  const headingDegrees = Number(area.properties?.headingDegrees ?? 0);
-  const buildingPosition =
-    building &&
-    Number.isFinite(centroidLatitude) &&
-    Number.isFinite(centroidLongitude)
-      ? Cartesian3.fromDegrees(
-          centroidLongitude,
-          centroidLatitude,
-          minHeightM + (heightM - minHeightM) / 2
-        )
-      : undefined;
-  const buildingOrientation = buildingPosition
-    ? Transforms.headingPitchRollQuaternion(
-        buildingPosition,
-        new HeadingPitchRoll(CesiumMath.toRadians(headingDegrees), 0, 0)
-      )
-    : undefined;
-
-  return new Entity({
-    id: area.id,
-    name: area.label ?? area.id,
-    position: buildingPosition,
-    orientation: buildingOrientation,
-    box:
-      building && buildingPosition
-        ? new BoxGraphics({
-            dimensions: new ConstantProperty(
-              new Cartesian3(
-                boxWidthM,
-                boxDepthM,
-                Math.max(3.2, heightM - minHeightM)
-              )
-            ),
-            material: new ColorMaterialProperty(
-              buildingAreaColor(area, sourceBacked ? 0.38 : 0.2)
-            ),
-            outline: true,
-            outlineColor: buildingOutline.withAlpha(sourceBacked ? 0.62 : 0.32),
-            distanceDisplayCondition: new ConstantProperty(
-              new DistanceDisplayCondition(0, areaFarDistance(area))
-            )
-          })
-        : undefined,
-    polygon: new PolygonGraphics({
-      hierarchy: new ConstantProperty(new PolygonHierarchy(positions)),
-      material: new ColorMaterialProperty(
-        building
-          ? buildingRoof
-          : water
-            ? Color.fromCssColorString('#2eb9e8').withAlpha(0.22)
-            : Color.fromCssColorString('#59d99a').withAlpha(0.18)
-      ),
-      outline: true,
-      outlineColor: building
-        ? buildingOutline
-        : water
-          ? Color.fromCssColorString('#70ddff').withAlpha(0.45)
-          : Color.fromCssColorString('#83e8b7').withAlpha(0.34),
-      distanceDisplayCondition: new ConstantProperty(
-        new DistanceDisplayCondition(0, areaFarDistance(area))
-      ),
-      perPositionHeight: !building,
-      height: building ? new ConstantProperty(heightM) : undefined
-    }),
-    wall: building
-      ? new WallGraphics({
-          positions: new ConstantProperty(positions),
-          minimumHeights: new ConstantProperty(buildingMinimumHeights),
-          maximumHeights: new ConstantProperty(buildingMaximumHeights),
-          material: new ColorMaterialProperty(buildingFill),
-          outline: true,
-          outlineColor: buildingOutline,
-          distanceDisplayCondition: new ConstantProperty(
-            new DistanceDisplayCondition(0, areaFarDistance(area))
-          )
-        })
-      : undefined,
-    properties: {
-      overlayKind: area.kind,
-      sourceName: area.label ?? area.id,
-      ...provenance,
-      ...area.properties
-    }
-  });
-}
-
 export class NetworkOverlayLayer {
   #viewer: Viewer;
   #aircraftFixes=new Map<string,{position:Cartesian3;time:number}>();
@@ -422,10 +52,7 @@ export class NetworkOverlayLayer {
   #edgeEntities = new Map<string, Entity>();
   #scenarioGhostEntities = new Map<string, Entity>();
   #areaEntities = new Map<string, Entity>();
-  #buildingPrimitive: Primitive | null = null;
-  #buildingLines: Primitive | null = null;
-  #fillStyles: { id: object; value: Uint8Array; base: Color }[] = [];
-  #lineStyles: { id: { sourceFeatureId: string }; value: Uint8Array }[] = [];
+  #buildings: BuildingOverlayPrimitives;
   #areaColors = new Map<string, Color>();
   #labelColors = new Map<string, { fill: Color; outline: Color; background: Color }>();
   #modelColors = new Map<string, Color>();
@@ -437,12 +64,13 @@ export class NetworkOverlayLayer {
 
   constructor(viewer: Viewer) {
     this.#viewer = viewer;
+    this.#buildings = new BuildingOverlayPrimitives(viewer.scene);
     void this.#viewer.dataSources.add(this.#source);
   }
 
   apply(snapshot: SpatialOverlaySnapshot): void {
     this.#snapshot = snapshot;
-    this.#clearBuildingPrimitive();
+    this.#buildings.clear();
     this.#source.entities.removeAll();
     this.#nodeEntities.clear();
     this.#edgeEntities.clear();
@@ -451,14 +79,14 @@ export class NetworkOverlayLayer {
     this.#areaColors.clear();
     this.#labelColors.clear();
     this.#modelColors.clear();
-    if (this.#selectedSourceFeatureId && !(snapshot.areas ?? []).some((area) => this.#sourceFeatureId(area.id, area.properties) === this.#selectedSourceFeatureId) &&
-      !snapshot.nodes.some((node) => this.#sourceFeatureId(node.id, node.properties) === this.#selectedSourceFeatureId) &&
-      !snapshot.edges.some((edge) => this.#sourceFeatureId(edge.id, edge.properties) === this.#selectedSourceFeatureId)) this.#selectedSourceFeatureId = null;
+    if (this.#selectedSourceFeatureId && !(snapshot.areas ?? []).some((area) => overlaySourceFeatureId(area.id, area.properties) === this.#selectedSourceFeatureId) &&
+      !snapshot.nodes.some((node) => overlaySourceFeatureId(node.id, node.properties) === this.#selectedSourceFeatureId) &&
+      !snapshot.edges.some((edge) => overlaySourceFeatureId(edge.id, edge.properties) === this.#selectedSourceFeatureId)) this.#selectedSourceFeatureId = null;
 
     const provenance = provenanceProperties(snapshot);
 
     if (snapshot.layerId === 'buildings') {
-      this.#applyBuildingPrimitive(snapshot, provenance);
+      this.#buildings.apply(snapshot, provenance, this.#visible);
     }
 
     const nextAircraftFixes=new Map<string,{position:Cartesian3;time:number}>();
@@ -668,175 +296,10 @@ export class NetworkOverlayLayer {
     if (this.#visible) this.#viewer.scene.requestRender();
   }
 
-  #applyBuildingPrimitive(
-    snapshot: SpatialOverlaySnapshot,
-    provenance: Readonly<Record<string, unknown>>
-  ): void {
-    const instances = (snapshot.areas ?? [])
-      .filter((area) => area.kind === 'building' && area.positions.length >= 3)
-      .flatMap((area) => {
-        const massing = buildingGeometry(area);
-        if (!massing) return [];
-        const minHeightM = massing.baseM;
-        const heightM = massing.topM;
-        const hierarchy = new PolygonHierarchy(
-          massing.ring.map((position) =>
-            Cartesian3.fromDegrees(position.longitude, position.latitude)
-          ),
-          massing.holes.map(ring => new PolygonHierarchy(ring.map(position => Cartesian3.fromDegrees(position.longitude, position.latitude))))
-        );
-        const sourceFeatureId =
-          typeof area.properties?.sourceFeatureId === 'string'
-            ? area.properties.sourceFeatureId
-            : area.id;
-        const id = {
-          aethergridSourceBuilding: true,
-          id: area.id,
-          sourceFeatureId,
-          label: area.label ?? area.id,
-          latitude: Number(area.properties?.centroidLatitude ?? Number.NaN),
-          longitude: Number(area.properties?.centroidLongitude ?? Number.NaN),
-          heightM,
-          properties: {
-            ...provenance,
-            ...area.properties,
-            overlayKind: area.kind,
-            heightCategory: massing.heightCategory,
-            roofRefinement: massing.roofRefinement,
-            geometryLimitation: massing.limitation,
-            sourceName: area.label ?? area.id
-          }
-        };
-
-        const bodyColor = buildingAreaColor(area, 1);
-        const body = new GeometryInstance({
-          id,
-          geometry: new PolygonGeometry({
-            polygonHierarchy: hierarchy,
-            height: minHeightM,
-            extrudedHeight: massing.wallTopM,
-            closeTop: !massing.roofFaces.length,
-            closeBottom: true,
-            vertexFormat: PerInstanceColorAppearance.VERTEX_FORMAT
-          }),
-          attributes: {
-            color: ColorGeometryInstanceAttribute.fromColor(
-              bodyColor
-            )
-          }
-        });
-        this.#fillStyles.push({ id, value: body.attributes.color.value, base: bodyColor });
-        const roofArea = { ...area, properties: { ...area.properties,
-          buildingColor: area.properties?.roofColor,
-          buildingMaterial: area.properties?.roofMaterial } };
-        const roofs = massing.roofFaces.map((face, index) => {
-          const roofId = { ...id, geometryPart: `roof:${index}` };
-          const base = buildingAreaColor(roofArea, 1);
-          const instance = new GeometryInstance({
-          id: roofId,
-          geometry: new PolygonGeometry({
-            polygonHierarchy: new PolygonHierarchy(face.map((p) => Cartesian3.fromDegrees(p.longitude, p.latitude, p.heightMeters))),
-            perPositionHeight: true,
-            vertexFormat: PerInstanceColorAppearance.VERTEX_FORMAT
-          }),
-          attributes: { color: ColorGeometryInstanceAttribute.fromColor(base) }
-          });
-          this.#fillStyles.push({ id: roofId, value: instance.attributes.color.value, base });
-          return instance;
-        });
-        // A single-plane roof is not a floating sheet: fill the upper facade
-        // between the common eave height and the mapped per-vertex roof heights.
-        const roofWalls = massing.roofWallFaces.map((face, index) => {
-          const wallId = { ...id, geometryPart: `roof-wall:${index}` };
-          const wallColor = buildingAreaColor(area, 1);
-          const wall = new GeometryInstance({
-            id: wallId,
-            geometry: new WallGeometry({
-              positions: [
-                Cartesian3.fromDegrees(face[0].longitude, face[0].latitude),
-                Cartesian3.fromDegrees(face[1].longitude, face[1].latitude)
-              ],
-              minimumHeights: [face[0].heightMeters!, face[1].heightMeters!],
-              maximumHeights: [face[3].heightMeters!, face[2].heightMeters!],
-              vertexFormat: PerInstanceColorAppearance.VERTEX_FORMAT
-            }),
-            attributes: { color: ColorGeometryInstanceAttribute.fromColor(wallColor) }
-          });
-          this.#fillStyles.push({ id: wallId, value: wall.attributes.color.value, base: wallColor });
-          return wall;
-        });
-        return [body, ...roofs, ...roofWalls];
-      });
-
-    if (!instances.length) return;
-
-    const primitive = new Primitive({
-      geometryInstances: instances,
-      appearance: new PerInstanceColorAppearance({
-        closed: true,
-        translucent: false,
-        flat: false
-      }),
-      asynchronous: false
-    });
-    primitive.show = this.#visible;
-    this.#viewer.scene.primitives.add(primitive);
-    this.#buildingPrimitive = primitive;
-    const lines = (snapshot.areas ?? []).flatMap((area) => area.kind !== 'building' ? [] : buildingEdges(area).map(([from, to], index) => {
-      const sourceFeatureId = this.#sourceFeatureId(area.id, area.properties);
-      const id = { aethergridSourceBuilding: true, id: area.id, sourceFeatureId, geometryPart: `edge:${index}`,
-        label: area.label ?? area.id, latitude: area.properties?.centroidLatitude, longitude: area.properties?.centroidLongitude,
-        heightM: area.properties?.heightM, properties: { ...provenance, ...area.properties, overlayKind: area.kind,
-          heightCategory: buildingGeometry(area)?.heightCategory, roofRefinement: buildingGeometry(area)?.roofRefinement,
-          geometryLimitation: buildingGeometry(area)?.limitation } };
-      const instance = new GeometryInstance({ id, geometry: new PolylineGeometry({ positions: [coordinate(from), coordinate(to)], width: 1.5,
-        vertexFormat: PolylineColorAppearance.VERTEX_FORMAT }), attributes: { color: ColorGeometryInstanceAttribute.fromColor(Color.CYAN) } });
-      this.#lineStyles.push({ id, value: instance.attributes.color.value });
-      return instance;
-    }));
-    if (lines.length) {
-      this.#buildingLines = new Primitive({ geometryInstances: lines, appearance: new PolylineColorAppearance({ translucent: true }), asynchronous: false });
-      this.#viewer.scene.primitives.add(this.#buildingLines);
-    }
-    this.#viewer.scene.requestRender();
-  }
-
-  #clearBuildingPrimitive(): void {
-    for (const primitive of [this.#buildingPrimitive, this.#buildingLines]) {
-      if (!primitive || primitive.isDestroyed()) continue;
-      this.#viewer.scene.primitives.remove(primitive);
-      if (!primitive.isDestroyed()) primitive.destroy();
-    }
-    this.#buildingPrimitive = null;
-    this.#buildingLines = null;
-    this.#fillStyles = [];
-    this.#lineStyles = [];
-  }
-
-  #writeColor(primitive: Primitive | null, id: object, value: Uint8Array, color: Color): void {
-    const bytes = ColorGeometryInstanceAttribute.toValue(color);
-    value.set(bytes);
-    if (primitive?.ready) primitive.getGeometryInstanceAttributes(id).color = bytes;
-  }
-
   #applyBuildingStyle(): void {
-    const mode = this.#presentation;
-    const alpha = (mode === 'holographic' ? .12 : mode === 'grid' ? .18 : mode === 'xray' ? .2 : 1) * this.#opacity;
-    if (this.#buildingPrimitive) {
-      this.#buildingPrimitive.show = this.#visible && this.#opacity > 0 && mode !== 'wireframe';
-      const translucent = alpha < 1;
-      if (this.#buildingPrimitive.appearance.translucent !== translucent) this.#buildingPrimitive.appearance = new PerInstanceColorAppearance({ closed: !translucent, translucent, flat: false });
-      for (const style of this.#fillStyles) this.#writeColor(this.#buildingPrimitive, style.id, style.value,
-        (mode === 'holographic' ? Color.fromCssColorString('#46eaff') : mode === 'xray' ? Color.fromCssColorString('#6bc7ff') : style.base).withAlpha(alpha));
-    }
-    if (this.#buildingLines) {
-      this.#buildingLines.show = this.#visible && this.#opacity > 0;
-      for (const style of this.#lineStyles) {
-        const selected = style.id.sourceFeatureId === this.#selectedSourceFeatureId;
-        const base = selected ? Color.WHITE : mode === 'solid' || mode === 'reality' ? Color.fromCssColorString('#324351') : Color.fromCssColorString('#58efff');
-        this.#writeColor(this.#buildingLines, style.id, style.value, base.withAlpha((selected ? 1 : mode === 'solid' || mode === 'reality' ? .35 : .9) * this.#opacity));
-      }
-    }
+    this.#buildings.setPresentation(
+      this.#presentation, this.#opacity, this.#visible, this.#selectedSourceFeatureId,
+    );
   }
 
   #applyEntityOpacity(): void {
@@ -869,21 +332,13 @@ export class NetworkOverlayLayer {
     }
   }
 
-  #sourceFeatureId(
-    id: string,
-    properties: Readonly<Record<string, unknown>> | undefined
-  ): string {
-    const value = properties?.sourceFeatureId;
-    return typeof value === 'string' && value.trim() ? value.trim() : id;
-  }
-
   #applySelectionHighlight(): void {
     const snapshot = this.#snapshot;
     const selected = this.#selectedSourceFeatureId;
     if (!snapshot || !selected) return;
 
     for (const node of snapshot.nodes) {
-      if (this.#sourceFeatureId(node.id, node.properties) !== selected) continue;
+      if (overlaySourceFeatureId(node.id, node.properties) !== selected) continue;
       const entity = this.#nodeEntities.get(node.id);
       if (!entity?.point) continue;
       const intensity = overlayIntensity(node.intensity);
@@ -893,7 +348,7 @@ export class NetworkOverlayLayer {
     }
 
     for (const edge of snapshot.edges) {
-      if (this.#sourceFeatureId(edge.id, edge.properties) !== selected) continue;
+      if (overlaySourceFeatureId(edge.id, edge.properties) !== selected) continue;
       const entity = this.#edgeEntities.get(edge.id);
       if (!entity?.polyline) continue;
       const intensity = overlayIntensity(edge.intensity);
@@ -904,7 +359,7 @@ export class NetworkOverlayLayer {
     }
 
     for (const area of snapshot.areas ?? []) {
-      if (this.#sourceFeatureId(area.id, area.properties) !== selected) continue;
+      if (overlaySourceFeatureId(area.id, area.properties) !== selected) continue;
       const entity = this.#areaEntities.get(area.id);
       if (!entity?.polygon) continue;
       updateConstantProperty(entity.polygon, 'outlineColor', Color.fromCssColorString('#ffffff').withAlpha(0.92));
@@ -931,7 +386,7 @@ export class NetworkOverlayLayer {
   }
 
   destroy(): void {
-    this.#clearBuildingPrimitive();
+    this.#buildings.clear();
     this.#source.entities.removeAll();
     this.#viewer.dataSources.remove(this.#source, true);
     this.#snapshot = null;

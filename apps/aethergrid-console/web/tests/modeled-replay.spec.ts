@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { AethergridTemporalClock } from '../src/time/temporal-clock';
+import { createOperatorScenario, operatorScenarioToOverlay } from '../src/services/operator-scenario';
+import type { SpatialWorksetGeometrySummary } from '../src/services/spatial-workset-geometry';
 import { createSpatialBookmark, saveSpatialBookmarks, loadSpatialBookmarks } from '../src/services/view-bookmarks';
 import { createOperatorSession, loadOperatorSessions, saveOperatorSessions } from '../src/services/operator-session';
 
@@ -104,4 +106,81 @@ test('malformed saved session replay windows are withheld before restore', () =>
     saveOperatorSessions([session]);
     expect(loadOperatorSessions()).toEqual([]);
   } finally { if (original) Object.defineProperty(globalThis, 'localStorage', original); else delete (globalThis as any).localStorage; }
+});
+
+test('modeled geometry evaluates scenario parameters once and keeps source and time boundaries', () => {
+  const temporal = { iso: start, mode: 'scenario' } as const;
+  const nodes = ['first', 'second'].map((id, index) => ({
+    canonicalId: id,
+    displayName: id,
+    latitude: 40 + index / 100,
+    longitude: -74,
+    heightMeters: 10,
+    region: 'new-york',
+    capturedAt: start,
+  }));
+  const geometry: SpatialWorksetGeometrySummary = {
+    authoritative: false,
+    relationshipBasis: 'minimum-spanning-analysis',
+    positionedEntityCount: nodes.length,
+    omittedEntityCount: 0,
+    edgeCount: 2,
+    totalTreeDistanceMeters: 2000,
+    maximumPairDistanceMeters: 1000,
+    centroid: null,
+    temporalSpanMs: null,
+    regions: ['new-york'],
+    nodes,
+    edges: [
+      { id: 'mapped-edge', fromCanonicalId: 'first', toCanonicalId: 'second', distanceMeters: 1000 },
+      { id: 'invalid-edge', fromCanonicalId: 'first', toCanonicalId: 'missing', distanceMeters: 1000 },
+    ],
+  };
+  const scenario = createOperatorScenario(
+    'Peak model',
+    '',
+    'peak-demand',
+    { loadMultiplierPercent: 130, renewableAvailabilityPercent: 70, storageReservePercent: 20, weatherRiskPercent: 30 },
+    start,
+    end,
+    { region: 'new-york', temporal, workset: [], incidents: [], observationA: null, observationB: null, geometry },
+  );
+  const parameters = scenario.parameters;
+  let parameterReads = 0;
+  Object.defineProperty(scenario, 'parameters', {
+    get() {
+      parameterReads += 1;
+      return parameters;
+    },
+  });
+
+  const overlay = operatorScenarioToOverlay(scenario, geometry, temporal);
+  expect(parameterReads).toBe(1);
+  expect(overlay).toMatchObject({ layerId: 'scenario-model', eventTime: start, sourceTime: null, live: false });
+  expect(overlay.nodes.map((node) => node.intensity)).toEqual([overlay.nodes[0].intensity, overlay.nodes[0].intensity]);
+  expect(overlay.nodes[0]).toMatchObject({
+    position: { heightMeters: 46 },
+    validFrom: start,
+    validTo: end,
+    properties: { authoritative: false, modeled: true, sourceFeatureId: 'first' },
+  });
+  expect(overlay.edges).toHaveLength(1);
+  expect(overlay.edges[0]).toMatchObject({
+    validTo: end,
+    properties: { authoritative: false, modeled: true, sourceFeatureId: 'mapped-edge' },
+  });
+});
+
+test('saved workspace IDs use Web Crypto even when insecure randomness is unavailable', () => {
+  const originalRandom = Math.random;
+  Math.random = () => { throw new Error('insecure randomness must not generate workspace IDs'); };
+  try {
+    const workspace = { view: { scope: 'city', target: { latitude: 40, longitude: -74 }, visualMode: 'solid', temporalMode: 'forecast', cursorIso: start, layers: [], useCase: null, playbackRange: { start, end } }, interactionMode: 'inspect', measurementPoints: [], measurementFrame: null, observationA: null, observationB: null, frozenDossier: null, operatorScenario: null, workset: [], incidents: [] };
+    const first = createOperatorSession('First', workspace as any);
+    const second = createOperatorSession('Second', workspace as any);
+    expect(first.id).toMatch(/^session:.*:[0-9a-f]{32}$/u);
+    expect(second.id).not.toBe(first.id);
+    expect(first.workspace).toEqual(workspace);
+    expect(first.authoritative).toBe(false);
+  } finally { Math.random = originalRandom; }
 });

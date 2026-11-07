@@ -16,6 +16,7 @@ on:
       - 'apps/aethergrid-console/app.js'
       - 'apps/aethergrid-console/state.js'
       - 'apps/aethergrid-console/standalone-geo.js'
+      - 'apps/aethergrid-console/legacy-city-mesh.js'
       - 'apps/aethergrid-console/sw.js'
       - 'scripts/assemble-aethergrid-full-app.mjs'
       - 'tests/aethergrid-standalone-geo-behavior.test.mjs'

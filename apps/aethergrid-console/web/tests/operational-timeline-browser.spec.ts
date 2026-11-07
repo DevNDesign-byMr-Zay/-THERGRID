@@ -166,3 +166,51 @@ test('city switching rejects a delayed previous-city forecast receipt', async ({
     await expect(rail).not.toContainText('delayed-new-york');
   } finally { release(); }
 });
+
+test('retrying failed 3D geometry preserves the current city forecast and source cursor', async ({ page }) => {
+  test.setTimeout(90000);
+  await page.setViewportSize({ width: 1366, height: 768 });
+  let forecastRequests = 0;
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/aethergrid/weather/forecast') {
+      forecastRequests += 1;
+    }
+  });
+  await cityForecast(page);
+
+  let geometryAttempts = 0;
+  await page.route('**/api/aethergrid/geospatial/city/london?**', (route) => {
+    geometryAttempts += 1;
+    if (geometryAttempts === 1) return route.fulfill({ status: 503 });
+    return route.fulfill({
+      json: {
+        city: { id: 'london', lat: 51.5136, lon: -0.0917 },
+        source: { provider: 'offline-map-contract', live: true, attribution: 'OFFLINE TIMELINE CONTRACT' },
+        buildings: [{ id: 'london-retry', heightM: 40, heightSource: 'height', footprint: [[-30, -30], [30, -30], [30, 30], [-30, 30]] }],
+        powerAssets: [],
+        powerLines: [],
+        roads: [],
+      },
+    });
+  });
+  const rail = page.getByRole('region', { name: '4D time controls' });
+  await rail.getByRole('button', { name: 'FORECAST', exact: true }).click();
+  await expect(rail.getByRole('combobox', { name: 'Forecast valid time' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Navigation and layers' }).click();
+  await page.getByRole('navigation', { name: 'City targets' }).getByRole('button', { name: /LONDON/ }).click();
+  await page.getByRole('button', { name: 'Close navigation drawer' }).click();
+
+  const retryGeometry = page.getByRole('button', { name: 'Retry mapped city geometry' });
+  await expect(retryGeometry).toBeVisible();
+  await expect(rail.getByRole('combobox', { name: 'Forecast valid time' })).toBeEnabled();
+  await rail.getByRole('button', { name: 'First source sample' }).click();
+  const forecastRequestsBeforeRetry = forecastRequests;
+  await retryGeometry.click();
+
+  await expect(page.locator('.world-stage')).toHaveAttribute('data-source-building-count', '1', { timeout: 30000 });
+  await expect(retryGeometry).toBeHidden();
+  await expect(rail).toContainText('3 source samples');
+  await expect(rail.locator('output')).toHaveAttribute('data-cursor', '2026-10-11T12:00:00.000Z');
+  expect(geometryAttempts).toBe(2);
+  expect(forecastRequests).toBe(forecastRequestsBeforeRetry);
+});

@@ -1,14 +1,47 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { decodeGtfsRealtime as decodeFeed } from '../apps/aethergrid-console/providers/gtfs-realtime-decoder.mjs';
 import { loadTransitFeedConfig } from '../apps/aethergrid-console/providers/transit-feed-config.mjs';
 import {
   createTransitRegistry,
   decodeGtfsRealtime,
 } from '../apps/aethergrid-console/providers/transit-registry.mjs';
+
+test('the transit registry preserves its decoder export and the independent decoder reads a feed', () => {
+  assert.equal(decodeGtfsRealtime, decodeFeed);
+  assert.deepEqual(decodeFeed(Uint8Array.of(0x12, 0x03, 0x0a, 0x01, 0x78)), {
+    header: {},
+    entities: [{ id: 'x' }],
+  });
+});
+
+test('malformed negative GTFS field lengths reject without rewinding the feed reader', () => {
+  const decoder = new URL(
+    '../apps/aethergrid-console/providers/gtfs-realtime-decoder.mjs',
+    import.meta.url,
+  );
+  const child = spawnSync(
+    process.execPath,
+    [
+      '--input-type=module',
+      '--eval',
+      `import assert from 'node:assert/strict';
+      import { decodeGtfsRealtime } from ${JSON.stringify(decoder.href)};
+      const negativeLength = [250, 255, 255, 255, 15];
+      for (const prefix of [[10], [10, 6, 10], [26]]) {
+        assert.equal(decodeGtfsRealtime(Uint8Array.of(...prefix, ...negativeLength)), null);
+      }`,
+    ],
+    { timeout: 2000, encoding: 'utf8' },
+  );
+  assert.ifError(child.error);
+  assert.equal(child.status, 0, child.stderr);
+});
 
 function withTempConfig(configObj, testFn) {
   const dir = mkdtempSync(join(tmpdir(), 'aethergrid-gtfs-test-'));
