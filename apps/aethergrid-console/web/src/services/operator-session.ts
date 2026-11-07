@@ -143,11 +143,13 @@ export function createOperatorSession(
 ): OperatorWorkspaceSession {
   const now = new Date().toISOString();
   const safeName = boundedName(name) || 'Operator Session';
+  const nonce = Array.from(crypto.getRandomValues(new Uint8Array(16)),
+    (byte) => byte.toString(16).padStart(2, '0')).join('');
   return {
     schemaVersion: 'aethergrid.operator-workspace-session.v1',
     kind: 'operator-workspace-session',
     authoritative: false,
-    id: `session:${now}:${Math.random().toString(36).slice(2, 8)}`,
+    id: `session:${now}:${nonce}`,
     name: safeName,
     createdAt: now,
     updatedAt: now,

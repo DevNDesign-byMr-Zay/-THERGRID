@@ -170,3 +170,17 @@ test('modeled geometry evaluates scenario parameters once and keeps source and t
     properties: { authoritative: false, modeled: true, sourceFeatureId: 'mapped-edge' },
   });
 });
+
+test('saved workspace IDs use Web Crypto even when insecure randomness is unavailable', () => {
+  const originalRandom = Math.random;
+  Math.random = () => { throw new Error('insecure randomness must not generate workspace IDs'); };
+  try {
+    const workspace = { view: { scope: 'city', target: { latitude: 40, longitude: -74 }, visualMode: 'solid', temporalMode: 'forecast', cursorIso: start, layers: [], useCase: null, playbackRange: { start, end } }, interactionMode: 'inspect', measurementPoints: [], measurementFrame: null, observationA: null, observationB: null, frozenDossier: null, operatorScenario: null, workset: [], incidents: [] };
+    const first = createOperatorSession('First', workspace as any);
+    const second = createOperatorSession('Second', workspace as any);
+    expect(first.id).toMatch(/^session:.*:[0-9a-f]{32}$/u);
+    expect(second.id).not.toBe(first.id);
+    expect(first.workspace).toEqual(workspace);
+    expect(first.authoritative).toBe(false);
+  } finally { Math.random = originalRandom; }
+});
